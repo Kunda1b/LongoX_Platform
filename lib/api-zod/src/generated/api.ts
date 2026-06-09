@@ -466,6 +466,129 @@ export const DuplicateWorkflowParams = zod.object({
 
 
 /**
+ * @summary List saved DAG version snapshots for a workflow
+ */
+export const ListWorkflowVersionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListWorkflowVersionsResponseItem = zod.object({
+  "id": zod.number(),
+  "workflowId": zod.number(),
+  "version": zod.number(),
+  "name": zod.string(),
+  "nodes": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "name": zod.string(),
+  "nodeTypeId": zod.string().nullish(),
+  "connectorId": zod.number().nullish(),
+  "config": zod.record(zod.string(), zod.unknown()).optional(),
+  "position": zod.object({
+  "x": zod.number(),
+  "y": zod.number()
+})
+})),
+  "changeNote": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListWorkflowVersionsResponse = zod.array(ListWorkflowVersionsResponseItem)
+
+
+/**
+ * @summary Trigger a workflow via inbound webhook
+ */
+export const TriggerWebhookParams = zod.object({
+  "workflowId": zod.coerce.number()
+})
+
+
+/**
+ * @summary List dead-letter queue entries (failed jobs awaiting retry/dismiss)
+ */
+export const listDlqEntriesQueryLimitDefault = 50;
+
+export const ListDlqEntriesQueryParams = zod.object({
+  "resolved": zod.coerce.boolean().optional(),
+  "limit": zod.coerce.number().default(listDlqEntriesQueryLimitDefault)
+})
+
+export const ListDlqEntriesResponseItem = zod.object({
+  "id": zod.number(),
+  "executionId": zod.number(),
+  "workflowId": zod.number(),
+  "workflowName": zod.string(),
+  "nodeId": zod.string(),
+  "nodeName": zod.string(),
+  "nodeType": zod.string(),
+  "errorMessage": zod.string(),
+  "attempts": zod.number(),
+  "jobData": zod.record(zod.string(), zod.unknown()).optional(),
+  "createdAt": zod.string(),
+  "resolvedAt": zod.string().nullish(),
+  "resolution": zod.string().nullish()
+})
+export const ListDlqEntriesResponse = zod.array(ListDlqEntriesResponseItem)
+
+
+/**
+ * @summary Re-queue a DLQ entry (re-runs the full workflow)
+ */
+export const RetryDlqEntryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Dismiss (mark resolved) a DLQ entry without retrying
+ */
+export const DismissDlqEntryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DismissDlqEntryResponse = zod.object({
+  "id": zod.number(),
+  "executionId": zod.number(),
+  "workflowId": zod.number(),
+  "workflowName": zod.string(),
+  "nodeId": zod.string(),
+  "nodeName": zod.string(),
+  "nodeType": zod.string(),
+  "errorMessage": zod.string(),
+  "attempts": zod.number(),
+  "jobData": zod.record(zod.string(), zod.unknown()).optional(),
+  "createdAt": zod.string(),
+  "resolvedAt": zod.string().nullish(),
+  "resolution": zod.string().nullish()
+})
+
+
+/**
+ * @summary List audit log entries
+ */
+export const listAuditLogQueryLimitDefault = 100;
+
+export const ListAuditLogQueryParams = zod.object({
+  "resourceType": zod.coerce.string().optional(),
+  "resourceId": zod.coerce.string().optional(),
+  "action": zod.coerce.string().optional(),
+  "limit": zod.coerce.number().default(listAuditLogQueryLimitDefault)
+})
+
+export const ListAuditLogResponseItem = zod.object({
+  "id": zod.number(),
+  "actorType": zod.string(),
+  "actorId": zod.string().nullish(),
+  "action": zod.string(),
+  "resourceType": zod.string(),
+  "resourceId": zod.string(),
+  "metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "createdAt": zod.string()
+})
+export const ListAuditLogResponse = zod.array(ListAuditLogResponseItem)
+
+
+/**
  * @summary List executions across all workflows
  */
 export const listExecutionsQueryLimitDefault = 50;

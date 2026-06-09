@@ -433,6 +433,145 @@ paths:
               schema:
                 $ref: "#/components/schemas/Workflow"
 
+  /workflows/{id}/versions:
+    get:
+      operationId: listWorkflowVersions
+      tags: [workflows]
+      summary: List saved DAG version snapshots for a workflow
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Version list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkflowVersion"
+
+  # ─── Webhook Triggers ────────────────────────────────────────────────
+  /webhooks/{workflowId}:
+    post:
+      operationId: triggerWebhook
+      tags: [executions]
+      summary: Trigger a workflow via inbound webhook
+      parameters:
+        - name: workflowId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "202":
+          description: Execution queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Execution"
+
+  # ─── Dead-Letter Queue ───────────────────────────────────────────────
+  /dlq:
+    get:
+      operationId: listDlqEntries
+      tags: [executions]
+      summary: List dead-letter queue entries (failed jobs awaiting retry/dismiss)
+      parameters:
+        - name: resolved
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: DLQ entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DlqEntry"
+
+  /dlq/{id}/retry:
+    post:
+      operationId: retryDlqEntry
+      tags: [executions]
+      summary: Re-queue a DLQ entry (re-runs the full workflow)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "202":
+          description: Re-queued execution
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Execution"
+
+  /dlq/{id}/dismiss:
+    post:
+      operationId: dismissDlqEntry
+      tags: [executions]
+      summary: Dismiss (mark resolved) a DLQ entry without retrying
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Dismissed entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DlqEntry"
+
+  # ─── Audit Log ───────────────────────────────────────────────────────
+  /audit-log:
+    get:
+      operationId: listAuditLog
+      tags: [audit]
+      summary: List audit log entries
+      parameters:
+        - name: resourceType
+          in: query
+          schema:
+            type: string
+        - name: resourceId
+          in: query
+          schema:
+            type: string
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditLogEntry"
+
   # ─── Executions ──────────────────────────────────────────────────────
   /executions:
     get:
@@ -854,6 +993,81 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WorkflowNode"
+
+    DlqEntry:
+      type: object
+      required: [id, executionId, workflowId, workflowName, nodeId, nodeName, nodeType, errorMessage, attempts, createdAt]
+      properties:
+        id:
+          type: integer
+        executionId:
+          type: integer
+        workflowId:
+          type: integer
+        workflowName:
+          type: string
+        nodeId:
+          type: string
+        nodeName:
+          type: string
+        nodeType:
+          type: string
+        errorMessage:
+          type: string
+        attempts:
+          type: integer
+        jobData:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+        resolvedAt:
+          type: ["string", "null"]
+        resolution:
+          type: ["string", "null"]
+
+    AuditLogEntry:
+      type: object
+      required: [id, actorType, action, resourceType, resourceId, createdAt]
+      properties:
+        id:
+          type: integer
+        actorType:
+          type: string
+        actorId:
+          type: ["string", "null"]
+        action:
+          type: string
+        resourceType:
+          type: string
+        resourceId:
+          type: string
+        metadata:
+          type: ["object", "null"]
+          additionalProperties: true
+        createdAt:
+          type: string
+
+    WorkflowVersion:
+      type: object
+      required: [id, workflowId, version, name, nodes, createdAt]
+      properties:
+        id:
+          type: integer
+        workflowId:
+          type: integer
+        version:
+          type: integer
+        name:
+          type: string
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkflowNode"
+        changeNote:
+          type: ["string", "null"]
+        createdAt:
+          type: string
 
     Credential:
       type: object

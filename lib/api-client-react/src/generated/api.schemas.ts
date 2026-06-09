@@ -147,6 +147,55 @@ export interface TemplateCreate {
   nodes?: WorkflowNode[];
 }
 
+export type DlqEntryJobData = { [key: string]: unknown };
+
+export interface DlqEntry {
+  id: number;
+  executionId: number;
+  workflowId: number;
+  workflowName: string;
+  nodeId: string;
+  nodeName: string;
+  nodeType: string;
+  errorMessage: string;
+  attempts: number;
+  jobData?: DlqEntryJobData;
+  createdAt: string;
+  /** @nullable */
+  resolvedAt?: string | null;
+  /** @nullable */
+  resolution?: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type AuditLogEntryMetadata = { [key: string]: unknown } | null;
+
+export interface AuditLogEntry {
+  id: number;
+  actorType: string;
+  /** @nullable */
+  actorId?: string | null;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  /** @nullable */
+  metadata?: AuditLogEntryMetadata;
+  createdAt: string;
+}
+
+export interface WorkflowVersion {
+  id: number;
+  workflowId: number;
+  version: number;
+  name: string;
+  nodes: WorkflowNode[];
+  /** @nullable */
+  changeNote?: string | null;
+  createdAt: string;
+}
+
 export interface Credential {
   id: number;
   name: string;
@@ -453,6 +502,18 @@ export const ListWorkflowsStatus = {
   inactive: 'inactive',
   draft: 'draft',
 } as const;
+
+export type ListDlqEntriesParams = {
+resolved?: boolean;
+limit?: number;
+};
+
+export type ListAuditLogParams = {
+resourceType?: string;
+resourceId?: string;
+action?: string;
+limit?: number;
+};
 
 export type ListExecutionsParams = {
 workflowId?: number;

@@ -11,6 +11,8 @@ import AppStats from "@/pages/apps/stats";
 import Templates from "@/pages/templates/index";
 import Credentials from "@/pages/credentials/index";
 import Analytics from "@/pages/analytics/index";
+import DlqPage from "@/pages/dlq/index";
+import AuditLogPage from "@/pages/audit-log/index";
 import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout";
@@ -48,6 +50,9 @@ function AppRoutes() {
         <Route path="/apps/stats" component={AppStats} />
         <Route path="/apps/:id" component={AppDetail} />
         <Route path="/apps" component={Apps} />
+
+        <Route path="/dlq" component={DlqPage} />
+        <Route path="/audit-log" component={AuditLogPage} />
 
         <Route component={NotFound} />
       </Switch>

@@ -5,12 +5,13 @@ import {
   BarChart, 
   Cable, 
   LayoutDashboard, 
-  Play, 
   Workflow as WorkflowIcon,
-  Menu,
   Layers,
   KeyRound,
-  BarChart2
+  BarChart2,
+  AlertTriangle,
+  Shield,
+  Webhook,
 } from "lucide-react";
 import {
   Sidebar,
@@ -100,6 +101,38 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <Link href="/connectors">
                         <AppWindow />
                         <span>Connectors</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel>Observability</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/dlq")}>
+                      <Link href="/dlq">
+                        <AlertTriangle />
+                        <span>Dead-Letter Queue</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/audit-log")}>
+                      <Link href="/audit-log">
+                        <Shield />
+                        <span>Audit Log</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={false}>
+                      <Link href="/executions">
+                        <Webhook />
+                        <span>Webhook Triggers</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

@@ -9,6 +9,9 @@ import templatesRouter from "./templates";
 import credentialsRouter from "./credentials";
 import analyticsRouter from "./analytics";
 import nodeTypesRouter from "./node-types";
+import dlqRouter from "./dlq";
+import auditLogRouter from "./audit-log";
+import webhooksRouter from "./webhooks";
 
 const router: IRouter = Router();
 
@@ -22,5 +25,8 @@ router.use(workflowsRouter);
 router.use(executionsRouter);
 router.use(connectorsRouter);
 router.use(appsRouter);
+router.use(dlqRouter);
+router.use(auditLogRouter);
+router.use(webhooksRouter);
 
 export default router;

@@ -4,3 +4,7 @@ export * from "./connectors";
 export * from "./apps";
 export * from "./templates";
 export * from "./credentials";
+export * from "./execution-checkpoints";
+export * from "./dlq-entries";
+export * from "./audit-log";
+export * from "./workflow-versions";

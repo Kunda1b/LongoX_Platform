@@ -25,19 +25,23 @@ import type {
   AppInput,
   AppStats,
   AppUpdate,
+  AuditLogEntry,
   Connector,
   ConnectorCategory,
   Credential,
   CredentialInput,
   DailyExecutionStat,
   DashboardSummary,
+  DlqEntry,
   Execution,
   ExecutionDetail,
   GetExecutionAnalyticsParams,
   GetRecentActivityParams,
   HealthStatus,
   ListAppsParams,
+  ListAuditLogParams,
   ListConnectorsParams,
+  ListDlqEntriesParams,
   ListExecutionsParams,
   ListNodeTypesParams,
   ListTemplatesParams,
@@ -48,7 +52,8 @@ import type {
   Workflow,
   WorkflowInput,
   WorkflowStat,
-  WorkflowUpdate
+  WorkflowUpdate,
+  WorkflowVersion
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1719,6 +1724,461 @@ export const useDuplicateWorkflow = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getDuplicateWorkflowMutationOptions(options));
     }
+
+export const getListWorkflowVersionsUrl = (id: number,) => {
+
+
+
+
+  return `/api/workflows/${id}/versions`
+}
+
+/**
+ * @summary List saved DAG version snapshots for a workflow
+ */
+export const listWorkflowVersions = async (id: number, options?: RequestInit): Promise<WorkflowVersion[]> => {
+
+  return customFetch<WorkflowVersion[]>(getListWorkflowVersionsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWorkflowVersionsQueryKey = (id: number,) => {
+    return [
+    `/api/workflows/${id}/versions`
+    ] as const;
+    }
+
+
+export const getListWorkflowVersionsQueryOptions = <TData = Awaited<ReturnType<typeof listWorkflowVersions>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkflowVersions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWorkflowVersionsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWorkflowVersions>>> = ({ signal }) => listWorkflowVersions(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWorkflowVersions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWorkflowVersionsQueryResult = NonNullable<Awaited<ReturnType<typeof listWorkflowVersions>>>
+export type ListWorkflowVersionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List saved DAG version snapshots for a workflow
+ */
+
+export function useListWorkflowVersions<TData = Awaited<ReturnType<typeof listWorkflowVersions>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkflowVersions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWorkflowVersionsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getTriggerWebhookUrl = (workflowId: number,) => {
+
+
+
+
+  return `/api/webhooks/${workflowId}`
+}
+
+/**
+ * @summary Trigger a workflow via inbound webhook
+ */
+export const triggerWebhook = async (workflowId: number, options?: RequestInit): Promise<Execution> => {
+
+  return customFetch<Execution>(getTriggerWebhookUrl(workflowId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getTriggerWebhookMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triggerWebhook>>, TError,{workflowId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof triggerWebhook>>, TError,{workflowId: number}, TContext> => {
+
+const mutationKey = ['triggerWebhook'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof triggerWebhook>>, {workflowId: number}> = (props) => {
+          const {workflowId} = props ?? {};
+
+          return  triggerWebhook(workflowId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TriggerWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof triggerWebhook>>>
+
+    export type TriggerWebhookMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Trigger a workflow via inbound webhook
+ */
+export const useTriggerWebhook = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triggerWebhook>>, TError,{workflowId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof triggerWebhook>>,
+        TError,
+        {workflowId: number},
+        TContext
+      > => {
+      return useMutation(getTriggerWebhookMutationOptions(options));
+    }
+
+export const getListDlqEntriesUrl = (params?: ListDlqEntriesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/dlq?${stringifiedParams}` : `/api/dlq`
+}
+
+/**
+ * @summary List dead-letter queue entries (failed jobs awaiting retry/dismiss)
+ */
+export const listDlqEntries = async (params?: ListDlqEntriesParams, options?: RequestInit): Promise<DlqEntry[]> => {
+
+  return customFetch<DlqEntry[]>(getListDlqEntriesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDlqEntriesQueryKey = (params?: ListDlqEntriesParams,) => {
+    return [
+    `/api/dlq`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListDlqEntriesQueryOptions = <TData = Awaited<ReturnType<typeof listDlqEntries>>, TError = ErrorType<unknown>>(params?: ListDlqEntriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDlqEntries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDlqEntriesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDlqEntries>>> = ({ signal }) => listDlqEntries(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDlqEntries>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDlqEntriesQueryResult = NonNullable<Awaited<ReturnType<typeof listDlqEntries>>>
+export type ListDlqEntriesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List dead-letter queue entries (failed jobs awaiting retry/dismiss)
+ */
+
+export function useListDlqEntries<TData = Awaited<ReturnType<typeof listDlqEntries>>, TError = ErrorType<unknown>>(
+ params?: ListDlqEntriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDlqEntries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDlqEntriesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getRetryDlqEntryUrl = (id: number,) => {
+
+
+
+
+  return `/api/dlq/${id}/retry`
+}
+
+/**
+ * @summary Re-queue a DLQ entry (re-runs the full workflow)
+ */
+export const retryDlqEntry = async (id: number, options?: RequestInit): Promise<Execution> => {
+
+  return customFetch<Execution>(getRetryDlqEntryUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRetryDlqEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retryDlqEntry>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof retryDlqEntry>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['retryDlqEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof retryDlqEntry>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  retryDlqEntry(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RetryDlqEntryMutationResult = NonNullable<Awaited<ReturnType<typeof retryDlqEntry>>>
+
+    export type RetryDlqEntryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Re-queue a DLQ entry (re-runs the full workflow)
+ */
+export const useRetryDlqEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retryDlqEntry>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof retryDlqEntry>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRetryDlqEntryMutationOptions(options));
+    }
+
+export const getDismissDlqEntryUrl = (id: number,) => {
+
+
+
+
+  return `/api/dlq/${id}/dismiss`
+}
+
+/**
+ * @summary Dismiss (mark resolved) a DLQ entry without retrying
+ */
+export const dismissDlqEntry = async (id: number, options?: RequestInit): Promise<DlqEntry> => {
+
+  return customFetch<DlqEntry>(getDismissDlqEntryUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getDismissDlqEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof dismissDlqEntry>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof dismissDlqEntry>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['dismissDlqEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof dismissDlqEntry>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  dismissDlqEntry(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DismissDlqEntryMutationResult = NonNullable<Awaited<ReturnType<typeof dismissDlqEntry>>>
+
+    export type DismissDlqEntryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Dismiss (mark resolved) a DLQ entry without retrying
+ */
+export const useDismissDlqEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof dismissDlqEntry>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof dismissDlqEntry>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDismissDlqEntryMutationOptions(options));
+    }
+
+export const getListAuditLogUrl = (params?: ListAuditLogParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/audit-log?${stringifiedParams}` : `/api/audit-log`
+}
+
+/**
+ * @summary List audit log entries
+ */
+export const listAuditLog = async (params?: ListAuditLogParams, options?: RequestInit): Promise<AuditLogEntry[]> => {
+
+  return customFetch<AuditLogEntry[]>(getListAuditLogUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAuditLogQueryKey = (params?: ListAuditLogParams,) => {
+    return [
+    `/api/audit-log`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAuditLogQueryOptions = <TData = Awaited<ReturnType<typeof listAuditLog>>, TError = ErrorType<unknown>>(params?: ListAuditLogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAuditLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAuditLogQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAuditLog>>> = ({ signal }) => listAuditLog(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAuditLog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAuditLogQueryResult = NonNullable<Awaited<ReturnType<typeof listAuditLog>>>
+export type ListAuditLogQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List audit log entries
+ */
+
+export function useListAuditLog<TData = Awaited<ReturnType<typeof listAuditLog>>, TError = ErrorType<unknown>>(
+ params?: ListAuditLogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAuditLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAuditLogQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListExecutionsUrl = (params?: ListExecutionsParams,) => {
   const normalizedParams = new URLSearchParams();
