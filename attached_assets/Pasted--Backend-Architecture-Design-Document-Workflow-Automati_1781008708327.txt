@@ -1,0 +1,1299 @@
+# Backend Architecture Design Document
+## Workflow Automation Engine + Low-Code Internal Tools Platform
+
+**Version:** 1.0  
+**Audience:** Internal Engineering Teams & External Connector Developers  
+**Status:** Draft
+
+---
+
+## Table of Contents
+
+1. [Executive Summary](#1-executive-summary)
+2. [System Architecture Overview](#2-system-architecture-overview)
+3. [Workflow Execution Engine Design](#3-workflow-execution-engine-design)
+4. [Multi-Tenancy & Isolation Model](#4-multi-tenancy--isolation-model)
+5. [Connector Marketplace Architecture](#5-connector-marketplace-architecture)
+6. [Low-Code Builder Backend](#6-low-code-builder-backend)
+7. [API Contracts](#7-api-contracts)
+8. [Database Schema](#8-database-schema)
+9. [Security Architecture](#9-security-architecture)
+10. [Scalability & Operational Considerations](#10-scalability--operational-considerations)
+11. [Open Questions & Future Considerations](#11-open-questions--future-considerations)
+
+---
+
+## 1. Executive Summary
+
+### Platform Overview
+
+This document describes the backend architecture for a combined SaaS platform targeting SMBs that delivers two tightly integrated products:
+
+- **AutoFlow Engine** — a managed workflow automation engine (analogous to n8n) with webhook/schedule triggers, a rich connector ecosystem, and a developer-facing connector marketplace.
+- **BuildKit** — a low-code internal tools builder where non-engineers create drag-and-drop CRUD dashboards backed by direct database connections or REST/GraphQL APIs.
+
+The platform is delivered as a multi-tenant SaaS product. Tenants range from small teams (5 users, a handful of workflows) to mid-market SMBs running dozens of concurrent automations.
+
+### Design Goals
+
+| Goal | Description |
+|------|-------------|
+| **Isolation** | Tenant data, credentials, and execution contexts are strictly isolated from one another. |
+| **Resilience** | Workflow executions recover from transient failures without full restarts. |
+| **Extensibility** | External developers can build and publish connectors through a typed SDK and public review pipeline. |
+| **Observability** | Every execution, API call, and secret access is logged, traced, and metered. |
+| **Simplicity for users** | SMB operators interact only with a friendly UI; complexity is absorbed by the platform. |
+
+### Key Architectural Decisions
+
+1. **Row-level tenancy in PostgreSQL** (with `tenant_id` on every table) rather than schema-per-tenant — chosen for operational simplicity at the expected scale (thousands of tenants, not millions).
+2. **BullMQ over tenant-tagged queues** for workflow job scheduling, with dedicated queues per tenant at higher tiers.
+3. **V8 Isolates as the primary sandbox** for custom code nodes, with Docker containers as a fallback for workloads requiring native binaries.
+4. **HashiCorp Vault** for secrets management, with the application database storing only Vault secret paths — never plaintext credentials.
+5. **Hybrid trigger architecture**: webhook receivers are stateless HTTP handlers; polling is handled by a separate scheduler service via BullMQ repeatable jobs.
+
+---
+
+## 2. System Architecture Overview
+
+### High-Level Component Map
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                          CLIENT LAYER                               │
+│  Web App (React)   │  Mobile (future)   │  External Webhooks        │
+└───────────┬─────────────────┬──────────────────┬────────────────────┘
+            │                 │                  │
+            ▼                 ▼                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                          API GATEWAY                                │
+│  - JWT auth / OAuth 2.0 session validation                          │
+│  - Rate limiting (per-tenant, per-endpoint)                         │
+│  - REST router  +  GraphQL endpoint                                 │
+│  - API versioning (URL prefix: /api/v1/)                            │
+└──────┬─────────────────────┬──────────────────┬─────────────────────┘
+       │                     │                  │
+       ▼                     ▼                  ▼
+┌─────────────┐   ┌─────────────────┐   ┌──────────────────┐
+│  Auth       │   │  Workflow API   │   │  Builder API     │
+│  Service    │   │  Service        │   │  Service         │
+│             │   │  (CRUD, logs)   │   │  (dashboards,    │
+│  - JWT sign │   │                 │   │   queries, RBAC) │
+│  - OAuth    │   └────────┬────────┘   └────────┬─────────┘
+│  - MFA      │            │                     │
+└─────────────┘            ▼                     ▼
+                  ┌─────────────────┐   ┌──────────────────┐
+                  │  Execution      │   │  Query           │
+                  │  Engine Service │   │  Proxy Service   │
+                  │                 │   │  (DB / API calls)│
+                  │  - DAG runner   │   └──────────────────┘
+                  │  - BullMQ worker│
+                  │  - Retry / DLQ  │
+                  └────────┬────────┘
+                           │
+          ┌────────────────┼────────────────┐
+          ▼                ▼                ▼
+┌──────────────┐  ┌──────────────┐  ┌────────────────┐
+│  Connector   │  │  Sandbox     │  │  Scheduler     │
+│  Registry    │  │  Runtime     │  │  Service       │
+│  Service     │  │  (V8 / Docker│  │  (polling,     │
+│              │  │   Isolates)  │  │   cron jobs)   │
+└──────────────┘  └──────────────┘  └────────────────┘
+
+                  ┌──────────────────────────────────┐
+                  │          DATA LAYER               │
+                  │  PostgreSQL  │  Redis  │  Vault   │
+                  └──────────────────────────────────┘
+```
+
+### Service Responsibilities
+
+| Service | Responsibility |
+|---------|---------------|
+| **API Gateway** | Auth enforcement, rate limiting, request routing, versioning |
+| **Auth Service** | JWT issuance, OAuth 2.0 flows, session management, MFA |
+| **Workflow API Service** | Workflow CRUD, trigger management, execution log queries |
+| **Execution Engine** | DAG execution, BullMQ worker, retries, DLQ, checkpoint writes |
+| **Scheduler Service** | Cron/interval scheduling, polling job management |
+| **Connector Registry** | Connector metadata, SDK validation, versioning, marketplace |
+| **Sandbox Runtime** | V8 Isolate pool, Docker container orchestration for code nodes |
+| **Builder API Service** | Dashboard/component CRUD, RBAC enforcement, data binding |
+| **Query Proxy Service** | Executes tenant-authorized queries against DBs and APIs |
+
+### Inter-Service Communication
+
+- **Synchronous:** REST (internal service mesh), GraphQL (externally via API Gateway).
+- **Asynchronous:** BullMQ (Redis-backed) for execution jobs, scheduling events, and webhook queuing.
+- **Service discovery:** DNS-based in Kubernetes; environment-injected base URLs in development.
+
+---
+
+## 3. Workflow Execution Engine Design
+
+> **Audience: Internal**
+
+### 3.1 DAG Model
+
+Every workflow is a Directed Acyclic Graph. Nodes represent actions or triggers; edges encode control flow.
+
+```typescript
+// Core DAG types
+interface WorkflowDAG {
+  workflowId: string;
+  nodes: Node[];
+  edges: Edge[];
+  version: number;
+}
+
+interface Node {
+  id: string;                       // UUID
+  type: NodeType;                   // trigger | action | condition | code | transformer
+  connectorId: string | null;       // null for built-in nodes
+  operationId: string;              // e.g. "slack.sendMessage"
+  config: Record<string, unknown>;  // static config
+  inputBindings: Binding[];         // dynamic references to prior node outputs
+  retryPolicy: RetryPolicy;
+  timeoutMs: number;
+}
+
+interface Edge {
+  id: string;
+  fromNodeId: string;
+  toNodeId: string;
+  condition?: ConditionExpression;  // for branching (if/else, switch)
+}
+
+interface Binding {
+  targetField: string;
+  expression: string; // JSONPath or template literal: "{{nodes.node1.output.email}}"
+}
+
+type NodeType = 'trigger' | 'action' | 'condition' | 'codeNode' | 'transformer' | 'merge';
+
+interface RetryPolicy {
+  maxAttempts: number;        // default: 3
+  backoffType: 'exponential' | 'fixed';
+  initialDelayMs: number;     // default: 1000
+  maxDelayMs: number;         // default: 60000
+  retryOnStatusCodes: number[];
+}
+```
+
+**Branching logic** is encoded via conditional edges. When a node with multiple outgoing edges is evaluated, the engine resolves the `condition` expressions in edge order and follows the first truthy branch. A node with no condition on its outgoing edges executes all branches in parallel (fan-out).
+
+### 3.2 Execution Lifecycle
+
+```
+QUEUED → RUNNING → [per-node: PENDING → EXECUTING → SUCCESS | FAILED | SKIPPED]
+                ↘ PAUSED (waiting for human approval node)
+                ↘ CANCELLED
+```
+
+**State machine rules:**
+- A workflow execution transitions to `RUNNING` when its first job is dequeued by a worker.
+- A workflow execution is `SUCCESS` only when all terminal nodes complete with `SUCCESS` or `SKIPPED`.
+- A single unrecoverable node failure transitions the execution to `FAILED` after DLQ exhaustion.
+
+### 3.3 Execution State Persistence (Checkpointing)
+
+Each node execution writes a checkpoint after completion. If the process crashes mid-execution, the engine replays only from the last successful checkpoint — it does not restart the entire workflow.
+
+```typescript
+interface ExecutionCheckpoint {
+  executionId: string;
+  nodeId: string;
+  attemptNumber: number;
+  status: 'success' | 'failed' | 'skipped';
+  output: Record<string, unknown>;   // stored as JSONB in PostgreSQL
+  errorDetails?: ErrorDetails;
+  completedAt: Date;
+}
+```
+
+Checkpoint writes are upserted atomically using `ON CONFLICT DO UPDATE` to tolerate duplicate delivery from BullMQ's at-least-once guarantee.
+
+### 3.4 BullMQ Job Schema
+
+Each node execution is a separate BullMQ job. The execution engine dequeues a job, runs the node, writes a checkpoint, and enqueues successor jobs.
+
+```typescript
+interface WorkflowJob {
+  // BullMQ job data payload
+  executionId: string;
+  workflowId: string;
+  tenantId: string;
+  nodeId: string;
+  attemptNumber: number;
+  triggerPayload: Record<string, unknown>;  // original trigger data
+  checkpointMap: Record<string, ExecutionCheckpoint>; // prior node outputs
+}
+
+// BullMQ queue options per job
+const jobOptions: JobsOptions = {
+  attempts: node.retryPolicy.maxAttempts,
+  backoff: {
+    type: 'exponential',
+    delay: node.retryPolicy.initialDelayMs,
+  },
+  removeOnComplete: { age: 60 * 60 * 24 * 7 },  // keep 7 days
+  removeOnFail: false,  // preserve for DLQ inspection
+};
+```
+
+### 3.5 Hybrid Trigger Architecture
+
+#### Webhook Triggers (Event-Driven)
+
+```
+External Service  →  POST /webhooks/{tenantId}/{workflowId}
+                              ↓
+                    Webhook Receiver (stateless HTTP handler)
+                              ↓ validates HMAC signature
+                    Enqueue WorkflowJob in BullMQ
+                              ↓
+                    Execution Engine Worker
+```
+
+The webhook receiver is a thin stateless handler. It validates the incoming request (HMAC signature or token check), persists the raw payload to a `webhook_events` table, and enqueues a `WorkflowJob`. It responds `200 OK` immediately (or `202 Accepted`) so external systems are not blocked.
+
+**Idempotency:** Webhook events include a deduplication key (typically from request headers like `Stripe-Signature` or `X-Idempotency-Key`). The receiver checks this against a Redis set with a 24-hour TTL before enqueuing.
+
+#### Polling Triggers (Scheduler-Driven)
+
+For APIs without webhook push support (e.g., polling a Google Sheets range, checking a database table for new rows):
+
+```
+Scheduler Service
+  └─ BullMQ repeatable job (cron expression stored in DB)
+        ↓ wakes up
+  Polling Node Executor
+        ↓ fetches data from external API
+        ↓ diffs against last_seen_cursor (stored in execution_state)
+        ↓ if new records found → enqueue downstream nodes
+```
+
+The cursor (last seen record ID, timestamp, or ETag) is stored in `workflow_trigger_state` per workflow per tenant. This enables stateful polling without re-processing old data.
+
+### 3.6 Dead-Letter Queue (DLQ)
+
+After a node exhausts its `maxAttempts`, BullMQ moves the job to a failed state. A separate DLQ processor reads failed jobs and:
+
+1. Writes a `DLQ_ENTRY` record to PostgreSQL with full context.
+2. Sends an alert (email/Slack) to the tenant's configured alert destination.
+3. Marks the workflow execution as `FAILED`.
+4. Makes the entry visible in the UI for manual retry or dismissal.
+
+Tenants can manually trigger a retry from the UI, which re-enqueues the job from the checkpoint immediately before the failing node.
+
+---
+
+## 4. Multi-Tenancy & Isolation Model
+
+> **Audience: Internal**
+
+### 4.1 PostgreSQL Tenant Partitioning
+
+**Strategy: Shared schema with `tenant_id` row-level isolation.**
+
+Every application table has a `tenant_id UUID NOT NULL` column. PostgreSQL Row Level Security (RLS) policies enforce that queries only touch rows belonging to the authenticated tenant's ID.
+
+```sql
+-- Enable RLS on all tenant-scoped tables
+ALTER TABLE workflows ENABLE ROW LEVEL SECURITY;
+
+-- RLS policy: set current tenant via session variable
+CREATE POLICY tenant_isolation ON workflows
+  USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
+
+-- Application sets this at the start of each DB session
+SET LOCAL app.current_tenant_id = '<uuid>';
+```
+
+The application sets `app.current_tenant_id` at the start of each transaction using a database middleware layer. Direct SQL access via DB tools must route through a privileged admin role that bypasses RLS and is locked down to internal tooling only.
+
+**Trade-off vs. schema-per-tenant:** Schema-per-tenant offers stronger physical isolation and easier tenant offboarding, but becomes operationally expensive beyond ~500 tenants (migration fan-out, connection pool pressure). Row-level isolation is simpler to operate at thousands-of-tenants scale.
+
+### 4.2 Queue Isolation
+
+BullMQ queue strategy by tenant tier:
+
+| Tier | Queue Strategy |
+|------|---------------|
+| **Starter** | Shared queue `workflow-jobs-shared`, tenant_id in job data |
+| **Growth** | Dedicated queue `workflow-jobs-{tenantId}` |
+| **Enterprise** | Dedicated queue + dedicated worker pool |
+
+Workers for shared queues enforce per-tenant concurrency limits using a Redis counter:
+```
+INCR tenant:{tenantId}:active_jobs
+EXPIRE tenant:{tenantId}:active_jobs 60
+-- if value > MAX_CONCURRENT, delay job by backoff
+```
+
+### 4.3 Sandbox Execution Model
+
+Custom Code nodes execute user-supplied JavaScript/TypeScript. Two sandbox levels:
+
+**Primary: V8 Isolates (via `isolated-vm` npm package)**
+- Sub-millisecond startup, low memory overhead.
+- CPU and memory limits enforced per isolate.
+- No access to Node.js built-ins (`require`, `fs`, `net`) — only a curated API surface is injected.
+- Suitable for: data transformation, conditional logic, string manipulation.
+
+**Fallback: Docker Containers**
+- Used when tenant selects "full code node" (arbitrary npm packages).
+- Containers are pulled from a pre-approved base image registry.
+- Network egress is restricted via iptables rules to an allowlist the tenant configures.
+- Each execution gets a fresh container; containers are never reused across tenants.
+- Container lifetime is bounded by the node's `timeoutMs`.
+
+```typescript
+// Sandbox API surface injected into V8 Isolate
+interface SandboxContext {
+  input: Record<string, unknown>;    // current node input
+  $nodes: Record<string, unknown>;   // outputs of prior nodes
+  $env: Record<string, string>;      // tenant env vars (resolved from Vault)
+  $http: {
+    get(url: string, options?: RequestInit): Promise<Response>;
+    post(url: string, body: unknown, options?: RequestInit): Promise<Response>;
+  };
+  console: { log(...args: unknown[]): void };
+}
+```
+
+### 4.4 Secrets Management Flow
+
+```
+Tenant configures credential (e.g., Slack OAuth token)
+              ↓
+Auth Service encrypts with tenant-specific Vault transit key
+              ↓
+Vault stores the ciphertext; returns a secret path:
+  secret/tenants/{tenantId}/connectors/{connectorId}/{credentialId}
+              ↓
+Application DB stores ONLY the Vault path (never plaintext)
+              ↓
+At execution time: Execution Engine calls Vault with short-lived AppRole token
+              ↓
+Vault returns plaintext secret → injected into sandbox context
+              ↓
+Secret is held in memory only for the duration of the node execution
+```
+
+**Encryption at rest:** Vault's storage backend is encrypted. The application database stores no secret material. Vault audit logs capture every secret access with `tenant_id`, `executor_id`, and `execution_id`.
+
+**Key rotation:** Vault transit keys are rotated quarterly. Vault automatically re-wraps stored secrets on rotation; no application-level migration is required.
+
+---
+
+## 5. Connector Marketplace Architecture
+
+### 5.1 Connector SDK Interface
+
+> **Audience: External / SDK**
+
+Every connector is a TypeScript package that implements the `ConnectorDefinition` interface. The SDK is published to npm as `@autoflow/connector-sdk`.
+
+```typescript
+// @autoflow/connector-sdk — core types
+
+export interface ConnectorDefinition {
+  metadata: ConnectorMetadata;
+  auth: AuthConfig;
+  operations: OperationDefinition[];
+  triggerDefinitions?: TriggerDefinition[];
+  webhookHandlers?: WebhookHandlerMap;
+}
+
+export interface ConnectorMetadata {
+  id: string;              // reverse-domain: com.slack.autoflow
+  name: string;            // "Slack"
+  description: string;
+  version: string;         // semver
+  iconUrl: string;
+  categories: ConnectorCategory[];
+  documentationUrl: string;
+  supportEmail: string;
+}
+
+export interface OperationDefinition {
+  id: string;              // "sendMessage"
+  name: string;            // "Send Message"
+  description: string;
+  inputSchema: JSONSchema7;
+  outputSchema: JSONSchema7;
+  execute: (context: OperationContext) => Promise<OperationResult>;
+}
+
+export interface TriggerDefinition {
+  id: string;
+  name: string;
+  type: 'webhook' | 'polling';
+  outputSchema: JSONSchema7;
+  // For polling triggers only:
+  poll?: (context: PollContext) => Promise<PollResult>;
+  // For webhook triggers only:
+  webhookSetup?: (context: WebhookSetupContext) => Promise<WebhookSetupResult>;
+  webhookTeardown?: (context: WebhookSetupContext) => Promise<void>;
+}
+
+export interface OperationContext {
+  auth: ResolvedCredential;           // decrypted at runtime by platform
+  input: Record<string, unknown>;
+  logger: Logger;
+  abortSignal: AbortSignal;
+}
+
+export interface OperationResult {
+  success: boolean;
+  output?: Record<string, unknown>;
+  error?: { code: string; message: string; retryable: boolean };
+}
+
+export type ConnectorCategory =
+  | 'communication' | 'crm' | 'database'
+  | 'payment' | 'storage' | 'analytics' | 'ai' | 'other';
+```
+
+### 5.2 Auth Integration Patterns
+
+**OAuth 2.0 (Slack, HubSpot, Salesforce)**
+
+```typescript
+export interface OAuth2Config {
+  type: 'oauth2';
+  authorizationUrl: string;
+  tokenUrl: string;
+  scopes: string[];
+  pkce: boolean;                // recommended: true
+  tokenRefreshBuffer: number;   // seconds before expiry to refresh
+}
+
+// Platform handles the OAuth dance; connector receives resolved tokens:
+export interface OAuth2Credential {
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt: Date;
+  scopes: string[];
+  rawResponse: Record<string, unknown>;
+}
+```
+
+The platform's Auth Service manages the OAuth callback endpoint (`/auth/oauth/callback/{connectorId}`), exchanges the code for tokens, and stores tokens encrypted in Vault. Connectors never handle raw tokens directly.
+
+**API Key (PostgreSQL, MongoDB, REST APIs)**
+
+```typescript
+export interface ApiKeyConfig {
+  type: 'apiKey';
+  fields: ApiKeyField[];   // defines what the user must provide
+}
+
+export interface ApiKeyField {
+  key: string;             // "host", "port", "username", "password"
+  label: string;
+  type: 'string' | 'password' | 'number';
+  required: boolean;
+  placeholder?: string;
+}
+```
+
+**Webhooks (Stripe, PayPal, WhatsApp)**
+
+```typescript
+export interface WebhookConfig {
+  type: 'webhook';
+  signatureValidation: {
+    algorithm: 'hmac-sha256' | 'hmac-sha512' | 'rsa';
+    headerName: string;    // e.g., "Stripe-Signature"
+    secretField: string;   // key in credential that holds the signing secret
+  };
+}
+
+// Connector implements this to validate incoming webhook payloads
+export type WebhookValidator = (
+  payload: Buffer,
+  headers: Record<string, string>,
+  credential: ResolvedCredential
+) => Promise<boolean>;
+```
+
+### 5.3 Connector Registry Data Model
+
+```sql
+CREATE TABLE connectors (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug            TEXT NOT NULL UNIQUE,              -- "slack", "hubspot"
+  name            TEXT NOT NULL,
+  description     TEXT,
+  icon_url        TEXT,
+  categories      TEXT[] NOT NULL DEFAULT '{}',
+  auth_type       TEXT NOT NULL,                     -- 'oauth2' | 'apiKey' | 'webhook'
+  publisher_id    UUID REFERENCES users(id),
+  is_verified     BOOLEAN NOT NULL DEFAULT false,    -- platform-verified connectors
+  status          TEXT NOT NULL DEFAULT 'draft',     -- draft | review | published | deprecated
+  latest_version  TEXT NOT NULL,
+  npm_package     TEXT NOT NULL,                     -- "@autoflow/connector-slack"
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE connector_versions (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  connector_id    UUID NOT NULL REFERENCES connectors(id),
+  version         TEXT NOT NULL,                     -- semver
+  changelog       TEXT,
+  npm_tag         TEXT NOT NULL,                     -- exact npm dist-tag
+  schema_snapshot JSONB NOT NULL,                    -- snapshot of ConnectorDefinition at publish time
+  is_breaking     BOOLEAN NOT NULL DEFAULT false,
+  published_at    TIMESTAMPTZ,
+  deprecated_at   TIMESTAMPTZ,
+  UNIQUE(connector_id, version)
+);
+```
+
+### 5.4 Connector Versioning & Lifecycle
+
+**Versioning strategy:** Connectors use semver. The platform pins each workflow node to a specific connector version at save time (`connector_version_id` on the `workflow_nodes` table). Tenants can opt into upgrades explicitly.
+
+```
+Lifecycle states:
+  draft → review → published → deprecated
+               ↘ rejected (back to draft with review notes)
+```
+
+**Submission process:**
+1. Developer publishes connector package to npm (`@autoflow/connector-{slug}@x.y.z`).
+2. Developer calls `POST /api/v1/marketplace/connectors/{id}/submit` with the npm tag.
+3. Platform runs automated checks: TypeScript compilation, schema validation, sandbox smoke test.
+4. Platform reviewer approves → status moves to `published`.
+5. Deprecated connectors show warnings in the UI; workflows pinned to them continue working but cannot be created anew with that version.
+
+---
+
+## 6. Low-Code Builder Backend
+
+> **Audience: Internal**
+
+### 6.1 Component & Layout Data Model
+
+Dashboards are composed of Pages, which contain Layout Grids, which contain Components. This hierarchy is persisted as JSONB for flexibility.
+
+```typescript
+interface Dashboard {
+  id: string;
+  tenantId: string;
+  name: string;
+  slug: string;
+  pages: Page[];
+  globalVariables: Variable[];
+}
+
+interface Page {
+  id: string;
+  name: string;
+  layout: LayoutGrid;
+  queries: QueryDefinition[];   // page-scoped queries
+}
+
+interface LayoutGrid {
+  columns: number;               // default: 12
+  rowHeight: number;             // px
+  items: LayoutItem[];
+}
+
+interface LayoutItem {
+  componentId: string;
+  x: number; y: number;
+  w: number; h: number;
+}
+
+interface Component {
+  id: string;
+  type: ComponentType;
+  label: string;
+  props: Record<string, PropValue>;   // static or bound values
+  events: EventBinding[];             // e.g., onClick → run query / navigate
+  visibility: VisibilityCondition;
+}
+
+type ComponentType =
+  | 'table' | 'form' | 'button' | 'text' | 'chart'
+  | 'select' | 'dateRangePicker' | 'fileUpload' | 'modal';
+
+interface PropValue {
+  type: 'static' | 'binding';
+  value?: unknown;                    // for static
+  expression?: string;                // for binding: "{{queries.getUsers.data}}"
+}
+```
+
+### 6.2 Data Source Binding Model
+
+```typescript
+interface QueryDefinition {
+  id: string;
+  name: string;                        // "getUsers"
+  dataSourceId: string;
+  type: 'sql' | 'rest' | 'graphql';
+  body: string;                        // SQL text or URL template
+  variables: QueryVariable[];          // parameterized inputs
+  transformScript?: string;            // optional JS to reshape response
+  cachePolicy: CachePolicy;
+  runTrigger: 'onLoad' | 'manual';
+}
+
+interface DataSource {
+  id: string;
+  tenantId: string;
+  name: string;
+  type: 'postgres' | 'mysql' | 'mongodb' | 'rest' | 'graphql';
+  connectionConfig: Record<string, unknown>; // host, port, db (not credentials)
+  vaultCredentialPath: string;               // Vault path for DB credentials
+}
+
+interface CachePolicy {
+  enabled: boolean;
+  ttlSeconds: number;
+}
+```
+
+### 6.3 Query Execution Pipeline
+
+```
+User triggers query (UI event or onLoad)
+            ↓
+Builder API Service receives request
+            ↓ RBAC check: does this user have READ permission on this query?
+Query Proxy Service
+            ↓ resolves data source credential from Vault
+            ↓ validates parameterized inputs (prevents SQL injection via parameterization)
+            ↓ applies row limit (configurable max: 10,000 rows)
+            ↓ executes query with timeout (default: 30s)
+            ↓ applies transformScript in V8 Isolate (if present)
+            ↓
+Response sent to client
+            ↓ cached in Redis if CachePolicy.enabled
+```
+
+### 6.4 RBAC Data Model
+
+RBAC is hierarchical: permissions cascade down from tenant → dashboard → page → component → query, but can be overridden at each level.
+
+```sql
+-- Permission scopes (composite primary key approach)
+CREATE TABLE rbac_roles (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id   UUID NOT NULL REFERENCES tenants(id),
+  name        TEXT NOT NULL,                -- "Admin", "Editor", "Viewer"
+  is_system   BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE TABLE rbac_permissions (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  role_id       UUID NOT NULL REFERENCES rbac_roles(id),
+  resource_type TEXT NOT NULL,  -- 'dashboard' | 'page' | 'component' | 'query' | 'datasource'
+  resource_id   UUID,           -- NULL = applies to all resources of this type in tenant
+  action        TEXT NOT NULL,  -- 'read' | 'write' | 'execute' | 'admin'
+  effect        TEXT NOT NULL DEFAULT 'allow',  -- 'allow' | 'deny'
+  UNIQUE(role_id, resource_type, resource_id, action)
+);
+
+CREATE TABLE rbac_user_roles (
+  user_id     UUID NOT NULL REFERENCES users(id),
+  role_id     UUID NOT NULL REFERENCES rbac_roles(id),
+  tenant_id   UUID NOT NULL REFERENCES tenants(id),
+  granted_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  granted_by  UUID REFERENCES users(id),
+  PRIMARY KEY (user_id, role_id, tenant_id)
+);
+```
+
+**Permission resolution algorithm:**
+
+```typescript
+function resolvePermission(
+  userId: string,
+  action: string,
+  resourceType: string,
+  resourceId: string
+): 'allow' | 'deny' {
+  // 1. Collect all roles for user in tenant
+  // 2. Collect all permissions for those roles matching (resourceType, resourceId) or (resourceType, null)
+  // 3. More specific resource_id overrides null (wildcard)
+  // 4. 'deny' overrides 'allow' at the same specificity level
+  // 5. If no permission found → default deny
+}
+```
+
+---
+
+## 7. API Contracts
+
+### 7.1 Authentication
+
+All requests must include:
+```
+Authorization: Bearer <jwt_token>
+X-Tenant-ID: <tenant_uuid>
+```
+
+JWT claims:
+```json
+{
+  "sub": "user_uuid",
+  "tenant_id": "tenant_uuid",
+  "roles": ["editor"],
+  "exp": 1720000000
+}
+```
+
+### 7.2 REST API — Workflows
+
+**Create Workflow**
+```
+POST /api/v1/workflows
+
+Request:
+{
+  "name": "New Lead Notification",
+  "description": "Notify Slack when HubSpot lead created",
+  "dag": {
+    "nodes": [...],
+    "edges": [...]
+  },
+  "tags": ["crm", "notifications"]
+}
+
+Response 201:
+{
+  "id": "wf_01j...",
+  "name": "New Lead Notification",
+  "status": "draft",
+  "version": 1,
+  "createdAt": "2025-01-15T10:00:00Z"
+}
+```
+
+**List Workflows**
+```
+GET /api/v1/workflows?status=active&page=1&limit=20
+
+Response 200:
+{
+  "data": [{ "id": "...", "name": "...", "status": "active", "lastRunAt": "..." }],
+  "pagination": { "page": 1, "limit": 20, "total": 47 }
+}
+```
+
+**Get Execution Logs**
+```
+GET /api/v1/workflows/{workflowId}/executions?status=failed&from=2025-01-01&limit=50
+
+Response 200:
+{
+  "data": [{
+    "executionId": "ex_01j...",
+    "status": "failed",
+    "triggeredAt": "2025-01-14T09:22:00Z",
+    "completedAt": "2025-01-14T09:22:05Z",
+    "failedNodeId": "node_03",
+    "error": { "code": "CONNECTOR_TIMEOUT", "message": "Slack API timed out" }
+  }]
+}
+```
+
+**Retry Execution from Checkpoint**
+```
+POST /api/v1/executions/{executionId}/retry
+
+Request:
+{
+  "fromNodeId": "node_03"   // optional; defaults to last failed node
+}
+
+Response 202:
+{
+  "newExecutionId": "ex_01k...",
+  "status": "queued"
+}
+```
+
+### 7.3 REST API — Connectors
+
+> **Audience: External / SDK**
+
+**List Published Connectors**
+```
+GET /api/v1/marketplace/connectors?category=crm&q=hubspot
+
+Response 200:
+{
+  "data": [{
+    "id": "conn_hubspot",
+    "slug": "hubspot",
+    "name": "HubSpot",
+    "version": "2.4.1",
+    "categories": ["crm"],
+    "authType": "oauth2",
+    "isVerified": true
+  }]
+}
+```
+
+**Submit Connector Version**
+```
+POST /api/v1/marketplace/connectors/{connectorId}/versions
+
+Request:
+{
+  "version": "2.5.0",
+  "npmTag": "@autoflow/connector-hubspot@2.5.0",
+  "changelog": "Added contact enrichment operation",
+  "isBreaking": false
+}
+
+Response 202:
+{
+  "versionId": "cv_01j...",
+  "status": "review",
+  "estimatedReviewDays": 3
+}
+```
+
+### 7.4 GraphQL Schema Excerpts
+
+```graphql
+type Query {
+  workflow(id: ID!): Workflow
+  workflows(filter: WorkflowFilter, pagination: PaginationInput): WorkflowConnection
+  execution(id: ID!): Execution
+  dashboard(id: ID!): Dashboard
+  connectors(filter: ConnectorFilter): [Connector!]!
+}
+
+type Mutation {
+  createWorkflow(input: CreateWorkflowInput!): Workflow!
+  updateWorkflow(id: ID!, input: UpdateWorkflowInput!): Workflow!
+  activateWorkflow(id: ID!): Workflow!
+  retryExecution(id: ID!, fromNodeId: ID): Execution!
+  createDashboard(input: CreateDashboardInput!): Dashboard!
+  upsertPermission(input: PermissionInput!): Permission!
+}
+
+type Subscription {
+  executionUpdated(executionId: ID!): ExecutionEvent!
+  workflowExecutionStarted(workflowId: ID!): Execution!
+}
+
+type Workflow {
+  id: ID!
+  name: String!
+  status: WorkflowStatus!
+  version: Int!
+  dag: WorkflowDAG!
+  executions(filter: ExecutionFilter): ExecutionConnection!
+  triggers: [TriggerConfig!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Execution {
+  id: ID!
+  status: ExecutionStatus!
+  nodeExecutions: [NodeExecution!]!
+  triggeredAt: DateTime!
+  completedAt: DateTime
+  durationMs: Int
+}
+
+enum WorkflowStatus { DRAFT ACTIVE PAUSED ARCHIVED }
+enum ExecutionStatus { QUEUED RUNNING SUCCESS FAILED CANCELLED PAUSED }
+```
+
+### 7.5 API Versioning & Rate Limiting
+
+**Versioning:** URL prefix (`/api/v1/`, `/api/v2/`). Breaking changes always bump the major version. Minor additions are backward-compatible within a version.
+
+**Rate limits (enforced at API Gateway via Redis token buckets):**
+
+| Endpoint Group | Limit |
+|---------------|-------|
+| General API | 1,000 req/min per tenant |
+| Webhook ingestion | 10,000 req/min per tenant |
+| Connector marketplace (read) | 500 req/min per API key |
+| Execution retry | 50 req/min per tenant |
+
+Headers returned: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
+
+---
+
+## 8. Database Schema
+
+### Core Tables
+
+```sql
+-- Tenants
+CREATE TABLE tenants (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name            TEXT NOT NULL,
+  slug            TEXT NOT NULL UNIQUE,
+  plan            TEXT NOT NULL DEFAULT 'starter',
+  max_workflows   INT NOT NULL DEFAULT 10,
+  max_concurrent  INT NOT NULL DEFAULT 10,
+  vault_namespace TEXT NOT NULL,            -- Vault namespace for this tenant
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at      TIMESTAMPTZ
+);
+
+-- Users
+CREATE TABLE users (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id       UUID NOT NULL REFERENCES tenants(id),
+  email           TEXT NOT NULL,
+  name            TEXT NOT NULL,
+  password_hash   TEXT,
+  mfa_secret      TEXT,                     -- TOTP secret (encrypted at rest)
+  last_login_at   TIMESTAMPTZ,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(tenant_id, email)
+);
+
+-- Workflows
+CREATE TABLE workflows (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id       UUID NOT NULL REFERENCES tenants(id),
+  name            TEXT NOT NULL,
+  description     TEXT,
+  status          TEXT NOT NULL DEFAULT 'draft',
+  version         INT NOT NULL DEFAULT 1,
+  dag             JSONB NOT NULL,           -- WorkflowDAG as JSONB
+  tags            TEXT[] NOT NULL DEFAULT '{}',
+  created_by      UUID REFERENCES users(id),
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX workflows_tenant_status ON workflows(tenant_id, status);
+
+-- Workflow Trigger State (for polling cursors)
+CREATE TABLE workflow_trigger_state (
+  workflow_id     UUID PRIMARY KEY REFERENCES workflows(id),
+  tenant_id       UUID NOT NULL REFERENCES tenants(id),
+  trigger_node_id TEXT NOT NULL,
+  cursor          JSONB,                    -- last seen record ID / timestamp / etag
+  last_polled_at  TIMESTAMPTZ
+);
+
+-- Executions
+CREATE TABLE workflow_executions (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id       UUID NOT NULL REFERENCES tenants(id),
+  workflow_id     UUID NOT NULL REFERENCES workflows(id),
+  workflow_version INT NOT NULL,
+  status          TEXT NOT NULL DEFAULT 'queued',
+  trigger_type    TEXT NOT NULL,            -- 'webhook' | 'schedule' | 'manual'
+  trigger_payload JSONB,
+  triggered_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at    TIMESTAMPTZ,
+  duration_ms     INT
+);
+CREATE INDEX executions_workflow ON workflow_executions(workflow_id, triggered_at DESC);
+CREATE INDEX executions_tenant_status ON workflow_executions(tenant_id, status);
+
+-- Node Execution Checkpoints
+CREATE TABLE node_execution_checkpoints (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  execution_id    UUID NOT NULL REFERENCES workflow_executions(id),
+  tenant_id       UUID NOT NULL REFERENCES tenants(id),
+  node_id         TEXT NOT NULL,
+  attempt_number  INT NOT NULL DEFAULT 1,
+  status          TEXT NOT NULL,
+  output          JSONB,
+  error_details   JSONB,
+  completed_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(execution_id, node_id)
+);
+
+-- DLQ Entries
+CREATE TABLE dlq_entries (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id       UUID NOT NULL REFERENCES tenants(id),
+  execution_id    UUID REFERENCES workflow_executions(id),
+  node_id         TEXT,
+  job_data        JSONB NOT NULL,
+  error_details   JSONB NOT NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  resolved_at     TIMESTAMPTZ,
+  resolution      TEXT                      -- 'retried' | 'dismissed'
+);
+
+-- Connectors (registry)
+CREATE TABLE connectors (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug            TEXT NOT NULL UNIQUE,
+  name            TEXT NOT NULL,
+  description     TEXT,
+  icon_url        TEXT,
+  categories      TEXT[] NOT NULL DEFAULT '{}',
+  auth_type       TEXT NOT NULL,
+  publisher_id    UUID REFERENCES users(id),
+  is_verified     BOOLEAN NOT NULL DEFAULT false,
+  status          TEXT NOT NULL DEFAULT 'draft',
+  latest_version  TEXT NOT NULL,
+  npm_package     TEXT NOT NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Connector Versions
+CREATE TABLE connector_versions (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  connector_id    UUID NOT NULL REFERENCES connectors(id),
+  version         TEXT NOT NULL,
+  changelog       TEXT,
+  npm_tag         TEXT NOT NULL,
+  schema_snapshot JSONB NOT NULL,
+  is_breaking     BOOLEAN NOT NULL DEFAULT false,
+  published_at    TIMESTAMPTZ,
+  deprecated_at   TIMESTAMPTZ,
+  UNIQUE(connector_id, version)
+);
+
+-- Tenant Credentials (Vault paths only)
+CREATE TABLE tenant_credentials (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id       UUID NOT NULL REFERENCES tenants(id),
+  connector_id    UUID NOT NULL REFERENCES connectors(id),
+  name            TEXT NOT NULL,            -- user-given label, e.g., "Production Slack"
+  vault_path      TEXT NOT NULL,            -- e.g. secret/tenants/{id}/connectors/{cid}/{credId}
+  auth_type       TEXT NOT NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_used_at    TIMESTAMPTZ
+);
+
+-- Dashboards
+CREATE TABLE dashboards (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id       UUID NOT NULL REFERENCES tenants(id),
+  name            TEXT NOT NULL,
+  slug            TEXT NOT NULL,
+  definition      JSONB NOT NULL,           -- full Dashboard object as JSONB
+  created_by      UUID REFERENCES users(id),
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(tenant_id, slug)
+);
+
+-- Data Sources
+CREATE TABLE data_sources (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id       UUID NOT NULL REFERENCES tenants(id),
+  name            TEXT NOT NULL,
+  type            TEXT NOT NULL,
+  connection_config JSONB NOT NULL,         -- host/port/db (no secrets)
+  vault_credential_path TEXT NOT NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- RBAC
+CREATE TABLE rbac_roles (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id   UUID NOT NULL REFERENCES tenants(id),
+  name        TEXT NOT NULL,
+  is_system   BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE TABLE rbac_permissions (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  role_id       UUID NOT NULL REFERENCES rbac_roles(id),
+  resource_type TEXT NOT NULL,
+  resource_id   UUID,
+  action        TEXT NOT NULL,
+  effect        TEXT NOT NULL DEFAULT 'allow',
+  UNIQUE(role_id, resource_type, resource_id, action)
+);
+
+CREATE TABLE rbac_user_roles (
+  user_id     UUID NOT NULL REFERENCES users(id),
+  role_id     UUID NOT NULL REFERENCES rbac_roles(id),
+  tenant_id   UUID NOT NULL REFERENCES tenants(id),
+  granted_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  granted_by  UUID REFERENCES users(id),
+  PRIMARY KEY (user_id, role_id, tenant_id)
+);
+
+-- Audit Log
+CREATE TABLE audit_log (
+  id            BIGSERIAL PRIMARY KEY,
+  tenant_id     UUID NOT NULL REFERENCES tenants(id),
+  actor_id      UUID REFERENCES users(id),
+  actor_type    TEXT NOT NULL,             -- 'user' | 'system' | 'api_key'
+  action        TEXT NOT NULL,             -- 'workflow.created' | 'secret.accessed' etc.
+  resource_type TEXT,
+  resource_id   TEXT,
+  metadata      JSONB,
+  ip_address    INET,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- Partition by month for write performance at scale
+CREATE INDEX audit_log_tenant_time ON audit_log(tenant_id, created_at DESC);
+```
+
+---
+
+## 9. Security Architecture
+
+### 9.1 Secret Encryption Flow
+
+1. **Input:** Tenant submits credential via UI (e.g., Slack OAuth token after redirect).
+2. **Transit encryption:** Auth Service calls Vault's Transit Secrets Engine to encrypt the credential with the tenant's transit key.
+3. **Storage:** The ciphertext and Vault path are stored in `tenant_credentials`. The plaintext is discarded immediately.
+4. **Runtime decryption:** Execution Engine authenticates to Vault using a short-lived AppRole token (30-minute TTL). Vault verifies the token and decrypts the credential.
+5. **Injection:** Decrypted value is injected into the sandbox context. It never touches the application database.
+6. **Audit:** Every decrypt call is logged in Vault's audit log and mirrored to the `audit_log` table.
+
+### 9.2 Sandbox Isolation Guarantees
+
+| Threat | V8 Isolate Mitigation | Docker Mitigation |
+|--------|----------------------|-------------------|
+| CPU exhaustion | CPU time limit per isolate | cgroups CPU quota |
+| Memory exhaustion | `maxOldSpaceSize` limit | cgroups memory limit |
+| Network access | No Node.js `net` module | iptables egress allowlist |
+| Filesystem access | No `fs` module | Read-only rootfs, tmpfs for writes |
+| Tenant data leakage | Separate isolate per execution | Separate container per execution |
+| Infinite loops | Interrupt signal after timeout | Container killed after timeoutMs |
+
+### 9.3 OAuth Token Lifecycle
+
+```
+User initiates OAuth → platform redirects to provider
+     ↓
+Provider redirects to /auth/oauth/callback/{connectorId}
+     ↓ Auth Service exchanges code for access + refresh tokens
+     ↓ Tokens encrypted and stored in Vault
+     ↓ Vault path stored in tenant_credentials
+     ↓
+At execution time:
+     ↓ Engine fetches token from Vault
+     ↓ Checks expiry: if within tokenRefreshBuffer → refresh
+     ↓ On refresh: call provider token endpoint, store new tokens in Vault
+     ↓ Invalidate old tokens (call provider revoke endpoint where supported)
+```
+
+Token refresh is handled transparently. Connectors receive a valid token every time; they never implement refresh logic themselves.
+
+### 9.4 Audit Logging
+
+All security-relevant events are written to `audit_log`:
+
+| Event Category | Examples |
+|---------------|---------|
+| Auth events | login, logout, failed login, MFA challenge |
+| Secret access | credential decrypted, secret rotated |
+| Workflow changes | created, updated, deleted, activated |
+| RBAC changes | role assigned, permission granted/revoked |
+| Connector lifecycle | submitted, approved, deprecated |
+| Data queries | query executed (includes datasource_id, not query text) |
+
+Audit log rows are append-only. No UPDATE or DELETE is permitted on the `audit_log` table (enforced via PostgreSQL trigger + restricted role).
+
+---
+
+## 10. Scalability & Operational Considerations
+
+### 10.1 Horizontal Scaling
+
+All services are stateless and can be scaled horizontally behind a load balancer:
+
+| Service | Scaling Lever |
+|---------|--------------|
+| API Gateway | Replicas behind AWS ALB / nginx |
+| Workflow API Service | Stateless; scale by CPU/RPS |
+| Execution Engine | Scale BullMQ workers; each worker processes one job at a time |
+| Sandbox Runtime | V8 Isolate pool per worker; Docker via Kubernetes job spawning |
+| Scheduler Service | **Single leader election** via Redis lock (avoid duplicate cron triggers) |
+| Query Proxy | Stateless; scale by CPU |
+
+PostgreSQL is the primary stateful component. Use read replicas for execution log queries and dashboard data reads. PgBouncer manages connection pooling (transaction mode) to keep connection count bounded as worker count grows.
+
+### 10.2 Queue Throughput Estimates
+
+Target: 10–100 concurrent executions per tenant, N tenants.
+
+```
+Assumptions (conservative):
+  - Average workflow: 5 nodes
+  - Average node execution time: 800ms
+  - Webhook burst: 500 req/sec across all tenants
+
+Single BullMQ worker throughput:
+  - 1 concurrent job per worker process (BullMQ default)
+  - With 5 nodes/workflow at 800ms each: ~1.25 workflows/worker/sec
+  - For 100 concurrent executions at a tenant: ~8 dedicated workers
+
+At 1,000 Growth-tier tenants:
+  - Shared worker pool: 200–500 workers handles the load
+  - Redis throughput: ~10,000 jobs/sec (single Redis instance handles this comfortably)
+
+Webhook ingestion:
+  - Webhook receiver is stateless HTTP → scale to handle 10k req/sec
+  - Each webhook enqueues 1 job → Redis write throughput must match
+  - Redis Cluster with 3 shards comfortably handles 50k writes/sec
+```
+
+### 10.3 Observability Stack
+
+**Logging:** Structured JSON logs (via `pino`) with fields: `tenant_id`, `execution_id`, `node_id`, `trace_id`, `level`, `message`. Shipped to an ELK or Loki stack.
+
+**Metrics (Prometheus + Grafana):**
+- `workflow_executions_total{status, tenant_tier}`
+- `node_execution_duration_ms{connector_id, operation_id}`
+- `bullmq_queue_depth{queue_name}`
+- `bullmq_job_failures_total{queue_name, error_code}`
+- `api_request_duration_ms{method, path, status}`
+- `vault_secret_access_total{tenant_id}`
+
+**Distributed Tracing (OpenTelemetry → Jaeger or Tempo):**
+- Every workflow execution carries a root `trace_id`.
+- Each node execution is a child span.
+- Vault and database calls are instrumented as sub-spans.
+- Webhook ingestion through execution completion is fully traceable.
+
+**Alerting thresholds:**
+- BullMQ queue depth > 10,000 jobs → PagerDuty alert.
+- DLQ entries > 100 in 5 minutes → incident channel notification.
+- P99 execution latency > 30s → warning alert.
+- Vault secret access error rate > 1% → critical alert.
+
+---
+
+## 11. Open Questions & Future Considerations
+
+### Known Trade-offs
+
+| Decision | Trade-off |
+|----------|-----------|
+| Row-level tenancy over schema-per-tenant | Easier operations; slightly weaker physical isolation; RLS bugs could affect multiple tenants |
+| V8 Isolates as primary sandbox | Lower overhead than Docker; limited to JS/TS only; requires careful API surface design |
+| BullMQ + Redis over Kafka | Simpler ops; Redis is a single point of failure for job queues; Kafka preferred for >100k events/sec |
+| Monorepo services (Node.js) | Faster initial development; may need language diversity (Python for ML connectors) later |
+
+### Deferred Decisions
+
+1. **Schema-per-tenant migration path:** If a large enterprise customer requires stronger isolation, the schema migration tooling should be designed now even if not activated. Recommendation: evaluate at 5,000+ tenants.
+
+2. **Workflow versioning & rollback:** The current schema stores `version` as an integer but does not persist historical DAG snapshots. Consider storing previous versions in a `workflow_versions` table to enable rollback.
+
+3. **Real-time collaboration on dashboards:** The builder currently uses last-write-wins. Operational Transform or CRDT-based conflict resolution (e.g., Yjs) should be evaluated if multiple simultaneous editors become a user request.
+
+4. **Connector sandboxing in marketplace:** Currently the connector npm package runs in the platform's Node.js process (after review). Long-term, each third-party connector should run in its own V8 Isolate or lightweight container to prevent supply chain attacks.
+
+5. **Multi-region deployment:** The current architecture is single-region. Adding a second region requires: active-active or active-passive PostgreSQL (Patroni or AWS Aurora Global), Redis Cluster replication, and tenant affinity routing at the API Gateway.
+
+6. **AI-native nodes:** A native LLM node type (OpenAI, Anthropic, Gemini) should be a first-class node type with built-in prompt templating, model selection, and token usage metering per tenant.
+
+7. **Billing & metering:** Workflow execution counts, node execution counts, and data query row counts should be metered to Stripe/usage billing infra. A `metering_events` table with a background billing flush process is the recommended approach.
+
+---
+
+*End of Document — v1.0*
