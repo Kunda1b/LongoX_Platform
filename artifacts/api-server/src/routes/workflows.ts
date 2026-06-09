@@ -153,6 +153,46 @@ router.post("/workflows/:id/run", async (req, res): Promise<void> => {
   });
 });
 
+router.post("/workflows/:id/publish", async (req, res): Promise<void> => {
+  const params = GetWorkflowParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+  const [workflow] = await db.select().from(workflowsTable).where(eq(workflowsTable.id, params.data.id));
+  if (!workflow) { res.status(404).json({ error: "Workflow not found" }); return; }
+
+  const changeNote = (req.body as { changeNote?: string })?.changeNote ?? "Published";
+
+  const existing = await db.select({ version: workflowVersionsTable.version })
+    .from(workflowVersionsTable)
+    .where(eq(workflowVersionsTable.workflowId, params.data.id))
+    .orderBy(desc(workflowVersionsTable.version)).limit(1);
+  const nextVersion = (existing[0]?.version ?? 0) + 1;
+
+  const [version] = await db.insert(workflowVersionsTable).values({
+    workflowId: params.data.id,
+    version: nextVersion,
+    name: workflow.name,
+    nodes: (workflow.nodes ?? []) as Parameters<typeof db.insert>[0],
+    changeNote,
+    published: true,
+  }).returning();
+
+  await db.update(workflowsTable).set({ status: "active" }).where(eq(workflowsTable.id, params.data.id));
+
+  await writeAudit("workflow.published", "workflow", String(workflow.id), { version: nextVersion, changeNote }, "user");
+
+  res.status(201).json({
+    id: version.id,
+    workflowId: version.workflowId,
+    version: version.version,
+    name: version.name,
+    nodes: version.nodes,
+    changeNote: version.changeNote ?? null,
+    published: version.published,
+    createdAt: version.createdAt.toISOString(),
+  });
+});
+
 router.post("/workflows/:id/duplicate", async (req, res): Promise<void> => {
   const params = GetWorkflowParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }

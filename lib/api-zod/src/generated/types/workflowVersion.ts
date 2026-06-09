@@ -15,5 +15,6 @@ export interface WorkflowVersion {
   nodes: WorkflowNode[];
   /** @nullable */
   changeNote?: string | null;
+  published: boolean;
   createdAt: string;
 }

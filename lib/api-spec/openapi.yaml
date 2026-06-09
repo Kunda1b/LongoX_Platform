@@ -17,6 +17,8 @@ tags:
     description: Workflow execution history
   - name: apps
     description: Low-code internal apps and dashboards
+  - name: dashboards
+    description: Dashboard builder and management
   - name: dashboard
     description: Platform overview and summaries
   - name: templates
@@ -27,6 +29,8 @@ tags:
     description: Available workflow node types
   - name: analytics
     description: Execution analytics and process insights
+  - name: audit
+    description: Audit log
 
 paths:
   /healthz:
@@ -453,6 +457,161 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/WorkflowVersion"
+
+  /workflows/{id}/publish:
+    post:
+      operationId: publishWorkflow
+      tags: [workflows]
+      summary: Publish an immutable workflow version and activate it
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Published version record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowVersion"
+        "404":
+          description: Not found
+
+  # ─── Dashboards (Builder) ─────────────────────────────────────────────
+  /dashboards:
+    get:
+      operationId: listDashboards
+      tags: [dashboards]
+      summary: List all dashboards
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, published]
+      responses:
+        "200":
+          description: Dashboard list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Dashboard"
+    post:
+      operationId: createDashboard
+      tags: [dashboards]
+      summary: Create a new dashboard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DashboardInput"
+      responses:
+        "201":
+          description: Created dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+
+  /dashboards/stats:
+    get:
+      operationId: getDashboardBuilderStats
+      tags: [dashboards]
+      summary: Dashboard usage stats
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboards/{id}:
+    get:
+      operationId: getDashboard
+      tags: [dashboards]
+      summary: Get dashboard by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateDashboard
+      tags: [dashboards]
+      summary: Update a dashboard (layout, name, widgets)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DashboardUpdate"
+      responses:
+        "200":
+          description: Updated dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+    delete:
+      operationId: deleteDashboard
+      tags: [dashboards]
+      summary: Delete a dashboard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /dashboards/{id}/publish:
+    post:
+      operationId: publishDashboard
+      tags: [dashboards]
+      summary: Publish a dashboard (make it live)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Published dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+        "404":
+          description: Not found
 
   # ─── Webhook Triggers ────────────────────────────────────────────────
   /webhooks/{workflowId}:
@@ -1050,7 +1209,7 @@ components:
 
     WorkflowVersion:
       type: object
-      required: [id, workflowId, version, name, nodes, createdAt]
+      required: [id, workflowId, version, name, nodes, published, createdAt]
       properties:
         id:
           type: integer
@@ -1066,6 +1225,8 @@ components:
             $ref: "#/components/schemas/WorkflowNode"
         changeNote:
           type: ["string", "null"]
+        published:
+          type: boolean
         createdAt:
           type: string
 
@@ -1395,3 +1556,91 @@ components:
             properties:
               type: { type: string }
               count: { type: integer }
+
+    DashboardWidget:
+      type: object
+      required: [id, type, gridCol, gridRow, colSpan, rowSpan]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [kpi, chart, table, text, image, separator]
+        gridCol:
+          type: integer
+        gridRow:
+          type: integer
+        colSpan:
+          type: integer
+        rowSpan:
+          type: integer
+        config:
+          type: object
+          additionalProperties: true
+
+    Dashboard:
+      type: object
+      required: [id, name, status, widgets, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [draft, published]
+        widgets:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardWidget"
+        publishedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    DashboardInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        widgets:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardWidget"
+
+    DashboardUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        widgets:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardWidget"
+        status:
+          type: string
+          enum: [draft, published]
+
+    DashboardStats:
+      type: object
+      required: [total, published, draft, totalWidgets]
+      properties:
+        total:
+          type: integer
+        published:
+          type: integer
+        draft:
+          type: integer
+        totalWidgets:
+          type: integer

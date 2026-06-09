@@ -6,7 +6,4 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListTemplatesParams = {
-category?: string;
-search?: string;
-};
+export type DashboardWidgetConfig = { [key: string]: unknown };

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, jsonb, boolean } from "drizzle-orm/pg-core";
 
 export const workflowVersionsTable = pgTable("workflow_versions", {
   id: serial("id").primaryKey(),
@@ -7,6 +7,7 @@ export const workflowVersionsTable = pgTable("workflow_versions", {
   name: text("name").notNull(),
   nodes: jsonb("nodes").notNull().default([]),
   changeNote: text("change_note"),
+  published: boolean("published").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

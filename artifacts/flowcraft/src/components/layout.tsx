@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   Shield,
   Webhook,
+  PanelTop,
 } from "lucide-react";
 import {
   Sidebar,
@@ -144,6 +145,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <SidebarGroupLabel>Internal Tools</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/dashboards")}>
+                      <Link href="/dashboards">
+                        <PanelTop />
+                        <span>Dashboards</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location === "/apps" || (location.startsWith("/apps/") && location !== "/apps/stats")}>
                       <Link href="/apps">

@@ -8,3 +8,4 @@ export * from "./execution-checkpoints";
 export * from "./dlq-entries";
 export * from "./audit-log";
 export * from "./workflow-versions";
+export * from "./dashboards";

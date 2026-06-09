@@ -13,6 +13,8 @@ import Credentials from "@/pages/credentials/index";
 import Analytics from "@/pages/analytics/index";
 import DlqPage from "@/pages/dlq/index";
 import AuditLogPage from "@/pages/audit-log/index";
+import DashboardsPage from "@/pages/dashboards/index";
+import DashboardBuilder from "@/pages/dashboards/builder";
 import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout";
@@ -50,6 +52,9 @@ function AppRoutes() {
         <Route path="/apps/stats" component={AppStats} />
         <Route path="/apps/:id" component={AppDetail} />
         <Route path="/apps" component={Apps} />
+
+        <Route path="/dashboards/:id" component={DashboardBuilder} />
+        <Route path="/dashboards" component={DashboardsPage} />
 
         <Route path="/dlq" component={DlqPage} />
         <Route path="/audit-log" component={AuditLogPage} />

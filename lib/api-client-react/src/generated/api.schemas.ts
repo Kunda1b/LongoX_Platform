@@ -193,6 +193,7 @@ export interface WorkflowVersion {
   nodes: WorkflowNode[];
   /** @nullable */
   changeNote?: string | null;
+  published: boolean;
   createdAt: string;
 }
 
@@ -361,10 +362,6 @@ export interface ExecutionDetail {
 export interface Connector {
   id: number;
   name: string;
-  /** @nullable */
-  displayName?: string | null;
-  version?: string;
-  sdkVersion?: string;
   category: string;
   description: string;
   icon: string;
@@ -379,53 +376,6 @@ export interface Connector {
   rating?: number | null;
   /** @nullable */
   author?: string | null;
-  authType?: string;
-  authConfig?: Record<string, unknown>;
-  certificationLevel?: string;
-  permissions?: string[];
-  capabilities?: Record<string, boolean>;
-  rateLimit?: Record<string, number>;
-  healthStatus?: Record<string, unknown>;
-}
-
-export interface ConnectorAction {
-  id: number;
-  connectorId: number;
-  actionId: string;
-  name: string;
-  description: string;
-  inputSchema: Record<string, unknown>;
-  outputSchema: Record<string, unknown>;
-}
-
-export interface ConnectorTrigger {
-  id: number;
-  connectorId: number;
-  triggerId: string;
-  triggerType: string;
-  name: string;
-  description: string;
-  config?: Record<string, unknown>;
-  /** @nullable */
-  pollingInterval?: number | null;
-}
-
-export interface ConnectorExecution {
-  id: number;
-  connectorId: number;
-  connectorVersion: string;
-  executionId: string;
-  /** @nullable */
-  actionId?: string | null;
-  /** @nullable */
-  triggerId?: string | null;
-  tenantId: string;
-  status: string;
-  /** @nullable */
-  durationMs?: number | null;
-  /** @nullable */
-  errorMessage?: string | null;
-  createdAt: string;
 }
 
 export interface ConnectorCategory {
@@ -523,6 +473,81 @@ export interface AppStats {
   byType: AppStatsByTypeItem[];
 }
 
+export type DashboardWidgetType = typeof DashboardWidgetType[keyof typeof DashboardWidgetType];
+
+
+export const DashboardWidgetType = {
+  kpi: 'kpi',
+  chart: 'chart',
+  table: 'table',
+  text: 'text',
+  image: 'image',
+  separator: 'separator',
+} as const;
+
+export type DashboardWidgetConfig = { [key: string]: unknown };
+
+export interface DashboardWidget {
+  id: string;
+  type: DashboardWidgetType;
+  gridCol: number;
+  gridRow: number;
+  colSpan: number;
+  rowSpan: number;
+  config?: DashboardWidgetConfig;
+}
+
+export type DashboardStatus = typeof DashboardStatus[keyof typeof DashboardStatus];
+
+
+export const DashboardStatus = {
+  draft: 'draft',
+  published: 'published',
+} as const;
+
+export interface Dashboard {
+  id: number;
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  status: DashboardStatus;
+  widgets: DashboardWidget[];
+  /** @nullable */
+  publishedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DashboardInput {
+  /** @minLength 1 */
+  name: string;
+  description?: string;
+  widgets?: DashboardWidget[];
+}
+
+export type DashboardUpdateStatus = typeof DashboardUpdateStatus[keyof typeof DashboardUpdateStatus];
+
+
+export const DashboardUpdateStatus = {
+  draft: 'draft',
+  published: 'published',
+} as const;
+
+export interface DashboardUpdate {
+  /** @minLength 1 */
+  name?: string;
+  description?: string;
+  widgets?: DashboardWidget[];
+  status?: DashboardUpdateStatus;
+}
+
+export interface DashboardStats {
+  total: number;
+  published: number;
+  draft: number;
+  totalWidgets: number;
+}
+
 export type GetRecentActivityParams = {
 limit?: number;
 };
@@ -552,6 +577,19 @@ export const ListWorkflowsStatus = {
   active: 'active',
   inactive: 'inactive',
   draft: 'draft',
+} as const;
+
+export type ListDashboardsParams = {
+search?: string;
+status?: ListDashboardsStatus;
+};
+
+export type ListDashboardsStatus = typeof ListDashboardsStatus[keyof typeof ListDashboardsStatus];
+
+
+export const ListDashboardsStatus = {
+  draft: 'draft',
+  published: 'published',
 } as const;
 
 export type ListDlqEntriesParams = {

@@ -2,3 +2,4 @@
 - [React-query orval options pattern](orval-query-options.md) — UseQueryOptions requires queryKey in v5; omit refetchInterval from hook options or accept TS error.
 - [Execution engine pattern](execution-engine.md) — fire-and-forget async runner in api-server; checkpoints table replaces steps JSONB for new executions.
 - [Connector framework architecture](connector-framework.md) — full connector manifest pattern with actions/triggers/executions tables; seed via route-level lazy init guard; use direct fetch for new sub-resource endpoints in frontends.
+- [Orval operationId body naming](orval-body-naming.md) — orval names requestBody Zod schemas as `<OperationId>Body`; if spec schema is also `<OperationId>Body`, it causes TS2308 duplicate export. Fix: use inline schema (not $ref) in requestBody, OR omit requestBody entirely.

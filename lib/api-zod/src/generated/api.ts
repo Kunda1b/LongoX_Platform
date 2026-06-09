@@ -111,8 +111,7 @@ export const ListNodeTypesResponse = zod.array(ListNodeTypesResponseItem)
  */
 export const ListTemplatesQueryParams = zod.object({
   "category": zod.coerce.string().optional(),
-  "search": zod.coerce.string().optional(),
-  "templateType": zod.coerce.string().optional()
+  "search": zod.coerce.string().optional()
 })
 
 export const ListTemplatesResponseItem = zod.object({
@@ -138,9 +137,7 @@ export const ListTemplatesResponseItem = zod.object({
 })
 })),
   "isCustom": zod.boolean(),
-  "createdAt": zod.string(),
-  "templateType": zod.string().optional(),
-  "metadata": zod.record(zod.string(), zod.unknown()).optional()
+  "createdAt": zod.string()
 })
 export const ListTemplatesResponse = zod.array(ListTemplatesResponseItem)
 
@@ -493,9 +490,186 @@ export const ListWorkflowVersionsResponseItem = zod.object({
 })
 })),
   "changeNote": zod.string().nullish(),
+  "published": zod.boolean(),
   "createdAt": zod.string()
 })
 export const ListWorkflowVersionsResponse = zod.array(ListWorkflowVersionsResponseItem)
+
+
+/**
+ * @summary Publish an immutable workflow version and activate it
+ */
+export const PublishWorkflowParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List all dashboards
+ */
+export const ListDashboardsQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "status": zod.enum(['draft', 'published']).optional()
+})
+
+export const ListDashboardsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "status": zod.enum(['draft', 'published']),
+  "widgets": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['kpi', 'chart', 'table', 'text', 'image', 'separator']),
+  "gridCol": zod.number(),
+  "gridRow": zod.number(),
+  "colSpan": zod.number(),
+  "rowSpan": zod.number(),
+  "config": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "publishedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListDashboardsResponse = zod.array(ListDashboardsResponseItem)
+
+
+/**
+ * @summary Create a new dashboard
+ */
+
+
+
+export const CreateDashboardBody = zod.object({
+  "name": zod.string().min(1),
+  "description": zod.string().optional(),
+  "widgets": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['kpi', 'chart', 'table', 'text', 'image', 'separator']),
+  "gridCol": zod.number(),
+  "gridRow": zod.number(),
+  "colSpan": zod.number(),
+  "rowSpan": zod.number(),
+  "config": zod.record(zod.string(), zod.unknown()).optional()
+})).optional()
+})
+
+
+/**
+ * @summary Dashboard usage stats
+ */
+export const GetDashboardBuilderStatsResponse = zod.object({
+  "total": zod.number(),
+  "published": zod.number(),
+  "draft": zod.number(),
+  "totalWidgets": zod.number()
+})
+
+
+/**
+ * @summary Get dashboard by ID
+ */
+export const GetDashboardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetDashboardResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "status": zod.enum(['draft', 'published']),
+  "widgets": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['kpi', 'chart', 'table', 'text', 'image', 'separator']),
+  "gridCol": zod.number(),
+  "gridRow": zod.number(),
+  "colSpan": zod.number(),
+  "rowSpan": zod.number(),
+  "config": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "publishedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update a dashboard (layout, name, widgets)
+ */
+export const UpdateDashboardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateDashboardBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "description": zod.string().optional(),
+  "widgets": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['kpi', 'chart', 'table', 'text', 'image', 'separator']),
+  "gridCol": zod.number(),
+  "gridRow": zod.number(),
+  "colSpan": zod.number(),
+  "rowSpan": zod.number(),
+  "config": zod.record(zod.string(), zod.unknown()).optional()
+})).optional(),
+  "status": zod.enum(['draft', 'published']).optional()
+})
+
+export const UpdateDashboardResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "status": zod.enum(['draft', 'published']),
+  "widgets": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['kpi', 'chart', 'table', 'text', 'image', 'separator']),
+  "gridCol": zod.number(),
+  "gridRow": zod.number(),
+  "colSpan": zod.number(),
+  "rowSpan": zod.number(),
+  "config": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "publishedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a dashboard
+ */
+export const DeleteDashboardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Publish a dashboard (make it live)
+ */
+export const PublishDashboardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PublishDashboardResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "status": zod.enum(['draft', 'published']),
+  "widgets": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['kpi', 'chart', 'table', 'text', 'image', 'separator']),
+  "gridCol": zod.number(),
+  "gridRow": zod.number(),
+  "colSpan": zod.number(),
+  "rowSpan": zod.number(),
+  "config": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "publishedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
 
 
 /**
@@ -668,9 +842,6 @@ export const ListConnectorsQueryParams = zod.object({
 export const ListConnectorsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "displayName": zod.string().nullish(),
-  "version": zod.string().optional(),
-  "sdkVersion": zod.string().optional(),
   "category": zod.string(),
   "description": zod.string(),
   "icon": zod.string(),
@@ -681,14 +852,7 @@ export const ListConnectorsResponseItem = zod.object({
   "triggerCount": zod.number(),
   "installCount": zod.number().optional(),
   "rating": zod.number().nullish(),
-  "author": zod.string().nullish(),
-  "authType": zod.string().optional(),
-  "authConfig": zod.record(zod.string(), zod.unknown()).optional(),
-  "certificationLevel": zod.string().optional(),
-  "permissions": zod.array(zod.string()).optional(),
-  "capabilities": zod.record(zod.string(), zod.boolean()).optional(),
-  "rateLimit": zod.record(zod.string(), zod.number()).optional(),
-  "healthStatus": zod.record(zod.string(), zod.unknown()).optional()
+  "author": zod.string().nullish()
 })
 export const ListConnectorsResponse = zod.array(ListConnectorsResponseItem)
 
@@ -703,9 +867,6 @@ export const GetConnectorParams = zod.object({
 export const GetConnectorResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "displayName": zod.string().nullish(),
-  "version": zod.string().optional(),
-  "sdkVersion": zod.string().optional(),
   "category": zod.string(),
   "description": zod.string(),
   "icon": zod.string(),
@@ -716,14 +877,7 @@ export const GetConnectorResponse = zod.object({
   "triggerCount": zod.number(),
   "installCount": zod.number().optional(),
   "rating": zod.number().nullish(),
-  "author": zod.string().nullish(),
-  "authType": zod.string().optional(),
-  "authConfig": zod.record(zod.string(), zod.unknown()).optional(),
-  "certificationLevel": zod.string().optional(),
-  "permissions": zod.array(zod.string()).optional(),
-  "capabilities": zod.record(zod.string(), zod.boolean()).optional(),
-  "rateLimit": zod.record(zod.string(), zod.number()).optional(),
-  "healthStatus": zod.record(zod.string(), zod.unknown()).optional()
+  "author": zod.string().nullish()
 })
 
 
@@ -737,8 +891,6 @@ export const InstallConnectorParams = zod.object({
 export const InstallConnectorResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "displayName": zod.string().nullish(),
-  "version": zod.string().optional(),
   "category": zod.string(),
   "description": zod.string(),
   "icon": zod.string(),
@@ -749,86 +901,8 @@ export const InstallConnectorResponse = zod.object({
   "triggerCount": zod.number(),
   "installCount": zod.number().optional(),
   "rating": zod.number().nullish(),
-  "author": zod.string().nullish(),
-  "authType": zod.string().optional(),
-  "certificationLevel": zod.string().optional(),
-  "permissions": zod.array(zod.string()).optional(),
-  "capabilities": zod.record(zod.string(), zod.boolean()).optional(),
-  "rateLimit": zod.record(zod.string(), zod.number()).optional(),
-  "healthStatus": zod.record(zod.string(), zod.unknown()).optional()
+  "author": zod.string().nullish()
 })
-
-
-/**
- * @summary Uninstall a connector
- */
-export const UninstallConnectorParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-
-/**
- * @summary List actions for a connector
- */
-export const GetConnectorActionsParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const GetConnectorActionsResponseItem = zod.object({
-  "id": zod.number(),
-  "connectorId": zod.number(),
-  "actionId": zod.string(),
-  "name": zod.string(),
-  "description": zod.string(),
-  "inputSchema": zod.record(zod.string(), zod.unknown()),
-  "outputSchema": zod.record(zod.string(), zod.unknown())
-})
-export const GetConnectorActionsResponse = zod.array(GetConnectorActionsResponseItem)
-
-
-/**
- * @summary List triggers for a connector
- */
-export const GetConnectorTriggersParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const GetConnectorTriggersResponseItem = zod.object({
-  "id": zod.number(),
-  "connectorId": zod.number(),
-  "triggerId": zod.string(),
-  "triggerType": zod.string(),
-  "name": zod.string(),
-  "description": zod.string(),
-  "config": zod.record(zod.string(), zod.unknown()).optional(),
-  "pollingInterval": zod.number().nullish()
-})
-export const GetConnectorTriggersResponse = zod.array(GetConnectorTriggersResponseItem)
-
-
-/**
- * @summary Connector execution history (observability)
- */
-export const GetConnectorExecutionsQueryParams = zod.object({
-  "connectorId": zod.coerce.number().optional(),
-  "status": zod.string().optional(),
-  "limit": zod.coerce.number().default(50)
-})
-
-export const GetConnectorExecutionsResponseItem = zod.object({
-  "id": zod.number(),
-  "connectorId": zod.number(),
-  "connectorVersion": zod.string(),
-  "executionId": zod.string(),
-  "actionId": zod.string().nullish(),
-  "triggerId": zod.string().nullish(),
-  "tenantId": zod.string(),
-  "status": zod.string(),
-  "durationMs": zod.number().nullish(),
-  "errorMessage": zod.string().nullish(),
-  "createdAt": zod.string()
-})
-export const GetConnectorExecutionsResponse = zod.array(GetConnectorExecutionsResponseItem)
 
 
 /**

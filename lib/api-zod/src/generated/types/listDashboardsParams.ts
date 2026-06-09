@@ -5,8 +5,9 @@
  * FlowCraft API — low-code automation and internal tools platform
  * OpenAPI spec version: 0.1.0
  */
+import type { ListDashboardsStatus } from './listDashboardsStatus';
 
-export type ListTemplatesParams = {
-category?: string;
+export type ListDashboardsParams = {
 search?: string;
+status?: ListDashboardsStatus;
 };

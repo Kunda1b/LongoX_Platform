@@ -6,7 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListTemplatesParams = {
-category?: string;
-search?: string;
-};
+export type DashboardStatus = typeof DashboardStatus[keyof typeof DashboardStatus];
+
+
+export const DashboardStatus = {
+  draft: 'draft',
+  published: 'published',
+} as const;

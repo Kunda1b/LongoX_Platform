@@ -7,14 +7,28 @@ import {
   useListNodeTypes,
   useDuplicateWorkflow,
   useCreateTemplate,
+  usePublishWorkflow,
+  useListWorkflowVersions,
   getGetWorkflowQueryKey,
   getListExecutionsQueryKey,
   getListWorkflowsQueryKey,
   getListTemplatesQueryKey,
+  getListWorkflowVersionsQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/badges";
-import { ArrowLeft, Play, Settings2, Copy, BookmarkPlus } from "lucide-react";
+import {
+  ArrowLeft,
+  Play,
+  Settings2,
+  Copy,
+  BookmarkPlus,
+  Rocket,
+  History,
+  CheckCircle2,
+  Clock,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { WorkflowBuilder } from "@/components/workflow-builder";
 import {
@@ -25,6 +39,13 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +56,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { formatDistanceToNow, format } from "date-fns";
 
 const CATEGORIES = ["Sales", "Support", "Data", "Reporting", "Operations", "Developer", "Research"];
 
@@ -52,11 +76,22 @@ export default function WorkflowDetail() {
   const [templateComplexity, setTemplateComplexity] = useState<"beginner" | "intermediate" | "advanced">("beginner");
   const [templateTags, setTemplateTags] = useState("");
 
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [changeNote, setChangeNote] = useState("");
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+
   const { data: workflow, isLoading: isLoadingWf } = useGetWorkflow(workflowId, {
     query: { enabled: !!workflowId, queryKey: getGetWorkflowQueryKey(workflowId) },
   });
 
   const { data: nodeTypes = [] } = useListNodeTypes();
+
+  const { data: versions = [], isLoading: versionsLoading } = useListWorkflowVersions(workflowId, {
+    query: {
+      enabled: versionHistoryOpen && !!workflowId,
+      queryKey: getListWorkflowVersionsQueryKey(workflowId),
+    },
+  });
 
   const runMutation = useRunWorkflow({
     mutation: {
@@ -91,10 +126,27 @@ export default function WorkflowDetail() {
     },
   });
 
+  const publishMutation = usePublishWorkflow({
+    mutation: {
+      onSuccess: (version) => {
+        queryClient.invalidateQueries({ queryKey: getGetWorkflowQueryKey(workflowId) });
+        queryClient.invalidateQueries({ queryKey: getListWorkflowVersionsQueryKey(workflowId) });
+        queryClient.invalidateQueries({ queryKey: getListWorkflowsQueryKey() });
+        setPublishOpen(false);
+        setChangeNote("");
+        toast({
+          title: `Published v${version.version}`,
+          description: "Workflow is now live and active.",
+        });
+      },
+      onError: () => toast({ title: "Publish failed", variant: "destructive" }),
+    },
+  });
+
   const handleSaveAsTemplate = () => {
     if (!workflow) return;
     const tags = templateTags.split(",").map((t) => t.trim()).filter(Boolean);
-    const nodes = (workflow.nodes ?? []) as object[];
+    const nodes = (workflow.nodes ?? []) as Parameters<typeof saveAsTemplateMutation.mutate>[0]["data"]["nodes"];
     saveAsTemplateMutation.mutate({
       data: {
         name: templateName || workflow.name,
@@ -106,6 +158,10 @@ export default function WorkflowDetail() {
         nodes,
       },
     });
+  };
+
+  const handlePublish = () => {
+    publishMutation.mutate({ id: workflowId });
   };
 
   const handleSaved = () => {
@@ -140,6 +196,15 @@ export default function WorkflowDetail() {
         </div>
         <div className="flex items-center gap-2">
           <Button
+            variant="ghost"
+            size="sm"
+            className="gap-2 text-muted-foreground"
+            onClick={() => setVersionHistoryOpen(true)}
+          >
+            <History className="h-4 w-4" />
+            History
+          </Button>
+          <Button
             variant="outline"
             size="sm"
             className="gap-2"
@@ -163,6 +228,7 @@ export default function WorkflowDetail() {
             Settings
           </Button>
           <Button
+            variant="outline"
             size="sm"
             className="gap-2"
             disabled={runMutation.isPending || workflow.status !== "active"}
@@ -170,6 +236,15 @@ export default function WorkflowDetail() {
           >
             <Play className="h-4 w-4" />
             {runMutation.isPending ? "Starting..." : "Run Now"}
+          </Button>
+          <Button
+            size="sm"
+            className="gap-2 bg-primary"
+            onClick={() => setPublishOpen(true)}
+            disabled={publishMutation.isPending}
+          >
+            <Rocket className="h-4 w-4" />
+            Publish
           </Button>
         </div>
       </header>
@@ -182,6 +257,134 @@ export default function WorkflowDetail() {
           onSaved={handleSaved}
         />
       </div>
+
+      {/* ─── Publish Dialog ────────────────────────────────────────────────── */}
+      <Dialog open={publishOpen} onOpenChange={setPublishOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Rocket className="h-5 w-5 text-primary" />
+              Publish Workflow
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="rounded-lg bg-muted/50 border p-4 space-y-1">
+              <p className="text-sm font-medium">{workflow.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {(workflow.nodes ?? []).length} nodes · {workflow.triggerType}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="change-note">Change note (optional)</Label>
+              <Textarea
+                id="change-note"
+                placeholder="Describe what changed in this version…"
+                value={changeNote}
+                onChange={(e) => setChangeNote(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Publishing creates an immutable version snapshot and marks this workflow as <strong>active</strong>.
+            </p>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button
+              onClick={handlePublish}
+              disabled={publishMutation.isPending}
+              className="gap-2"
+            >
+              <Rocket className="h-4 w-4" />
+              {publishMutation.isPending ? "Publishing…" : "Publish Now"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Version History Drawer ───────────────────────────────────────── */}
+      <Sheet open={versionHistoryOpen} onOpenChange={setVersionHistoryOpen}>
+        <SheetContent className="w-[400px] sm:w-[480px] flex flex-col">
+          <SheetHeader className="shrink-0">
+            <SheetTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Version History
+            </SheetTitle>
+            <SheetDescription>
+              Published snapshots of <strong>{workflow.name}</strong>
+            </SheetDescription>
+          </SheetHeader>
+
+          <Separator className="my-4 shrink-0" />
+
+          <ScrollArea className="flex-1 -mx-6 px-6">
+            {versionsLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-20 rounded-lg bg-muted animate-pulse" />
+                ))}
+              </div>
+            ) : versions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <History className="h-10 w-10 text-muted-foreground mb-3" />
+                <p className="font-medium">No published versions yet</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Click <strong>Publish</strong> to create the first immutable snapshot.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2 pb-4">
+                {[...versions].reverse().map((v, idx) => (
+                  <div
+                    key={v.id}
+                    className="rounded-lg border bg-card p-4 space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={v.published ? "default" : "secondary"} className="text-xs">
+                          {v.published ? (
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                          ) : null}
+                          v{v.version}
+                        </Badge>
+                        {idx === 0 && (
+                          <Badge variant="outline" className="text-xs text-primary border-primary/40">
+                            Latest
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {formatDistanceToNow(new Date(v.createdAt), { addSuffix: true })}
+                      </span>
+                    </div>
+                    {v.changeNote && (
+                      <p className="text-sm text-muted-foreground">{v.changeNote}</p>
+                    )}
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span>{(v.nodes as unknown[]).length} nodes</span>
+                      <span>·</span>
+                      <span>{format(new Date(v.createdAt), "MMM d, yyyy 'at' h:mm a")}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+
+          <div className="shrink-0 pt-4 border-t">
+            <Button
+              className="w-full gap-2"
+              onClick={() => { setVersionHistoryOpen(false); setPublishOpen(true); }}
+            >
+              <Rocket className="h-4 w-4" />
+              Publish New Version
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* ─── Save as Template Dialog ─────────────────────────────────────── */}
       <Dialog open={saveAsTemplateOpen} onOpenChange={setSaveAsTemplateOpen}>
