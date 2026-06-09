@@ -114,7 +114,7 @@ function ConnectorDetailDialog({
 
   return (
     <Dialog open onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className="w-[calc(100vw-1rem)] sm:w-full sm:max-w-2xl max-h-[92dvh] overflow-hidden flex flex-col p-0">
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b">
           <DialogHeader>
@@ -146,13 +146,13 @@ function ConnectorDetailDialog({
                   </div>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-2 shrink-0">
+                      <div className="flex flex-col items-end gap-2 shrink-0">
                 {connector.isInstalled ? (
-                  <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => onUninstall(connector.id)}>
+                  <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 whitespace-nowrap" onClick={() => onUninstall(connector.id)}>
                     <X className="h-3.5 w-3.5 mr-1" /> Uninstall
                   </Button>
                 ) : (
-                  <Button size="sm" onClick={() => onInstall(connector.id)} disabled={installing}>
+                  <Button size="sm" onClick={() => onInstall(connector.id)} disabled={installing} className="whitespace-nowrap">
                     <Download className="h-3.5 w-3.5 mr-1" /> {installing ? "Installing…" : "Install"}
                   </Button>
                 )}
@@ -163,16 +163,18 @@ function ConnectorDetailDialog({
 
         {/* Tabs */}
         <Tabs defaultValue="overview" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="px-6 justify-start rounded-none border-b bg-transparent h-10 gap-1">
-            <TabsTrigger value="overview" className="text-xs data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Overview</TabsTrigger>
-            <TabsTrigger value="actions" className="text-xs data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-              Actions <Badge className="ml-1 text-[0.6rem] px-1 py-0">{actions.length}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="triggers" className="text-xs data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-              Triggers <Badge className="ml-1 text-[0.6rem] px-1 py-0">{triggers.length}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="health" className="text-xs data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">Health</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto border-b">
+            <TabsList className="px-4 sm:px-6 justify-start rounded-none bg-transparent h-10 gap-1 w-max min-w-full">
+              <TabsTrigger value="overview" className="text-xs data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none whitespace-nowrap">Overview</TabsTrigger>
+              <TabsTrigger value="actions" className="text-xs data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none whitespace-nowrap">
+                Actions <Badge className="ml-1 text-[0.6rem] px-1 py-0">{actions.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="triggers" className="text-xs data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none whitespace-nowrap">
+                Triggers <Badge className="ml-1 text-[0.6rem] px-1 py-0">{triggers.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="health" className="text-xs data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none whitespace-nowrap">Health</TabsTrigger>
+            </TabsList>
+          </div>
 
           <div className="flex-1 overflow-y-auto">
             {/* Overview Tab */}
@@ -267,7 +269,7 @@ function ConnectorDetailDialog({
                       : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
                   </button>
                   {expandedAction === action.actionId && (
-                    <div className="px-4 pb-4 pt-2 border-t bg-muted/20 grid grid-cols-2 gap-4">
+                    <div className="px-4 pb-4 pt-2 border-t bg-muted/20 grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <p className="text-[0.65rem] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Input Schema</p>
                         <SchemaFields schema={action.inputSchema} />
@@ -624,8 +626,25 @@ export default function Connectors() {
             </div>
           </div>
 
+          {/* Mobile-only category select (sidebar hidden on mobile) */}
+          <div className="md:hidden">
+            <Select value={category ?? "all"} onValueChange={(v) => setCategory(v === "all" ? undefined : v)}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="All categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Connectors</SelectItem>
+                {categories?.map((cat) => (
+                  <SelectItem key={cat.name} value={cat.name} className="capitalize">
+                    {cat.name} ({cat.count})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Certification level tabs */}
-          <div className="flex gap-0.5">
+          <div className="flex gap-0.5 overflow-x-auto -mx-px">
             {CERT_TABS.map((tab) => (
               <button
                 key={tab.key}

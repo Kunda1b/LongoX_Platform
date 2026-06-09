@@ -16,6 +16,7 @@ import {
   Globe,
   Receipt,
   BrainCircuit,
+  Building2,
 } from "lucide-react";
 import {
   Sidebar,

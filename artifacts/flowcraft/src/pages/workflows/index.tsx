@@ -95,17 +95,17 @@ export default function Workflows() {
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Workflows</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Workflows</h1>
           <p className="text-muted-foreground mt-1">Design and manage your automation pipelines.</p>
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               New Workflow
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="w-[calc(100vw-2rem)] sm:w-auto sm:max-w-lg rounded-lg">
             <DialogHeader>
               <DialogTitle>Create Workflow</DialogTitle>
             </DialogHeader>
@@ -171,7 +171,7 @@ export default function Workflows() {
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 max-w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
             placeholder="Search workflows..." 
@@ -188,12 +188,12 @@ export default function Workflows() {
             <Skeleton key={i} className="h-24 w-full" />
           ))
         ) : workflows?.length === 0 ? (
-          <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-4 text-balance rounded-lg border border-dashed p-6 text-center md:p-12">
+          <div className="flex flex-col items-center justify-center gap-4 text-center rounded-lg border border-dashed p-6 md:p-12">
             <div className="bg-muted text-foreground flex size-12 shrink-0 items-center justify-center rounded-lg">
               <Cable className="size-6" />
             </div>
-            <div className="flex max-w-sm flex-col items-center gap-1 text-center">
-              <div className="text-lg font-medium tracking-tight text-foreground">No workflows yet</div>
+            <div className="flex max-w-sm flex-col items-center gap-1">
+              <div className="text-lg font-medium tracking-tight">No workflows yet</div>
               <p className="text-muted-foreground text-sm/relaxed">Automate repetitive tasks by connecting triggers, actions, and logic nodes.</p>
             </div>
             <Button onClick={() => setIsCreateOpen(true)} className="mt-2">Create your first workflow</Button>
@@ -201,35 +201,37 @@ export default function Workflows() {
         ) : (
           workflows?.map((wf) => (
             <Card key={wf.id} className="hover:border-primary/50 transition-colors">
-              <CardContent className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <CardContent className="p-4 sm:p-6">
                 <div className="flex items-start gap-4">
-                  <div className="bg-primary/10 text-primary p-3 rounded-md mt-1">
-                    <Cable className="h-5 w-5" />
+                  {/* Icon */}
+                  <div className="bg-primary/10 text-primary p-2.5 sm:p-3 rounded-md mt-0.5 shrink-0">
+                    <Cable className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
-                  <div>
-                    <Link href={`/workflows/${wf.id}`} className="font-semibold text-lg hover:underline">
+
+                  {/* Main content — min-w-0 allows truncation */}
+                  <div className="flex-1 min-w-0">
+                    <Link href={`/workflows/${wf.id}`} className="font-semibold text-base sm:text-lg hover:underline block truncate">
                       {wf.name}
                     </Link>
-                    {wf.description && <p className="text-muted-foreground text-sm mt-1">{wf.description}</p>}
-                    <div className="flex items-center gap-3 mt-3">
+                    {wf.description && (
+                      <p className="text-muted-foreground text-sm mt-0.5 truncate">{wf.description}</p>
+                    )}
+                    <div className="flex items-center flex-wrap gap-2 mt-2">
                       <StatusBadge status={wf.status} />
-                      <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-md">
+                      <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-md">
                         {wf.triggerType}
                       </span>
+                      <span className="text-xs text-muted-foreground">{wf.nodeCount} nodes</span>
                       <span className="text-xs text-muted-foreground">
-                        {wf.nodeCount} nodes
+                        {wf.executionCount?.toLocaleString() ?? 0} runs
                       </span>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-6 sm:pl-6 sm:border-l">
-                  <div className="text-right hidden sm:block">
-                    <p className="text-sm font-medium">{wf.executionCount?.toLocaleString() ?? 0}</p>
-                    <p className="text-xs text-muted-foreground">Runs</p>
-                  </div>
+
+                  {/* Actions */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="icon" className="shrink-0 h-9 w-9">
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
