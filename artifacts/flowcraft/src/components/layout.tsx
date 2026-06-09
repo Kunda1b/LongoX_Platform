@@ -13,6 +13,8 @@ import {
   Shield,
   Webhook,
   PanelTop,
+  Globe,
+  Receipt,
 } from "lucide-react";
 import {
   Sidebar,
@@ -174,6 +176,30 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </SidebarGroup>
 
             <SidebarGroup>
+              <SidebarGroupLabel>Distribution</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/environments")}>
+                      <Link href="/environments">
+                        <Globe />
+                        <span>Environments</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/billing")}>
+                      <Link href="/billing">
+                        <Receipt />
+                        <span>Billing</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
               <SidebarGroupLabel>Settings</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
@@ -182,6 +208,22 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <Link href="/credentials">
                         <KeyRound />
                         <span>Credentials</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/rbac")}>
+                      <Link href="/rbac">
+                        <Shield />
+                        <span>Access Control</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/tenants")}>
+                      <Link href="/tenants">
+                        <Building2 />
+                        <span>Tenants</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

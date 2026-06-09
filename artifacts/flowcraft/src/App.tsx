@@ -15,6 +15,10 @@ import DlqPage from "@/pages/dlq/index";
 import AuditLogPage from "@/pages/audit-log/index";
 import DashboardsPage from "@/pages/dashboards/index";
 import DashboardBuilder from "@/pages/dashboards/builder";
+import BillingPage from "@/pages/billing/index";
+import EnvironmentsPage from "@/pages/environments/index";
+import TenantsPage from "@/pages/tenants/index";
+import RbacPage from "@/pages/rbac/index";
 import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout";
@@ -55,6 +59,11 @@ function AppRoutes() {
 
         <Route path="/dashboards/:id" component={DashboardBuilder} />
         <Route path="/dashboards" component={DashboardsPage} />
+
+        <Route path="/billing" component={BillingPage} />
+        <Route path="/environments" component={EnvironmentsPage} />
+        <Route path="/tenants" component={TenantsPage} />
+        <Route path="/rbac" component={RbacPage} />
 
         <Route path="/dlq" component={DlqPage} />
         <Route path="/audit-log" component={AuditLogPage} />

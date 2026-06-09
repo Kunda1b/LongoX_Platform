@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, like, and, desc } from "drizzle-orm";
-import { db, workflowsTable, workflowVersionsTable } from "@workspace/db";
+import { db, workflowsTable, workflowVersionsTable, workflowPromotionsTable } from "@workspace/db";
 import {
   ListWorkflowsQueryParams,
   CreateWorkflowBody,
@@ -232,6 +232,78 @@ router.get("/workflows/:id/versions", async (req, res): Promise<void> => {
     changeNote: v.changeNote ?? null,
     createdAt: v.createdAt.toISOString(),
   })));
+});
+
+// ─── Workflow Promotions ──────────────────────────────────────────────────────
+
+router.get("/workflows/:id/promotions", async (req, res): Promise<void> => {
+  const params = GetWorkflowParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+  const [workflow] = await db.select().from(workflowsTable).where(eq(workflowsTable.id, params.data.id));
+  if (!workflow) { res.status(404).json({ error: "Workflow not found" }); return; }
+
+  const promotions = await db.select().from(workflowPromotionsTable)
+    .where(eq(workflowPromotionsTable.workflowId, params.data.id))
+    .orderBy(desc(workflowPromotionsTable.createdAt))
+    .limit(20);
+
+  res.json(promotions.map((p) => ({
+    id: p.id,
+    workflowId: p.workflowId,
+    workflowName: p.workflowName,
+    fromEnvironment: p.fromEnvironment,
+    toEnvironment: p.toEnvironment,
+    status: p.status,
+    promotedBy: p.promotedBy,
+    approvedBy: p.approvedBy ?? null,
+    notes: p.notes ?? null,
+    createdAt: p.createdAt.toISOString(),
+  })));
+});
+
+router.post("/workflows/:id/promotions", async (req, res): Promise<void> => {
+  const params = GetWorkflowParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+  const [workflow] = await db.select().from(workflowsTable).where(eq(workflowsTable.id, params.data.id));
+  if (!workflow) { res.status(404).json({ error: "Workflow not found" }); return; }
+
+  const { fromEnvironment, toEnvironment, notes } = req.body as {
+    fromEnvironment?: string;
+    toEnvironment?: string;
+    notes?: string;
+  };
+
+  if (!fromEnvironment || !toEnvironment) {
+    res.status(400).json({ error: "fromEnvironment and toEnvironment are required" });
+    return;
+  }
+
+  const [promotion] = await db.insert(workflowPromotionsTable).values({
+    workflowId: workflow.id,
+    workflowName: workflow.name,
+    fromEnvironment,
+    toEnvironment,
+    status: "promoted",
+    promotedBy: "user",
+    notes: notes ?? null,
+  }).returning();
+
+  await writeAudit("workflow.promoted", "workflow", String(workflow.id), { fromEnvironment, toEnvironment }, "user");
+
+  res.status(201).json({
+    id: promotion.id,
+    workflowId: promotion.workflowId,
+    workflowName: promotion.workflowName,
+    fromEnvironment: promotion.fromEnvironment,
+    toEnvironment: promotion.toEnvironment,
+    status: promotion.status,
+    promotedBy: promotion.promotedBy,
+    approvedBy: promotion.approvedBy ?? null,
+    notes: promotion.notes ?? null,
+    createdAt: promotion.createdAt.toISOString(),
+  });
 });
 
 export default router;

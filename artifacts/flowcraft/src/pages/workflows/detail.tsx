@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link, useLocation } from "wouter";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import {
   useGetWorkflow,
   useRunWorkflow,
@@ -9,12 +9,16 @@ import {
   useCreateTemplate,
   usePublishWorkflow,
   useListWorkflowVersions,
+  useListWorkflowPromotions,
   getGetWorkflowQueryKey,
   getListExecutionsQueryKey,
   getListWorkflowsQueryKey,
   getListTemplatesQueryKey,
   getListWorkflowVersionsQueryKey,
+  getListWorkflowPromotionsQueryKey,
 } from "@workspace/api-client-react";
+import type { Environment, WorkflowPromotion } from "@workspace/api-client-react";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/badges";
@@ -28,6 +32,8 @@ import {
   History,
   CheckCircle2,
   Clock,
+  Globe,
+  ArrowRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { WorkflowBuilder } from "@/components/workflow-builder";
@@ -80,6 +86,11 @@ export default function WorkflowDetail() {
   const [changeNote, setChangeNote] = useState("");
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
 
+  const [deployOpen, setDeployOpen] = useState(false);
+  const [deployFrom, setDeployFrom] = useState("dev");
+  const [deployTo, setDeployTo] = useState("staging");
+  const [deployNotes, setDeployNotes] = useState("");
+
   const { data: workflow, isLoading: isLoadingWf } = useGetWorkflow(workflowId, {
     query: { enabled: !!workflowId, queryKey: getGetWorkflowQueryKey(workflowId) },
   });
@@ -91,6 +102,34 @@ export default function WorkflowDetail() {
       enabled: versionHistoryOpen && !!workflowId,
       queryKey: getListWorkflowVersionsQueryKey(workflowId),
     },
+  });
+
+  const { data: promotions = [] } = useListWorkflowPromotions(workflowId, {
+    query: {
+      enabled: versionHistoryOpen && !!workflowId,
+      queryKey: getListWorkflowPromotionsQueryKey(workflowId),
+    },
+  });
+
+  const { data: environments = [] } = useQuery<Environment[]>({
+    queryKey: ["environments"],
+    queryFn: () => fetch("/api/environments").then((r) => r.json()),
+  });
+
+  const promoteMutation = useMutation<WorkflowPromotion, Error, { fromEnvironment: string; toEnvironment: string; notes: string }>({
+    mutationFn: ({ fromEnvironment, toEnvironment, notes }) =>
+      fetch(`/api/workflows/${workflowId}/promotions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fromEnvironment, toEnvironment, notes }),
+      }).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: getListWorkflowPromotionsQueryKey(workflowId) });
+      setDeployOpen(false);
+      setDeployNotes("");
+      toast({ title: `Promoted to ${deployTo}`, description: "Workflow deployed successfully." });
+    },
+    onError: () => toast({ title: "Promotion failed", variant: "destructive" }),
   });
 
   const runMutation = useRunWorkflow({
@@ -246,6 +285,15 @@ export default function WorkflowDetail() {
             <Rocket className="h-4 w-4" />
             Publish
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-2"
+            onClick={() => setDeployOpen(true)}
+          >
+            <Globe className="h-4 w-4" />
+            Deploy
+          </Button>
         </div>
       </header>
 
@@ -306,28 +354,29 @@ export default function WorkflowDetail() {
 
       {/* ─── Version History Drawer ───────────────────────────────────────── */}
       <Sheet open={versionHistoryOpen} onOpenChange={setVersionHistoryOpen}>
-        <SheetContent className="w-[400px] sm:w-[480px] flex flex-col">
+        <SheetContent className="w-[400px] sm:w-[500px] flex flex-col">
           <SheetHeader className="shrink-0">
             <SheetTitle className="flex items-center gap-2">
               <History className="h-5 w-5" />
               Version History
             </SheetTitle>
             <SheetDescription>
-              Published snapshots of <strong>{workflow.name}</strong>
+              Published snapshots and deployments of <strong>{workflow.name}</strong>
             </SheetDescription>
           </SheetHeader>
 
           <Separator className="my-4 shrink-0" />
 
           <ScrollArea className="flex-1 -mx-6 px-6">
+            {/* Published versions */}
             {versionsLoading ? (
               <div className="space-y-3">
-                {Array.from({ length: 4 }).map((_, i) => (
+                {Array.from({ length: 3 }).map((_, i) => (
                   <div key={i} className="h-20 rounded-lg bg-muted animate-pulse" />
                 ))}
               </div>
             ) : versions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="flex flex-col items-center justify-center py-10 text-center">
                 <History className="h-10 w-10 text-muted-foreground mb-3" />
                 <p className="font-medium">No published versions yet</p>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -337,22 +386,15 @@ export default function WorkflowDetail() {
             ) : (
               <div className="space-y-2 pb-4">
                 {[...versions].reverse().map((v, idx) => (
-                  <div
-                    key={v.id}
-                    className="rounded-lg border bg-card p-4 space-y-2"
-                  >
+                  <div key={v.id} className="rounded-lg border bg-card p-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Badge variant={v.published ? "default" : "secondary"} className="text-xs">
-                          {v.published ? (
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                          ) : null}
+                          {v.published && <CheckCircle2 className="h-3 w-3 mr-1" />}
                           v{v.version}
                         </Badge>
                         {idx === 0 && (
-                          <Badge variant="outline" className="text-xs text-primary border-primary/40">
-                            Latest
-                          </Badge>
+                          <Badge variant="outline" className="text-xs text-primary border-primary/40">Latest</Badge>
                         )}
                       </div>
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -360,9 +402,7 @@ export default function WorkflowDetail() {
                         {formatDistanceToNow(new Date(v.createdAt), { addSuffix: true })}
                       </span>
                     </div>
-                    {v.changeNote && (
-                      <p className="text-sm text-muted-foreground">{v.changeNote}</p>
-                    )}
+                    {v.changeNote && <p className="text-sm text-muted-foreground">{v.changeNote}</p>}
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span>{(v.nodes as unknown[]).length} nodes</span>
                       <span>·</span>
@@ -372,19 +412,136 @@ export default function WorkflowDetail() {
                 ))}
               </div>
             )}
+
+            {/* Deployment history */}
+            {promotions.length > 0 && (
+              <>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-2 mb-3">
+                  Deployment History
+                </p>
+                <div className="space-y-2 pb-4">
+                  {promotions.map((p) => (
+                    <div key={p.id} className="rounded-lg border bg-muted/30 p-3 flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 text-sm font-medium flex-1 min-w-0">
+                        <Badge variant="outline" className="text-xs shrink-0">{p.fromEnvironment}</Badge>
+                        <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <Badge className="text-xs shrink-0 bg-emerald-600">{p.toEnvironment}</Badge>
+                        {p.notes && <span className="text-xs text-muted-foreground truncate ml-1">{p.notes}</span>}
+                      </div>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {formatDistanceToNow(new Date(p.createdAt), { addSuffix: true })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </ScrollArea>
 
-          <div className="shrink-0 pt-4 border-t">
+          <div className="shrink-0 pt-4 border-t flex gap-2">
             <Button
-              className="w-full gap-2"
+              variant="outline"
+              className="flex-1 gap-2"
+              onClick={() => { setVersionHistoryOpen(false); setDeployOpen(true); }}
+            >
+              <Globe className="h-4 w-4" />
+              Deploy
+            </Button>
+            <Button
+              className="flex-1 gap-2"
               onClick={() => { setVersionHistoryOpen(false); setPublishOpen(true); }}
             >
               <Rocket className="h-4 w-4" />
-              Publish New Version
+              Publish
             </Button>
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* ─── Deploy / Promote Dialog ──────────────────────────────────────── */}
+      <Dialog open={deployOpen} onOpenChange={setDeployOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-primary" />
+              Deploy Workflow
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="rounded-lg bg-muted/50 border p-4 space-y-1">
+              <p className="text-sm font-medium">{workflow.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {(workflow.nodes ?? []).length} nodes · {workflow.triggerType}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>From environment</Label>
+                <Select value={deployFrom} onValueChange={setDeployFrom}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {environments.map((e) => (
+                      <SelectItem key={e.id} value={e.type}>{e.name}</SelectItem>
+                    ))}
+                    {environments.length === 0 && (
+                      <>
+                        <SelectItem value="dev">Development</SelectItem>
+                        <SelectItem value="staging">Staging</SelectItem>
+                        <SelectItem value="prod">Production</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>To environment</Label>
+                <Select value={deployTo} onValueChange={setDeployTo}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {environments.map((e) => (
+                      <SelectItem key={e.id} value={e.type}>{e.name}</SelectItem>
+                    ))}
+                    {environments.length === 0 && (
+                      <>
+                        <SelectItem value="dev">Development</SelectItem>
+                        <SelectItem value="staging">Staging</SelectItem>
+                        <SelectItem value="prod">Production</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="deploy-notes">Notes (optional)</Label>
+              <Textarea
+                id="deploy-notes"
+                placeholder="Describe this deployment…"
+                value={deployNotes}
+                onChange={(e) => setDeployNotes(e.target.value)}
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button
+              onClick={() => promoteMutation.mutate({ fromEnvironment: deployFrom, toEnvironment: deployTo, notes: deployNotes })}
+              disabled={promoteMutation.isPending || deployFrom === deployTo}
+              className="gap-2"
+            >
+              <Globe className="h-4 w-4" />
+              {promoteMutation.isPending ? "Deploying…" : `Deploy to ${deployTo}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ─── Save as Template Dialog ─────────────────────────────────────── */}
       <Dialog open={saveAsTemplateOpen} onOpenChange={setSaveAsTemplateOpen}>

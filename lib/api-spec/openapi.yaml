@@ -213,6 +213,48 @@ paths:
         "204":
           description: Deleted
 
+  /templates/{id}/versions:
+    get:
+      operationId: listTemplateVersions
+      tags: [templates]
+      summary: List version snapshots for a template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Version list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TemplateVersion"
+
+  /templates/{id}/fork:
+    post:
+      operationId: forkTemplate
+      tags: [templates]
+      summary: Fork a template into a new editable copy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Forked template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+        "404":
+          description: Not found
+
   /templates/{id}/use:
     post:
       operationId: useTemplate
@@ -613,6 +655,210 @@ paths:
         "404":
           description: Not found
 
+  # ─── Billing & Usage ────────────────────────────────────────────────
+  /usage:
+    get:
+      operationId: getUsageSummary
+      tags: [billing]
+      summary: Get usage summary for the current period
+      responses:
+        "200":
+          description: Usage summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageSummary"
+
+  /usage/events:
+    get:
+      operationId: listUsageEvents
+      tags: [billing]
+      summary: List usage events
+      parameters:
+        - name: workflowId
+          in: query
+          schema:
+            type: integer
+        - name: eventType
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Usage event list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UsageEvent"
+
+  /billing/current:
+    get:
+      operationId: getCurrentBillingPeriod
+      tags: [billing]
+      summary: Get current billing period details
+      responses:
+        "200":
+          description: Current billing period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingPeriod"
+
+  /billing/invoices:
+    get:
+      operationId: listBillingInvoices
+      tags: [billing]
+      summary: List past billing invoices
+      responses:
+        "200":
+          description: Invoice list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BillingInvoice"
+
+  # ─── Environments ────────────────────────────────────────────────────
+  /environments:
+    get:
+      operationId: listEnvironments
+      tags: [environments]
+      summary: List deployment environments
+      responses:
+        "200":
+          description: Environment list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Environment"
+    post:
+      operationId: createEnvironment
+      tags: [environments]
+      summary: Create a new environment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnvironmentInput"
+      responses:
+        "201":
+          description: Created environment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+
+  /environments/{id}:
+    get:
+      operationId: getEnvironment
+      tags: [environments]
+      summary: Get environment by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Environment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateEnvironment
+      tags: [environments]
+      summary: Update an environment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnvironmentInput"
+      responses:
+        "200":
+          description: Updated environment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteEnvironment
+      tags: [environments]
+      summary: Delete an environment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Workflow Promotions ──────────────────────────────────────────────
+  /workflows/{id}/promotions:
+    get:
+      operationId: listWorkflowPromotions
+      tags: [workflows]
+      summary: List environment promotions for a workflow
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Promotion history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkflowPromotion"
+    post:
+      operationId: promoteWorkflow
+      tags: [workflows]
+      summary: Promote a workflow to an environment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Promotion record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowPromotion"
+        "404":
+          description: Not found
+
   # ─── Webhook Triggers ────────────────────────────────────────────────
   /webhooks/{workflowId}:
     post:
@@ -987,6 +1233,814 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AppStats"
+
+  # ─── Tenants ─────────────────────────────────────────────────────────
+  /tenants:
+    get:
+      operationId: listTenants
+      tags: [tenants]
+      summary: List all tenants
+      responses:
+        "200":
+          description: Tenant list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tenant"
+    post:
+      operationId: createTenant
+      tags: [tenants]
+      summary: Create a new tenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+
+  /tenants/{id}:
+    get:
+      operationId: getTenant
+      tags: [tenants]
+      summary: Get tenant by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Tenant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+    patch:
+      operationId: updateTenant
+      tags: [tenants]
+      summary: Update a tenant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+    delete:
+      operationId: deleteTenant
+      tags: [tenants]
+      summary: Delete a tenant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── RBAC — Roles ─────────────────────────────────────────────────────
+  /roles:
+    get:
+      operationId: listRoles
+      tags: [rbac]
+      summary: List roles (optionally filtered by tenantId)
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Role list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Role"
+    post:
+      operationId: createRole
+      tags: [rbac]
+      summary: Create a role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+
+  /roles/{id}:
+    get:
+      operationId: getRole
+      tags: [rbac]
+      summary: Get role with its permissions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Role detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleDetail"
+    patch:
+      operationId: updateRole
+      tags: [rbac]
+      summary: Update a role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+    delete:
+      operationId: deleteRole
+      tags: [rbac]
+      summary: Delete a role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /roles/{id}/permissions/{permissionId}:
+    put:
+      operationId: addPermissionToRole
+      tags: [rbac]
+      summary: Assign a permission to a role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: permissionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Assigned
+    delete:
+      operationId: removePermissionFromRole
+      tags: [rbac]
+      summary: Remove a permission from a role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: permissionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Removed
+
+  # ─── RBAC — Permissions ───────────────────────────────────────────────
+  /permissions:
+    get:
+      operationId: listPermissions
+      tags: [rbac]
+      summary: List all system permissions
+      responses:
+        "200":
+          description: Permission list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Permission"
+
+  # ─── RBAC — User Role Assignments ─────────────────────────────────────
+  /user-roles:
+    get:
+      operationId: listUserRoles
+      tags: [rbac]
+      summary: List role assignments (filter by userId or tenantId)
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: string
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User role list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserRole"
+    post:
+      operationId: assignRole
+      tags: [rbac]
+      summary: Assign a role to a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserRoleInput"
+      responses:
+        "201":
+          description: Assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRole"
+
+  /user-roles/{id}:
+    delete:
+      operationId: revokeRole
+      tags: [rbac]
+      summary: Revoke a role assignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Revoked
+
+  # ─── AI Models ────────────────────────────────────────────────────────
+  /ai-models:
+    get:
+      operationId: listAiModels
+      tags: [ai]
+      summary: List AI model registry entries
+      responses:
+        "200":
+          description: Model list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiModel"
+    post:
+      operationId: createAiModel
+      tags: [ai]
+      summary: Register a new AI model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiModelInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiModel"
+
+  /ai-models/{id}:
+    get:
+      operationId: getAiModel
+      tags: [ai]
+      summary: Get AI model by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Model
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiModel"
+    patch:
+      operationId: updateAiModel
+      tags: [ai]
+      summary: Update AI model
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiModelInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiModel"
+    delete:
+      operationId: deleteAiModel
+      tags: [ai]
+      summary: Remove AI model from registry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Prompts ──────────────────────────────────────────────────────────
+  /prompts:
+    get:
+      operationId: listPrompts
+      tags: [ai]
+      summary: List prompt registry entries
+      responses:
+        "200":
+          description: Prompt list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Prompt"
+    post:
+      operationId: createPrompt
+      tags: [ai]
+      summary: Create a new prompt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PromptInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prompt"
+
+  /prompts/{id}:
+    get:
+      operationId: getPrompt
+      tags: [ai]
+      summary: Get prompt by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Prompt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prompt"
+    patch:
+      operationId: updatePrompt
+      tags: [ai]
+      summary: Update a prompt
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PromptInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prompt"
+    delete:
+      operationId: deletePrompt
+      tags: [ai]
+      summary: Delete a prompt
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /prompts/{id}/versions:
+    get:
+      operationId: listPromptVersions
+      tags: [ai]
+      summary: List versions for a prompt
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Version list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PromptVersion"
+
+  /prompts/{id}/publish:
+    post:
+      operationId: publishPrompt
+      tags: [ai]
+      summary: Publish a prompt (draft → approved)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prompt"
+
+  # ─── AI Usage / Token Accounting ──────────────────────────────────────
+  /ai/usage:
+    get:
+      operationId: listTokenUsage
+      tags: [ai]
+      summary: List token usage records
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Usage records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TokenUsage"
+
+  /ai/usage/summary:
+    get:
+      operationId: getAiUsageSummary
+      tags: [ai]
+      summary: Aggregated token usage summary
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiUsageSummary"
+
+  # ─── Feature Flags ────────────────────────────────────────────────────
+  /feature-flags:
+    get:
+      operationId: listFeatureFlags
+      tags: [platform]
+      summary: List all feature flags
+      responses:
+        "200":
+          description: Feature flag list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeatureFlag"
+    post:
+      operationId: createFeatureFlag
+      tags: [platform]
+      summary: Create a feature flag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureFlagInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlag"
+
+  /feature-flags/{id}:
+    patch:
+      operationId: updateFeatureFlag
+      tags: [platform]
+      summary: Update a feature flag
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureFlagInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlag"
+    delete:
+      operationId: deleteFeatureFlag
+      tags: [platform]
+      summary: Delete a feature flag
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Notifications ────────────────────────────────────────────────────
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [platform]
+      summary: List notifications (optionally filter by recipientId)
+      parameters:
+        - name: recipientId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Notification list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+    post:
+      operationId: createNotification
+      tags: [platform]
+      summary: Create/send a notification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
+  /notifications/{id}/read:
+    post:
+      operationId: markNotificationRead
+      tags: [platform]
+      summary: Mark a notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Marked read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
+  /notification-templates:
+    get:
+      operationId: listNotificationTemplates
+      tags: [platform]
+      summary: List notification templates
+      responses:
+        "200":
+          description: Template list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NotificationTemplate"
+    post:
+      operationId: createNotificationTemplate
+      tags: [platform]
+      summary: Create a notification template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationTemplateInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationTemplate"
+
+  # ─── Global Search ────────────────────────────────────────────────────
+  /search:
+    get:
+      operationId: globalSearch
+      tags: [platform]
+      summary: Global search across workflows, apps, templates, connectors
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: types
+          in: query
+          schema:
+            type: string
+            description: Comma-separated list of types to search (workflows,apps,templates,connectors)
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResults"
+
+  # ─── Region Policies ─────────────────────────────────────────────────
+  /region-policies:
+    get:
+      operationId: listRegionPolicies
+      tags: [platform]
+      summary: List region policies
+      responses:
+        "200":
+          description: Policy list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RegionPolicy"
+    post:
+      operationId: createRegionPolicy
+      tags: [platform]
+      summary: Create a region policy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegionPolicyInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegionPolicy"
+
+  /region-policies/{id}:
+    patch:
+      operationId: updateRegionPolicy
+      tags: [platform]
+      summary: Update a region policy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegionPolicyInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegionPolicy"
+    delete:
+      operationId: deleteRegionPolicy
+      tags: [platform]
+      summary: Delete a region policy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
 
 components:
   schemas:
@@ -1644,3 +2698,681 @@ components:
           type: integer
         totalWidgets:
           type: integer
+
+    TemplateVersion:
+      type: object
+      required: [id, templateId, version, name, nodeCount, createdAt]
+      properties:
+        id:
+          type: integer
+        templateId:
+          type: integer
+        version:
+          type: integer
+        name:
+          type: string
+        nodeCount:
+          type: integer
+        changeNote:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+
+    UsageSummary:
+      type: object
+      required: [totalExecutions, executionsThisMonth, totalWorkflows, activeWorkflows, totalConnectors, usedConnectors, currentPeriodCost]
+      properties:
+        totalExecutions:
+          type: integer
+        executionsThisMonth:
+          type: integer
+        totalWorkflows:
+          type: integer
+        activeWorkflows:
+          type: integer
+        totalConnectors:
+          type: integer
+        usedConnectors:
+          type: integer
+        currentPeriodCost:
+          type: number
+        budgetLimit:
+          type: number
+          nullable: true
+
+    UsageEvent:
+      type: object
+      required: [id, eventType, quantity, createdAt]
+      properties:
+        id:
+          type: integer
+        workflowId:
+          type: integer
+          nullable: true
+        workflowName:
+          type: string
+          nullable: true
+        eventType:
+          type: string
+        quantity:
+          type: integer
+        metadata:
+          type: object
+        createdAt:
+          type: string
+
+    BillingPeriod:
+      type: object
+      required: [start, end, totalAmount, usageBreakdown]
+      properties:
+        start:
+          type: string
+        end:
+          type: string
+        totalAmount:
+          type: number
+        usageBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/BillingLineItem"
+
+    BillingLineItem:
+      type: object
+      required: [label, quantity, unitCost, total]
+      properties:
+        label:
+          type: string
+        quantity:
+          type: integer
+        unitCost:
+          type: number
+        total:
+          type: number
+
+    BillingInvoice:
+      type: object
+      required: [id, periodStart, periodEnd, totalAmount, status, createdAt]
+      properties:
+        id:
+          type: integer
+        periodStart:
+          type: string
+        periodEnd:
+          type: string
+        totalAmount:
+          type: number
+        status:
+          type: string
+          enum: [paid, pending, draft]
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/BillingLineItem"
+        createdAt:
+          type: string
+
+    Environment:
+      type: object
+      required: [id, name, type, isDefault, workflowCount, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [dev, staging, prod]
+        description:
+          type: string
+          nullable: true
+        isDefault:
+          type: boolean
+        workflowCount:
+          type: integer
+        createdAt:
+          type: string
+
+    EnvironmentInput:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        type:
+          type: string
+          enum: [dev, staging, prod]
+        description:
+          type: string
+
+    WorkflowPromotion:
+      type: object
+      required: [id, workflowId, workflowName, fromEnvironment, toEnvironment, status, promotedBy, createdAt]
+      properties:
+        id:
+          type: integer
+        workflowId:
+          type: integer
+        workflowName:
+          type: string
+        fromEnvironment:
+          type: string
+        toEnvironment:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected, promoted]
+        promotedBy:
+          type: string
+        approvedBy:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+
+    Tenant:
+      type: object
+      required: [id, name, slug, plan, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        plan:
+          type: string
+          enum: [free, pro, enterprise]
+        isActive:
+          type: boolean
+        settings:
+          type: object
+          nullable: true
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    TenantInput:
+      type: object
+      required: [name, slug]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        slug:
+          type: string
+          minLength: 1
+        plan:
+          type: string
+          enum: [free, pro, enterprise]
+        isActive:
+          type: boolean
+        settings:
+          type: object
+
+    Role:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        tenantId:
+          type: integer
+          nullable: true
+        permissionCount:
+          type: integer
+        createdAt:
+          type: string
+
+    RoleDetail:
+      type: object
+      required: [id, name, createdAt, permissions]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        tenantId:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Permission"
+
+    RoleInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        tenantId:
+          type: integer
+
+    Permission:
+      type: object
+      required: [id, resource, action]
+      properties:
+        id:
+          type: integer
+        resource:
+          type: string
+        action:
+          type: string
+        description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+
+    UserRole:
+      type: object
+      required: [id, userId, roleId, roleName, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        roleId:
+          type: integer
+        roleName:
+          type: string
+        tenantId:
+          type: integer
+          nullable: true
+        tenantName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+
+    UserRoleInput:
+      type: object
+      required: [userId, roleId]
+      properties:
+        userId:
+          type: string
+        roleId:
+          type: integer
+        tenantId:
+          type: integer
+
+    AiModel:
+      type: object
+      required: [id, provider, name, modelId, contextWindow, inputCostPerToken, outputCostPerToken, isEnabled, createdAt]
+      properties:
+        id:
+          type: integer
+        provider:
+          type: string
+        name:
+          type: string
+        modelId:
+          type: string
+        contextWindow:
+          type: integer
+        inputCostPerToken:
+          type: number
+        outputCostPerToken:
+          type: number
+        isEnabled:
+          type: boolean
+        config:
+          type: object
+          nullable: true
+        createdAt:
+          type: string
+
+    AiModelInput:
+      type: object
+      required: [provider, name, modelId]
+      properties:
+        provider:
+          type: string
+        name:
+          type: string
+        modelId:
+          type: string
+        contextWindow:
+          type: integer
+        inputCostPerToken:
+          type: number
+        outputCostPerToken:
+          type: number
+        isEnabled:
+          type: boolean
+        config:
+          type: object
+
+    Prompt:
+      type: object
+      required: [id, name, content, version, status, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        content:
+          type: string
+        version:
+          type: integer
+        status:
+          type: string
+          enum: [draft, review, approved]
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    PromptInput:
+      type: object
+      required: [name, content]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        content:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    PromptVersion:
+      type: object
+      required: [id, promptId, content, version, status, createdAt]
+      properties:
+        id:
+          type: integer
+        promptId:
+          type: integer
+        content:
+          type: string
+        version:
+          type: integer
+        status:
+          type: string
+          enum: [draft, review, approved]
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+
+    TokenUsage:
+      type: object
+      required: [id, inputTokens, outputTokens, cost, createdAt]
+      properties:
+        id:
+          type: integer
+        modelId:
+          type: integer
+          nullable: true
+        modelName:
+          type: string
+          nullable: true
+        provider:
+          type: string
+          nullable: true
+        promptId:
+          type: integer
+          nullable: true
+        workflowId:
+          type: integer
+          nullable: true
+        inputTokens:
+          type: integer
+        outputTokens:
+          type: integer
+        cost:
+          type: number
+        createdAt:
+          type: string
+
+    AiUsageSummary:
+      type: object
+      required: [totalInputTokens, totalOutputTokens, totalCost, totalRequests, byProvider, byModel]
+      properties:
+        totalInputTokens:
+          type: integer
+        totalOutputTokens:
+          type: integer
+        totalCost:
+          type: number
+        totalRequests:
+          type: integer
+        byProvider:
+          type: array
+          items:
+            type: object
+        byModel:
+          type: array
+          items:
+            type: object
+
+    FeatureFlag:
+      type: object
+      required: [id, key, name, enabled, rolloutPercentage, createdAt]
+      properties:
+        id:
+          type: integer
+        key:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+        rolloutPercentage:
+          type: integer
+        conditions:
+          type: object
+          nullable: true
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    FeatureFlagInput:
+      type: object
+      required: [key, name]
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        enabled:
+          type: boolean
+        rolloutPercentage:
+          type: integer
+        conditions:
+          type: object
+
+    Notification:
+      type: object
+      required: [id, type, title, channel, status, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+          nullable: true
+        channel:
+          type: string
+          enum: [in_app, email, webhook]
+        status:
+          type: string
+          enum: [unread, read, delivered, failed]
+        recipientId:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+        createdAt:
+          type: string
+
+    NotificationInput:
+      type: object
+      required: [title, type]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        channel:
+          type: string
+          enum: [in_app, email, webhook]
+        recipientId:
+          type: string
+        metadata:
+          type: object
+
+    NotificationTemplate:
+      type: object
+      required: [id, name, channel, body, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        channel:
+          type: string
+        subject:
+          type: string
+          nullable: true
+        body:
+          type: string
+        variables:
+          type: array
+          items:
+            type: string
+          nullable: true
+        createdAt:
+          type: string
+
+    NotificationTemplateInput:
+      type: object
+      required: [name, channel, body]
+      properties:
+        name:
+          type: string
+        channel:
+          type: string
+          enum: [in_app, email, webhook]
+        subject:
+          type: string
+        body:
+          type: string
+        variables:
+          type: array
+          items:
+            type: string
+
+    SearchResult:
+      type: object
+      required: [id, type, title, description, url]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [workflow, app, template, connector]
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        url:
+          type: string
+        metadata:
+          type: object
+          nullable: true
+
+    SearchResults:
+      type: object
+      required: [query, results, total]
+      properties:
+        query:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchResult"
+        total:
+          type: integer
+
+    RegionPolicy:
+      type: object
+      required: [id, name, region, tier, replicationFactor, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        region:
+          type: string
+        tier:
+          type: string
+          enum: [standard, premium, edge]
+        replicationFactor:
+          type: integer
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+
+    RegionPolicyInput:
+      type: object
+      required: [name, region]
+      properties:
+        name:
+          type: string
+        region:
+          type: string
+        tier:
+          type: string
+          enum: [standard, premium, edge]
+        replicationFactor:
+          type: integer
+        notes:
+          type: string

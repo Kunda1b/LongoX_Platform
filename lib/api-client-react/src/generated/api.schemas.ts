@@ -548,6 +548,492 @@ export interface DashboardStats {
   totalWidgets: number;
 }
 
+export interface TemplateVersion {
+  id: number;
+  templateId: number;
+  version: number;
+  name: string;
+  nodeCount: number;
+  changeNote?: string | null;
+  createdAt: string;
+}
+
+export interface UsageSummary {
+  totalExecutions: number;
+  executionsThisMonth: number;
+  totalWorkflows: number;
+  activeWorkflows: number;
+  totalConnectors: number;
+  usedConnectors: number;
+  currentPeriodCost: number;
+  budgetLimit?: number | null;
+}
+
+export type UsageEventMetadata = { [key: string]: unknown };
+
+export interface UsageEvent {
+  id: number;
+  workflowId?: number | null;
+  workflowName?: string | null;
+  eventType: string;
+  quantity: number;
+  metadata?: UsageEventMetadata;
+  createdAt: string;
+}
+
+export interface BillingLineItem {
+  label: string;
+  quantity: number;
+  unitCost: number;
+  total: number;
+}
+
+export interface BillingPeriod {
+  start: string;
+  end: string;
+  totalAmount: number;
+  usageBreakdown: BillingLineItem[];
+}
+
+export type BillingInvoiceStatus = typeof BillingInvoiceStatus[keyof typeof BillingInvoiceStatus];
+
+
+export const BillingInvoiceStatus = {
+  paid: 'paid',
+  pending: 'pending',
+  draft: 'draft',
+} as const;
+
+export interface BillingInvoice {
+  id: number;
+  periodStart: string;
+  periodEnd: string;
+  totalAmount: number;
+  status: BillingInvoiceStatus;
+  lineItems?: BillingLineItem[];
+  createdAt: string;
+}
+
+export type EnvironmentType = typeof EnvironmentType[keyof typeof EnvironmentType];
+
+
+export const EnvironmentType = {
+  dev: 'dev',
+  staging: 'staging',
+  prod: 'prod',
+} as const;
+
+export interface Environment {
+  id: number;
+  name: string;
+  type: EnvironmentType;
+  description?: string | null;
+  isDefault: boolean;
+  workflowCount: number;
+  createdAt: string;
+}
+
+export type EnvironmentInputType = typeof EnvironmentInputType[keyof typeof EnvironmentInputType];
+
+
+export const EnvironmentInputType = {
+  dev: 'dev',
+  staging: 'staging',
+  prod: 'prod',
+} as const;
+
+export interface EnvironmentInput {
+  /** @minLength 1 */
+  name: string;
+  type: EnvironmentInputType;
+  description?: string;
+}
+
+export type WorkflowPromotionStatus = typeof WorkflowPromotionStatus[keyof typeof WorkflowPromotionStatus];
+
+
+export const WorkflowPromotionStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+  promoted: 'promoted',
+} as const;
+
+export interface WorkflowPromotion {
+  id: number;
+  workflowId: number;
+  workflowName: string;
+  fromEnvironment: string;
+  toEnvironment: string;
+  status: WorkflowPromotionStatus;
+  promotedBy: string;
+  approvedBy?: string | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export type TenantPlan = typeof TenantPlan[keyof typeof TenantPlan];
+
+
+export const TenantPlan = {
+  free: 'free',
+  pro: 'pro',
+  enterprise: 'enterprise',
+} as const;
+
+export type TenantSettings = { [key: string]: unknown } | null;
+
+export interface Tenant {
+  id: number;
+  name: string;
+  slug: string;
+  plan: TenantPlan;
+  isActive: boolean;
+  settings?: TenantSettings;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export type TenantInputPlan = typeof TenantInputPlan[keyof typeof TenantInputPlan];
+
+
+export const TenantInputPlan = {
+  free: 'free',
+  pro: 'pro',
+  enterprise: 'enterprise',
+} as const;
+
+export type TenantInputSettings = { [key: string]: unknown };
+
+export interface TenantInput {
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 1 */
+  slug: string;
+  plan?: TenantInputPlan;
+  isActive?: boolean;
+  settings?: TenantInputSettings;
+}
+
+export interface Role {
+  id: number;
+  name: string;
+  description?: string | null;
+  tenantId?: number | null;
+  permissionCount?: number;
+  createdAt: string;
+}
+
+export interface Permission {
+  id: number;
+  resource: string;
+  action: string;
+  description?: string | null;
+  createdAt?: string;
+}
+
+export interface RoleDetail {
+  id: number;
+  name: string;
+  description?: string | null;
+  tenantId?: number | null;
+  createdAt: string;
+  permissions: Permission[];
+}
+
+export interface RoleInput {
+  /** @minLength 1 */
+  name: string;
+  description?: string;
+  tenantId?: number;
+}
+
+export interface UserRole {
+  id: number;
+  userId: string;
+  roleId: number;
+  roleName: string;
+  tenantId?: number | null;
+  tenantName?: string | null;
+  createdAt: string;
+}
+
+export interface UserRoleInput {
+  userId: string;
+  roleId: number;
+  tenantId?: number;
+}
+
+export type AiModelConfig = { [key: string]: unknown } | null;
+
+export interface AiModel {
+  id: number;
+  provider: string;
+  name: string;
+  modelId: string;
+  contextWindow: number;
+  inputCostPerToken: number;
+  outputCostPerToken: number;
+  isEnabled: boolean;
+  config?: AiModelConfig;
+  createdAt: string;
+}
+
+export type AiModelInputConfig = { [key: string]: unknown };
+
+export interface AiModelInput {
+  provider: string;
+  name: string;
+  modelId: string;
+  contextWindow?: number;
+  inputCostPerToken?: number;
+  outputCostPerToken?: number;
+  isEnabled?: boolean;
+  config?: AiModelInputConfig;
+}
+
+export type PromptStatus = typeof PromptStatus[keyof typeof PromptStatus];
+
+
+export const PromptStatus = {
+  draft: 'draft',
+  review: 'review',
+  approved: 'approved',
+} as const;
+
+export interface Prompt {
+  id: number;
+  name: string;
+  description?: string | null;
+  content: string;
+  version: number;
+  status: PromptStatus;
+  tags?: string[] | null;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface PromptInput {
+  /** @minLength 1 */
+  name: string;
+  description?: string;
+  content: string;
+  tags?: string[];
+}
+
+export type PromptVersionStatus = typeof PromptVersionStatus[keyof typeof PromptVersionStatus];
+
+
+export const PromptVersionStatus = {
+  draft: 'draft',
+  review: 'review',
+  approved: 'approved',
+} as const;
+
+export interface PromptVersion {
+  id: number;
+  promptId: number;
+  content: string;
+  version: number;
+  status: PromptVersionStatus;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface TokenUsage {
+  id: number;
+  modelId?: number | null;
+  modelName?: string | null;
+  provider?: string | null;
+  promptId?: number | null;
+  workflowId?: number | null;
+  inputTokens: number;
+  outputTokens: number;
+  cost: number;
+  createdAt: string;
+}
+
+export type AiUsageSummaryByProviderItem = { [key: string]: unknown };
+
+export type AiUsageSummaryByModelItem = { [key: string]: unknown };
+
+export interface AiUsageSummary {
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCost: number;
+  totalRequests: number;
+  byProvider: AiUsageSummaryByProviderItem[];
+  byModel: AiUsageSummaryByModelItem[];
+}
+
+export type FeatureFlagConditions = { [key: string]: unknown } | null;
+
+export interface FeatureFlag {
+  id: number;
+  key: string;
+  name: string;
+  description?: string | null;
+  enabled: boolean;
+  rolloutPercentage: number;
+  conditions?: FeatureFlagConditions;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export type FeatureFlagInputConditions = { [key: string]: unknown };
+
+export interface FeatureFlagInput {
+  key: string;
+  name: string;
+  description?: string;
+  enabled?: boolean;
+  rolloutPercentage?: number;
+  conditions?: FeatureFlagInputConditions;
+}
+
+export type NotificationChannel = typeof NotificationChannel[keyof typeof NotificationChannel];
+
+
+export const NotificationChannel = {
+  in_app: 'in_app',
+  email: 'email',
+  webhook: 'webhook',
+} as const;
+
+export type NotificationStatus = typeof NotificationStatus[keyof typeof NotificationStatus];
+
+
+export const NotificationStatus = {
+  unread: 'unread',
+  read: 'read',
+  delivered: 'delivered',
+  failed: 'failed',
+} as const;
+
+export type NotificationMetadata = { [key: string]: unknown } | null;
+
+export interface Notification {
+  id: number;
+  type: string;
+  title: string;
+  body?: string | null;
+  channel: NotificationChannel;
+  status: NotificationStatus;
+  recipientId?: string | null;
+  metadata?: NotificationMetadata;
+  createdAt: string;
+}
+
+export type NotificationInputChannel = typeof NotificationInputChannel[keyof typeof NotificationInputChannel];
+
+
+export const NotificationInputChannel = {
+  in_app: 'in_app',
+  email: 'email',
+  webhook: 'webhook',
+} as const;
+
+export type NotificationInputMetadata = { [key: string]: unknown };
+
+export interface NotificationInput {
+  type: string;
+  title: string;
+  body?: string;
+  channel?: NotificationInputChannel;
+  recipientId?: string;
+  metadata?: NotificationInputMetadata;
+}
+
+export interface NotificationTemplate {
+  id: number;
+  name: string;
+  channel: string;
+  subject?: string | null;
+  body: string;
+  variables?: string[] | null;
+  createdAt: string;
+}
+
+export type NotificationTemplateInputChannel = typeof NotificationTemplateInputChannel[keyof typeof NotificationTemplateInputChannel];
+
+
+export const NotificationTemplateInputChannel = {
+  in_app: 'in_app',
+  email: 'email',
+  webhook: 'webhook',
+} as const;
+
+export interface NotificationTemplateInput {
+  name: string;
+  channel: NotificationTemplateInputChannel;
+  subject?: string;
+  body: string;
+  variables?: string[];
+}
+
+export type SearchResultType = typeof SearchResultType[keyof typeof SearchResultType];
+
+
+export const SearchResultType = {
+  workflow: 'workflow',
+  app: 'app',
+  template: 'template',
+  connector: 'connector',
+} as const;
+
+export type SearchResultMetadata = { [key: string]: unknown } | null;
+
+export interface SearchResult {
+  id: number;
+  type: SearchResultType;
+  title: string;
+  description: string | null;
+  url: string;
+  metadata?: SearchResultMetadata;
+}
+
+export interface SearchResults {
+  query: string;
+  results: SearchResult[];
+  total: number;
+}
+
+export type RegionPolicyTier = typeof RegionPolicyTier[keyof typeof RegionPolicyTier];
+
+
+export const RegionPolicyTier = {
+  standard: 'standard',
+  premium: 'premium',
+  edge: 'edge',
+} as const;
+
+export interface RegionPolicy {
+  id: number;
+  name: string;
+  region: string;
+  tier: RegionPolicyTier;
+  replicationFactor: number;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export type RegionPolicyInputTier = typeof RegionPolicyInputTier[keyof typeof RegionPolicyInputTier];
+
+
+export const RegionPolicyInputTier = {
+  standard: 'standard',
+  premium: 'premium',
+  edge: 'edge',
+} as const;
+
+export interface RegionPolicyInput {
+  name: string;
+  region: string;
+  tier?: RegionPolicyInputTier;
+  replicationFactor?: number;
+  notes?: string;
+}
+
 export type GetRecentActivityParams = {
 limit?: number;
 };
@@ -592,6 +1078,12 @@ export const ListDashboardsStatus = {
   published: 'published',
 } as const;
 
+export type ListUsageEventsParams = {
+workflowId?: number;
+eventType?: string;
+limit?: number;
+};
+
 export type ListDlqEntriesParams = {
 resolved?: boolean;
 limit?: number;
@@ -628,5 +1120,32 @@ installed?: boolean;
 
 export type ListAppsParams = {
 search?: string;
+};
+
+export type ListRolesParams = {
+tenantId?: number;
+};
+
+export type ListUserRolesParams = {
+userId?: string;
+tenantId?: number;
+};
+
+export type ListTokenUsageParams = {
+limit?: number;
+};
+
+export type ListNotificationsParams = {
+recipientId?: string;
+status?: string;
+limit?: number;
+};
+
+export type GlobalSearchParams = {
+q: string;
+/**
+ * Comma-separated list of types to search (workflows,apps,templates,connectors)
+ */
+types?: string;
 };
 

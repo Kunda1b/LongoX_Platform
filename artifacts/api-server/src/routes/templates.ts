@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, like, and, sql } from "drizzle-orm";
-import { db, templatesTable, workflowsTable } from "@workspace/db";
+import { eq, like, and, sql, desc } from "drizzle-orm";
+import { db, templatesTable, workflowsTable, templateVersionsTable } from "@workspace/db";
 import { ListTemplatesQueryParams, GetTemplateParams } from "@workspace/api-zod";
 import { z } from "zod";
 
@@ -832,6 +832,78 @@ router.delete("/templates/:id", async (req, res): Promise<void> => {
 
   await db.delete(templatesTable).where(eq(templatesTable.id, params.data.id));
   res.sendStatus(204);
+});
+
+// ─── Template versions ────────────────────────────────────────────────────────
+
+router.get("/templates/:id/versions", async (req, res): Promise<void> => {
+  const params = GetTemplateParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+  const [template] = await db.select().from(templatesTable).where(eq(templatesTable.id, params.data.id));
+  if (!template) { res.status(404).json({ error: "Template not found" }); return; }
+
+  const versions = await db.select().from(templateVersionsTable)
+    .where(eq(templateVersionsTable.templateId, params.data.id))
+    .orderBy(desc(templateVersionsTable.version));
+
+  res.json(versions.map((v) => ({
+    id: v.id,
+    templateId: v.templateId,
+    version: v.version,
+    name: v.name,
+    nodeCount: Array.isArray(v.nodes) ? (v.nodes as unknown[]).length : 0,
+    changeNote: v.changeNote ?? null,
+    createdAt: v.createdAt.toISOString(),
+  })));
+});
+
+// ─── Fork template ────────────────────────────────────────────────────────────
+
+router.post("/templates/:id/fork", async (req, res): Promise<void> => {
+  const params = GetTemplateParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+  const [source] = await db.select().from(templatesTable).where(eq(templatesTable.id, params.data.id));
+  if (!source) { res.status(404).json({ error: "Template not found" }); return; }
+
+  const [forked] = await db.insert(templatesTable).values({
+    name: `${source.name} (Fork)`,
+    description: source.description,
+    category: source.category,
+    triggerType: source.triggerType,
+    complexity: source.complexity,
+    tags: source.tags,
+    uses: 0,
+    templateType: source.templateType,
+    metadata: source.metadata,
+    nodes: source.nodes,
+    nodeCount: source.nodeCount,
+  }).returning();
+
+  await db.insert(templateVersionsTable).values({
+    templateId: forked.id,
+    version: 1,
+    name: forked.name,
+    nodes: (source.nodes ?? []) as Parameters<typeof db.insert>[0],
+    changeNote: `Forked from "${source.name}" (v${source.id})`,
+  });
+
+  res.status(201).json({
+    id: forked.id,
+    name: forked.name,
+    description: forked.description ?? null,
+    category: forked.category,
+    triggerType: forked.triggerType,
+    complexity: forked.complexity,
+    tags: forked.tags ?? [],
+    uses: forked.uses,
+    templateType: forked.templateType,
+    metadata: forked.metadata ?? {},
+    nodes: forked.nodes ?? [],
+    nodeCount: forked.nodeCount,
+    createdAt: forked.createdAt.toISOString(),
+  });
 });
 
 router.post("/templates/:id/use", async (req, res): Promise<void> => {

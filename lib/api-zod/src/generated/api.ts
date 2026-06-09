@@ -213,6 +213,33 @@ export const DeleteTemplateParams = zod.object({
 
 
 /**
+ * @summary List version snapshots for a template
+ */
+export const ListTemplateVersionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListTemplateVersionsResponseItem = zod.object({
+  "id": zod.number(),
+  "templateId": zod.number(),
+  "version": zod.number(),
+  "name": zod.string(),
+  "nodeCount": zod.number(),
+  "changeNote": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListTemplateVersionsResponse = zod.array(ListTemplateVersionsResponseItem)
+
+
+/**
+ * @summary Fork a template into a new editable copy
+ */
+export const ForkTemplateParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary Clone a template into a new workflow
  */
 export const UseTemplateParams = zod.object({
@@ -673,6 +700,193 @@ export const PublishDashboardResponse = zod.object({
 
 
 /**
+ * @summary Get usage summary for the current period
+ */
+export const GetUsageSummaryResponse = zod.object({
+  "totalExecutions": zod.number(),
+  "executionsThisMonth": zod.number(),
+  "totalWorkflows": zod.number(),
+  "activeWorkflows": zod.number(),
+  "totalConnectors": zod.number(),
+  "usedConnectors": zod.number(),
+  "currentPeriodCost": zod.number(),
+  "budgetLimit": zod.number().nullish()
+})
+
+
+/**
+ * @summary List usage events
+ */
+export const listUsageEventsQueryLimitDefault = 50;
+
+export const ListUsageEventsQueryParams = zod.object({
+  "workflowId": zod.coerce.number().optional(),
+  "eventType": zod.coerce.string().optional(),
+  "limit": zod.coerce.number().default(listUsageEventsQueryLimitDefault)
+})
+
+export const ListUsageEventsResponseItem = zod.object({
+  "id": zod.number(),
+  "workflowId": zod.number().nullish(),
+  "workflowName": zod.string().nullish(),
+  "eventType": zod.string(),
+  "quantity": zod.number(),
+  "metadata": zod.object({
+
+}).passthrough().optional(),
+  "createdAt": zod.string()
+})
+export const ListUsageEventsResponse = zod.array(ListUsageEventsResponseItem)
+
+
+/**
+ * @summary Get current billing period details
+ */
+export const GetCurrentBillingPeriodResponse = zod.object({
+  "start": zod.string(),
+  "end": zod.string(),
+  "totalAmount": zod.number(),
+  "usageBreakdown": zod.array(zod.object({
+  "label": zod.string(),
+  "quantity": zod.number(),
+  "unitCost": zod.number(),
+  "total": zod.number()
+}))
+})
+
+
+/**
+ * @summary List past billing invoices
+ */
+export const ListBillingInvoicesResponseItem = zod.object({
+  "id": zod.number(),
+  "periodStart": zod.string(),
+  "periodEnd": zod.string(),
+  "totalAmount": zod.number(),
+  "status": zod.enum(['paid', 'pending', 'draft']),
+  "lineItems": zod.array(zod.object({
+  "label": zod.string(),
+  "quantity": zod.number(),
+  "unitCost": zod.number(),
+  "total": zod.number()
+})).optional(),
+  "createdAt": zod.string()
+})
+export const ListBillingInvoicesResponse = zod.array(ListBillingInvoicesResponseItem)
+
+
+/**
+ * @summary List deployment environments
+ */
+export const ListEnvironmentsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "type": zod.enum(['dev', 'staging', 'prod']),
+  "description": zod.string().nullish(),
+  "isDefault": zod.boolean(),
+  "workflowCount": zod.number(),
+  "createdAt": zod.string()
+})
+export const ListEnvironmentsResponse = zod.array(ListEnvironmentsResponseItem)
+
+
+/**
+ * @summary Create a new environment
+ */
+
+
+
+export const CreateEnvironmentBody = zod.object({
+  "name": zod.string().min(1),
+  "type": zod.enum(['dev', 'staging', 'prod']),
+  "description": zod.string().optional()
+})
+
+
+/**
+ * @summary Get environment by ID
+ */
+export const GetEnvironmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetEnvironmentResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "type": zod.enum(['dev', 'staging', 'prod']),
+  "description": zod.string().nullish(),
+  "isDefault": zod.boolean(),
+  "workflowCount": zod.number(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Update an environment
+ */
+export const UpdateEnvironmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateEnvironmentBody = zod.object({
+  "name": zod.string().min(1),
+  "type": zod.enum(['dev', 'staging', 'prod']),
+  "description": zod.string().optional()
+})
+
+export const UpdateEnvironmentResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "type": zod.enum(['dev', 'staging', 'prod']),
+  "description": zod.string().nullish(),
+  "isDefault": zod.boolean(),
+  "workflowCount": zod.number(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete an environment
+ */
+export const DeleteEnvironmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List environment promotions for a workflow
+ */
+export const ListWorkflowPromotionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListWorkflowPromotionsResponseItem = zod.object({
+  "id": zod.number(),
+  "workflowId": zod.number(),
+  "workflowName": zod.string(),
+  "fromEnvironment": zod.string(),
+  "toEnvironment": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'promoted']),
+  "promotedBy": zod.string(),
+  "approvedBy": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListWorkflowPromotionsResponse = zod.array(ListWorkflowPromotionsResponseItem)
+
+
+/**
+ * @summary Promote a workflow to an environment
+ */
+export const PromoteWorkflowParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary Trigger a workflow via inbound webhook
  */
 export const TriggerWebhookParams = zod.object({
@@ -1026,6 +1240,787 @@ export const GetAppStatsResponse = zod.object({
   "type": zod.string(),
   "count": zod.number()
 }))
+})
+
+
+/**
+ * @summary List all tenants
+ */
+export const ListTenantsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string(),
+  "plan": zod.enum(['free', 'pro', 'enterprise']),
+  "isActive": zod.boolean(),
+  "settings": zod.object({
+
+}).passthrough().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+export const ListTenantsResponse = zod.array(ListTenantsResponseItem)
+
+
+/**
+ * @summary Create a new tenant
+ */
+
+
+
+
+export const CreateTenantBody = zod.object({
+  "name": zod.string().min(1),
+  "slug": zod.string().min(1),
+  "plan": zod.enum(['free', 'pro', 'enterprise']).optional(),
+  "isActive": zod.boolean().optional(),
+  "settings": zod.object({
+
+}).passthrough().optional()
+})
+
+
+/**
+ * @summary Get tenant by ID
+ */
+export const GetTenantParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetTenantResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string(),
+  "plan": zod.enum(['free', 'pro', 'enterprise']),
+  "isActive": zod.boolean(),
+  "settings": zod.object({
+
+}).passthrough().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Update a tenant
+ */
+export const UpdateTenantParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+export const UpdateTenantBody = zod.object({
+  "name": zod.string().min(1),
+  "slug": zod.string().min(1),
+  "plan": zod.enum(['free', 'pro', 'enterprise']).optional(),
+  "isActive": zod.boolean().optional(),
+  "settings": zod.object({
+
+}).passthrough().optional()
+})
+
+export const UpdateTenantResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string(),
+  "plan": zod.enum(['free', 'pro', 'enterprise']),
+  "isActive": zod.boolean(),
+  "settings": zod.object({
+
+}).passthrough().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Delete a tenant
+ */
+export const DeleteTenantParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List roles (optionally filtered by tenantId)
+ */
+export const ListRolesQueryParams = zod.object({
+  "tenantId": zod.coerce.number().optional()
+})
+
+export const ListRolesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "tenantId": zod.number().nullish(),
+  "permissionCount": zod.number().optional(),
+  "createdAt": zod.string()
+})
+export const ListRolesResponse = zod.array(ListRolesResponseItem)
+
+
+/**
+ * @summary Create a role
+ */
+
+
+
+export const CreateRoleBody = zod.object({
+  "name": zod.string().min(1),
+  "description": zod.string().optional(),
+  "tenantId": zod.number().optional()
+})
+
+
+/**
+ * @summary Get role with its permissions
+ */
+export const GetRoleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetRoleResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "tenantId": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "permissions": zod.array(zod.object({
+  "id": zod.number(),
+  "resource": zod.string(),
+  "action": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string().optional()
+}))
+})
+
+
+/**
+ * @summary Update a role
+ */
+export const UpdateRoleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateRoleBody = zod.object({
+  "name": zod.string().min(1),
+  "description": zod.string().optional(),
+  "tenantId": zod.number().optional()
+})
+
+export const UpdateRoleResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "tenantId": zod.number().nullish(),
+  "permissionCount": zod.number().optional(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a role
+ */
+export const DeleteRoleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Assign a permission to a role
+ */
+export const AddPermissionToRoleParams = zod.object({
+  "id": zod.coerce.number(),
+  "permissionId": zod.coerce.number()
+})
+
+
+/**
+ * @summary Remove a permission from a role
+ */
+export const RemovePermissionFromRoleParams = zod.object({
+  "id": zod.coerce.number(),
+  "permissionId": zod.coerce.number()
+})
+
+
+/**
+ * @summary List all system permissions
+ */
+export const ListPermissionsResponseItem = zod.object({
+  "id": zod.number(),
+  "resource": zod.string(),
+  "action": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string().optional()
+})
+export const ListPermissionsResponse = zod.array(ListPermissionsResponseItem)
+
+
+/**
+ * @summary List role assignments (filter by userId or tenantId)
+ */
+export const ListUserRolesQueryParams = zod.object({
+  "userId": zod.coerce.string().optional(),
+  "tenantId": zod.coerce.number().optional()
+})
+
+export const ListUserRolesResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.string(),
+  "roleId": zod.number(),
+  "roleName": zod.string(),
+  "tenantId": zod.number().nullish(),
+  "tenantName": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListUserRolesResponse = zod.array(ListUserRolesResponseItem)
+
+
+/**
+ * @summary Assign a role to a user
+ */
+export const AssignRoleBody = zod.object({
+  "userId": zod.string(),
+  "roleId": zod.number(),
+  "tenantId": zod.number().optional()
+})
+
+
+/**
+ * @summary Revoke a role assignment
+ */
+export const RevokeRoleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List AI model registry entries
+ */
+export const ListAiModelsResponseItem = zod.object({
+  "id": zod.number(),
+  "provider": zod.string(),
+  "name": zod.string(),
+  "modelId": zod.string(),
+  "contextWindow": zod.number(),
+  "inputCostPerToken": zod.number(),
+  "outputCostPerToken": zod.number(),
+  "isEnabled": zod.boolean(),
+  "config": zod.object({
+
+}).passthrough().nullish(),
+  "createdAt": zod.string()
+})
+export const ListAiModelsResponse = zod.array(ListAiModelsResponseItem)
+
+
+/**
+ * @summary Register a new AI model
+ */
+export const CreateAiModelBody = zod.object({
+  "provider": zod.string(),
+  "name": zod.string(),
+  "modelId": zod.string(),
+  "contextWindow": zod.number().optional(),
+  "inputCostPerToken": zod.number().optional(),
+  "outputCostPerToken": zod.number().optional(),
+  "isEnabled": zod.boolean().optional(),
+  "config": zod.object({
+
+}).passthrough().optional()
+})
+
+
+/**
+ * @summary Get AI model by ID
+ */
+export const GetAiModelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetAiModelResponse = zod.object({
+  "id": zod.number(),
+  "provider": zod.string(),
+  "name": zod.string(),
+  "modelId": zod.string(),
+  "contextWindow": zod.number(),
+  "inputCostPerToken": zod.number(),
+  "outputCostPerToken": zod.number(),
+  "isEnabled": zod.boolean(),
+  "config": zod.object({
+
+}).passthrough().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Update AI model
+ */
+export const UpdateAiModelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateAiModelBody = zod.object({
+  "provider": zod.string(),
+  "name": zod.string(),
+  "modelId": zod.string(),
+  "contextWindow": zod.number().optional(),
+  "inputCostPerToken": zod.number().optional(),
+  "outputCostPerToken": zod.number().optional(),
+  "isEnabled": zod.boolean().optional(),
+  "config": zod.object({
+
+}).passthrough().optional()
+})
+
+export const UpdateAiModelResponse = zod.object({
+  "id": zod.number(),
+  "provider": zod.string(),
+  "name": zod.string(),
+  "modelId": zod.string(),
+  "contextWindow": zod.number(),
+  "inputCostPerToken": zod.number(),
+  "outputCostPerToken": zod.number(),
+  "isEnabled": zod.boolean(),
+  "config": zod.object({
+
+}).passthrough().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Remove AI model from registry
+ */
+export const DeleteAiModelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List prompt registry entries
+ */
+export const ListPromptsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "content": zod.string(),
+  "version": zod.number(),
+  "status": zod.enum(['draft', 'review', 'approved']),
+  "tags": zod.array(zod.string()).nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+export const ListPromptsResponse = zod.array(ListPromptsResponseItem)
+
+
+/**
+ * @summary Create a new prompt
+ */
+
+
+
+export const CreatePromptBody = zod.object({
+  "name": zod.string().min(1),
+  "description": zod.string().optional(),
+  "content": zod.string(),
+  "tags": zod.array(zod.string()).optional()
+})
+
+
+/**
+ * @summary Get prompt by ID
+ */
+export const GetPromptParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPromptResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "content": zod.string(),
+  "version": zod.number(),
+  "status": zod.enum(['draft', 'review', 'approved']),
+  "tags": zod.array(zod.string()).nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Update a prompt
+ */
+export const UpdatePromptParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdatePromptBody = zod.object({
+  "name": zod.string().min(1),
+  "description": zod.string().optional(),
+  "content": zod.string(),
+  "tags": zod.array(zod.string()).optional()
+})
+
+export const UpdatePromptResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "content": zod.string(),
+  "version": zod.number(),
+  "status": zod.enum(['draft', 'review', 'approved']),
+  "tags": zod.array(zod.string()).nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Delete a prompt
+ */
+export const DeletePromptParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List versions for a prompt
+ */
+export const ListPromptVersionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListPromptVersionsResponseItem = zod.object({
+  "id": zod.number(),
+  "promptId": zod.number(),
+  "content": zod.string(),
+  "version": zod.number(),
+  "status": zod.enum(['draft', 'review', 'approved']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListPromptVersionsResponse = zod.array(ListPromptVersionsResponseItem)
+
+
+/**
+ * @summary Publish a prompt (draft → approved)
+ */
+export const PublishPromptParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PublishPromptResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "content": zod.string(),
+  "version": zod.number(),
+  "status": zod.enum(['draft', 'review', 'approved']),
+  "tags": zod.array(zod.string()).nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+
+
+/**
+ * @summary List token usage records
+ */
+export const listTokenUsageQueryLimitDefault = 50;
+
+export const ListTokenUsageQueryParams = zod.object({
+  "limit": zod.coerce.number().default(listTokenUsageQueryLimitDefault)
+})
+
+export const ListTokenUsageResponseItem = zod.object({
+  "id": zod.number(),
+  "modelId": zod.number().nullish(),
+  "modelName": zod.string().nullish(),
+  "provider": zod.string().nullish(),
+  "promptId": zod.number().nullish(),
+  "workflowId": zod.number().nullish(),
+  "inputTokens": zod.number(),
+  "outputTokens": zod.number(),
+  "cost": zod.number(),
+  "createdAt": zod.string()
+})
+export const ListTokenUsageResponse = zod.array(ListTokenUsageResponseItem)
+
+
+/**
+ * @summary Aggregated token usage summary
+ */
+export const GetAiUsageSummaryResponse = zod.object({
+  "totalInputTokens": zod.number(),
+  "totalOutputTokens": zod.number(),
+  "totalCost": zod.number(),
+  "totalRequests": zod.number(),
+  "byProvider": zod.array(zod.object({
+
+}).passthrough()),
+  "byModel": zod.array(zod.object({
+
+}).passthrough())
+})
+
+
+/**
+ * @summary List all feature flags
+ */
+export const ListFeatureFlagsResponseItem = zod.object({
+  "id": zod.number(),
+  "key": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "enabled": zod.boolean(),
+  "rolloutPercentage": zod.number(),
+  "conditions": zod.object({
+
+}).passthrough().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+export const ListFeatureFlagsResponse = zod.array(ListFeatureFlagsResponseItem)
+
+
+/**
+ * @summary Create a feature flag
+ */
+export const CreateFeatureFlagBody = zod.object({
+  "key": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().optional(),
+  "enabled": zod.boolean().optional(),
+  "rolloutPercentage": zod.number().optional(),
+  "conditions": zod.object({
+
+}).passthrough().optional()
+})
+
+
+/**
+ * @summary Update a feature flag
+ */
+export const UpdateFeatureFlagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateFeatureFlagBody = zod.object({
+  "key": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().optional(),
+  "enabled": zod.boolean().optional(),
+  "rolloutPercentage": zod.number().optional(),
+  "conditions": zod.object({
+
+}).passthrough().optional()
+})
+
+export const UpdateFeatureFlagResponse = zod.object({
+  "id": zod.number(),
+  "key": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "enabled": zod.boolean(),
+  "rolloutPercentage": zod.number(),
+  "conditions": zod.object({
+
+}).passthrough().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Delete a feature flag
+ */
+export const DeleteFeatureFlagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List notifications (optionally filter by recipientId)
+ */
+export const listNotificationsQueryLimitDefault = 50;
+
+export const ListNotificationsQueryParams = zod.object({
+  "recipientId": zod.coerce.string().optional(),
+  "status": zod.coerce.string().optional(),
+  "limit": zod.coerce.number().default(listNotificationsQueryLimitDefault)
+})
+
+export const ListNotificationsResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "title": zod.string(),
+  "body": zod.string().nullish(),
+  "channel": zod.enum(['in_app', 'email', 'webhook']),
+  "status": zod.enum(['unread', 'read', 'delivered', 'failed']),
+  "recipientId": zod.string().nullish(),
+  "metadata": zod.object({
+
+}).passthrough().nullish(),
+  "createdAt": zod.string()
+})
+export const ListNotificationsResponse = zod.array(ListNotificationsResponseItem)
+
+
+/**
+ * @summary Create/send a notification
+ */
+export const CreateNotificationBody = zod.object({
+  "type": zod.string(),
+  "title": zod.string(),
+  "body": zod.string().optional(),
+  "channel": zod.enum(['in_app', 'email', 'webhook']).optional(),
+  "recipientId": zod.string().optional(),
+  "metadata": zod.object({
+
+}).passthrough().optional()
+})
+
+
+/**
+ * @summary Mark a notification as read
+ */
+export const MarkNotificationReadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MarkNotificationReadResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "title": zod.string(),
+  "body": zod.string().nullish(),
+  "channel": zod.enum(['in_app', 'email', 'webhook']),
+  "status": zod.enum(['unread', 'read', 'delivered', 'failed']),
+  "recipientId": zod.string().nullish(),
+  "metadata": zod.object({
+
+}).passthrough().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary List notification templates
+ */
+export const ListNotificationTemplatesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "channel": zod.string(),
+  "subject": zod.string().nullish(),
+  "body": zod.string(),
+  "variables": zod.array(zod.string()).nullish(),
+  "createdAt": zod.string()
+})
+export const ListNotificationTemplatesResponse = zod.array(ListNotificationTemplatesResponseItem)
+
+
+/**
+ * @summary Create a notification template
+ */
+export const CreateNotificationTemplateBody = zod.object({
+  "name": zod.string(),
+  "channel": zod.enum(['in_app', 'email', 'webhook']),
+  "subject": zod.string().optional(),
+  "body": zod.string(),
+  "variables": zod.array(zod.string()).optional()
+})
+
+
+/**
+ * @summary Global search across workflows, apps, templates, connectors
+ */
+export const GlobalSearchQueryParams = zod.object({
+  "q": zod.coerce.string(),
+  "types": zod.coerce.string().optional()
+})
+
+export const GlobalSearchResponse = zod.object({
+  "query": zod.string(),
+  "results": zod.array(zod.object({
+  "id": zod.number(),
+  "type": zod.enum(['workflow', 'app', 'template', 'connector']),
+  "title": zod.string(),
+  "description": zod.string().nullable(),
+  "url": zod.string(),
+  "metadata": zod.object({
+
+}).passthrough().nullish()
+})),
+  "total": zod.number()
+})
+
+
+/**
+ * @summary List region policies
+ */
+export const ListRegionPoliciesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "region": zod.string(),
+  "tier": zod.enum(['standard', 'premium', 'edge']),
+  "replicationFactor": zod.number(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListRegionPoliciesResponse = zod.array(ListRegionPoliciesResponseItem)
+
+
+/**
+ * @summary Create a region policy
+ */
+export const CreateRegionPolicyBody = zod.object({
+  "name": zod.string(),
+  "region": zod.string(),
+  "tier": zod.enum(['standard', 'premium', 'edge']).optional(),
+  "replicationFactor": zod.number().optional(),
+  "notes": zod.string().optional()
+})
+
+
+/**
+ * @summary Update a region policy
+ */
+export const UpdateRegionPolicyParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateRegionPolicyBody = zod.object({
+  "name": zod.string(),
+  "region": zod.string(),
+  "tier": zod.enum(['standard', 'premium', 'edge']).optional(),
+  "replicationFactor": zod.number().optional(),
+  "notes": zod.string().optional()
+})
+
+export const UpdateRegionPolicyResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "region": zod.string(),
+  "tier": zod.enum(['standard', 'premium', 'edge']),
+  "replicationFactor": zod.number(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a region policy
+ */
+export const DeleteRegionPolicyParams = zod.object({
+  "id": zod.coerce.number()
 })
 
 

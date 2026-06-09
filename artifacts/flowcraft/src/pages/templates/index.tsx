@@ -5,6 +5,7 @@ import {
   useUseTemplate,
   useCreateTemplate,
   useDeleteTemplate,
+  useForkTemplate,
   getListTemplatesQueryKey,
 } from "@workspace/api-client-react";
 import type { Template } from "@workspace/api-client-react";
@@ -16,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Search, Layers, Activity, Plus, Trash2, Eye, GitBranch,
   LayoutDashboard, Package, Code2, Sparkles, Copy, Check,
-  Database, ShieldCheck, Workflow,
+  Database, ShieldCheck, Workflow, GitFork,
 } from "lucide-react";
 import { TemplatePreviewDialog } from "@/components/template-preview-dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -88,13 +89,15 @@ function fmtUses(n: number) {
 // ─── Card Components ───────────────────────────────────────────────────────────
 
 function WorkflowCard({
-  template, onPreview, onDelete, onUse, isUsing,
+  template, onPreview, onDelete, onUse, onFork, isUsing, isForking,
 }: {
   template: Template;
   onPreview: () => void;
   onDelete?: () => void;
   onUse: () => void;
+  onFork: () => void;
   isUsing: boolean;
+  isForking: boolean;
 }) {
   return (
     <Card className="flex flex-col h-full overflow-hidden hover:border-primary/50 transition-colors group">
@@ -116,6 +119,9 @@ function WorkflowCard({
             </span>
             <button className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); onPreview(); }}>
               <Eye className="h-4 w-4" />
+            </button>
+            <button className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground" title="Fork template" onClick={(e) => { e.stopPropagation(); onFork(); }}>
+              <GitFork className="h-4 w-4" />
             </button>
             {template.isCustom && onDelete && (
               <button className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
@@ -143,8 +149,12 @@ function WorkflowCard({
           </div>
         </div>
       </CardContent>
-      <CardFooter className="pt-0 mt-auto border-t bg-muted/20 p-4">
-        <Button className="w-full font-medium shadow-none hover:shadow-sm" onClick={onUse} disabled={isUsing}>
+      <CardFooter className="pt-0 mt-auto border-t bg-muted/20 p-4 gap-2">
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={onFork} disabled={isForking} title="Fork into an editable copy">
+          <GitFork className="h-3.5 w-3.5" />
+          {isForking ? "Forking…" : "Fork"}
+        </Button>
+        <Button className="flex-1 font-medium shadow-none hover:shadow-sm" onClick={onUse} disabled={isUsing}>
           {isUsing ? "Applying…" : "Use Template"}
         </Button>
       </CardFooter>
@@ -456,6 +466,16 @@ export default function Templates() {
     },
   });
 
+  const forkMutation = useForkTemplate({
+    mutation: {
+      onSuccess: (forked) => {
+        queryClient.invalidateQueries({ queryKey: getListTemplatesQueryKey() });
+        toast({ title: `Forked: "${forked.name}"`, description: "A new editable copy has been created." });
+      },
+      onError: () => toast({ title: "Fork failed", variant: "destructive" }),
+    },
+  });
+
   function handleCreate() {
     const tags = form.tagsInput.split(",").map((t) => t.trim()).filter(Boolean);
     createMutation.mutate({ data: { name: form.name, description: form.description, category: form.category, triggerType: form.triggerType, complexity: form.complexity, tags, nodes: [] } });
@@ -580,7 +600,9 @@ export default function Templates() {
                 onPreview={() => setPreviewTemplate(t)}
                 onDelete={t.isCustom ? () => setDeleteTarget(t.id) : undefined}
                 onUse={() => useMutation.mutate({ id: t.id })}
+                onFork={() => forkMutation.mutate({ id: t.id })}
                 isUsing={useMutation.isPending}
+                isForking={forkMutation.isPending && forkMutation.variables?.id === t.id}
               />
             );
           })}

@@ -13,6 +13,10 @@ import nodeTypesRouter from "./node-types";
 import dlqRouter from "./dlq";
 import auditLogRouter from "./audit-log";
 import webhooksRouter from "./webhooks";
+import billingRouter from "./billing";
+import environmentsRouter from "./environments";
+import tenantsRouter from "./tenants";
+import rbacRouter from "./rbac";
 
 const router: IRouter = Router();
 
@@ -30,5 +34,9 @@ router.use(dashboardsRouter);
 router.use(dlqRouter);
 router.use(auditLogRouter);
 router.use(webhooksRouter);
+router.use(billingRouter);
+router.use(environmentsRouter);
+router.use(tenantsRouter);
+router.use(rbacRouter);
 
 export default router;
