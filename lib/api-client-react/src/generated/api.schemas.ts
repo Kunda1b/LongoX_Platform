@@ -123,7 +123,28 @@ export interface Template {
   complexity: TemplateComplexity;
   tags: string[];
   nodes: WorkflowNode[];
+  isCustom: boolean;
   createdAt: string;
+}
+
+export type TemplateCreateComplexity = typeof TemplateCreateComplexity[keyof typeof TemplateCreateComplexity];
+
+
+export const TemplateCreateComplexity = {
+  beginner: 'beginner',
+  intermediate: 'intermediate',
+  advanced: 'advanced',
+} as const;
+
+export interface TemplateCreate {
+  /** @minLength 1 */
+  name: string;
+  description: string;
+  category: string;
+  triggerType: string;
+  complexity: TemplateCreateComplexity;
+  tags?: string[];
+  nodes?: WorkflowNode[];
 }
 
 export interface Credential {

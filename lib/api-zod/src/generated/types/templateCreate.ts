@@ -5,20 +5,16 @@
  * FlowCraft API — low-code automation and internal tools platform
  * OpenAPI spec version: 0.1.0
  */
-import type { TemplateComplexity } from './templateComplexity';
+import type { TemplateCreateComplexity } from './templateCreateComplexity';
 import type { WorkflowNode } from './workflowNode';
 
-export interface Template {
-  id: number;
+export interface TemplateCreate {
+  /** @minLength 1 */
   name: string;
   description: string;
   category: string;
   triggerType: string;
-  nodeCount: number;
-  uses: number;
-  complexity: TemplateComplexity;
-  tags: string[];
-  nodes: WorkflowNode[];
-  isCustom: boolean;
-  createdAt: string;
+  complexity: TemplateCreateComplexity;
+  tags?: string[];
+  nodes?: WorkflowNode[];
 }

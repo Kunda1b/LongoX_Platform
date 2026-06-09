@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, jsonb, real } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, jsonb, real, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -13,6 +13,7 @@ export const templatesTable = pgTable("templates", {
   complexity: text("complexity").notNull().default("beginner"),
   tags: text("tags").array().notNull().default([]),
   nodes: jsonb("nodes").notNull().default([]),
+  isCustom: boolean("is_custom").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

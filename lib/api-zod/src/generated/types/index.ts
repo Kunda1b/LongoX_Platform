@@ -49,6 +49,8 @@ export * from './nodeType';
 export * from './nodeTypeCategory';
 export * from './template';
 export * from './templateComplexity';
+export * from './templateCreate';
+export * from './templateCreateComplexity';
 export * from './workflow';
 export * from './workflowInput';
 export * from './workflowNode';

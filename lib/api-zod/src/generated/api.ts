@@ -136,9 +136,38 @@ export const ListTemplatesResponseItem = zod.object({
   "y": zod.number()
 })
 })),
+  "isCustom": zod.boolean(),
   "createdAt": zod.string()
 })
 export const ListTemplatesResponse = zod.array(ListTemplatesResponseItem)
+
+
+/**
+ * @summary Create a custom template
+ */
+
+
+
+export const CreateTemplateBody = zod.object({
+  "name": zod.string().min(1),
+  "description": zod.string(),
+  "category": zod.string(),
+  "triggerType": zod.string(),
+  "complexity": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "tags": zod.array(zod.string()).optional(),
+  "nodes": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "name": zod.string(),
+  "nodeTypeId": zod.string().nullish(),
+  "connectorId": zod.number().nullish(),
+  "config": zod.record(zod.string(), zod.unknown()).optional(),
+  "position": zod.object({
+  "x": zod.number(),
+  "y": zod.number()
+})
+})).optional()
+})
 
 
 /**
@@ -170,7 +199,16 @@ export const GetTemplateResponse = zod.object({
   "y": zod.number()
 })
 })),
+  "isCustom": zod.boolean(),
   "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a custom template
+ */
+export const DeleteTemplateParams = zod.object({
+  "id": zod.coerce.number()
 })
 
 
