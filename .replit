@@ -65,7 +65,7 @@ args = "PORT=21036 BASE_PATH=/ pnpm --filter @workspace/autoflow dev"
 waitForPort = 21036
 
 [agent]
-stack = "PNPM_WORKSPACE"
+stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
 
 [postMerge]
