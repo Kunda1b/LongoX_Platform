@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useListTemplates, useUseTemplate, useCreateTemplate, useDeleteTemplate, getListTemplatesQueryKey } from "@workspace/api-client-react";
+import type { Template } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Layers, Activity, Plus, Trash2, X } from "lucide-react";
+import { Search, Layers, Activity, Plus, Trash2, Eye } from "lucide-react";
+import { TemplatePreviewDialog } from "@/components/template-preview-dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -69,12 +71,14 @@ export default function Templates() {
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState<CreateFormState>(EMPTY_FORM);
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
 
   const { data: templates = [], isLoading } = useListTemplates();
 
   const useMutation = useUseTemplate({
     mutation: {
       onSuccess: (newWorkflow) => {
+        setPreviewTemplate(null);
         toast({ title: "Template applied!" });
         setLocation(`/workflows/${newWorkflow.id}`);
       },
@@ -204,6 +208,16 @@ export default function Templates() {
                       <Activity className="h-3 w-3" />
                       {formatUses(template.uses)}
                     </span>
+                    <button
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                      title="Preview template"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewTemplate(template);
+                      }}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
                     {template.isCustom && (
                       <button
                         className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
@@ -390,6 +404,15 @@ export default function Templates() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ─── Template Preview Dialog ─────────────────────────────────────────── */}
+      <TemplatePreviewDialog
+        template={previewTemplate}
+        open={previewTemplate !== null}
+        onClose={() => setPreviewTemplate(null)}
+        onUse={(id) => useMutation.mutate({ id })}
+        isUsing={useMutation.isPending}
+      />
     </div>
   );
 }
