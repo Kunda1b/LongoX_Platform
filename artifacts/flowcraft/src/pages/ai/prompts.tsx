@@ -37,7 +37,7 @@ export default function PromptsPage() {
   const [versionTarget, setVersionTarget] = useState<Prompt | null>(null);
   const [form, setForm] = useState<PromptForm>(EMPTY);
 
-  const { data: versions = [] } = useListPromptVersions(versionTarget?.id ?? 0, { query: { enabled: versionTarget !== null } });
+  const { data: versions = [] } = useListPromptVersions(versionTarget?.id ?? 0, { query: { enabled: versionTarget !== null, queryKey: [] } });
 
   const createMutation = useCreatePrompt({
     mutation: {

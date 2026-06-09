@@ -22,7 +22,10 @@ type TriggerSeed = {
 type ConnectorSeed = {
   name: string; displayName?: string; version: string; sdkVersion: string;
   category: string; description: string; icon: string; color: string; author: string;
-  permissions: string[]; capabilities: Record<string, boolean>;
+  permissions: string[]; capabilities: {
+    actions: boolean; pollingTriggers: boolean; webhookTriggers: boolean;
+    oauth2: boolean; apiKey: boolean; batching: boolean; pagination: boolean; fileUpload: boolean;
+  };
   authType: string; authConfig: Record<string, unknown>;
   certificationLevel: string; rateLimit: { requestsPerMinute: number; burst: number };
   isInstalled: boolean; isFeatured: boolean;

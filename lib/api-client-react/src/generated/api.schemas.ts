@@ -93,6 +93,8 @@ export const TemplateComplexity = {
   advanced: 'advanced',
 } as const;
 
+export type TemplateMetadata = { [key: string]: unknown } | null;
+
 export type WorkflowNodeConfig = { [key: string]: unknown };
 
 export type WorkflowNodePosition = {
@@ -125,6 +127,7 @@ export interface Template {
   nodes: WorkflowNode[];
   isCustom: boolean;
   createdAt: string;
+  metadata?: TemplateMetadata;
 }
 
 export type TemplateCreateComplexity = typeof TemplateCreateComplexity[keyof typeof TemplateCreateComplexity];
@@ -359,14 +362,37 @@ export interface ExecutionDetail {
   steps: ExecutionStep[];
 }
 
+export type ConnectorAuthConfig = { [key: string]: unknown } | null;
+
+export type ConnectorCapabilities = { [key: string]: unknown } | null;
+
+export type ConnectorRateLimit = { [key: string]: unknown } | null;
+
+export type ConnectorHealthStatus = { [key: string]: unknown } | null;
+
 export interface Connector {
   id: number;
   name: string;
+  /** @nullable */
+  displayName?: string | null;
+  /** @nullable */
+  version?: string | null;
   category: string;
   description: string;
   icon: string;
   /** @nullable */
   color?: string | null;
+  /** @nullable */
+  author?: string | null;
+  /** @nullable */
+  certificationLevel?: string | null;
+  /** @nullable */
+  authType?: string | null;
+  authConfig?: ConnectorAuthConfig;
+  permissions?: string[] | null;
+  capabilities?: ConnectorCapabilities;
+  rateLimit?: ConnectorRateLimit;
+  healthStatus?: ConnectorHealthStatus;
   isInstalled: boolean;
   isFeatured: boolean;
   actionCount: number;
@@ -374,8 +400,6 @@ export interface Connector {
   installCount?: number;
   /** @nullable */
   rating?: number | null;
-  /** @nullable */
-  author?: string | null;
 }
 
 export interface ConnectorCategory {

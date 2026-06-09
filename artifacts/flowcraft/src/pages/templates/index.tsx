@@ -633,10 +633,10 @@ export default function Templates() {
                     <ul className="space-y-1">{dbs.map((d) => <li key={d} className="text-xs">· {d}</li>)}</ul>
                   </div>
                 </div>
-                {(meta.includesDatabase || meta.includesPermissions) && (
+                {(!!meta.includesDatabase || !!meta.includesPermissions) && (
                   <div className="flex gap-2">
-                    {meta.includesDatabase && <Badge variant="outline" className="text-emerald-700 border-emerald-200 gap-1"><Database className="h-3 w-3" />DB Schema</Badge>}
-                    {meta.includesPermissions && <Badge variant="outline" className="text-amber-700 border-amber-200 gap-1"><ShieldCheck className="h-3 w-3" />Permissions</Badge>}
+                    {!!meta.includesDatabase && <Badge variant="outline" className="text-emerald-700 border-emerald-200 gap-1"><Database className="h-3 w-3" />DB Schema</Badge>}
+                    {!!meta.includesPermissions && <Badge variant="outline" className="text-amber-700 border-amber-200 gap-1"><ShieldCheck className="h-3 w-3" />Permissions</Badge>}
                   </div>
                 )}
               </div>

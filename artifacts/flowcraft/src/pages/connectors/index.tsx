@@ -6,13 +6,16 @@ import {
   useInstallConnector,
   getListConnectorsQueryKey,
 } from "@workspace/api-client-react";
-import type { Connector, ConnectorAction, ConnectorTrigger, ConnectorExecution } from "@workspace/api-client-react";
+import type { Connector } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -23,6 +26,22 @@ import {
   BarChart3, FileJson, ArrowRight, X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+// ─── Local Types ──────────────────────────────────────────────────────────────
+
+type ConnectorAction = {
+  id: number; actionId: string; name: string; description: string;
+  inputSchema: Record<string, unknown>; outputSchema: Record<string, unknown>; connectorId: number;
+};
+type ConnectorTrigger = {
+  id: number; triggerId: string; triggerType: string; name: string; description: string;
+  pollingInterval?: number | null; connectorId: number;
+};
+type ConnectorExecution = {
+  id: number; connectorId: number; executionId: string;
+  actionId?: string | null; triggerId?: string | null;
+  status: "success" | "failed" | "timeout"; durationMs?: number | null; createdAt: string;
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,7 +59,7 @@ const AUTH_CONFIG = {
   basic:   { label: "Basic",    icon: Lock,  color: "bg-gray-100 text-gray-600 border-gray-200" },
 };
 
-function getHealthDot(healthStatus?: Record<string, unknown>) {
+function getHealthDot(healthStatus?: Record<string, unknown> | null) {
   if (!healthStatus || !healthStatus.availability) return "bg-gray-300";
   const avail = Number(healthStatus.availability);
   if (avail >= 99.9) return "bg-emerald-500";
@@ -62,7 +81,7 @@ function SchemaFields({ schema }: { schema: Record<string, unknown> }) {
           <code className="bg-muted px-1.5 py-0.5 rounded text-[0.7rem] font-mono shrink-0">{key}</code>
           <span className="text-muted-foreground">{String(def.type ?? "any")}</span>
           {required.includes(key) && <span className="text-red-500 text-[0.65rem] font-medium">required</span>}
-          {def.description && <span className="text-muted-foreground opacity-70 truncate">{String(def.description)}</span>}
+          {!!def.description && <span className="text-muted-foreground opacity-70 truncate">{String(def.description)}</span>}
         </div>
       ))}
     </div>
@@ -212,7 +231,7 @@ function ConnectorDetailDialog({
                   <div className="grid grid-cols-2 gap-3">
                     {Object.entries(connector.rateLimit).map(([key, val]) => (
                       <div key={key} className="bg-muted/50 rounded-lg p-3">
-                        <p className="text-lg font-bold">{val}</p>
+                        <p className="text-lg font-bold">{String(val)}</p>
                         <p className="text-xs text-muted-foreground">{key.replace(/([A-Z])/g, " $1").trim()}</p>
                       </div>
                     ))}
@@ -368,7 +387,7 @@ function ConnectorDetailDialog({
                     {connector.healthStatus.avgLatencyMs !== undefined && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Avg API Latency</span>
-                        <span className="font-medium">{connector.healthStatus.avgLatencyMs}ms</span>
+                        <span className="font-medium">{String(connector.healthStatus.avgLatencyMs)}ms</span>
                       </div>
                     )}
                   </div>
@@ -467,12 +486,12 @@ function ConnectorCard({
             <AuthIcon className="h-2.5 w-2.5" />
             {auth.label}
           </Badge>
-          {caps.webhookTriggers && (
+          {!!(caps as Record<string, unknown>).webhookTriggers && (
             <Badge variant="outline" className="text-[0.6rem] px-1.5 py-0.5 bg-violet-50 text-violet-700 border-violet-200 flex items-center gap-0.5">
               <Webhook className="h-2.5 w-2.5" /> Webhooks
             </Badge>
           )}
-          {caps.pagination && (
+          {!!(caps as Record<string, unknown>).pagination && (
             <Badge variant="outline" className="text-[0.6rem] px-1.5 py-0.5 bg-sky-50 text-sky-700 border-sky-200">
               Pagination
             </Badge>

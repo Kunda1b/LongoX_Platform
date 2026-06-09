@@ -100,14 +100,14 @@ export default function Analytics() {
                 wfAnalytics.map((stat) => (
                   <tr key={stat.workflowId} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                     <td className="px-6 py-4 font-medium text-foreground">{stat.workflowName}</td>
-                    <td className="px-6 py-4 text-right">{stat.totalRuns}</td>
-                    <td className="px-6 py-4 text-right font-medium text-green-600">{stat.successCount}</td>
-                    <td className="px-6 py-4 text-right font-medium text-red-600">{stat.failedCount}</td>
+                    <td className="px-6 py-4 text-right">{stat.total}</td>
+                    <td className="px-6 py-4 text-right font-medium text-green-600">{stat.success}</td>
+                    <td className="px-6 py-4 text-right font-medium text-red-600">{stat.failed}</td>
                     <td className="px-6 py-4 text-right text-muted-foreground">{stat.avgDurationMs ? `${Math.round(stat.avgDurationMs)}ms` : '-'}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <Progress value={stat.successRate} className="h-2 flex-1" />
-                        <span className="text-xs font-medium w-10 text-right">{Math.round(stat.successRate)}%</span>
+                        <Progress value={stat.total > 0 ? (stat.success / stat.total) * 100 : 0} className="h-2 flex-1" />
+                        <span className="text-xs font-medium w-10 text-right">{stat.total > 0 ? Math.round((stat.success / stat.total) * 100) : 0}%</span>
                       </div>
                     </td>
                   </tr>

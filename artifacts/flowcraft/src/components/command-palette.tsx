@@ -44,7 +44,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const [, setLocation] = useLocation();
 
   const debouncedQuery = useDebounce(query, 300);
-  const { data: searchResults } = useGlobalSearch({ q: debouncedQuery }, { query: { enabled: debouncedQuery.length >= 2 } });
+  const { data: searchResults } = useGlobalSearch({ q: debouncedQuery }, { query: { enabled: debouncedQuery.length >= 2, queryKey: [] } });
 
   function navigate(url: string) {
     setLocation(url);

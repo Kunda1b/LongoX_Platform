@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { TemplateComplexity } from './templateComplexity';
+import type { TemplateMetadata } from './templateMetadata';
 import type { WorkflowNode } from './workflowNode';
 
 export interface Template {
@@ -21,4 +22,5 @@ export interface Template {
   nodes: WorkflowNode[];
   isCustom: boolean;
   createdAt: string;
+  metadata?: TemplateMetadata;
 }

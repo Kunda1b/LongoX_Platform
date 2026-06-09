@@ -361,7 +361,7 @@ export default function RbacPage() {
 
 function RoleCard({ role, onDelete }: { role: Role; onDelete: () => void }) {
   const [expanded, setExpanded] = useState(false);
-  const { data: detail } = useGetRole(role.id, { query: { enabled: expanded } });
+  const { data: detail } = useGetRole(role.id, { query: { enabled: expanded, queryKey: [] } });
 
   return (
     <Card className="flex flex-col">

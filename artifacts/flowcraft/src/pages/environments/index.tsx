@@ -6,6 +6,7 @@ import {
   useDeleteEnvironment,
   useUpdateEnvironment,
   getListEnvironmentsQueryKey,
+  EnvironmentInputType,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -83,12 +84,12 @@ export default function EnvironmentsPage() {
 
   function handleCreate() {
     if (!form.name.trim()) return;
-    createMutation.mutate({ data: { name: form.name, type: form.type, description: form.description } });
+    createMutation.mutate({ data: { name: form.name, type: form.type as EnvironmentInputType, description: form.description } });
   }
 
   function handleUpdate() {
     if (!editEnv || !form.name.trim()) return;
-    updateMutation.mutate({ id: editEnv.id, data: { name: form.name, type: form.type, description: form.description } });
+    updateMutation.mutate({ id: editEnv.id, data: { name: form.name, type: form.type as EnvironmentInputType, description: form.description } });
   }
 
   function openEdit(env: Environment) {

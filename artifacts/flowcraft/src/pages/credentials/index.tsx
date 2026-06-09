@@ -39,7 +39,7 @@ export default function Credentials() {
   const [fieldsText, setFieldsText] = useState("");
 
   const { data: credentials = [], isLoading } = useListCredentials();
-  const { data: connectors = [] } = useListConnectors({ query: { params: { installed: true } } });
+  const { data: connectors = [] } = useListConnectors({ installed: true });
 
   const createMutation = useCreateCredential({
     mutation: {
@@ -72,10 +72,13 @@ export default function Credentials() {
       return;
     }
     const fields = fieldsText.split(",").map(s => s.trim()).filter(Boolean);
+    const numericConnectorId = parseInt(connectorId, 10);
+    const selectedConnector = connectors.find(c => c.id === numericConnectorId);
     createMutation.mutate({
       data: {
         name,
-        connectorId: parseInt(connectorId, 10),
+        connectorId: numericConnectorId,
+        connectorName: selectedConnector?.name ?? "",
         fields
       }
     });

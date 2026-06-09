@@ -137,7 +137,8 @@ export const ListTemplatesResponseItem = zod.object({
 })
 })),
   "isCustom": zod.boolean(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "metadata": zod.record(zod.string(), zod.unknown()).nullish()
 })
 export const ListTemplatesResponse = zod.array(ListTemplatesResponseItem)
 
@@ -200,7 +201,8 @@ export const GetTemplateResponse = zod.object({
 })
 })),
   "isCustom": zod.boolean(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "metadata": zod.record(zod.string(), zod.unknown()).nullish()
 })
 
 
@@ -1056,17 +1058,26 @@ export const ListConnectorsQueryParams = zod.object({
 export const ListConnectorsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "displayName": zod.string().nullish(),
+  "version": zod.string().nullish(),
   "category": zod.string(),
   "description": zod.string(),
   "icon": zod.string(),
   "color": zod.string().nullish(),
+  "author": zod.string().nullish(),
+  "certificationLevel": zod.string().nullish(),
+  "authType": zod.string().nullish(),
+  "authConfig": zod.record(zod.string(), zod.unknown()).nullish(),
+  "permissions": zod.array(zod.string()).nullish(),
+  "capabilities": zod.record(zod.string(), zod.unknown()).nullish(),
+  "rateLimit": zod.record(zod.string(), zod.unknown()).nullish(),
+  "healthStatus": zod.record(zod.string(), zod.unknown()).nullish(),
   "isInstalled": zod.boolean(),
   "isFeatured": zod.boolean(),
   "actionCount": zod.number(),
   "triggerCount": zod.number(),
   "installCount": zod.number().optional(),
-  "rating": zod.number().nullish(),
-  "author": zod.string().nullish()
+  "rating": zod.number().nullish()
 })
 export const ListConnectorsResponse = zod.array(ListConnectorsResponseItem)
 
@@ -1081,17 +1092,26 @@ export const GetConnectorParams = zod.object({
 export const GetConnectorResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "displayName": zod.string().nullish(),
+  "version": zod.string().nullish(),
   "category": zod.string(),
   "description": zod.string(),
   "icon": zod.string(),
   "color": zod.string().nullish(),
+  "author": zod.string().nullish(),
+  "certificationLevel": zod.string().nullish(),
+  "authType": zod.string().nullish(),
+  "authConfig": zod.record(zod.string(), zod.unknown()).nullish(),
+  "permissions": zod.array(zod.string()).nullish(),
+  "capabilities": zod.record(zod.string(), zod.unknown()).nullish(),
+  "rateLimit": zod.record(zod.string(), zod.unknown()).nullish(),
+  "healthStatus": zod.record(zod.string(), zod.unknown()).nullish(),
   "isInstalled": zod.boolean(),
   "isFeatured": zod.boolean(),
   "actionCount": zod.number(),
   "triggerCount": zod.number(),
   "installCount": zod.number().optional(),
-  "rating": zod.number().nullish(),
-  "author": zod.string().nullish()
+  "rating": zod.number().nullish()
 })
 
 
@@ -1105,17 +1125,26 @@ export const InstallConnectorParams = zod.object({
 export const InstallConnectorResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "displayName": zod.string().nullish(),
+  "version": zod.string().nullish(),
   "category": zod.string(),
   "description": zod.string(),
   "icon": zod.string(),
   "color": zod.string().nullish(),
+  "author": zod.string().nullish(),
+  "certificationLevel": zod.string().nullish(),
+  "authType": zod.string().nullish(),
+  "authConfig": zod.record(zod.string(), zod.unknown()).nullish(),
+  "permissions": zod.array(zod.string()).nullish(),
+  "capabilities": zod.record(zod.string(), zod.unknown()).nullish(),
+  "rateLimit": zod.record(zod.string(), zod.unknown()).nullish(),
+  "healthStatus": zod.record(zod.string(), zod.unknown()).nullish(),
   "isInstalled": zod.boolean(),
   "isFeatured": zod.boolean(),
   "actionCount": zod.number(),
   "triggerCount": zod.number(),
   "installCount": zod.number().optional(),
-  "rating": zod.number().nullish(),
-  "author": zod.string().nullish()
+  "rating": zod.number().nullish()
 })
 
 

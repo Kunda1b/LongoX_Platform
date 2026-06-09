@@ -55,7 +55,7 @@ export default function FeatureFlagsPage() {
   });
 
   function toggleFlag(flag: FeatureFlag) {
-    updateMutation.mutate({ id: flag.id, data: { enabled: !flag.enabled } });
+    updateMutation.mutate({ id: flag.id, data: { key: flag.key, name: flag.name, enabled: !flag.enabled } });
   }
 
   function openEdit(flag: FeatureFlag) {

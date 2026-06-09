@@ -2181,6 +2181,10 @@ components:
           type: boolean
         createdAt:
           type: string
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
 
     TemplateCreate:
       type: object
@@ -2497,6 +2501,10 @@ components:
           type: integer
         name:
           type: string
+        displayName:
+          type: ["string", "null"]
+        version:
+          type: ["string", "null"]
         category:
           type: string
         description:
@@ -2505,6 +2513,33 @@ components:
           type: string
         color:
           type: ["string", "null"]
+        author:
+          type: ["string", "null"]
+        certificationLevel:
+          type: ["string", "null"]
+        authType:
+          type: ["string", "null"]
+        authConfig:
+          type: object
+          nullable: true
+          additionalProperties: true
+        permissions:
+          type: array
+          nullable: true
+          items:
+            type: string
+        capabilities:
+          type: object
+          nullable: true
+          additionalProperties: true
+        rateLimit:
+          type: object
+          nullable: true
+          additionalProperties: true
+        healthStatus:
+          type: object
+          nullable: true
+          additionalProperties: true
         isInstalled:
           type: boolean
         isFeatured:
@@ -2517,8 +2552,6 @@ components:
           type: integer
         rating:
           type: ["number", "null"]
-        author:
-          type: ["string", "null"]
 
     ConnectorCategory:
       type: object
