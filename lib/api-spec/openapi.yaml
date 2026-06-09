@@ -1,22 +1,31 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: FlowCraft API — low-code automation and internal tools platform
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: workflows
+    description: Automation workflow management
+  - name: connectors
+    description: Integration connectors and marketplace
+  - name: executions
+    description: Workflow execution history
+  - name: apps
+    description: Low-code internal apps and dashboards
+  - name: dashboard
+    description: Platform overview and summaries
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +33,418 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── Dashboard / Summary ────────────────────────────────────────────
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Platform-wide summary stats
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Recent execution activity feed
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Activity list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  # ─── Workflows ──────────────────────────────────────────────────────
+  /workflows:
+    get:
+      operationId: listWorkflows
+      tags: [workflows]
+      summary: List all workflows
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, draft]
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Workflow list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Workflow"
+    post:
+      operationId: createWorkflow
+      tags: [workflows]
+      summary: Create a new workflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+
+  /workflows/{id}:
+    get:
+      operationId: getWorkflow
+      tags: [workflows]
+      summary: Get a workflow by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Workflow
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateWorkflow
+      tags: [workflows]
+      summary: Update a workflow
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+    delete:
+      operationId: deleteWorkflow
+      tags: [workflows]
+      summary: Delete a workflow
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /workflows/{id}/toggle:
+    post:
+      operationId: toggleWorkflow
+      tags: [workflows]
+      summary: Activate or deactivate a workflow
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated workflow
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+
+  /workflows/{id}/run:
+    post:
+      operationId: runWorkflow
+      tags: [workflows]
+      summary: Manually trigger a workflow run
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "202":
+          description: Execution started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Execution"
+
+  # ─── Executions ──────────────────────────────────────────────────────
+  /executions:
+    get:
+      operationId: listExecutions
+      tags: [executions]
+      summary: List executions across all workflows
+      parameters:
+        - name: workflowId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [running, success, failed, cancelled]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Execution list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Execution"
+
+  /executions/{id}:
+    get:
+      operationId: getExecution
+      tags: [executions]
+      summary: Get execution detail with step logs
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Execution detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionDetail"
+
+  # ─── Connectors ──────────────────────────────────────────────────────
+  /connectors:
+    get:
+      operationId: listConnectors
+      tags: [connectors]
+      summary: List available connectors/integrations
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: installed
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Connector list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Connector"
+
+  /connectors/{id}:
+    get:
+      operationId: getConnector
+      tags: [connectors]
+      summary: Get connector detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Connector
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Connector"
+
+  /connectors/{id}/install:
+    post:
+      operationId: installConnector
+      tags: [connectors]
+      summary: Install a connector from the marketplace
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Installed connector
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Connector"
+
+  /connectors/categories:
+    get:
+      operationId: listConnectorCategories
+      tags: [connectors]
+      summary: List all connector categories with counts
+      responses:
+        "200":
+          description: Category list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConnectorCategory"
+
+  # ─── Apps (Internal Tools Builder) ──────────────────────────────────
+  /apps:
+    get:
+      operationId: listApps
+      tags: [apps]
+      summary: List all internal tool apps
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: App list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/App"
+    post:
+      operationId: createApp
+      tags: [apps]
+      summary: Create a new internal app
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppInput"
+      responses:
+        "201":
+          description: Created app
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/App"
+
+  /apps/{id}:
+    get:
+      operationId: getApp
+      tags: [apps]
+      summary: Get app by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: App
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/App"
+    patch:
+      operationId: updateApp
+      tags: [apps]
+      summary: Update an app
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppUpdate"
+      responses:
+        "200":
+          description: Updated app
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/App"
+    delete:
+      operationId: deleteApp
+      tags: [apps]
+      summary: Delete an app
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /apps/stats:
+    get:
+      operationId: getAppStats
+      tags: [apps]
+      summary: App usage stats summary
+      responses:
+        "200":
+          description: App stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppStats"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +452,328 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    DashboardSummary:
+      type: object
+      required: [totalWorkflows, activeWorkflows, totalExecutions, successRate, totalApps, totalConnectors, executionsToday, failedToday]
+      properties:
+        totalWorkflows:
+          type: integer
+        activeWorkflows:
+          type: integer
+        totalExecutions:
+          type: integer
+        successRate:
+          type: number
+        totalApps:
+          type: integer
+        totalConnectors:
+          type: integer
+        executionsToday:
+          type: integer
+        failedToday:
+          type: integer
+
+    ActivityItem:
+      type: object
+      required: [id, workflowId, workflowName, status, startedAt]
+      properties:
+        id:
+          type: integer
+        workflowId:
+          type: integer
+        workflowName:
+          type: string
+        status:
+          type: string
+          enum: [running, success, failed, cancelled]
+        startedAt:
+          type: string
+        durationMs:
+          type: ["integer", "null"]
+        errorMessage:
+          type: ["string", "null"]
+
+    Workflow:
+      type: object
+      required: [id, name, status, triggerType, nodeCount, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, inactive, draft]
+        triggerType:
+          type: string
+        nodeCount:
+          type: integer
+        lastRunAt:
+          type: ["string", "null"]
+        lastRunStatus:
+          type: ["string", "null"]
+        executionCount:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        nodes:
+          type: ["array", "null"]
+          items:
+            $ref: "#/components/schemas/WorkflowNode"
+
+    WorkflowNode:
+      type: object
+      required: [id, type, name, position]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        name:
+          type: string
+        connectorId:
+          type: ["integer", "null"]
+        config:
+          type: object
+          additionalProperties: true
+        position:
+          type: object
+          required: [x, y]
+          properties:
+            x: { type: number }
+            y: { type: number }
+
+    WorkflowInput:
+      type: object
+      required: [name, triggerType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        triggerType:
+          type: string
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkflowNode"
+
+    WorkflowUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive, draft]
+        triggerType:
+          type: string
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkflowNode"
+
+    Execution:
+      type: object
+      required: [id, workflowId, workflowName, status, startedAt]
+      properties:
+        id:
+          type: integer
+        workflowId:
+          type: integer
+        workflowName:
+          type: string
+        status:
+          type: string
+          enum: [running, success, failed, cancelled]
+        startedAt:
+          type: string
+        finishedAt:
+          type: ["string", "null"]
+        durationMs:
+          type: ["integer", "null"]
+        errorMessage:
+          type: ["string", "null"]
+
+    ExecutionStep:
+      type: object
+      required: [id, nodeId, nodeName, status, startedAt]
+      properties:
+        id:
+          type: integer
+        nodeId:
+          type: string
+        nodeName:
+          type: string
+        status:
+          type: string
+          enum: [running, success, failed, skipped]
+        startedAt:
+          type: string
+        finishedAt:
+          type: ["string", "null"]
+        durationMs:
+          type: ["integer", "null"]
+        outputData:
+          type: ["object", "null"]
+          additionalProperties: true
+        errorMessage:
+          type: ["string", "null"]
+
+    ExecutionDetail:
+      type: object
+      required: [id, workflowId, workflowName, status, startedAt, steps]
+      properties:
+        id:
+          type: integer
+        workflowId:
+          type: integer
+        workflowName:
+          type: string
+        status:
+          type: string
+          enum: [running, success, failed, cancelled]
+        startedAt:
+          type: string
+        finishedAt:
+          type: ["string", "null"]
+        durationMs:
+          type: ["integer", "null"]
+        errorMessage:
+          type: ["string", "null"]
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExecutionStep"
+
+    Connector:
+      type: object
+      required: [id, name, category, description, icon, isInstalled, isFeatured, actionCount, triggerCount]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        color:
+          type: ["string", "null"]
+        isInstalled:
+          type: boolean
+        isFeatured:
+          type: boolean
+        actionCount:
+          type: integer
+        triggerCount:
+          type: integer
+        installCount:
+          type: integer
+        rating:
+          type: ["number", "null"]
+        author:
+          type: ["string", "null"]
+
+    ConnectorCategory:
+      type: object
+      required: [name, count]
+      properties:
+        name:
+          type: string
+        count:
+          type: integer
+
+    App:
+      type: object
+      required: [id, name, type, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [dashboard, crud, form, report]
+        status:
+          type: string
+          enum: [published, draft]
+        pageCount:
+          type: integer
+        lastEditedAt:
+          type: string
+        viewCount:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        layout:
+          type: ["object", "null"]
+          additionalProperties: true
+
+    AppInput:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        type:
+          type: string
+          enum: [dashboard, crud, form, report]
+        layout:
+          type: object
+          additionalProperties: true
+
+    AppUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        status:
+          type: string
+          enum: [published, draft]
+        layout:
+          type: object
+          additionalProperties: true
+
+    AppStats:
+      type: object
+      required: [totalApps, publishedApps, draftApps, totalViews, byType]
+      properties:
+        totalApps:
+          type: integer
+        publishedApps:
+          type: integer
+        draftApps:
+          type: integer
+        totalViews:
+          type: integer
+        byType:
+          type: array
+          items:
+            type: object
+            required: [type, count]
+            properties:
+              type: { type: string }
+              count: { type: integer }

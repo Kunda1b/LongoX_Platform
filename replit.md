@@ -1,10 +1,11 @@
-# [Project name]
+# FlowCraft
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A low-code automation + internal tools platform for SMBs — workflow automation (n8n-style) with a connector marketplace, plus a drag-drop internal tools builder.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
+- `pnpm --filter @workspace/flowcraft run dev` — run the frontend (port 25075)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
@@ -14,7 +15,8 @@ _Replace the heading above with the project's name, and this line with one sente
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
+- Frontend: React + Vite + Tailwind CSS + shadcn/ui, served at `/`
+- API: Express 5, served at `/api`
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
@@ -22,15 +24,26 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/api-spec/openapi.yaml` — OpenAPI contract (source of truth)
+- `lib/db/src/schema/` — Drizzle table definitions (workflows, executions, connectors, apps)
+- `artifacts/api-server/src/routes/` — Express route handlers (dashboard, workflows, executions, connectors, apps)
+- `artifacts/flowcraft/src/` — React frontend
+- `lib/api-client-react/src/generated/` — generated React Query hooks
+- `lib/api-zod/src/generated/` — generated Zod schemas for server validation
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- OpenAPI-first: spec in `lib/api-spec/openapi.yaml` gates all codegen; never hand-write hooks or schemas
+- `connectors/categories` route placed BEFORE `connectors/:id` in router to avoid Express matching "categories" as an id
+- Workflow run endpoint simulates execution with random success/failure and inserts a real execution row
+- App stats endpoint computed on-the-fly from the apps table (no separate stats table)
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- **Workflow automation**: Create, manage, and run multi-step workflows triggered by schedules, webhooks, or third-party events
+- **Connector Marketplace**: 15 pre-loaded connectors (Slack, GitHub, Stripe, Google Sheets, etc.) with install flow
+- **Internal Tools Builder**: Create and manage dashboards, CRUD apps, forms, and reports
+- **Execution History**: Full audit log of all workflow runs with step-level detail
 
 ## User preferences
 
@@ -38,7 +51,9 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Route order matters: `/connectors/categories` must be registered before `/connectors/:id`
+- Route order matters: `/apps/stats` must be registered before `/apps/:id`
+- After any OpenAPI spec change, run `pnpm --filter @workspace/api-spec run codegen` before touching routes or frontend
 
 ## Pointers
 
