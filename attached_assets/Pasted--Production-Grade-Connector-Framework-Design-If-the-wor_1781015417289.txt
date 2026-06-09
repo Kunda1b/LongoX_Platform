@@ -1,0 +1,743 @@
+# Production-Grade Connector Framework Design
+
+If the workflow engine is the heart of the platform, the connector framework is the operating system. A poorly designed connector framework becomes impossible to maintain once you reach 50–100 integrations.
+
+The design below is inspired by patterns used by workflow platforms, integration platforms, API gateways, and plugin ecosystems, while being optimized for a TypeScript + PostgreSQL + Redis + BullMQ stack.
+
+---
+
+# Design Goals
+
+The framework must support:
+
+✅ Marketplace connectors
+
+✅ First-party connectors
+
+✅ OAuth2
+
+✅ API Keys
+
+✅ JWT
+
+✅ Webhooks
+
+✅ Polling triggers
+
+✅ Actions
+
+✅ Multi-tenancy
+
+✅ Versioning
+
+✅ Sandbox execution
+
+✅ Connector upgrades
+
+✅ Dynamic UI generation
+
+✅ Backward compatibility
+
+---
+
+# Architecture
+
+```text
+┌──────────────────────┐
+│ Workflow Builder UI  │
+└──────────┬───────────┘
+           │
+           ▼
+
+┌──────────────────────┐
+│ Connector Registry   │
+└──────────┬───────────┘
+           │
+           ▼
+
+┌──────────────────────┐
+│ Connector Runtime    │
+│ Manager              │
+└──────────┬───────────┘
+           │
+           ▼
+
+┌──────────────────────┐
+│ Connector Sandbox    │
+└──────────┬───────────┘
+           │
+           ▼
+
+┌──────────────────────┐
+│ External APIs        │
+└──────────────────────┘
+```
+
+---
+
+# Core Concepts
+
+## Connector
+
+A connector is a deployable plugin.
+
+```typescript
+interface ConnectorPackage {
+  manifest: ConnectorManifest;
+
+  auth: AuthProvider;
+
+  actions: ActionDefinition[];
+
+  triggers: TriggerDefinition[];
+
+  webhooks?: WebhookDefinition[];
+}
+```
+
+---
+
+# Connector Manifest
+
+The manifest drives:
+
+* Marketplace
+* UI rendering
+* Versioning
+* Compatibility
+
+```typescript
+interface ConnectorManifest {
+  id: string;
+
+  name: string;
+
+  displayName: string;
+
+  version: string;
+
+  author: string;
+
+  category:
+    | "crm"
+    | "database"
+    | "payments"
+    | "communication";
+
+  sdkVersion: string;
+
+  icon: string;
+
+  description: string;
+
+  permissions: string[];
+
+  capabilities: CapabilitySet;
+}
+```
+
+---
+
+# Capabilities System
+
+Critical for platform scalability.
+
+```typescript
+interface CapabilitySet {
+  actions: boolean;
+
+  pollingTriggers: boolean;
+
+  webhookTriggers: boolean;
+
+  oauth2: boolean;
+
+  apiKey: boolean;
+
+  batching: boolean;
+
+  pagination: boolean;
+
+  fileUpload: boolean;
+}
+```
+
+---
+
+# Connector SDK
+
+External developers build connectors using a small SDK.
+
+```typescript
+export const connector =
+  defineConnector({
+    manifest,
+    auth,
+
+    actions: [],
+
+    triggers: [],
+
+    webhooks: []
+  });
+```
+
+---
+
+# Action System
+
+Actions perform operations.
+
+Examples:
+
+```text
+Create Contact
+Update Lead
+Send Message
+Create Invoice
+```
+
+---
+
+## Action Definition
+
+```typescript
+interface ActionDefinition {
+  id: string;
+
+  name: string;
+
+  description: string;
+
+  inputSchema: JSONSchema;
+
+  outputSchema: JSONSchema;
+
+  execute(
+    ctx: ExecutionContext,
+    input: unknown
+  ): Promise<unknown>;
+}
+```
+
+---
+
+## Example
+
+```typescript
+defineAction({
+  id: "create_contact",
+
+  name: "Create Contact",
+
+  inputSchema: {
+    type: "object",
+    properties: {
+      email: {
+        type: "string"
+      }
+    }
+  },
+
+  async execute(ctx, input) {
+    return hubspot.contacts.create(
+      input
+    );
+  }
+});
+```
+
+---
+
+# Trigger Framework
+
+Two types:
+
+```text
+Webhook Trigger
+Polling Trigger
+```
+
+---
+
+# Polling Trigger
+
+```typescript
+interface PollingTrigger {
+  poll(
+    ctx: TriggerContext
+  ): Promise<Event[]>;
+}
+```
+
+Scheduler:
+
+```text
+BullMQ Scheduler
+      ↓
+Poll Job
+      ↓
+Connector
+      ↓
+New Events
+      ↓
+Workflow Trigger
+```
+
+---
+
+# Incremental Sync Support
+
+Every polling trigger stores a cursor.
+
+```typescript
+interface PollingState {
+  lastCursor: string;
+
+  lastRunAt: Date;
+}
+```
+
+Example:
+
+```json
+{
+  "lastCursor": "ticket_12345"
+}
+```
+
+Avoids duplicate processing.
+
+---
+
+# Webhook Framework
+
+```typescript
+interface WebhookDefinition {
+  subscribe();
+
+  unsubscribe();
+
+  verifySignature();
+
+  parsePayload();
+}
+```
+
+---
+
+# Webhook Lifecycle
+
+```text
+Workflow Activated
+       ↓
+Connector Registers Webhook
+       ↓
+External Service
+       ↓
+Webhook Gateway
+       ↓
+Verification
+       ↓
+Workflow Execution
+```
+
+---
+
+# Authentication Framework
+
+## Unified Auth Model
+
+```typescript
+interface AuthProvider {
+  type:
+    | "oauth2"
+    | "apikey"
+    | "jwt"
+    | "basic";
+}
+```
+
+---
+
+# OAuth2 Provider
+
+```typescript
+interface OAuth2Provider {
+  authorizationUrl: string;
+
+  tokenUrl: string;
+
+  scopes: string[];
+
+  refreshStrategy: "automatic";
+}
+```
+
+---
+
+# Credential Abstraction
+
+Connectors never access secrets directly.
+
+```typescript
+const token =
+ await ctx.credentials.get();
+```
+
+Under the hood:
+
+```text
+Vault
+  ↓
+Credential Service
+  ↓
+Temporary Token
+  ↓
+Connector Runtime
+```
+
+---
+
+# Execution Context
+
+Every connector execution receives context.
+
+```typescript
+interface ExecutionContext {
+  tenantId: string;
+
+  executionId: string;
+
+  workflowId: string;
+
+  logger: Logger;
+
+  credentials: CredentialProvider;
+
+  http: HttpClient;
+}
+```
+
+---
+
+# Built-In HTTP Client
+
+Never allow raw fetch.
+
+Provide:
+
+```typescript
+ctx.http.get()
+
+ctx.http.post()
+```
+
+Benefits:
+
+* Rate limiting
+* Retry logic
+* Tracing
+* Metrics
+* Secret masking
+
+---
+
+# Rate Limiting Framework
+
+Many APIs have limits.
+
+```typescript
+interface ConnectorRateLimit {
+  requestsPerMinute: number;
+
+  burst: number;
+}
+```
+
+Stored:
+
+```sql
+connector_rate_limits
+```
+
+Worker enforces limits automatically.
+
+---
+
+# Connector Runtime
+
+The runtime loads connectors dynamically.
+
+```typescript
+Connector Registry
+       ↓
+Load Package
+       ↓
+Validate Signature
+       ↓
+Launch Sandbox
+       ↓
+Execute Action
+```
+
+---
+
+# Sandbox Architecture
+
+Recommended:
+
+```text
+Connector Runtime
+      ↓
+V8 Isolate
+```
+
+Marketplace connectors:
+
+```text
+V8 Isolate
+```
+
+User code:
+
+```text
+Docker Container
+```
+
+This keeps connector execution lightweight.
+
+---
+
+# Package Signing
+
+Every connector is signed.
+
+```typescript
+interface Signature {
+  checksum: string;
+
+  publisherKey: string;
+}
+```
+
+Validation:
+
+```text
+Install
+   ↓
+Verify Signature
+   ↓
+Allow Execution
+```
+
+Prevents tampering.
+
+---
+
+# Connector Registry Service
+
+Stores metadata only.
+
+```typescript
+interface ConnectorVersion {
+  id: string;
+
+  connectorId: string;
+
+  version: string;
+
+  manifest: Json;
+
+  checksum: string;
+}
+```
+
+---
+
+# Connector Installation
+
+Tenant installs connector.
+
+```text
+Marketplace
+     ↓
+Install
+     ↓
+Create Tenant Mapping
+     ↓
+Authorize Credentials
+     ↓
+Ready
+```
+
+---
+
+## Tenant Installation Record
+
+```typescript
+interface TenantConnector {
+  tenantId: string;
+
+  connectorId: string;
+
+  version: string;
+
+  enabled: boolean;
+}
+```
+
+---
+
+# Version Compatibility
+
+Never mutate old versions.
+
+```text
+HubSpot 1.0.0
+HubSpot 1.1.0
+HubSpot 2.0.0
+```
+
+Workflow references:
+
+```typescript
+{
+  connectorId: "hubspot",
+  version: "1.1.0"
+}
+```
+
+Execution always uses the referenced version.
+
+---
+
+# Dynamic Form Generation
+
+The builder UI should be generated from schemas.
+
+```typescript
+inputSchema: {
+  type: "object",
+
+  properties: {
+    email: {
+      type: "string"
+    },
+
+    company: {
+      type: "string"
+    }
+  }
+}
+```
+
+Automatically becomes:
+
+```text
+Email Input
+Company Input
+```
+
+No custom frontend work required.
+
+---
+
+# Observability
+
+Every connector emits:
+
+```typescript
+{
+  connectorId,
+  version,
+  executionId,
+  duration,
+  status
+}
+```
+
+Metrics:
+
+```text
+Execution Count
+Failure Rate
+Latency
+OAuth Errors
+Rate Limit Hits
+```
+
+---
+
+# Recommended Monorepo Structure
+
+```text
+packages/
+├── connector-sdk/
+├── connector-runtime/
+├── connector-registry/
+├── connector-auth/
+├── connector-sandbox/
+├── connector-testing/
+├── connector-cli/
+│
+connectors/
+├── slack/
+├── hubspot/
+├── salesforce/
+├── stripe/
+├── paypal/
+├── postgres/
+├── mongodb/
+├── rest/
+└── graphql/
+```
+
+# Additional Production-Grade Enhancements
+
+For a serious marketplace (100+ connectors), I'd add:
+
+### Connector Certification Levels
+
+```text
+Official
+Verified
+Community
+Deprecated
+```
+
+### Connector Health Monitoring
+
+Track:
+
+```text
+OAuth failure %
+API error %
+Latency
+Availability
+```
+
+### Connector Feature Flags
+
+```typescript
+{
+  betaActions: true,
+  newWebhookEngine: false
+}
+```
+
+### Contract Testing Framework
+
+Every connector must pass:
+
+```text
+Authentication tests
+Schema validation tests
+Webhook tests
+Pagination tests
+Rate-limit tests
+```
+
+before publication.
+
+This architecture can comfortably support thousands of tenants, hundreds of connector packages, millions of monthly executions, and an external developer marketplace without requiring a redesign later.

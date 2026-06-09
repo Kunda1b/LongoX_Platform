@@ -668,6 +668,9 @@ export const ListConnectorsQueryParams = zod.object({
 export const ListConnectorsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "displayName": zod.string().nullish(),
+  "version": zod.string().optional(),
+  "sdkVersion": zod.string().optional(),
   "category": zod.string(),
   "description": zod.string(),
   "icon": zod.string(),
@@ -678,7 +681,14 @@ export const ListConnectorsResponseItem = zod.object({
   "triggerCount": zod.number(),
   "installCount": zod.number().optional(),
   "rating": zod.number().nullish(),
-  "author": zod.string().nullish()
+  "author": zod.string().nullish(),
+  "authType": zod.string().optional(),
+  "authConfig": zod.record(zod.string(), zod.unknown()).optional(),
+  "certificationLevel": zod.string().optional(),
+  "permissions": zod.array(zod.string()).optional(),
+  "capabilities": zod.record(zod.string(), zod.boolean()).optional(),
+  "rateLimit": zod.record(zod.string(), zod.number()).optional(),
+  "healthStatus": zod.record(zod.string(), zod.unknown()).optional()
 })
 export const ListConnectorsResponse = zod.array(ListConnectorsResponseItem)
 
@@ -693,6 +703,9 @@ export const GetConnectorParams = zod.object({
 export const GetConnectorResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "displayName": zod.string().nullish(),
+  "version": zod.string().optional(),
+  "sdkVersion": zod.string().optional(),
   "category": zod.string(),
   "description": zod.string(),
   "icon": zod.string(),
@@ -703,7 +716,14 @@ export const GetConnectorResponse = zod.object({
   "triggerCount": zod.number(),
   "installCount": zod.number().optional(),
   "rating": zod.number().nullish(),
-  "author": zod.string().nullish()
+  "author": zod.string().nullish(),
+  "authType": zod.string().optional(),
+  "authConfig": zod.record(zod.string(), zod.unknown()).optional(),
+  "certificationLevel": zod.string().optional(),
+  "permissions": zod.array(zod.string()).optional(),
+  "capabilities": zod.record(zod.string(), zod.boolean()).optional(),
+  "rateLimit": zod.record(zod.string(), zod.number()).optional(),
+  "healthStatus": zod.record(zod.string(), zod.unknown()).optional()
 })
 
 
@@ -717,6 +737,8 @@ export const InstallConnectorParams = zod.object({
 export const InstallConnectorResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "displayName": zod.string().nullish(),
+  "version": zod.string().optional(),
   "category": zod.string(),
   "description": zod.string(),
   "icon": zod.string(),
@@ -727,8 +749,86 @@ export const InstallConnectorResponse = zod.object({
   "triggerCount": zod.number(),
   "installCount": zod.number().optional(),
   "rating": zod.number().nullish(),
-  "author": zod.string().nullish()
+  "author": zod.string().nullish(),
+  "authType": zod.string().optional(),
+  "certificationLevel": zod.string().optional(),
+  "permissions": zod.array(zod.string()).optional(),
+  "capabilities": zod.record(zod.string(), zod.boolean()).optional(),
+  "rateLimit": zod.record(zod.string(), zod.number()).optional(),
+  "healthStatus": zod.record(zod.string(), zod.unknown()).optional()
 })
+
+
+/**
+ * @summary Uninstall a connector
+ */
+export const UninstallConnectorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List actions for a connector
+ */
+export const GetConnectorActionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetConnectorActionsResponseItem = zod.object({
+  "id": zod.number(),
+  "connectorId": zod.number(),
+  "actionId": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "inputSchema": zod.record(zod.string(), zod.unknown()),
+  "outputSchema": zod.record(zod.string(), zod.unknown())
+})
+export const GetConnectorActionsResponse = zod.array(GetConnectorActionsResponseItem)
+
+
+/**
+ * @summary List triggers for a connector
+ */
+export const GetConnectorTriggersParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetConnectorTriggersResponseItem = zod.object({
+  "id": zod.number(),
+  "connectorId": zod.number(),
+  "triggerId": zod.string(),
+  "triggerType": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "config": zod.record(zod.string(), zod.unknown()).optional(),
+  "pollingInterval": zod.number().nullish()
+})
+export const GetConnectorTriggersResponse = zod.array(GetConnectorTriggersResponseItem)
+
+
+/**
+ * @summary Connector execution history (observability)
+ */
+export const GetConnectorExecutionsQueryParams = zod.object({
+  "connectorId": zod.coerce.number().optional(),
+  "status": zod.string().optional(),
+  "limit": zod.coerce.number().default(50)
+})
+
+export const GetConnectorExecutionsResponseItem = zod.object({
+  "id": zod.number(),
+  "connectorId": zod.number(),
+  "connectorVersion": zod.string(),
+  "executionId": zod.string(),
+  "actionId": zod.string().nullish(),
+  "triggerId": zod.string().nullish(),
+  "tenantId": zod.string(),
+  "status": zod.string(),
+  "durationMs": zod.number().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const GetConnectorExecutionsResponse = zod.array(GetConnectorExecutionsResponseItem)
 
 
 /**

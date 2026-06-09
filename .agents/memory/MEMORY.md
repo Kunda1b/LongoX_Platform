@@ -1,3 +1,4 @@
 - [Orval webhook requestBody conflict](orval-webhook-body-conflict.md) — webhook endpoint requestBody causes duplicate TriggerWebhookBody export; omit requestBody from spec.
 - [React-query orval options pattern](orval-query-options.md) — UseQueryOptions requires queryKey in v5; omit refetchInterval from hook options or accept TS error.
 - [Execution engine pattern](execution-engine.md) — fire-and-forget async runner in api-server; checkpoints table replaces steps JSONB for new executions.
+- [Connector framework architecture](connector-framework.md) — full connector manifest pattern with actions/triggers/executions tables; seed via route-level lazy init guard; use direct fetch for new sub-resource endpoints in frontends.

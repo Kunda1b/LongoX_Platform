@@ -361,6 +361,10 @@ export interface ExecutionDetail {
 export interface Connector {
   id: number;
   name: string;
+  /** @nullable */
+  displayName?: string | null;
+  version?: string;
+  sdkVersion?: string;
   category: string;
   description: string;
   icon: string;
@@ -375,6 +379,53 @@ export interface Connector {
   rating?: number | null;
   /** @nullable */
   author?: string | null;
+  authType?: string;
+  authConfig?: Record<string, unknown>;
+  certificationLevel?: string;
+  permissions?: string[];
+  capabilities?: Record<string, boolean>;
+  rateLimit?: Record<string, number>;
+  healthStatus?: Record<string, unknown>;
+}
+
+export interface ConnectorAction {
+  id: number;
+  connectorId: number;
+  actionId: string;
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+  outputSchema: Record<string, unknown>;
+}
+
+export interface ConnectorTrigger {
+  id: number;
+  connectorId: number;
+  triggerId: string;
+  triggerType: string;
+  name: string;
+  description: string;
+  config?: Record<string, unknown>;
+  /** @nullable */
+  pollingInterval?: number | null;
+}
+
+export interface ConnectorExecution {
+  id: number;
+  connectorId: number;
+  connectorVersion: string;
+  executionId: string;
+  /** @nullable */
+  actionId?: string | null;
+  /** @nullable */
+  triggerId?: string | null;
+  tenantId: string;
+  status: string;
+  /** @nullable */
+  durationMs?: number | null;
+  /** @nullable */
+  errorMessage?: string | null;
+  createdAt: string;
 }
 
 export interface ConnectorCategory {
