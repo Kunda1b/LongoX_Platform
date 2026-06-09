@@ -44,12 +44,32 @@ import {
   Trash2,
   X,
   Settings2,
+  PanelLeftOpen,
+  Menu,
 } from "lucide-react";
 import { useUpdateWorkflow } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import type { NodeType } from "@workspace/api-client-react";
 import type { WorkflowNode } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
+
+// ─── Mobile detection ─────────────────────────────────────────────────────────
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(max-width: 767px)").matches ||
+        window.matchMedia("(pointer: coarse)").matches
+      : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
 
 // ─── Category meta ───────────────────────────────────────────────────────────
 
@@ -180,12 +200,7 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
     },
     { key: "headers", label: "Headers (JSON)", type: "textarea", placeholder: '{"Authorization": "Bearer {{token}}"}' },
     { key: "body", label: "Request body (JSON)", type: "textarea", placeholder: '{"key": "{{value}}"}' },
-    {
-      key: "timeout",
-      label: "Timeout (seconds)",
-      type: "number",
-      placeholder: "30",
-    },
+    { key: "timeout", label: "Timeout (seconds)", type: "number", placeholder: "30" },
   ],
   "action.send_email": [
     { key: "to", label: "To", type: "text", placeholder: "user@example.com or {{email}}" },
@@ -485,15 +500,17 @@ function FlowNode({ data, selected }: { data: any; selected: boolean }) {
 
 const nodeTypes: NodeTypes = { flowNode: FlowNode };
 
-// ─── Config panel ─────────────────────────────────────────────────────────────
+// ─── Config panel (shared content) ───────────────────────────────────────────
 
 interface ConfigPanelProps {
   node: Node | null;
   onClose: () => void;
   onChange: (nodeId: string, label: string, config: Record<string, string>) => void;
+  onDelete?: (nodeId: string) => void;
+  mobile?: boolean;
 }
 
-function ConfigPanel({ node, onClose, onChange }: ConfigPanelProps) {
+function ConfigPanelContent({ node, onClose, onChange, onDelete, mobile }: ConfigPanelProps) {
   const [label, setLabel] = useState("");
   const [config, setConfig] = useState<Record<string, string>>({});
 
@@ -522,7 +539,7 @@ function ConfigPanel({ node, onClose, onChange }: ConfigPanelProps) {
   };
 
   return (
-    <div className="w-72 shrink-0 border-l bg-card flex flex-col h-full">
+    <div className="flex flex-col h-full">
       {/* Header */}
       <div className={cn("px-4 py-3 border-b flex items-start justify-between gap-2", meta.bg)}>
         <div className="flex items-center gap-2 min-w-0">
@@ -536,12 +553,24 @@ function ConfigPanel({ node, onClose, onChange }: ConfigPanelProps) {
             </p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={onClose}>
-          <X className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex items-center gap-1 shrink-0">
+          {onDelete && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-destructive hover:text-destructive"
+              onClick={() => { onDelete(node.id); onClose(); }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className={cn("flex-1", mobile && "max-h-[55vh]")}>
         <div className="p-4 space-y-4">
           {/* Node name */}
           <div className="space-y-1.5">
@@ -549,7 +578,7 @@ function ConfigPanel({ node, onClose, onChange }: ConfigPanelProps) {
             <Input
               value={label}
               onChange={(e) => handleLabelChange(e.target.value)}
-              className="h-8 text-xs"
+              className="h-9 text-sm"
               placeholder="Name this step…"
             />
           </div>
@@ -573,7 +602,7 @@ function ConfigPanel({ node, onClose, onChange }: ConfigPanelProps) {
                   value={config[field.key] ?? ""}
                   onValueChange={(v) => handleFieldChange(field.key, v)}
                 >
-                  <SelectTrigger className="h-8 text-xs">
+                  <SelectTrigger className="h-9 text-sm">
                     <SelectValue placeholder="Select…" />
                   </SelectTrigger>
                   <SelectContent>
@@ -598,7 +627,7 @@ function ConfigPanel({ node, onClose, onChange }: ConfigPanelProps) {
                   value={config[field.key] ?? ""}
                   onChange={(e) => handleFieldChange(field.key, e.target.value)}
                   placeholder={field.placeholder}
-                  className="h-8 text-xs"
+                  className="h-9 text-sm"
                 />
               )}
 
@@ -607,22 +636,89 @@ function ConfigPanel({ node, onClose, onChange }: ConfigPanelProps) {
               )}
             </div>
           ))}
+
+          {/* Extra bottom padding for mobile safe area */}
+          {mobile && <div className="h-4" />}
         </div>
       </ScrollArea>
 
-      <div className="px-4 py-3 border-t bg-muted/20">
-        <p className="text-[10px] text-muted-foreground/50 text-center">
-          Changes apply immediately · click canvas to deselect
-        </p>
-      </div>
+      {!mobile && (
+        <div className="px-4 py-3 border-t bg-muted/20">
+          <p className="text-[10px] text-muted-foreground/50 text-center">
+            Changes apply immediately · click canvas to deselect
+          </p>
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Node catalog sidebar ─────────────────────────────────────────────────────
+// Desktop config panel (sidebar)
+function ConfigPanel(props: ConfigPanelProps) {
+  return (
+    <div className="w-72 shrink-0 border-l bg-card flex flex-col h-full">
+      <ConfigPanelContent {...props} />
+    </div>
+  );
+}
 
-function NodeCatalog({ nodeTypes: nts }: { nodeTypes: NodeType[] }) {
+// Mobile config panel (bottom sheet)
+function MobileConfigSheet({
+  node,
+  onClose,
+  onChange,
+  onDelete,
+}: ConfigPanelProps) {
+  const isOpen = !!node;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className={cn(
+          "fixed inset-0 z-40 bg-black/50 transition-opacity duration-200",
+          isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        )}
+        onClick={onClose}
+      />
+      {/* Sheet */}
+      <div
+        className={cn(
+          "fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-2xl border-t shadow-2xl",
+          "transition-transform duration-300 ease-out",
+          isOpen ? "translate-y-0" : "translate-y-full"
+        )}
+        style={{ maxHeight: "80vh" }}
+      >
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+        </div>
+        {node && (
+          <ConfigPanelContent
+            node={node}
+            onClose={onClose}
+            onChange={onChange}
+            onDelete={onDelete}
+            mobile
+          />
+        )}
+      </div>
+    </>
+  );
+}
+
+// ─── Node catalog (shared content) ───────────────────────────────────────────
+
+interface NodeCatalogContentProps {
+  nodeTypes: NodeType[];
+  onAddNode?: (nt: NodeType) => void;
+  mobile?: boolean;
+}
+
+function NodeCatalogContent({ nodeTypes: nts, onAddNode, mobile }: NodeCatalogContentProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [activeCategory, setActiveCategory] = useState<string>("trigger");
   const categories = ["trigger", "action", "logic", "ai", "data"];
 
   const groups = categories
@@ -634,6 +730,61 @@ function NodeCatalog({ nodeTypes: nts }: { nodeTypes: NodeType[] }) {
     e.dataTransfer.effectAllowed = "move";
   };
 
+  if (mobile) {
+    const activeGroup = groups.find((g) => g.cat === activeCategory) ?? groups[0];
+    return (
+      <div className="flex flex-col" style={{ maxHeight: "65vh" }}>
+        {/* Category tab bar */}
+        <div className="flex border-b overflow-x-auto scrollbar-none px-2 gap-1 pt-2">
+          {groups.map(({ cat }) => {
+            const meta = CATEGORY_META[cat] ?? CATEGORY_META.action;
+            return (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-2 rounded-t-md text-xs font-medium whitespace-nowrap transition-colors border-b-2",
+                  activeCategory === cat
+                    ? cn("border-primary", meta.color)
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <span>{meta.icon}</span>
+                <span className="capitalize">{cat}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Node list for active category */}
+        <ScrollArea className="flex-1">
+          <div className="p-3 grid grid-cols-2 gap-2">
+            {(activeGroup?.items ?? []).map((nt) => {
+              const meta = CATEGORY_META[nt.category] ?? CATEGORY_META.action;
+              return (
+                <button
+                  key={nt.id}
+                  onClick={() => onAddNode?.(nt)}
+                  className={cn(
+                    "flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-all active:scale-95",
+                    "hover:shadow-md",
+                    meta.bg, meta.border
+                  )}
+                >
+                  <span className={cn("p-1.5 rounded-lg", meta.bg, meta.color)}>{meta.icon}</span>
+                  <span className={cn("text-xs font-semibold leading-tight", meta.color)}>{nt.name}</span>
+                  <span className="text-[10px] text-muted-foreground/70 leading-tight line-clamp-2">{nt.description}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="h-4" />
+        </ScrollArea>
+      </div>
+    );
+  }
+
+  // Desktop list
   return (
     <div className="flex flex-col h-full">
       <div className="px-3 py-3 border-b">
@@ -682,6 +833,57 @@ function NodeCatalog({ nodeTypes: nts }: { nodeTypes: NodeType[] }) {
         </div>
       </ScrollArea>
     </div>
+  );
+}
+
+function NodeCatalog({ nodeTypes: nts }: { nodeTypes: NodeType[] }) {
+  return <NodeCatalogContent nodeTypes={nts} />;
+}
+
+// Mobile catalog bottom sheet
+function MobileNodeSheet({
+  open,
+  onClose,
+  nodeTypes: nts,
+  onAddNode,
+}: {
+  open: boolean;
+  onClose: () => void;
+  nodeTypes: NodeType[];
+  onAddNode: (nt: NodeType) => void;
+}) {
+  return (
+    <>
+      <div
+        className={cn(
+          "fixed inset-0 z-40 bg-black/50 transition-opacity duration-200",
+          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        )}
+        onClick={onClose}
+      />
+      <div
+        className={cn(
+          "fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-2xl border-t shadow-2xl",
+          "transition-transform duration-300 ease-out",
+          open ? "translate-y-0" : "translate-y-full"
+        )}
+      >
+        <div className="flex items-center justify-between px-4 pt-4 pb-2">
+          <div>
+            <h2 className="text-sm font-semibold">Add Node</h2>
+            <p className="text-[10px] text-muted-foreground/60">Tap a node to add it to the canvas</p>
+          </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        <NodeCatalogContent
+          nodeTypes={nts}
+          onAddNode={(nt) => { onAddNode(nt); onClose(); }}
+          mobile
+        />
+      </div>
+    </>
   );
 }
 
@@ -734,7 +936,8 @@ interface WorkflowBuilderInnerProps {
 function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved }: WorkflowBuilderInnerProps) {
   const { toast } = useToast();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, getViewport } = useReactFlow();
+  const isMobile = useIsMobile();
 
   const nodeTypeMap = useMemo(() => {
     const m = new Map<string, NodeType>();
@@ -748,6 +951,9 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+
+  // Mobile sheet state
+  const [catalogOpen, setCatalogOpen] = useState(false);
 
   const selectedNode = useMemo(
     () => nodes.find((n) => n.id === selectedNodeId) ?? null,
@@ -811,6 +1017,40 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
     [screenToFlowPosition, setNodes]
   );
 
+  // Mobile tap-to-add: place node in the visible center of the canvas
+  const handleAddNodeFromCatalog = useCallback(
+    (nt: NodeType) => {
+      const wrapper = reactFlowWrapper.current;
+      if (!wrapper) return;
+      const rect = wrapper.getBoundingClientRect();
+      // Stagger nodes so multiple additions don't stack exactly
+      const offset = (nodes.length % 5) * 30;
+      const position = screenToFlowPosition({
+        x: rect.left + rect.width / 2 + offset,
+        y: rect.top + rect.height / 3 + offset,
+      });
+      const newNode: Node = {
+        id: generateNodeId(),
+        type: "flowNode",
+        position,
+        data: {
+          label: nt.name,
+          nodeTypeId: nt.id,
+          category: nt.category,
+          description: nt.description,
+          nodeTypeName: nt.name,
+          inputs: nt.inputs,
+          outputs: nt.outputs,
+          config: {},
+        },
+      };
+      setNodes((nds) => [...nds, newNode]);
+      setSelectedNodeId(newNode.id);
+      setIsDirty(true);
+    },
+    [screenToFlowPosition, setNodes, nodes.length]
+  );
+
   const onNodesChangeWrapped: typeof onNodesChange = useCallback(
     (changes) => {
       onNodesChange(changes);
@@ -854,11 +1094,169 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
     setIsDirty(true);
   }, [setNodes, setEdges]);
 
+  const deleteNode = useCallback(
+    (nodeId: string) => {
+      setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+      setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+      setSelectedNodeId(null);
+      setIsDirty(true);
+    },
+    [setNodes, setEdges]
+  );
+
   const handleSave = useCallback(() => {
     const wfNodes = flowNodesToWorkflow(nodes);
     updateMutation.mutate({ id: workflowId, data: { nodes: wfNodes } });
   }, [nodes, workflowId, updateMutation]);
 
+  // ── Shared ReactFlow canvas props ──────────────────────────────────────────
+  const canvasProps = {
+    nodes,
+    edges,
+    onNodesChange: onNodesChangeWrapped,
+    onEdgesChange,
+    onConnect,
+    onNodeClick: handleNodeClick,
+    onPaneClick: handlePaneClick,
+    nodeTypes,
+    fitView: true,
+    fitViewOptions: { padding: 0.3 },
+    deleteKeyCode: ["Backspace", "Delete"] as string[],
+    multiSelectionKeyCode: "Shift",
+    className: "bg-zinc-950",
+    defaultEdgeOptions: { animated: true, style: { stroke: "#6366f1", strokeWidth: 2 } },
+    // Touch / mobile settings
+    panOnDrag: true,
+    zoomOnPinch: true,
+    zoomOnScroll: !isMobile,
+    panOnScroll: false,
+    preventScrolling: true,
+    touchPadScrollToZoom: false,
+    selectionOnDrag: false,
+  };
+
+  // ── Mobile layout ──────────────────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div className="flex flex-col h-full overflow-hidden rounded-lg border relative">
+        {/* Compact top bar */}
+        <div className="flex items-center gap-2 px-3 py-2 border-b bg-card z-10">
+          <PanelLeftOpen className="h-4 w-4 text-muted-foreground/60 shrink-0" />
+          <span className="text-xs font-semibold flex-1 truncate text-muted-foreground">Workflow Canvas</span>
+          {selectedNodeId && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs gap-1 text-destructive hover:text-destructive px-2"
+              onClick={() => deleteNode(selectedNodeId)}
+            >
+              <Trash2 className="h-3 w-3" />
+              Delete
+            </Button>
+          )}
+          <Button
+            size="sm"
+            className="h-7 text-xs gap-1 px-3"
+            onClick={handleSave}
+            disabled={updateMutation.isPending || !isDirty}
+          >
+            <Save className="h-3 w-3" />
+            {updateMutation.isPending ? "Saving…" : isDirty ? "Save" : "Saved"}
+          </Button>
+        </div>
+
+        {/* Full-screen canvas */}
+        <div className="flex-1 relative" ref={reactFlowWrapper}>
+          <ReactFlow
+            {...canvasProps}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+          >
+            <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#27272a" />
+            <Controls
+              showZoom
+              showFitView
+              showInteractive={false}
+              className="!bg-card !border-border !shadow-md"
+              style={{ bottom: 80, top: "auto" }}
+            />
+
+            {nodes.length === 0 && (
+              <Panel position="top-center">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground text-sm bg-card border rounded-xl px-5 py-4 shadow-sm mt-10">
+                  <Plus className="h-5 w-5" />
+                  <span className="text-xs text-center">Tap the <strong>+</strong> button below<br />to add your first node</span>
+                </div>
+              </Panel>
+            )}
+
+            {selectedNodeId && (
+              <Panel position="top-center">
+                <button
+                  className="flex items-center gap-1.5 bg-primary text-primary-foreground text-xs px-3 py-1.5 rounded-full shadow-md mt-2"
+                  onClick={() => {/* already selected, sheet will open */}}
+                >
+                  <Settings2 className="h-3 w-3" />
+                  Tap node to configure
+                </button>
+              </Panel>
+            )}
+          </ReactFlow>
+
+          {/* FAB: Add node */}
+          <button
+            onClick={() => setCatalogOpen(true)}
+            className={cn(
+              "absolute bottom-4 right-4 z-20",
+              "w-14 h-14 rounded-full shadow-2xl",
+              "bg-primary text-primary-foreground",
+              "flex items-center justify-center",
+              "transition-transform active:scale-90",
+              "border-2 border-primary-foreground/20"
+            )}
+            aria-label="Add node"
+          >
+            <Plus className="h-6 w-6" />
+          </button>
+
+          {/* FAB: Catalog (secondary, left of +) */}
+          <button
+            onClick={() => setCatalogOpen(true)}
+            className={cn(
+              "absolute bottom-5 left-4 z-20",
+              "h-10 px-4 rounded-full shadow-lg",
+              "bg-card border text-foreground",
+              "flex items-center gap-2 text-xs font-medium",
+              "transition-transform active:scale-95"
+            )}
+            aria-label="Browse nodes"
+          >
+            <Menu className="h-3.5 w-3.5" />
+            Browse nodes
+          </button>
+        </div>
+
+        {/* Mobile: Node catalog sheet */}
+        <MobileNodeSheet
+          open={catalogOpen}
+          onClose={() => setCatalogOpen(false)}
+          nodeTypes={nodeTypesList}
+          onAddNode={handleAddNodeFromCatalog}
+        />
+
+        {/* Mobile: Config sheet */}
+        <MobileConfigSheet
+          node={selectedNode}
+          onClose={() => setSelectedNodeId(null)}
+          onChange={handleConfigChange}
+          onDelete={deleteNode}
+          mobile
+        />
+      </div>
+    );
+  }
+
+  // ── Desktop layout (unchanged) ─────────────────────────────────────────────
   return (
     <div className="flex h-full overflow-hidden rounded-lg border">
       {/* Left: Node catalog */}
@@ -869,22 +1267,9 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
       {/* Center: Canvas */}
       <div className="flex-1 relative min-w-0" ref={reactFlowWrapper}>
         <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChangeWrapped}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
+          {...canvasProps}
           onDrop={onDrop}
           onDragOver={onDragOver}
-          onNodeClick={handleNodeClick}
-          onPaneClick={handlePaneClick}
-          nodeTypes={nodeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.3 }}
-          deleteKeyCode={["Backspace", "Delete"]}
-          multiSelectionKeyCode="Shift"
-          className="bg-zinc-950"
-          defaultEdgeOptions={{ animated: true, style: { stroke: "#6366f1", strokeWidth: 2 } }}
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#27272a" />
           <Controls className="!bg-card !border-border !shadow-md" />
