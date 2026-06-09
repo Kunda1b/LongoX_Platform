@@ -42,13 +42,55 @@ export interface ActivityItem {
   errorMessage?: string | null;
 }
 
-export type WorkflowStatus = typeof WorkflowStatus[keyof typeof WorkflowStatus];
+export interface DailyExecutionStat {
+  date: string;
+  total: number;
+  success: number;
+  failed: number;
+}
+
+export interface WorkflowStat {
+  workflowId: number;
+  workflowName: string;
+  total: number;
+  success: number;
+  failed: number;
+  /** @nullable */
+  avgDurationMs: number | null;
+}
+
+export type NodeTypeCategory = typeof NodeTypeCategory[keyof typeof NodeTypeCategory];
 
 
-export const WorkflowStatus = {
-  active: 'active',
-  inactive: 'inactive',
-  draft: 'draft',
+export const NodeTypeCategory = {
+  trigger: 'trigger',
+  action: 'action',
+  logic: 'logic',
+  ai: 'ai',
+  data: 'data',
+  core: 'core',
+} as const;
+
+export interface NodeType {
+  id: string;
+  name: string;
+  category: NodeTypeCategory;
+  description: string;
+  icon: string;
+  color: string;
+  isTrigger: boolean;
+  isAi: boolean;
+  inputs: number;
+  outputs: number;
+}
+
+export type TemplateComplexity = typeof TemplateComplexity[keyof typeof TemplateComplexity];
+
+
+export const TemplateComplexity = {
+  beginner: 'beginner',
+  intermediate: 'intermediate',
+  advanced: 'advanced',
 } as const;
 
 export type WorkflowNodeConfig = { [key: string]: unknown };
@@ -63,10 +105,52 @@ export interface WorkflowNode {
   type: string;
   name: string;
   /** @nullable */
+  nodeTypeId?: string | null;
+  /** @nullable */
   connectorId?: number | null;
   config?: WorkflowNodeConfig;
   position: WorkflowNodePosition;
 }
+
+export interface Template {
+  id: number;
+  name: string;
+  description: string;
+  category: string;
+  triggerType: string;
+  nodeCount: number;
+  uses: number;
+  complexity: TemplateComplexity;
+  tags: string[];
+  nodes: WorkflowNode[];
+  createdAt: string;
+}
+
+export interface Credential {
+  id: number;
+  name: string;
+  connectorName: string;
+  connectorId: number;
+  fields: string[];
+  createdAt: string;
+}
+
+export interface CredentialInput {
+  /** @minLength 1 */
+  name: string;
+  connectorId: number;
+  connectorName: string;
+  fields: string[];
+}
+
+export type WorkflowStatus = typeof WorkflowStatus[keyof typeof WorkflowStatus];
+
+
+export const WorkflowStatus = {
+  active: 'active',
+  inactive: 'inactive',
+  draft: 'draft',
+} as const;
 
 export interface Workflow {
   id: number;
@@ -152,10 +236,17 @@ export const ExecutionStepStatus = {
  */
 export type ExecutionStepOutputData = { [key: string]: unknown } | null;
 
+/**
+ * @nullable
+ */
+export type ExecutionStepInputData = { [key: string]: unknown } | null;
+
 export interface ExecutionStep {
   id: number;
   nodeId: string;
   nodeName: string;
+  /** @nullable */
+  nodeType?: string | null;
   status: ExecutionStepStatus;
   startedAt: string;
   /** @nullable */
@@ -165,7 +256,11 @@ export interface ExecutionStep {
   /** @nullable */
   outputData?: ExecutionStepOutputData;
   /** @nullable */
+  inputData?: ExecutionStepInputData;
+  /** @nullable */
   errorMessage?: string | null;
+  /** @nullable */
+  itemCount?: number | null;
 }
 
 export type ExecutionDetailStatus = typeof ExecutionDetailStatus[keyof typeof ExecutionDetailStatus];
@@ -309,6 +404,19 @@ export interface AppStats {
 
 export type GetRecentActivityParams = {
 limit?: number;
+};
+
+export type GetExecutionAnalyticsParams = {
+days?: number;
+};
+
+export type ListNodeTypesParams = {
+category?: string;
+};
+
+export type ListTemplatesParams = {
+category?: string;
+search?: string;
 };
 
 export type ListWorkflowsParams = {

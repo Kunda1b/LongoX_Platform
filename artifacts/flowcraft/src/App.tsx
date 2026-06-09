@@ -8,6 +8,9 @@ import Connectors from "@/pages/connectors/index";
 import Apps from "@/pages/apps/index";
 import AppDetail from "@/pages/apps/detail";
 import AppStats from "@/pages/apps/stats";
+import Templates from "@/pages/templates/index";
+import Credentials from "@/pages/credentials/index";
+import Analytics from "@/pages/analytics/index";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -33,6 +36,10 @@ function Router() {
         <Route path="/workflows" component={Workflows} />
         <Route path="/workflows/:id" component={WorkflowDetail} />
         
+        <Route path="/templates" component={Templates} />
+        <Route path="/credentials" component={Credentials} />
+        <Route path="/analytics" component={Analytics} />
+
         <Route path="/executions" component={Executions} />
         <Route path="/executions/:id" component={ExecutionDetail} />
         

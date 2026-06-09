@@ -256,4 +256,46 @@ router.post("/workflows/:id/run", async (req, res): Promise<void> => {
   });
 });
 
+router.post("/workflows/:id/duplicate", async (req, res): Promise<void> => {
+  const params = GetWorkflowParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [existing] = await db
+    .select()
+    .from(workflowsTable)
+    .where(eq(workflowsTable.id, params.data.id));
+
+  if (!existing) {
+    res.status(404).json({ error: "Workflow not found" });
+    return;
+  }
+
+  const [workflow] = await db
+    .insert(workflowsTable)
+    .values({
+      name: `${existing.name} (copy)`,
+      description: existing.description,
+      status: "draft",
+      triggerType: existing.triggerType,
+      nodeCount: existing.nodeCount,
+      executionCount: 0,
+      nodes: existing.nodes,
+    })
+    .returning();
+
+  res.status(201).json({
+    ...workflow,
+    description: workflow.description ?? null,
+    lastRunAt: null,
+    lastRunStatus: null,
+    nodes: workflow.nodes ?? null,
+    createdAt: workflow.createdAt.toISOString(),
+    updatedAt: workflow.updatedAt.toISOString(),
+  });
+});
+
 export default router;
+

@@ -5,6 +5,7 @@
  * FlowCraft API — low-code automation and internal tools platform
  * OpenAPI spec version: 0.1.0
  */
+import type { ExecutionStepInputData } from './executionStepInputData';
 import type { ExecutionStepOutputData } from './executionStepOutputData';
 import type { ExecutionStepStatus } from './executionStepStatus';
 
@@ -12,6 +13,8 @@ export interface ExecutionStep {
   id: number;
   nodeId: string;
   nodeName: string;
+  /** @nullable */
+  nodeType?: string | null;
   status: ExecutionStepStatus;
   startedAt: string;
   /** @nullable */
@@ -21,5 +24,9 @@ export interface ExecutionStep {
   /** @nullable */
   outputData?: ExecutionStepOutputData;
   /** @nullable */
+  inputData?: ExecutionStepInputData;
+  /** @nullable */
   errorMessage?: string | null;
+  /** @nullable */
+  itemCount?: number | null;
 }

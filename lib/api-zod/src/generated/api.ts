@@ -53,6 +53,172 @@ export const GetRecentActivityResponse = zod.array(GetRecentActivityResponseItem
 
 
 /**
+ * @summary Daily execution stats over a time window
+ */
+export const getExecutionAnalyticsQueryDaysDefault = 14;
+
+export const GetExecutionAnalyticsQueryParams = zod.object({
+  "days": zod.coerce.number().default(getExecutionAnalyticsQueryDaysDefault)
+})
+
+export const GetExecutionAnalyticsResponseItem = zod.object({
+  "date": zod.string(),
+  "total": zod.number(),
+  "success": zod.number(),
+  "failed": zod.number()
+})
+export const GetExecutionAnalyticsResponse = zod.array(GetExecutionAnalyticsResponseItem)
+
+
+/**
+ * @summary Per-workflow execution stats
+ */
+export const GetWorkflowAnalyticsResponseItem = zod.object({
+  "workflowId": zod.number(),
+  "workflowName": zod.string(),
+  "total": zod.number(),
+  "success": zod.number(),
+  "failed": zod.number(),
+  "avgDurationMs": zod.number().nullable()
+})
+export const GetWorkflowAnalyticsResponse = zod.array(GetWorkflowAnalyticsResponseItem)
+
+
+/**
+ * @summary List all available workflow node types
+ */
+export const ListNodeTypesQueryParams = zod.object({
+  "category": zod.coerce.string().optional()
+})
+
+export const ListNodeTypesResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "category": zod.enum(['trigger', 'action', 'logic', 'ai', 'data', 'core']),
+  "description": zod.string(),
+  "icon": zod.string(),
+  "color": zod.string(),
+  "isTrigger": zod.boolean(),
+  "isAi": zod.boolean(),
+  "inputs": zod.number(),
+  "outputs": zod.number()
+})
+export const ListNodeTypesResponse = zod.array(ListNodeTypesResponseItem)
+
+
+/**
+ * @summary List workflow templates
+ */
+export const ListTemplatesQueryParams = zod.object({
+  "category": zod.coerce.string().optional(),
+  "search": zod.coerce.string().optional()
+})
+
+export const ListTemplatesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "category": zod.string(),
+  "triggerType": zod.string(),
+  "nodeCount": zod.number(),
+  "uses": zod.number(),
+  "complexity": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "tags": zod.array(zod.string()),
+  "nodes": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "name": zod.string(),
+  "nodeTypeId": zod.string().nullish(),
+  "connectorId": zod.number().nullish(),
+  "config": zod.record(zod.string(), zod.unknown()).optional(),
+  "position": zod.object({
+  "x": zod.number(),
+  "y": zod.number()
+})
+})),
+  "createdAt": zod.string()
+})
+export const ListTemplatesResponse = zod.array(ListTemplatesResponseItem)
+
+
+/**
+ * @summary Get a template by ID
+ */
+export const GetTemplateParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetTemplateResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "category": zod.string(),
+  "triggerType": zod.string(),
+  "nodeCount": zod.number(),
+  "uses": zod.number(),
+  "complexity": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "tags": zod.array(zod.string()),
+  "nodes": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "name": zod.string(),
+  "nodeTypeId": zod.string().nullish(),
+  "connectorId": zod.number().nullish(),
+  "config": zod.record(zod.string(), zod.unknown()).optional(),
+  "position": zod.object({
+  "x": zod.number(),
+  "y": zod.number()
+})
+})),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Clone a template into a new workflow
+ */
+export const UseTemplateParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List saved credentials
+ */
+export const ListCredentialsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "connectorName": zod.string(),
+  "connectorId": zod.number(),
+  "fields": zod.array(zod.string()),
+  "createdAt": zod.string()
+})
+export const ListCredentialsResponse = zod.array(ListCredentialsResponseItem)
+
+
+/**
+ * @summary Save a new credential
+ */
+
+
+
+export const CreateCredentialBody = zod.object({
+  "name": zod.string().min(1),
+  "connectorId": zod.number(),
+  "connectorName": zod.string(),
+  "fields": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Delete a credential
+ */
+export const DeleteCredentialParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary List all workflows
  */
 export const ListWorkflowsQueryParams = zod.object({
@@ -76,6 +242,7 @@ export const ListWorkflowsResponseItem = zod.object({
   "id": zod.string(),
   "type": zod.string(),
   "name": zod.string(),
+  "nodeTypeId": zod.string().nullish(),
   "connectorId": zod.number().nullish(),
   "config": zod.record(zod.string(), zod.unknown()).optional(),
   "position": zod.object({
@@ -101,6 +268,7 @@ export const CreateWorkflowBody = zod.object({
   "id": zod.string(),
   "type": zod.string(),
   "name": zod.string(),
+  "nodeTypeId": zod.string().nullish(),
   "connectorId": zod.number().nullish(),
   "config": zod.record(zod.string(), zod.unknown()).optional(),
   "position": zod.object({
@@ -134,6 +302,7 @@ export const GetWorkflowResponse = zod.object({
   "id": zod.string(),
   "type": zod.string(),
   "name": zod.string(),
+  "nodeTypeId": zod.string().nullish(),
   "connectorId": zod.number().nullish(),
   "config": zod.record(zod.string(), zod.unknown()).optional(),
   "position": zod.object({
@@ -163,6 +332,7 @@ export const UpdateWorkflowBody = zod.object({
   "id": zod.string(),
   "type": zod.string(),
   "name": zod.string(),
+  "nodeTypeId": zod.string().nullish(),
   "connectorId": zod.number().nullish(),
   "config": zod.record(zod.string(), zod.unknown()).optional(),
   "position": zod.object({
@@ -188,6 +358,7 @@ export const UpdateWorkflowResponse = zod.object({
   "id": zod.string(),
   "type": zod.string(),
   "name": zod.string(),
+  "nodeTypeId": zod.string().nullish(),
   "connectorId": zod.number().nullish(),
   "config": zod.record(zod.string(), zod.unknown()).optional(),
   "position": zod.object({
@@ -229,6 +400,7 @@ export const ToggleWorkflowResponse = zod.object({
   "id": zod.string(),
   "type": zod.string(),
   "name": zod.string(),
+  "nodeTypeId": zod.string().nullish(),
   "connectorId": zod.number().nullish(),
   "config": zod.record(zod.string(), zod.unknown()).optional(),
   "position": zod.object({
@@ -243,6 +415,14 @@ export const ToggleWorkflowResponse = zod.object({
  * @summary Manually trigger a workflow run
  */
 export const RunWorkflowParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Duplicate a workflow (Make/n8n-style clone)
+ */
+export const DuplicateWorkflowParams = zod.object({
   "id": zod.coerce.number()
 })
 
@@ -291,13 +471,24 @@ export const GetExecutionResponse = zod.object({
   "id": zod.number(),
   "nodeId": zod.string(),
   "nodeName": zod.string(),
+  "nodeType": zod.string().nullish(),
   "status": zod.enum(['running', 'success', 'failed', 'skipped']),
   "startedAt": zod.string(),
   "finishedAt": zod.string().nullish(),
   "durationMs": zod.number().nullish(),
   "outputData": zod.record(zod.string(), zod.unknown()).nullish(),
-  "errorMessage": zod.string().nullish()
+  "inputData": zod.record(zod.string(), zod.unknown()).nullish(),
+  "errorMessage": zod.string().nullish(),
+  "itemCount": zod.number().nullish()
 }))
+})
+
+
+/**
+ * @summary Retry a failed execution (Zapier/Make-style)
+ */
+export const RetryExecutionParams = zod.object({
+  "id": zod.coerce.number()
 })
 
 

@@ -1,0 +1,62 @@
+import { Router, type IRouter } from "express";
+import { ListNodeTypesQueryParams } from "@workspace/api-zod";
+
+const router: IRouter = Router();
+
+const NODE_TYPES = [
+  // ─── Triggers ──────────────────────────────────────────────────────
+  { id: "trigger.schedule", name: "Schedule", category: "trigger", description: "Run on a time-based schedule or cron expression.", icon: "Clock", color: "#06B6D4", isTrigger: true, isAi: false, inputs: 0, outputs: 1 },
+  { id: "trigger.webhook", name: "Webhook", category: "trigger", description: "Start when an HTTP POST arrives at a unique URL.", icon: "Webhook", color: "#8B5CF6", isTrigger: true, isAi: false, inputs: 0, outputs: 1 },
+  { id: "trigger.email", name: "Email Trigger", category: "trigger", description: "Start when a new email arrives in a connected inbox.", icon: "Mail", color: "#EC4899", isTrigger: true, isAi: false, inputs: 0, outputs: 1 },
+  { id: "trigger.form", name: "Form Submission", category: "trigger", description: "Start when a form is submitted.", icon: "FileText", color: "#F59E0B", isTrigger: true, isAi: false, inputs: 0, outputs: 1 },
+  { id: "trigger.manual", name: "Manual Trigger", category: "trigger", description: "Run the workflow manually with a button click.", icon: "Play", color: "#10B981", isTrigger: true, isAi: false, inputs: 0, outputs: 1 },
+
+  // ─── Actions ───────────────────────────────────────────────────────
+  { id: "action.http", name: "HTTP Request", category: "action", description: "Make an HTTP call to any REST API endpoint.", icon: "Globe", color: "#6366F1", isTrigger: false, isAi: false, inputs: 1, outputs: 1 },
+  { id: "action.send_email", name: "Send Email", category: "action", description: "Send an email via a connected mail provider.", icon: "Send", color: "#EC4899", isTrigger: false, isAi: false, inputs: 1, outputs: 1 },
+  { id: "action.slack", name: "Send Slack Message", category: "action", description: "Post a message to a Slack channel or DM.", icon: "MessageSquare", color: "#4A154B", isTrigger: false, isAi: false, inputs: 1, outputs: 1 },
+  { id: "action.db_query", name: "Database Query", category: "action", description: "Run a SELECT, INSERT, UPDATE or DELETE query.", icon: "Database", color: "#336791", isTrigger: false, isAi: false, inputs: 1, outputs: 1 },
+  { id: "action.spreadsheet", name: "Spreadsheet Row", category: "action", description: "Append, update or read rows in a spreadsheet.", icon: "Table", color: "#0F9D58", isTrigger: false, isAi: false, inputs: 1, outputs: 1 },
+  { id: "action.create_record", name: "Create Record", category: "action", description: "Create a new record in a connected CRM or database.", icon: "Plus", color: "#10B981", isTrigger: false, isAi: false, inputs: 1, outputs: 1 },
+
+  // ─── Logic ─────────────────────────────────────────────────────────
+  { id: "logic.if", name: "If / Else", category: "logic", description: "Branch the workflow based on a condition. True or False path.", icon: "GitBranch", color: "#F59E0B", isTrigger: false, isAi: false, inputs: 1, outputs: 2 },
+  { id: "logic.filter", name: "Filter", category: "logic", description: "Stop the workflow if a condition is not met (Zapier-style).", icon: "Filter", color: "#EF4444", isTrigger: false, isAi: false, inputs: 1, outputs: 1 },
+  { id: "logic.router", name: "Router", category: "logic", description: "Send data to multiple parallel branches at once (Make-style).", icon: "Share2", color: "#8B5CF6", isTrigger: false, isAi: false, inputs: 1, outputs: 4 },
+  { id: "logic.loop", name: "Loop / Iterator", category: "logic", description: "Process each item in an array individually (Gumloop-style).", icon: "RefreshCw", color: "#06B6D4", isTrigger: false, isAi: false, inputs: 1, outputs: 1 },
+  { id: "logic.delay", name: "Delay / Wait", category: "logic", description: "Pause the workflow for a fixed duration or until a time.", icon: "Timer", color: "#6B7280", isTrigger: false, isAi: false, inputs: 1, outputs: 1 },
+  { id: "logic.merge", name: "Merge", category: "logic", description: "Combine multiple branches back into one (Make aggregator).", icon: "Merge", color: "#10B981", isTrigger: false, isAi: false, inputs: 4, outputs: 1 },
+  { id: "logic.sub_workflow", name: "Sub-Workflow", category: "logic", description: "Call another workflow and wait for its result (n8n-style).", icon: "Workflow", color: "#F97316", isTrigger: false, isAi: false, inputs: 1, outputs: 1 },
+
+  // ─── AI ────────────────────────────────────────────────────────────
+  { id: "ai.llm", name: "LLM Prompt", category: "ai", description: "Send a prompt to a language model and use the response (Gumloop/Vellum).", icon: "Sparkles", color: "#7C3AED", isTrigger: false, isAi: true, inputs: 1, outputs: 1 },
+  { id: "ai.classify", name: "Classifier", category: "ai", description: "Classify input text into predefined categories using AI.", icon: "Tag", color: "#7C3AED", isTrigger: false, isAi: true, inputs: 1, outputs: 1 },
+  { id: "ai.summarize", name: "Summarizer", category: "ai", description: "Generate a concise summary of a long text or document.", icon: "AlignLeft", color: "#7C3AED", isTrigger: false, isAi: true, inputs: 1, outputs: 1 },
+  { id: "ai.extract", name: "Data Extractor", category: "ai", description: "Extract structured data (name, date, amount) from unstructured text.", icon: "Scissors", color: "#7C3AED", isTrigger: false, isAi: true, inputs: 1, outputs: 1 },
+  { id: "ai.agent", name: "AI Agent", category: "ai", description: "Autonomous agent that decides its own steps to complete a goal (Gumloop).", icon: "Bot", color: "#9333EA", isTrigger: false, isAi: true, inputs: 1, outputs: 1 },
+  { id: "ai.scraper", name: "Web Scraper", category: "ai", description: "Extract content from web pages using AI to understand structure.", icon: "Search", color: "#7C3AED", isTrigger: false, isAi: true, inputs: 1, outputs: 1 },
+
+  // ─── Data ──────────────────────────────────────────────────────────
+  { id: "data.transform", name: "Transform / Map", category: "data", description: "Reshape, rename or format data fields (Zapier Formatter).", icon: "Shuffle", color: "#0EA5E9", isTrigger: false, isAi: false, inputs: 1, outputs: 1 },
+  { id: "data.code", name: "Code (JS)", category: "data", description: "Run custom JavaScript to transform data (n8n Code Node).", icon: "Code2", color: "#1D4ED8", isTrigger: false, isAi: false, inputs: 1, outputs: 1 },
+  { id: "data.parse_doc", name: "Document Parser", category: "data", description: "Extract text and tables from PDFs and Office files (UiPath/Gumloop).", icon: "FileSearch", color: "#0EA5E9", isTrigger: false, isAi: false, inputs: 1, outputs: 1 },
+  { id: "data.store_get", name: "Read Variable", category: "data", description: "Read a value from the workflow variable store (Make Data Store).", icon: "BookOpen", color: "#6B7280", isTrigger: false, isAi: false, inputs: 1, outputs: 1 },
+  { id: "data.store_set", name: "Write Variable", category: "data", description: "Save a value to the workflow variable store (Make Data Store).", icon: "BookMarked", color: "#6B7280", isTrigger: false, isAi: false, inputs: 1, outputs: 1 },
+  { id: "data.note", name: "Sticky Note", category: "data", description: "Add a comment or documentation note to the canvas (n8n).", icon: "StickyNote", color: "#FCD34D", isTrigger: false, isAi: false, inputs: 0, outputs: 0 },
+];
+
+router.get("/node-types", async (req, res): Promise<void> => {
+  const params = ListNodeTypesQueryParams.safeParse(req.query);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const types = params.data.category
+    ? NODE_TYPES.filter((n) => n.category === params.data.category)
+    : NODE_TYPES;
+
+  res.json(types);
+});
+
+export default router;

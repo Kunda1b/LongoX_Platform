@@ -19,6 +19,14 @@ tags:
     description: Low-code internal apps and dashboards
   - name: dashboard
     description: Platform overview and summaries
+  - name: templates
+    description: Workflow template library
+  - name: credentials
+    description: Connector credential management
+  - name: node-types
+    description: Available workflow node types
+  - name: analytics
+    description: Execution analytics and process insights
 
 paths:
   /healthz:
@@ -68,6 +76,175 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ActivityItem"
+
+  # ─── Analytics (UiPath-inspired) ─────────────────────────────────────
+  /analytics/executions:
+    get:
+      operationId: getExecutionAnalytics
+      tags: [analytics]
+      summary: Daily execution stats over a time window
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 14
+      responses:
+        "200":
+          description: Daily stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DailyExecutionStat"
+
+  /analytics/workflows:
+    get:
+      operationId: getWorkflowAnalytics
+      tags: [analytics]
+      summary: Per-workflow execution stats
+      responses:
+        "200":
+          description: Workflow stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkflowStat"
+
+  # ─── Node Types (n8n-inspired) ────────────────────────────────────────
+  /node-types:
+    get:
+      operationId: listNodeTypes
+      tags: [node-types]
+      summary: List all available workflow node types
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Node type list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NodeType"
+
+  # ─── Templates (Zapier/n8n-inspired) ─────────────────────────────────
+  /templates:
+    get:
+      operationId: listTemplates
+      tags: [templates]
+      summary: List workflow templates
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Template list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Template"
+
+  /templates/{id}:
+    get:
+      operationId: getTemplate
+      tags: [templates]
+      summary: Get a template by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+
+  /templates/{id}/use:
+    post:
+      operationId: useTemplate
+      tags: [templates]
+      summary: Clone a template into a new workflow
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Cloned workflow
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+
+  # ─── Credentials (n8n-inspired) ────────────────────────────────────────
+  /credentials:
+    get:
+      operationId: listCredentials
+      tags: [credentials]
+      summary: List saved credentials
+      responses:
+        "200":
+          description: Credential list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Credential"
+    post:
+      operationId: createCredential
+      tags: [credentials]
+      summary: Save a new credential
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CredentialInput"
+      responses:
+        "201":
+          description: Created credential
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Credential"
+
+  /credentials/{id}:
+    delete:
+      operationId: deleteCredential
+      tags: [credentials]
+      summary: Delete a credential
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
 
   # ─── Workflows ──────────────────────────────────────────────────────
   /workflows:
@@ -207,6 +384,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/Execution"
 
+  /workflows/{id}/duplicate:
+    post:
+      operationId: duplicateWorkflow
+      tags: [workflows]
+      summary: Duplicate a workflow (Make/n8n-style clone)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Duplicated workflow
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+
   # ─── Executions ──────────────────────────────────────────────────────
   /executions:
     get:
@@ -256,6 +452,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExecutionDetail"
+
+  /executions/{id}/retry:
+    post:
+      operationId: retryExecution
+      tags: [executions]
+      summary: Retry a failed execution (Zapier/Make-style)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "202":
+          description: New execution started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Execution"
 
   # ─── Connectors ──────────────────────────────────────────────────────
   /connectors:
@@ -495,6 +710,129 @@ components:
         errorMessage:
           type: ["string", "null"]
 
+    DailyExecutionStat:
+      type: object
+      required: [date, total, success, failed]
+      properties:
+        date:
+          type: string
+        total:
+          type: integer
+        success:
+          type: integer
+        failed:
+          type: integer
+
+    WorkflowStat:
+      type: object
+      required: [workflowId, workflowName, total, success, failed, avgDurationMs]
+      properties:
+        workflowId:
+          type: integer
+        workflowName:
+          type: string
+        total:
+          type: integer
+        success:
+          type: integer
+        failed:
+          type: integer
+        avgDurationMs:
+          type: ["integer", "null"]
+
+    NodeType:
+      type: object
+      required: [id, name, category, description, icon, color, isTrigger, isAi, inputs, outputs]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+          enum: [trigger, action, logic, ai, data, core]
+        description:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+        isTrigger:
+          type: boolean
+        isAi:
+          type: boolean
+        inputs:
+          type: integer
+        outputs:
+          type: integer
+
+    Template:
+      type: object
+      required: [id, name, description, category, triggerType, nodeCount, uses, complexity, tags, nodes, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        triggerType:
+          type: string
+        nodeCount:
+          type: integer
+        uses:
+          type: integer
+        complexity:
+          type: string
+          enum: [beginner, intermediate, advanced]
+        tags:
+          type: array
+          items:
+            type: string
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkflowNode"
+        createdAt:
+          type: string
+
+    Credential:
+      type: object
+      required: [id, name, connectorName, connectorId, fields, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        connectorName:
+          type: string
+        connectorId:
+          type: integer
+        fields:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+
+    CredentialInput:
+      type: object
+      required: [name, connectorId, connectorName, fields]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        connectorId:
+          type: integer
+        connectorName:
+          type: string
+        fields:
+          type: array
+          items:
+            type: string
+
     Workflow:
       type: object
       required: [id, name, status, triggerType, nodeCount, createdAt, updatedAt]
@@ -537,6 +875,8 @@ components:
           type: string
         name:
           type: string
+        nodeTypeId:
+          type: ["string", "null"]
         connectorId:
           type: ["integer", "null"]
         config:
@@ -615,6 +955,8 @@ components:
           type: string
         nodeName:
           type: string
+        nodeType:
+          type: ["string", "null"]
         status:
           type: string
           enum: [running, success, failed, skipped]
@@ -627,8 +969,13 @@ components:
         outputData:
           type: ["object", "null"]
           additionalProperties: true
+        inputData:
+          type: ["object", "null"]
+          additionalProperties: true
         errorMessage:
           type: ["string", "null"]
+        itemCount:
+          type: ["integer", "null"]
 
     ExecutionDetail:
       type: object

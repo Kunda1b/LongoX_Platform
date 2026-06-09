@@ -7,7 +7,10 @@ import {
   LayoutDashboard, 
   Play, 
   Workflow as WorkflowIcon,
-  Menu
+  Menu,
+  Layers,
+  KeyRound,
+  BarChart2
 } from "lucide-react";
 import {
   Sidebar,
@@ -69,10 +72,26 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/templates")}>
+                      <Link href="/templates">
+                        <Layers />
+                        <span>Templates</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location.startsWith("/executions")}>
                       <Link href="/executions">
                         <Activity />
                         <span>Executions</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/analytics")}>
+                      <Link href="/analytics">
+                        <BarChart2 />
+                        <span>Analytics</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -105,6 +124,22 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <Link href="/apps/stats">
                         <BarChart />
                         <span>App Stats</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel>Settings</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/credentials")}>
+                      <Link href="/credentials">
+                        <KeyRound />
+                        <span>Credentials</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

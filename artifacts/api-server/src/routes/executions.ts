@@ -73,4 +73,50 @@ router.get("/executions/:id", async (req, res): Promise<void> => {
   });
 });
 
+router.post("/executions/:id/retry", async (req, res): Promise<void> => {
+  const params = GetExecutionParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [original] = await db
+    .select()
+    .from(executionsTable)
+    .where(eq(executionsTable.id, params.data.id));
+
+  if (!original) {
+    res.status(404).json({ error: "Execution not found" });
+    return;
+  }
+
+  const startedAt = new Date();
+  const durationMs = Math.floor(Math.random() * 2000) + 200;
+  const finishedAt = new Date(startedAt.getTime() + durationMs);
+  const success = Math.random() > 0.1;
+  const status = success ? "success" : "failed";
+
+  const steps = [
+    { id: 1, nodeId: "node-1", nodeName: "Trigger", nodeType: "trigger.manual", status: "success", startedAt: startedAt.toISOString(), finishedAt: new Date(startedAt.getTime() + 50).toISOString(), durationMs: 50, inputData: {}, outputData: { triggered: true, retried: true }, errorMessage: null, itemCount: 1 },
+    { id: 2, nodeId: "node-2", nodeName: "Process", nodeType: "action.http", status: success ? "success" : "failed", startedAt: startedAt.toISOString(), finishedAt: finishedAt.toISOString(), durationMs: durationMs - 50, inputData: { triggered: true }, outputData: success ? { status: 200, body: { ok: true } } : null, errorMessage: success ? null : "Connection timeout", itemCount: success ? 1 : null },
+  ];
+
+  const [execution] = await db
+    .insert(executionsTable)
+    .values({
+      workflowId: original.workflowId,
+      workflowName: original.workflowName,
+      status,
+      startedAt,
+      finishedAt,
+      durationMs,
+      errorMessage: success ? null : "Connection timeout on retry",
+      steps,
+    })
+    .returning();
+
+  res.status(202).json(serializeExecution(execution));
+});
+
 export default router;
+

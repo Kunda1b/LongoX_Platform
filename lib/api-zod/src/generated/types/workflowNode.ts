@@ -13,6 +13,8 @@ export interface WorkflowNode {
   type: string;
   name: string;
   /** @nullable */
+  nodeTypeId?: string | null;
+  /** @nullable */
   connectorId?: number | null;
   config?: WorkflowNodeConfig;
   position: WorkflowNodePosition;
