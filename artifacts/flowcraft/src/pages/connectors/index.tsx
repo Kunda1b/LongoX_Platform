@@ -9,7 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Download, Check, Star } from "lucide-react";
+import { Search, Download, Check, Star, Plug } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -80,8 +80,14 @@ export default function Connectors() {
               <Skeleton key={i} className="h-48 w-full" />
             ))
           ) : connectors?.length === 0 ? (
-            <div className="col-span-full py-12 text-center text-muted-foreground">
-              No connectors found matching your criteria.
+            <div className="col-span-full flex min-w-0 flex-1 flex-col items-center justify-center gap-4 text-balance rounded-lg border border-dashed p-6 text-center md:p-12">
+              <div className="bg-muted text-foreground flex size-12 shrink-0 items-center justify-center rounded-lg">
+                <Plug className="size-6" />
+              </div>
+              <div className="flex max-w-sm flex-col items-center gap-1 text-center">
+                <div className="text-lg font-medium tracking-tight text-foreground">No connectors installed</div>
+                <p className="text-muted-foreground text-sm/relaxed">Browse the marketplace to find and install connectors for your stack.</p>
+              </div>
             </div>
           ) : (
             connectors?.map((conn) => (

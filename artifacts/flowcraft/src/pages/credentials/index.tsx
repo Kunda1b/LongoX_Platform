@@ -140,13 +140,15 @@ export default function Credentials() {
       {isLoading ? (
         <div className="text-muted-foreground">Loading credentials...</div>
       ) : credentials.length === 0 ? (
-        <div className="text-center py-12 border rounded-lg border-dashed bg-muted/20">
-          <KeyRound className="h-10 w-10 text-muted-foreground mx-auto mb-4 opacity-50" />
-          <h3 className="text-lg font-medium">No credentials yet</h3>
-          <p className="text-muted-foreground max-w-sm mx-auto mt-2 mb-4">
-            Add credentials to authenticate your workflows with external services.
-          </p>
-          <Button variant="outline" onClick={() => setOpen(true)}>Add your first credential</Button>
+        <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-4 text-balance rounded-lg border border-dashed p-6 text-center md:p-12">
+          <div className="bg-muted text-foreground flex size-12 shrink-0 items-center justify-center rounded-lg">
+            <KeyRound className="size-6" />
+          </div>
+          <div className="flex max-w-sm flex-col items-center gap-1 text-center">
+            <div className="text-lg font-medium tracking-tight text-foreground">No credentials saved</div>
+            <p className="text-muted-foreground text-sm/relaxed">Add API keys and secrets for your installed connectors to use in workflows.</p>
+          </div>
+          <Button onClick={() => setOpen(true)} className="mt-2">Add credential</Button>
         </div>
       ) : (
         <div className="grid gap-4">

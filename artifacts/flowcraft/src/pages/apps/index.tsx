@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge, TypeBadge } from "@/components/badges";
-import { Plus, Search, AppWindow, Settings, BarChart2 } from "lucide-react";
+import { Plus, Search, AppWindow, Settings, BarChart2, LayoutGrid } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -171,10 +171,15 @@ export default function Apps() {
             <Skeleton key={i} className="h-40 w-full" />
           ))
         ) : apps?.length === 0 ? (
-          <div className="col-span-full text-center py-12 border rounded-lg bg-card text-muted-foreground">
-            <AppWindow className="h-12 w-12 mx-auto mb-4 opacity-20" />
-            <p className="text-lg font-medium">No apps found</p>
-            <p className="text-sm">Create your first internal tool.</p>
+          <div className="col-span-full flex min-w-0 flex-1 flex-col items-center justify-center gap-4 text-balance rounded-lg border border-dashed p-6 text-center md:p-12">
+            <div className="bg-muted text-foreground flex size-12 shrink-0 items-center justify-center rounded-lg">
+              <LayoutGrid className="size-6" />
+            </div>
+            <div className="flex max-w-sm flex-col items-center gap-1 text-center">
+              <div className="text-lg font-medium tracking-tight text-foreground">No apps yet</div>
+              <p className="text-muted-foreground text-sm/relaxed">Build internal dashboards, CRUD interfaces, forms, and reports without writing code.</p>
+            </div>
+            <Button onClick={() => setIsCreateOpen(true)} className="mt-2">Create your first app</Button>
           </div>
         ) : (
           apps?.map((app) => (

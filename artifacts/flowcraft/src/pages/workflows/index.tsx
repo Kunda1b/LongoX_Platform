@@ -188,10 +188,15 @@ export default function Workflows() {
             <Skeleton key={i} className="h-24 w-full" />
           ))
         ) : workflows?.length === 0 ? (
-          <div className="text-center py-12 border rounded-lg bg-card text-muted-foreground">
-            <Cable className="h-12 w-12 mx-auto mb-4 opacity-20" />
-            <p className="text-lg font-medium">No workflows found</p>
-            <p className="text-sm">Create one to get started.</p>
+          <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-4 text-balance rounded-lg border border-dashed p-6 text-center md:p-12">
+            <div className="bg-muted text-foreground flex size-12 shrink-0 items-center justify-center rounded-lg">
+              <Cable className="size-6" />
+            </div>
+            <div className="flex max-w-sm flex-col items-center gap-1 text-center">
+              <div className="text-lg font-medium tracking-tight text-foreground">No workflows yet</div>
+              <p className="text-muted-foreground text-sm/relaxed">Automate repetitive tasks by connecting triggers, actions, and logic nodes.</p>
+            </div>
+            <Button onClick={() => setIsCreateOpen(true)} className="mt-2">Create your first workflow</Button>
           </div>
         ) : (
           workflows?.map((wf) => (

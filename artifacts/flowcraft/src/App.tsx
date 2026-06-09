@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route } from "wouter";
 import Dashboard from "@/pages/dashboard";
 import Workflows from "@/pages/workflows/index";
 import WorkflowDetail from "@/pages/workflows/detail";
@@ -11,6 +11,7 @@ import AppStats from "@/pages/apps/stats";
 import Templates from "@/pages/templates/index";
 import Credentials from "@/pages/credentials/index";
 import Analytics from "@/pages/analytics/index";
+import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -26,32 +27,41 @@ const queryClient = new QueryClient({
   },
 });
 
-function Router() {
+function AppRoutes() {
   return (
     <AppLayout>
       <Switch>
-        <Route path="/" component={() => <Redirect to="/dashboard" />} />
         <Route path="/dashboard" component={Dashboard} />
-        
+
         <Route path="/workflows" component={Workflows} />
         <Route path="/workflows/:id" component={WorkflowDetail} />
-        
+
         <Route path="/templates" component={Templates} />
         <Route path="/credentials" component={Credentials} />
         <Route path="/analytics" component={Analytics} />
 
         <Route path="/executions" component={Executions} />
         <Route path="/executions/:id" component={ExecutionDetail} />
-        
+
         <Route path="/connectors" component={Connectors} />
-        
-        <Route path="/apps" component={Apps} />
+
         <Route path="/apps/stats" component={AppStats} />
         <Route path="/apps/:id" component={AppDetail} />
-        
+        <Route path="/apps" component={Apps} />
+
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
+  );
+}
+
+function Router() {
+  return (
+    <Switch>
+      <Route path="/" component={Landing} />
+      {/* Catch-all: no path = matches every other route */}
+      <Route>{() => <AppRoutes />}</Route>
+    </Switch>
   );
 }
 

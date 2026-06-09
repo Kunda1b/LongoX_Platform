@@ -130,8 +130,15 @@ export default function Templates() {
             </Card>
           ))}
           {filtered.length === 0 && (
-            <div className="col-span-full py-12 text-center text-muted-foreground">
-              No templates found matching your search.
+            <div className="col-span-full flex min-w-0 flex-1 flex-col items-center justify-center gap-4 text-balance rounded-lg border border-dashed p-6 text-center md:p-12">
+              <div className="bg-muted text-foreground flex size-12 shrink-0 items-center justify-center rounded-lg">
+                <Layers className="size-6" />
+              </div>
+              <div className="flex max-w-sm flex-col items-center gap-1 text-center">
+                <div className="text-lg font-medium tracking-tight text-foreground">No templates found</div>
+                <p className="text-muted-foreground text-sm/relaxed">Try a different category or search term.</p>
+              </div>
+              <Button variant="outline" onClick={() => { setSearch(""); setCategory("All"); }} className="mt-2">Clear filters</Button>
             </div>
           )}
         </div>

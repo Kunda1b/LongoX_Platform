@@ -57,6 +57,11 @@ export default function Analytics() {
                 </AreaChart>
               </ResponsiveContainer>
             )}
+            {!isLoadingExec && execAnalytics.length === 0 && (
+               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                 <div className="text-lg font-medium">No data yet</div>
+               </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -85,7 +90,11 @@ export default function Analytics() {
                 </tr>
               ) : wfAnalytics.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">No workflow data available.</td>
+                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                    <div className="flex flex-col items-center justify-center gap-1 text-center">
+                      <div className="text-lg font-medium tracking-tight text-foreground">No workflows have run yet</div>
+                    </div>
+                  </td>
                 </tr>
               ) : (
                 wfAnalytics.map((stat) => (

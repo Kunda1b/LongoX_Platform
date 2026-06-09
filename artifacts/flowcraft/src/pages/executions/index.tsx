@@ -7,6 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { Activity } from "lucide-react";
+import { Button } from "react-day-picker";
+
 export default function Executions() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
@@ -61,8 +64,19 @@ export default function Executions() {
               ))
             ) : executions?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  No executions found.
+                <TableCell colSpan={5} className="py-12">
+                  <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-4 text-balance text-center">
+                    <div className="bg-muted text-foreground flex size-12 shrink-0 items-center justify-center rounded-lg">
+                      <Activity className="size-6" />
+                    </div>
+                    <div className="flex max-w-sm flex-col items-center gap-1 text-center">
+                      <div className="text-lg font-medium tracking-tight text-foreground">No executions yet</div>
+                      <p className="text-muted-foreground text-sm/relaxed">Run a workflow to see its execution history here.</p>
+                    </div>
+                    <Button asChild variant="outline" className="mt-2">
+                      <Link href="/workflows">Go to workflows</Link>
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
