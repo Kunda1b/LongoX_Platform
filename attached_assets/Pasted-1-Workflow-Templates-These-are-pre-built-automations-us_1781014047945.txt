@@ -1,0 +1,245 @@
+1. Workflow Templates
+
+These are pre-built automations users can install with one click.
+
+CRM Templates
+Lead Capture → CRM → Notification
+Website Form
+      ↓
+Lead Validation
+      ↓
+HubSpot
+      ↓
+Slack Notification
+      ↓
+Follow-up Email
+
+Use Cases:
+
+Real estate
+Agencies
+Consultants
+Lead Scoring Workflow
+New Lead
+    ↓
+Enrich Contact
+    ↓
+Score Lead
+    ↓
+Assign Sales Rep
+
+Integrations:
+
+HubSpot
+Salesforce
+Clearbit
+Communication Templates
+WhatsApp Customer Support
+WhatsApp Message
+        ↓
+AI Classification
+        ↓
+Create Ticket
+        ↓
+Notify Agent
+
+Useful for African SMBs where WhatsApp is dominant.
+
+Missed Call Follow-Up
+Phone Missed Call
+        ↓
+Send WhatsApp
+        ↓
+Create CRM Record
+Finance Templates
+Invoice Reminder
+Invoice Due
+      ↓
+Reminder Email
+      ↓
+WhatsApp Reminder
+      ↓
+Escalate
+Stripe Payment Success
+Stripe Payment
+       ↓
+Generate Receipt
+       ↓
+Email Customer
+       ↓
+Update CRM
+HR Templates
+Employee Onboarding
+New Employee
+       ↓
+Create Accounts
+       ↓
+Send Welcome Email
+       ↓
+Create Tasks
+Leave Request Approval
+Employee Request
+       ↓
+Manager Approval
+       ↓
+HR Notification
+2. Dashboard Templates
+
+These are complete internal applications.
+
+Sales CRM
+
+Components:
+
+Leads Table
+Pipeline Board
+Customer Profile
+Activity Feed
+
+Data Sources:
+
+PostgreSQL
+HubSpot
+Salesforce
+Customer Support Desk
+
+Components:
+
+Ticket Queue
+Customer Lookup
+SLA Dashboard
+Agent Performance
+Inventory Management
+
+Components:
+
+Products
+Stock Levels
+Suppliers
+Purchase Orders
+Sales
+
+Popular with retailers.
+
+Real Estate Dashboard
+
+Given your Kunda Properties background, this is a strong vertical.
+
+Components:
+
+Properties
+Agents
+Offers
+Viewings
+Payments
+3. Industry-Specific Solutions
+
+These are full template bundles containing:
+
+Workflows
+Dashboards
+Database schema
+Permissions
+Real Estate Bundle
+
+Includes:
+
+Workflows
+New Lead Routing
+Property Approval
+Viewing Scheduling
+Offer Management
+Dashboard
+Listings
+Leads
+Agents
+Transactions
+E-Commerce Bundle
+Workflows
+Order Received
+Payment Success
+Abandoned Cart
+Refund Request
+Dashboard
+Orders
+Products
+Inventory
+Customers
+Healthcare Clinic Bundle
+Workflows
+Appointment Reminder
+Follow-up Notification
+Lab Result Alert
+Dashboard
+Patients
+Appointments
+Billing
+School Management Bundle
+
+Especially useful in The Gambia.
+
+Workflows
+Student Registration
+Fee Reminder
+Result Publication
+Dashboard
+Students
+Teachers
+Attendance
+Payments
+4. Developer Templates (Most Important)
+
+Most platforms ignore these.
+
+Instead of only user-facing templates, provide starter kits for connector developers.
+
+Connector Starter
+connector-template-oauth
+connector-template-api-key
+connector-template-webhook
+
+Generated:
+
+export default defineConnector({
+  metadata: {},
+  auth: {},
+  actions: [],
+  triggers: []
+});
+Workflow Node Starter
+Action Node
+Trigger Node
+Polling Node
+Webhook Node
+Dashboard Component Starter
+Table Component
+Chart Component
+CRUD Form
+Metric Card
+5. AI-Powered Templates
+
+These can become a premium feature.
+
+User enters:
+
+"I run a real estate agency"
+
+Platform generates:
+
+Workflows
+Lead Capture
+Viewing Scheduling
+Offer Approval
+Payment Reminder
+Dashboard
+Properties
+Agents
+Customers
+Revenue
+Roles
+Admin
+Agent
+Manager
+Viewer
+
+Automatically provisioned.

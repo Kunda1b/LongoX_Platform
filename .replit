@@ -11,6 +11,59 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "FlowCraft"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "AutoFlow"
+
+[[workflows.workflow]]
+name = "API Server"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=8080 pnpm --filter @workspace/api-server dev"
+waitForPort = 8080
+
+[[workflows.workflow]]
+name = "FlowCraft"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=25075 BASE_PATH=/ pnpm --filter @workspace/flowcraft dev"
+waitForPort = 25075
+
+[[workflows.workflow]]
+name = "AutoFlow"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=21036 BASE_PATH=/ pnpm --filter @workspace/autoflow dev"
+waitForPort = 21036
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true

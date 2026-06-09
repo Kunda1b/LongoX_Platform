@@ -14,6 +14,8 @@ export const templatesTable = pgTable("templates", {
   tags: text("tags").array().notNull().default([]),
   nodes: jsonb("nodes").notNull().default([]),
   isCustom: boolean("is_custom").notNull().default(false),
+  templateType: text("template_type").notNull().default("workflow"),
+  metadata: jsonb("metadata").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

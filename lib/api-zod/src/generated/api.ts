@@ -111,7 +111,8 @@ export const ListNodeTypesResponse = zod.array(ListNodeTypesResponseItem)
  */
 export const ListTemplatesQueryParams = zod.object({
   "category": zod.coerce.string().optional(),
-  "search": zod.coerce.string().optional()
+  "search": zod.coerce.string().optional(),
+  "templateType": zod.coerce.string().optional()
 })
 
 export const ListTemplatesResponseItem = zod.object({
@@ -137,7 +138,9 @@ export const ListTemplatesResponseItem = zod.object({
 })
 })),
   "isCustom": zod.boolean(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "templateType": zod.string().optional(),
+  "metadata": zod.record(zod.string(), zod.unknown()).optional()
 })
 export const ListTemplatesResponse = zod.array(ListTemplatesResponseItem)
 

@@ -9,4 +9,5 @@
 export type ListTemplatesParams = {
 category?: string;
 search?: string;
+templateType?: string;
 };

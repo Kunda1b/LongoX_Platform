@@ -21,4 +21,6 @@ export interface Template {
   nodes: WorkflowNode[];
   isCustom: boolean;
   createdAt: string;
+  templateType?: string;
+  metadata?: Record<string, unknown>;
 }
