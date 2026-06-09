@@ -24,10 +24,6 @@ args = "API Server"
 task = "workflow.run"
 args = "FlowCraft"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "AutoFlow"
-
 [[workflows.workflow]]
 name = "API Server"
 author = "agent"
@@ -51,18 +47,6 @@ outputType = "webview"
 task = "shell.exec"
 args = "PORT=25075 BASE_PATH=/ pnpm --filter @workspace/flowcraft dev"
 waitForPort = 25075
-
-[[workflows.workflow]]
-name = "AutoFlow"
-author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "webview"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "PORT=21036 BASE_PATH=/ pnpm --filter @workspace/autoflow dev"
-waitForPort = 21036
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
