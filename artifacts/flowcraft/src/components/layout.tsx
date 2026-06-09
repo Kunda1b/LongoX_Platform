@@ -15,6 +15,7 @@ import {
   PanelTop,
   Globe,
   Receipt,
+  BrainCircuit,
 } from "lucide-react";
 import {
   Sidebar,
@@ -104,6 +105,22 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <Link href="/connectors">
                         <AppWindow />
                         <span>Connectors</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel>AI</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/ai/playground")}>
+                      <Link href="/ai/playground">
+                        <BrainCircuit />
+                        <span>Playground</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

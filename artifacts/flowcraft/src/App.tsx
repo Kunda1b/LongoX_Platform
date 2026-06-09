@@ -19,6 +19,7 @@ import BillingPage from "@/pages/billing/index";
 import EnvironmentsPage from "@/pages/environments/index";
 import TenantsPage from "@/pages/tenants/index";
 import RbacPage from "@/pages/rbac/index";
+import AiPlayground from "@/pages/ai/playground";
 import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout";
@@ -67,6 +68,8 @@ function AppRoutes() {
 
         <Route path="/dlq" component={DlqPage} />
         <Route path="/audit-log" component={AuditLogPage} />
+
+        <Route path="/ai/playground" component={AiPlayground} />
 
         <Route component={NotFound} />
       </Switch>
