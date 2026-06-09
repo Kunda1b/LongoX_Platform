@@ -1,4 +1,5 @@
 import { eq, sql } from "drizzle-orm";
+import OpenAI from "openai";
 import {
   db,
   executionsTable,
@@ -7,7 +8,13 @@ import {
   auditLogTable,
   workflowVersionsTable,
   workflowsTable,
+  tokenUsageTable,
+  usageEventsTable,
 } from "@workspace/db";
+
+// ─── OpenAI client ─────────────────────────────────────────────────────────────
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -40,7 +47,7 @@ export async function writeAudit(
   });
 }
 
-// ─── Node simulation ───────────────────────────────────────────────────────────
+// ─── Node category helpers ──────────────────────────────────────────────────────
 
 function nodeCategory(nodeTypeId: string): string {
   const prefix = nodeTypeId.split(".")[0] ?? "action";
@@ -52,77 +59,186 @@ function nodeCategory(nodeTypeId: string): string {
 function nodeDurationMs(category: string): number {
   switch (category) {
     case "trigger": return Math.floor(Math.random() * 80) + 20;
-    case "logic": return Math.floor(Math.random() * 40) + 10;
-    case "data": return Math.floor(Math.random() * 120) + 30;
-    case "ai": return Math.floor(Math.random() * 2500) + 500;
-    default: return Math.floor(Math.random() * 1300) + 200; // action
+    case "logic":   return Math.floor(Math.random() * 40) + 10;
+    case "data":    return Math.floor(Math.random() * 120) + 30;
+    case "ai":      return Math.floor(Math.random() * 1000) + 200;
+    default:        return Math.floor(Math.random() * 800) + 100;
   }
 }
 
 function nodeFailureProbability(category: string): number {
   switch (category) {
     case "trigger": return 0;
-    case "logic": return 0.01;
-    case "data": return 0.02;
-    case "ai": return 0.04;
-    default: return 0.06; // action
+    case "logic":   return 0.01;
+    case "data":    return 0.02;
+    case "ai":      return 0.02;  // lower now that it's real
+    default:        return 0.04;
   }
 }
 
+// ─── Real AI execution ─────────────────────────────────────────────────────────
+
+async function executeAiNode(
+  nodeTypeId: string,
+  config: Record<string, unknown>,
+  input: Record<string, unknown>,
+  workflowId: number
+): Promise<Record<string, unknown>> {
+  const model = String(config.model ?? "gpt-4o-mini");
+  let messages: OpenAI.ChatCompletionMessageParam[];
+  let responseFormat: "text" | "json" = "text";
+
+  if (nodeTypeId === "ai.classify") {
+    const categories = String(config.categories ?? "CategoryA,CategoryB");
+    messages = [
+      { role: "system", content: `Classify the input into one of these categories: ${categories}. Respond with JSON: {"category": "...", "confidence": 0.0-1.0, "reasoning": "..."}` },
+      { role: "user", content: JSON.stringify(input) },
+    ];
+    responseFormat = "json";
+  } else if (nodeTypeId === "ai.summarize") {
+    const maxWords = Number(config.maxWords ?? 100);
+    messages = [
+      { role: "system", content: `Summarize the input in at most ${maxWords} words. Respond with JSON: {"summary": "...", "wordCount": 0}` },
+      { role: "user", content: JSON.stringify(input) },
+    ];
+    responseFormat = "json";
+  } else if (nodeTypeId === "ai.extract") {
+    const fields = String(config.fields ?? "vendor,amount,date");
+    messages = [
+      { role: "system", content: `Extract these fields from the input: ${fields}. Respond with JSON: {"extracted": {...}, "confidence": 0.0-1.0}` },
+      { role: "user", content: JSON.stringify(input) },
+    ];
+    responseFormat = "json";
+  } else {
+    // Generic AI node — use system prompt from config or a sensible default
+    const systemPrompt = String(config.systemPrompt ?? config.prompt ?? "Process the following input and return a JSON result.");
+    messages = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: JSON.stringify(input) },
+    ];
+    responseFormat = "json";
+  }
+
+  const completion = await openai.chat.completions.create({
+    model,
+    messages,
+    response_format: responseFormat === "json" ? { type: "json_object" } : undefined,
+    max_tokens: Number(config.maxTokens ?? 1024),
+  });
+
+  const inputTokens = completion.usage?.prompt_tokens ?? 0;
+  const outputTokens = completion.usage?.completion_tokens ?? 0;
+  const content = completion.choices[0]?.message?.content ?? "{}";
+
+  // Record token usage
+  try {
+    await db.insert(tokenUsageTable).values({
+      modelName: model,
+      provider: "openai",
+      workflowId,
+      inputTokens,
+      outputTokens,
+      cost: String(inputTokens * 0.00000015 + outputTokens * 0.0000006),
+    });
+  } catch {
+    // Non-fatal — don't fail execution over metering
+  }
+
+  let parsed: Record<string, unknown> = {};
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    parsed = { result: content };
+  }
+
+  return { ...parsed, modelUsed: model, inputTokens, outputTokens };
+}
+
+// ─── Real HTTP execution ───────────────────────────────────────────────────────
+
+async function executeHttpNode(
+  config: Record<string, unknown>,
+  input: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const url = String(config.url ?? "");
+  if (!url) throw new Error("action.http: no url configured");
+
+  const method = String(config.method ?? "GET").toUpperCase();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(config.headers as Record<string, string> ?? {}),
+  };
+
+  const hasBody = ["POST", "PUT", "PATCH"].includes(method);
+  const body = hasBody
+    ? JSON.stringify(config.body ?? input)
+    : undefined;
+
+  const startMs = Date.now();
+  const response = await fetch(url, { method, headers, body });
+  const responseTimeMs = Date.now() - startMs;
+
+  let responseBody: unknown;
+  const contentType = response.headers.get("content-type") ?? "";
+  try {
+    responseBody = contentType.includes("application/json")
+      ? await response.json()
+      : await response.text();
+  } catch {
+    responseBody = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} ${response.statusText} from ${url}`);
+  }
+
+  return {
+    statusCode: response.status,
+    headers: Object.fromEntries(response.headers.entries()),
+    body: responseBody,
+    responseTimeMs,
+  };
+}
+
+// ─── Fallback simulation for non-AI, non-HTTP nodes ───────────────────────────
+
 function simulateOutput(nodeTypeId: string, config: Record<string, unknown>, input: Record<string, unknown>): Record<string, unknown> {
-  const t = nodeTypeId;
-  if (t.startsWith("trigger.")) {
-    return { triggeredAt: new Date().toISOString(), payload: input, source: t.replace("trigger.", "") };
+  if (nodeTypeId.startsWith("trigger.")) {
+    return { triggeredAt: new Date().toISOString(), payload: input, source: nodeTypeId.replace("trigger.", "") };
   }
-  if (t === "action.http") {
-    return { statusCode: 200, headers: { "content-type": "application/json" }, body: { success: true, data: { id: Math.floor(Math.random() * 9999) } }, responseTimeMs: Math.floor(Math.random() * 300) + 50 };
-  }
-  if (t === "action.send_email") {
+  if (nodeTypeId === "action.send_email") {
     return { messageId: `msg_${Math.random().toString(36).slice(2)}`, to: config.to ?? "recipient@example.com", subject: config.subject ?? "Notification", accepted: true, timestamp: new Date().toISOString() };
   }
-  if (t === "action.slack") {
+  if (nodeTypeId === "action.slack") {
     return { ts: `${Date.now() / 1000}`, channel: config.channel ?? "#general", ok: true, messageId: `slack_${Math.random().toString(36).slice(2)}` };
   }
-  if (t === "action.create_record") {
-    return { id: Math.floor(Math.random() * 99999), object: config.object_type ?? "Record", createdAt: new Date().toISOString(), fields: { name: input.name ?? "New Record", status: "active" } };
+  if (nodeTypeId === "action.create_record") {
+    return { id: Math.floor(Math.random() * 99999), object: config.object_type ?? "Record", createdAt: new Date().toISOString(), fields: { name: (input.name as string) ?? "New Record", status: "active" } };
   }
-  if (t === "action.db_query") {
+  if (nodeTypeId === "action.db_query") {
     const rows = Array.from({ length: Math.floor(Math.random() * 8) + 1 }, (_, i) => ({ id: i + 1, value: Math.random() * 100 }));
     return { rows, rowCount: rows.length, duration: `${Math.floor(Math.random() * 20) + 2}ms` };
   }
-  if (t === "action.spreadsheet") {
+  if (nodeTypeId === "action.spreadsheet") {
     return { updatedRange: "Sheet1!A2:E100", updatedRows: Math.floor(Math.random() * 5) + 1, spreadsheetId: config.spreadsheetId ?? "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" };
   }
-  if (t === "ai.classify") {
-    const categories = String(config.categories ?? "CategoryA,CategoryB").split(",");
-    return { category: categories[Math.floor(Math.random() * categories.length)]?.trim(), confidence: (Math.random() * 0.3 + 0.7).toFixed(3), modelVersion: "gpt-4o-mini", tokensUsed: Math.floor(Math.random() * 80) + 20 };
-  }
-  if (t === "ai.summarize") {
-    return { summary: "Key metrics show a positive trend with 23% growth QoQ. Action items identified: expand outreach, optimize pipeline stages, and schedule follow-ups.", wordCount: 28, tokensUsed: Math.floor(Math.random() * 150) + 50 };
-  }
-  if (t === "ai.extract") {
-    return { extracted: { vendor: "ACME Corp", amount: `$${(Math.random() * 5000 + 100).toFixed(2)}`, date: new Date().toISOString().split("T")[0], invoiceNumber: `INV-${Math.floor(Math.random() * 9999)}` }, confidence: 0.94 };
-  }
-  if (t === "ai.scraper") {
-    return { url: config.url ?? "https://example.com/pricing", content: "Extracted pricing data: Starter $29/mo, Pro $99/mo, Enterprise custom pricing.", extractedAt: new Date().toISOString() };
-  }
-  if (t === "logic.if" || t === "logic.router") {
+  if (nodeTypeId === "logic.if" || nodeTypeId === "logic.router") {
     return { branch: Math.random() > 0.5 ? "true" : "false", evaluated: true, condition: config.operator ?? "eq" };
   }
-  if (t === "logic.filter") {
+  if (nodeTypeId === "logic.filter") {
     const kept = Math.floor(Math.random() * 5) + 1;
     return { filtered: kept, total: kept + Math.floor(Math.random() * 5), passedItems: kept };
   }
-  if (t === "logic.loop") {
+  if (nodeTypeId === "logic.loop") {
     return { iterations: Math.floor(Math.random() * 8) + 2, completed: true };
   }
-  if (t === "logic.delay") {
+  if (nodeTypeId === "logic.delay") {
     return { delayedMs: parseInt(String(config.duration ?? 1)) * 1000, resumedAt: new Date().toISOString() };
   }
-  if (t === "data.transform") {
+  if (nodeTypeId === "data.transform") {
     return { transformed: true, inputFields: Object.keys(input).length, outputFields: Object.keys(input).length + 2, schema: { id: "integer", name: "string", createdAt: "datetime" } };
   }
-  if (t === "data.parse_doc") {
+  if (nodeTypeId === "data.parse_doc") {
     return { text: "Extracted document text content. Invoice #12345. Total: $2,450.00. Due: 2025-02-15.", pages: 1, wordCount: 18 };
   }
   return { processed: true, timestamp: new Date().toISOString(), nodeType: nodeTypeId };
@@ -130,13 +246,9 @@ function simulateOutput(nodeTypeId: string, config: Record<string, unknown>, inp
 
 function simulateError(nodeTypeId: string): string {
   const errors: Record<string, string[]> = {
-    "action.http": ["Connection timeout after 30s", "HTTP 429 Too Many Requests", "HTTP 503 Service Unavailable", "SSL certificate verification failed"],
     "action.send_email": ["SMTP connection refused", "Invalid recipient address", "Rate limit exceeded"],
     "action.slack": ["Slack API error: channel_not_found", "Slack API error: not_in_channel"],
     "action.create_record": ["Duplicate key constraint violation", "Required field 'email' missing"],
-    "ai.classify": ["OpenAI API timeout", "Context length exceeded", "Model overloaded, retry later"],
-    "ai.summarize": ["Token limit exceeded for input", "OpenAI API rate limit"],
-    "ai.extract": ["Unable to parse document format", "Extraction confidence below threshold"],
     "action.db_query": ["Connection pool exhausted", "Query execution timeout (30s)", "Deadlock detected"],
   };
   const nodeErrors = errors[nodeTypeId] ?? ["Unexpected error: internal service failure", "Step execution timed out"];
@@ -153,7 +265,6 @@ export async function runWorkflow(
   triggerPayload: Record<string, unknown> = {},
   triggerType = "manual"
 ): Promise<void> {
-  // Sort nodes left-to-right by x position
   const sorted = [...nodes].sort((a, b) => (a.position?.x ?? 0) - (b.position?.x ?? 0));
 
   await writeAudit("execution.started", "execution", String(executionId), { workflowId, workflowName, triggerType, nodeCount: sorted.length });
@@ -165,6 +276,8 @@ export async function runWorkflow(
     const nodeTypeId = node.nodeTypeId ?? node.type ?? "action.http";
     const category = nodeCategory(nodeTypeId);
     const config = (node.config ?? {}) as Record<string, unknown>;
+    const isAiNode = category === "ai";
+    const isHttpNode = nodeTypeId === "action.http";
     const maxAttempts = category === "trigger" ? 1 : 2;
 
     let lastError: string | null = null;
@@ -174,9 +287,7 @@ export async function runWorkflow(
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const startedAt = new Date();
-      const duration = nodeDurationMs(category);
 
-      // Insert checkpoint as "running"
       const [checkpoint] = await db.insert(executionCheckpointsTable).values({
         executionId,
         nodeId: node.id,
@@ -188,27 +299,38 @@ export async function runWorkflow(
         startedAt,
       }).returning();
 
-      // Simulate execution time
-      await new Promise((r) => setTimeout(r, duration));
+      let output: Record<string, unknown>;
+      let execError: string | null = null;
 
-      const willFail = Math.random() < nodeFailureProbability(category);
+      try {
+        if (isAiNode && process.env.OPENAI_API_KEY) {
+          output = await executeAiNode(nodeTypeId, config, currentInput, workflowId);
+        } else if (isHttpNode) {
+          output = await executeHttpNode(config, currentInput);
+        } else {
+          // Simulate timing for non-real nodes
+          await new Promise((r) => setTimeout(r, nodeDurationMs(category)));
+          const willFail = Math.random() < nodeFailureProbability(category);
+          if (willFail) throw new Error(simulateError(nodeTypeId));
+          output = simulateOutput(nodeTypeId, config, currentInput);
+        }
+      } catch (err) {
+        execError = err instanceof Error ? err.message : String(err);
+      }
 
-      if (willFail) {
-        lastError = simulateError(nodeTypeId);
+      const duration = Date.now() - startedAt.getTime();
+
+      if (execError) {
+        lastError = execError;
         await db.update(executionCheckpointsTable)
           .set({ status: "failed", errorMessage: lastError, completedAt: new Date(), durationMs: duration })
           .where(eq(executionCheckpointsTable.id, checkpoint.id));
-
-        if (attempt < maxAttempts) {
-          // Brief backoff before retry
-          await new Promise((r) => setTimeout(r, 500));
-        }
+        if (attempt < maxAttempts) await new Promise((r) => setTimeout(r, 500));
       } else {
-        const output = simulateOutput(nodeTypeId, config, currentInput);
-        finalOutput = output;
+        finalOutput = output!;
         finalDuration = duration;
         await db.update(executionCheckpointsTable)
-          .set({ status: "success", outputData: output, completedAt: new Date(), durationMs: duration })
+          .set({ status: "success", outputData: output!, completedAt: new Date(), durationMs: duration })
           .where(eq(executionCheckpointsTable.id, checkpoint.id));
         succeeded = true;
         break;
@@ -216,7 +338,6 @@ export async function runWorkflow(
     }
 
     if (!succeeded) {
-      // Write DLQ entry
       await db.insert(dlqEntriesTable).values({
         executionId,
         workflowId,
@@ -231,7 +352,6 @@ export async function runWorkflow(
 
       await writeAudit("execution.node_failed", "execution", String(executionId), { nodeId: node.id, nodeName: node.name, nodeType: nodeTypeId, error: lastError });
 
-      // Mark execution as failed
       await db.update(executionsTable).set({
         status: "failed",
         finishedAt: new Date(),
@@ -240,7 +360,6 @@ export async function runWorkflow(
       }).where(eq(executionsTable.id, executionId));
 
       await db.update(workflowsTable).set({ lastRunStatus: "failed", lastRunAt: new Date() }).where(eq(workflowsTable.id, workflowId));
-
       await writeAudit("execution.failed", "execution", String(executionId), { workflowId, failedNode: node.name, error: lastError });
       failed = true;
       break;
@@ -253,15 +372,22 @@ export async function runWorkflow(
     const [exec] = await db.select().from(executionsTable).where(eq(executionsTable.id, executionId));
     const durationMs = exec ? Date.now() - exec.startedAt.getTime() : 0;
 
-    await db.update(executionsTable).set({
-      status: "success",
-      finishedAt: new Date(),
-      durationMs,
-    }).where(eq(executionsTable.id, executionId));
-
+    await db.update(executionsTable).set({ status: "success", finishedAt: new Date(), durationMs }).where(eq(executionsTable.id, executionId));
     await db.update(workflowsTable).set({ lastRunStatus: "success", lastRunAt: new Date() }).where(eq(workflowsTable.id, workflowId));
-
     await writeAudit("execution.completed", "execution", String(executionId), { workflowId, workflowName, durationMs });
+
+    // Record metering event
+    try {
+      await db.insert(usageEventsTable).values({
+        workflowId,
+        workflowName,
+        eventType: "workflow.execution.completed",
+        quantity: sorted.length,
+        metadata: { executionId, durationMs, nodeCount: sorted.length, triggerType },
+      });
+    } catch {
+      // Non-fatal
+    }
   }
 }
 
@@ -309,7 +435,7 @@ export async function startWorkflowExecution(
     }
   }
 
-  // Fire-and-forget execution
+  // Fire-and-forget
   runWorkflow(execution.id, workflowId, workflowName, nodes, triggerPayload, triggerType).catch(async (err) => {
     console.error("[workflow-runner] unexpected error:", err);
     await db.update(executionsTable).set({

@@ -17,6 +17,9 @@ import billingRouter from "./billing";
 import environmentsRouter from "./environments";
 import tenantsRouter from "./tenants";
 import rbacRouter from "./rbac";
+import aiModelsRouter from "./ai-models";
+import aiUsageRouter from "./ai-usage";
+import aiRunsRouter from "./ai-runs";
 
 const router: IRouter = Router();
 
@@ -38,5 +41,8 @@ router.use(billingRouter);
 router.use(environmentsRouter);
 router.use(tenantsRouter);
 router.use(rbacRouter);
+router.use(aiModelsRouter);
+router.use(aiUsageRouter);
+router.use(aiRunsRouter);
 
 export default router;
