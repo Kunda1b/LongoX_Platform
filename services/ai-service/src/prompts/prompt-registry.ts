@@ -37,7 +37,7 @@ export class PromptRegistry {
       variables:
         typeof prompt.variables === "string"
           ? JSON.parse(prompt.variables)
-          : ((prompt.variables as string[]) ?? []),
+          : [],
       version: this.getVersionNumber(prompt.createdAt),
     };
   }
@@ -58,10 +58,7 @@ export class PromptRegistry {
       provider: p.provider,
       maxTokens: p.maxTokens,
       temperature: p.temperature,
-      variables:
-        typeof p.variables === "string"
-          ? JSON.parse(p.variables)
-          : ((p.variables as string[]) ?? []),
+      variables: typeof p.variables === "string" ? JSON.parse(p.variables) : [],
       version: this.getVersionNumber(p.createdAt),
     }));
   }

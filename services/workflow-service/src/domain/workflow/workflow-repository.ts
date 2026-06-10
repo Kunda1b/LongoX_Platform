@@ -16,4 +16,5 @@ export interface WorkflowRepository {
   save(workflow: Workflow): Promise<Workflow>;
   create(data: Partial<Workflow>): Promise<Workflow>;
   delete(id: number): Promise<boolean>;
+  getNextVersion(workflowId: number): Promise<number>;
 }

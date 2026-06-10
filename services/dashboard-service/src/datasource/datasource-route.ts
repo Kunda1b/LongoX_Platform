@@ -32,8 +32,7 @@ router.post("/datasources", async (req, res): Promise<void> => {
       tenantId: (req as any).user?.tenantId ?? null,
       name: String(name),
       kind: String(kind),
-      configJson: (config ?? {}) as Record<string, unknown>,
-      isActive: true,
+      config: (config ?? {}) as Record<string, unknown>,
     })
     .returning();
 
@@ -80,7 +79,7 @@ router.post("/datasources/:id/test", async (req, res): Promise<void> => {
   try {
     const result = await testConnection(
       source.kind,
-      source.configJson as Record<string, unknown>,
+      source.config as Record<string, unknown>,
     );
     res.json({ success: true, latencyMs: Date.now() - startMs, result });
   } catch (err) {

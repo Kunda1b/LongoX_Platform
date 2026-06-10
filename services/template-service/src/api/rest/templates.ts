@@ -92,7 +92,7 @@ router.post("/templates", async (req, res): Promise<void> => {
     .insert(templatesTable)
     .values({
       name: String(name),
-      description: description ? String(description) : null,
+      description: description ? String(description) : "",
       category: String(category ?? "general"),
       tags: (tags ?? []) as string[],
       nodes: (nodes ?? []) as any[],

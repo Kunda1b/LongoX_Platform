@@ -16,7 +16,10 @@ import {
   ToggleWorkflowParams,
   RunWorkflowParams,
 } from "@longox/api-zod";
-import { startWorkflowExecution, writeAudit } from "../engine/workflow-runner";
+import {
+  startWorkflowExecution,
+  writeAudit,
+} from "@longox/execution-service/workflow-runner";
 
 const router: IRouter = Router();
 

@@ -4,7 +4,7 @@ import type {
   ExecutionContext,
   NodeExecutionResult,
 } from "@longox/workflow-engine";
-import { vm } from "node:vm";
+import * as vm from "node:vm";
 
 export class CodeExecutor implements NodeExecutor {
   canHandle(nodeTypeId: string): boolean {

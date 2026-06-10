@@ -39,8 +39,12 @@ export class PostgresAdapter implements DataSourceAdapter {
       throw new Error(`Query failed: ${text}`);
     }
 
-    const data = await response.json();
-    const rows = data.rows ?? data ?? [];
+    const data = (await response.json()) as
+      | { rows?: Record<string, unknown>[] }
+      | Record<string, unknown>[];
+    const rows: Record<string, unknown>[] = Array.isArray(data)
+      ? data
+      : (data.rows ?? []);
     const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
 
     return {

@@ -1,0 +1,23 @@
+{
+  "name": "@longox/scheduler-service",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@longox/db": "workspace:*",
+    "@longox/execution-service": "workspace:*",
+    "@longox/shared-logger": "workspace:*",
+    "@longox/shared-realtime": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "express": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "catalog:",
+    "tsx": "catalog:"
+  }
+}

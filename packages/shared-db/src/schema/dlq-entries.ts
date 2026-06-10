@@ -17,6 +17,7 @@ export const dlqEntriesTable = pgTable("dlq_entries", {
   nodeType: text("node_type").notNull(),
   errorMessage: text("error_message").notNull(),
   attempts: integer("attempts").notNull().default(1),
+  status: text("status").notNull().default("pending"),
   jobData: jsonb("job_data").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

@@ -13,6 +13,15 @@ export interface TokenPayload extends AuthUser {
   exp?: number;
 }
 
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace Express {
+    interface Request {
+      user?: AuthUser;
+    }
+  }
+}
+
 function getSecret(): string {
   return (
     process.env["JWT_SECRET"] ??
@@ -25,7 +34,9 @@ function getExpiry(): string {
 }
 
 export function signToken(user: AuthUser): string {
-  return jwt.sign(user, getSecret(), { expiresIn: getExpiry() });
+  return jwt.sign(user, getSecret(), {
+    expiresIn: getExpiry(),
+  } as jwt.SignOptions);
 }
 
 export function verifyToken(token: string): AuthUser | null {

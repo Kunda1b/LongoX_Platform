@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import "@longox/shared-auth";
 import { PostgresListingRepository } from "../infrastructure";
 import {
   SearchListingsQuery,

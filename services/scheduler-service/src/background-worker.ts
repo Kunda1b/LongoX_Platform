@@ -1,5 +1,5 @@
-import { db, executionsTable, workflowsTable } from "@longox/db";
-import { eq, sql } from "drizzle-orm";
+import { db, workflowsTable } from "@longox/db";
+import { eq } from "drizzle-orm";
 import { PostgresScheduleRepository } from "./infrastructure";
 import { CronParser } from "./infrastructure/cron-parser";
 import { logger } from "@longox/shared-logger";
@@ -95,33 +95,20 @@ export class ScheduleWorker {
       ? (workflow.nodes as any[])
       : [];
 
-    // Create execution record
-    const [execution] = await db
-      .insert(executionsTable)
-      .values({
-        workflowId,
-        workflowName: workflow.name,
-        status: "pending",
-        startedAt: new Date(),
-        steps: [],
-      })
-      .returning();
-
-    // Update workflow execution count
-    await db
-      .update(workflowsTable)
-      .set({
-        executionCount: sql`${workflowsTable.executionCount} + 1`,
-        lastRunAt: new Date(),
-        lastRunStatus: "running",
-      })
-      .where(eq(workflowsTable.id, workflowId));
-
-    // Enqueue the workflow execution via the shared job queue
-    const { startWorkflowExecution } = await import("@longox/workflow-engine");
-    await startWorkflowExecution(workflowId, workflow.name, nodes, "schedule", {
-      _scheduleId: scheduleId,
-    });
+    // Enqueue the workflow execution via the shared job queue.
+    // startWorkflowExecution creates the execution record and increments the
+    // workflow execution count, so we must not duplicate those operations here.
+    const { startWorkflowExecution } =
+      await import("@longox/execution-service/workflow-runner");
+    const execution = await startWorkflowExecution(
+      workflowId,
+      workflow.name,
+      nodes,
+      "schedule",
+      {
+        _scheduleId: scheduleId,
+      },
+    );
 
     // Calculate next run
     let nextRun: Date | undefined;

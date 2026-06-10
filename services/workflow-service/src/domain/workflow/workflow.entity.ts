@@ -43,14 +43,15 @@ export class Workflow {
     name: string,
     description: string | null,
     triggerType: TriggerType,
-  ): Omit<
+  ): Pick<
     Workflow,
-    | "id"
-    | "createdAt"
-    | "updatedAt"
-    | "executionCount"
-    | "lastRunAt"
-    | "lastRunStatus"
+    | "name"
+    | "description"
+    | "status"
+    | "triggerType"
+    | "nodeCount"
+    | "nodes"
+    | "edges"
   > {
     return {
       name,

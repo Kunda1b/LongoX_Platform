@@ -838,7 +838,7 @@ export async function startWorkflowExecution(
     type: "execution.started",
     aggregateId: String(execution.id),
     aggregateType: "execution",
-    payload: { workflowId, workflowName, triggerType, workflowName },
+    payload: { workflowId, workflowName, triggerType },
     actorId: String(0),
     actorType: triggerType === "webhook" ? "webhook" : "system",
   });
