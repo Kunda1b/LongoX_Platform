@@ -1,10 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { UseQueryOptions, UseMutationOptions, QueryKey } from "@tanstack/react-query";
+import type { UseQueryOptions, UseMutationOptions } from "@tanstack/react-query";
 import { customFetch } from "../custom-fetch";
 import type { ErrorType } from "../custom-fetch";
 import type { DataSource, DataSourceInput, QueryResult, ConnectionTestResult, ListDataSourcesParams } from "./types";
-
-// ─── URLs ────────────────────────────────────────────────────────────────────
 
 export const getListDataSourcesUrl = () => `/api/datasources`;
 
@@ -17,8 +15,6 @@ export const getTestConnectionUrl = (id: number) => `/api/datasources/${id}/test
 export const getExecuteQueryUrl = (id: number) => `/api/datasources/${id}/query`;
 
 export const getListTablesUrl = (id: number) => `/api/datasources/${id}/tables`;
-
-// ─── Fetch functions ─────────────────────────────────────────────────────────
 
 export const listDataSources = async (params?: ListDataSourcesParams, options?: RequestInit): Promise<DataSource[]> => {
   const searchParams = new URLSearchParams();
@@ -73,16 +69,12 @@ export const listDataSourceTables = async (id: number, options?: RequestInit): P
   return customFetch<string[]>(getListTablesUrl(id), { ...options, method: "GET" });
 };
 
-// ─── Query keys ──────────────────────────────────────────────────────────────
-
 export const getListDataSourcesQueryKey = (params?: ListDataSourcesParams) =>
   [`/api/datasources`, ...(params ? [params] : [])] as const;
 
 export const getDataSourceQueryKey = (id: number) => [`/api/datasources/${id}`] as const;
 
 export const getListAdaptersQueryKey = () => [`/api/datasources/adapters`] as const;
-
-// ─── Hooks ───────────────────────────────────────────────────────────────────
 
 export function useListDataSources<TData = DataSource[], TError = ErrorType<unknown>>(
   params?: ListDataSourcesParams,

@@ -5,7 +5,7 @@ import {
   ListExecutionsQueryParams,
   GetExecutionParams,
 } from "@autoflow/api-zod";
-import { startWorkflowExecution, writeAudit } from "../engine/workflow-runner";
+import { startWorkflowExecution, writeAudit } from "../lib/execution";
 
 const router: IRouter = Router();
 

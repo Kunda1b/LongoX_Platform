@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, isNull, isNotNull } from "drizzle-orm";
 import { db, dlqEntriesTable, workflowsTable, executionsTable } from "@autoflow/db";
-import { startWorkflowExecution } from "../engine/workflow-runner";
+import { startWorkflowExecution } from "../lib/execution";
 
 const router: IRouter = Router();
 

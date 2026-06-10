@@ -1,10 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { UseQueryOptions, UseMutationOptions, QueryKey } from "@tanstack/react-query";
+import type { UseQueryOptions, UseMutationOptions } from "@tanstack/react-query";
 import { customFetch } from "../custom-fetch";
 import type { ErrorType } from "../custom-fetch";
 import type { Schedule, ScheduleInput, ScheduleStats, ListSchedulesParams } from "./types";
-
-// ─── URLs ────────────────────────────────────────────────────────────────────
 
 export const getListSchedulesUrl = () => `/api/schedules`;
 
@@ -17,8 +15,6 @@ export const getScheduleStatsUrl = () => `/api/schedules/stats`;
 export const getPauseScheduleUrl = (id: number) => `/api/schedules/${id}/pause`;
 
 export const getActivateScheduleUrl = (id: number) => `/api/schedules/${id}/activate`;
-
-// ─── Fetch functions ─────────────────────────────────────────────────────────
 
 export const listSchedules = async (params?: ListSchedulesParams, options?: RequestInit): Promise<Schedule[]> => {
   const searchParams = new URLSearchParams();
@@ -70,8 +66,6 @@ export const activateSchedule = async (id: number, options?: RequestInit): Promi
   return customFetch<Schedule>(getActivateScheduleUrl(id), { ...options, method: "POST" });
 };
 
-// ─── Query keys ──────────────────────────────────────────────────────────────
-
 export const getListSchedulesQueryKey = (params?: ListSchedulesParams) =>
   [`/api/schedules`, ...(params ? [params] : [])] as const;
 
@@ -80,8 +74,6 @@ export const getScheduleQueryKey = (id: number) => [`/api/schedules/${id}`] as c
 export const getDueSchedulesQueryKey = () => [`/api/schedules/due`] as const;
 
 export const getScheduleStatsQueryKey = () => [`/api/schedules/stats`] as const;
-
-// ─── Hooks ───────────────────────────────────────────────────────────────────
 
 export function useListSchedules<TData = Schedule[], TError = ErrorType<unknown>>(
   params?: ListSchedulesParams,
