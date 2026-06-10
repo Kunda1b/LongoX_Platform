@@ -1,0 +1,24 @@
+{
+  "name": "Email Connector Bundle",
+  "description": "SMTP/IMAP email integration for sending and receiving emails",
+  "version": "1.0.0",
+  "connectors": [
+    {
+      "name": "smtp",
+      "type": "email",
+      "authType": "basic",
+      "actions": [
+        { "id": "send_email", "name": "Send Email", "description": "Send an email via SMTP" },
+        { "id": "send_template", "name": "Send Template", "description": "Send a templated email" }
+      ]
+    },
+    {
+      "name": "imap",
+      "type": "email",
+      "authType": "basic",
+      "triggers": [
+        { "id": "new_email", "name": "New Email", "description": "Triggered when a new email arrives" }
+      ]
+    }
+  ]
+}

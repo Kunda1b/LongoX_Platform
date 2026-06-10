@@ -27,6 +27,11 @@ import featureFlagsRouter from "./feature-flags";
 import notificationsRouter from "./notifications";
 import regionPoliciesRouter from "./region-policies";
 import searchRouter from "./search";
+import realtimeRouter from "./realtime";
+import eventsBridgeRouter from "./events-bridge";
+import mfaRouter from "./mfa";
+import ssoRouter from "./sso";
+import graphqlYoga from "../graphql";
 
 const router: IRouter = Router();
 
@@ -60,5 +65,28 @@ router.use(featureFlagsRouter);
 router.use(notificationsRouter);
 router.use(regionPoliciesRouter);
 router.use(searchRouter);
+router.use(realtimeRouter);
+router.use(eventsBridgeRouter);
+router.use(mfaRouter);
+router.use(ssoRouter);
+
+router.use("/graphql", async (req, res, next) => {
+  try {
+    const response = await graphqlYoga.fetch(req.url, {
+      method: req.method,
+      headers: req.headers as HeadersInit,
+      body: req.method === "POST" ? JSON.stringify(req.body) : undefined,
+    });
+
+    res.status(response.status);
+    response.headers.forEach((value, key) => {
+      res.setHeader(key, value);
+    });
+    const text = await response.text();
+    res.send(text);
+  } catch (err) {
+    next(err);
+  }
+});
 
 export default router;

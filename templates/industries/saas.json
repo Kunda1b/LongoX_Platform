@@ -1,0 +1,8 @@
+{
+  "name": "SaaS",
+  "description": "Workflow and dashboard templates for SaaS platforms",
+  "version": "1.0.0",
+  "workflows": ["user-onboarding", "billing-webhook", "trial-expiry"],
+  "dashboards": ["subscription-metrics", "user-activity"],
+  "connectors": ["stripe", "sendgrid", "intercom", "slack"]
+}

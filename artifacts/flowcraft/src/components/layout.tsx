@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Activity,
@@ -38,15 +39,19 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { WorkspaceLayout } from "@/components/WorkspaceLayout";
+import { useAppStore } from "@/stores/app-store";
+import { cn } from "@/lib/utils";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const { sidebarCollapsed } = useAppStore();
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={!sidebarCollapsed}>
       <div className="flex h-screen overflow-hidden w-full bg-background">
         <Sidebar className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-          <SidebarHeader className="h-16 flex items-center justify-center border-b border-sidebar-border px-4">
+          <SidebarHeader className="h-14 flex items-center justify-center border-b border-sidebar-border px-4">
             <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-primary w-full">
               <div className="bg-primary text-primary-foreground p-1.5 rounded-md">
                 <WorkflowIcon size={20} />
@@ -305,15 +310,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </SidebarContent>
         </Sidebar>
 
-        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <header className="h-16 flex items-center gap-4 border-b border-border bg-card px-6 md:hidden">
-            <SidebarTrigger />
-            <div className="font-semibold">FlowCraft</div>
-          </header>
-          <div className="flex-1 overflow-auto p-6 md:p-8">
-            {children}
-          </div>
-        </main>
+        <WorkspaceLayout>
+          {children}
+        </WorkspaceLayout>
       </div>
     </SidebarProvider>
   );

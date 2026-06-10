@@ -1,0 +1,61 @@
+{
+  "name": "Data Pipeline",
+  "description": "ETL pipeline that extracts data, transforms it, and loads to destination",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "schedule",
+      "type": "trigger:cron",
+      "label": "Daily Schedule",
+      "position": { "x": 100, "y": 200 },
+      "config": { "cron": "0 6 * * *" }
+    },
+    {
+      "id": "extract",
+      "type": "connector:http",
+      "label": "Extract Data",
+      "position": { "x": 300, "y": 200 },
+      "config": {
+        "url": "{{ config.source_url }}",
+        "method": "GET",
+        "headers": { "Authorization": "Bearer {{ secrets.api_key }}" }
+      }
+    },
+    {
+      "id": "transform",
+      "type": "action:transform",
+      "label": "Transform Data",
+      "position": { "x": 500, "y": 200 },
+      "config": {
+        "mapping": "{{ config.transform_script }}"
+      }
+    },
+    {
+      "id": "load",
+      "type": "connector:database",
+      "label": "Load to Database",
+      "position": { "x": 700, "y": 200 },
+      "config": {
+        "connection": "{{ config.db_connection }}",
+        "table": "{{ config.target_table }}",
+        "mode": "upsert"
+      }
+    },
+    {
+      "id": "notify",
+      "type": "action:notification",
+      "label": "Send Notification",
+      "position": { "x": 900, "y": 200 },
+      "config": {
+        "channel": "slack",
+        "message": "Pipeline completed: {{ output.rows_processed }} rows processed"
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "schedule", "target": "extract" },
+    { "id": "e2", "source": "extract", "target": "transform" },
+    { "id": "e3", "source": "transform", "target": "load" },
+    { "id": "e4", "source": "load", "target": "notify" }
+  ]
+}

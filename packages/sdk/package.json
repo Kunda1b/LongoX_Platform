@@ -1,0 +1,21 @@
+{
+  "name": "@autoflow/sdk",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./auth": "./src/auth-sdk/index.ts",
+    "./workflow": "./src/workflow-sdk/index.ts",
+    "./connector": "./src/connector-sdk/index.ts",
+    "./trigger": "./src/trigger-sdk/index.ts",
+    "./testing": "./src/testing-sdk/index.ts"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

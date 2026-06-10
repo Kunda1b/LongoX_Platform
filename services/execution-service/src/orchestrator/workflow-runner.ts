@@ -1,5 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import OpenAI from "openai";
+import { publishEvent } from "@autoflow/shared-realtime";
 import {
   db,
   executionsTable,
@@ -583,6 +584,15 @@ export async function startWorkflowExecution(
   }).where(eq(workflowsTable.id, workflowId));
 
   await writeAudit("execution.started", "workflow", String(workflowId), { executionId: execution.id, triggerType, workflowName }, triggerType === "webhook" ? "webhook" : "user");
+
+  publishEvent({
+    type: "execution.started",
+    aggregateId: String(execution.id),
+    aggregateType: "execution",
+    payload: { workflowId, workflowName, triggerType, workflowName },
+    actorId: String(0),
+    actorType: triggerType === "webhook" ? "webhook" : "system",
+  });
 
   // Save a version snapshot on each run (only if nodes exist)
   if (nodes.length > 0) {

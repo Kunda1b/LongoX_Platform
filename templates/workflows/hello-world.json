@@ -1,0 +1,36 @@
+{
+  "name": "Hello World",
+  "description": "A simple workflow that logs a message and returns a greeting",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "start",
+      "type": "trigger:manual",
+      "label": "Start",
+      "position": { "x": 100, "y": 100 },
+      "config": {}
+    },
+    {
+      "id": "log",
+      "type": "action:log",
+      "label": "Log Message",
+      "position": { "x": 300, "y": 100 },
+      "config": {
+        "message": "Hello from {{ input.name }}"
+      }
+    },
+    {
+      "id": "end",
+      "type": "output:return",
+      "label": "Return Greeting",
+      "position": { "x": 500, "y": 100 },
+      "config": {
+        "output": { "greeting": "Hello, {{ input.name }}!" }
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "start", "target": "log" },
+    { "id": "e2", "source": "log", "target": "end" }
+  ]
+}

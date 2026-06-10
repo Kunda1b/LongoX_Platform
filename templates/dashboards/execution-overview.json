@@ -1,0 +1,52 @@
+{
+  "name": "Execution Overview",
+  "description": "Real-time dashboard showing workflow execution metrics",
+  "version": 1,
+  "widgets": [
+    {
+      "id": "success-rate",
+      "type": "stat",
+      "label": "Success Rate",
+      "query": "executions:status:last_24h",
+      "config": { "aggregation": "percentage", "filter": { "status": "completed" } }
+    },
+    {
+      "id": "executions-trend",
+      "type": "timeseries",
+      "label": "Executions Over Time",
+      "query": "executions:count:last_7d",
+      "config": { "interval": "1h", "chart": "line" }
+    },
+    {
+      "id": "failed-executions",
+      "type": "table",
+      "label": "Recent Failures",
+      "query": "executions:failed:last_24h",
+      "config": { "limit": 20, "columns": ["workflow", "error", "started_at"] }
+    },
+    {
+      "id": "avg-duration",
+      "type": "stat",
+      "label": "Avg Duration",
+      "query": "executions:duration:last_24h",
+      "config": { "aggregation": "avg", "unit": "ms" }
+    },
+    {
+      "id": "workflow-breakdown",
+      "type": "pie",
+      "label": "Executions by Workflow",
+      "query": "executions:by_workflow:last_24h",
+      "config": {}
+    }
+  ],
+  "layout": {
+    "columns": 3,
+    "widgets": [
+      { "id": "success-rate", "x": 0, "y": 0, "w": 1, "h": 1 },
+      { "id": "avg-duration", "x": 1, "y": 0, "w": 1, "h": 1 },
+      { "id": "workflow-breakdown", "x": 2, "y": 0, "w": 1, "h": 2 },
+      { "id": "executions-trend", "x": 0, "y": 1, "w": 2, "h": 2 },
+      { "id": "failed-executions", "x": 0, "y": 3, "w": 3, "h": 2 }
+    ]
+  }
+}

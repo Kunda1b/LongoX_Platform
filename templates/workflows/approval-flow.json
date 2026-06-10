@@ -1,0 +1,71 @@
+{
+  "name": "Approval Flow",
+  "description": "Multi-step approval workflow with email notifications and timeout handling",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "start",
+      "type": "trigger:webhook",
+      "label": "Incoming Request",
+      "position": { "x": 100, "y": 300 },
+      "config": {}
+    },
+    {
+      "id": "validate",
+      "type": "action:condition",
+      "label": "Validate Request",
+      "position": { "x": 300, "y": 300 },
+      "config": {
+        "condition": "{{ input.amount }} < 10000"
+      }
+    },
+    {
+      "id": "auto_approve",
+      "type": "action:notification",
+      "label": "Auto Approve",
+      "position": { "x": 500, "y": 200 },
+      "config": {
+        "channel": "email",
+        "message": "Request auto-approved for {{ input.amount }}"
+      }
+    },
+    {
+      "id": "manager_approval",
+      "type": "action:await_approval",
+      "label": "Manager Approval",
+      "position": { "x": 500, "y": 400 },
+      "config": {
+        "assignee": "{{ input.manager_email }}",
+        "timeout_hours": 48
+      }
+    },
+    {
+      "id": "approved",
+      "type": "action:notification",
+      "label": "Approved",
+      "position": { "x": 700, "y": 300 },
+      "config": {
+        "channel": "email",
+        "message": "Request {{ input.id }} has been approved"
+      }
+    },
+    {
+      "id": "timeout",
+      "type": "action:notification",
+      "label": "Escalate",
+      "position": { "x": 700, "y": 500 },
+      "config": {
+        "channel": "email",
+        "message": "Request {{ input.id }} has timed out. Escalating to {{ input.escalation_email }}"
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "start", "target": "validate" },
+    { "id": "e2", "source": "validate", "target": "auto_approve", "conditions": { "result": true } },
+    { "id": "e3", "source": "validate", "target": "manager_approval", "conditions": { "result": false } },
+    { "id": "e4", "source": "manager_approval", "target": "approved", "conditions": { "decision": "approve" } },
+    { "id": "e5", "source": "manager_approval", "target": "timeout", "conditions": { "decision": "timeout" } },
+    { "id": "e6", "source": "auto_approve", "target": "approved" }
+  ]
+}

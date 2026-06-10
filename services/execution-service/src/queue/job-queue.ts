@@ -1,3 +1,4 @@
+import { publishEvent } from "@autoflow/shared-realtime";
 import { db, executionsTable, workflowsTable } from "@autoflow/db";
 import { eq, sql } from "drizzle-orm";
 import { logger } from "@autoflow/shared-logger";
@@ -193,6 +194,13 @@ export class JobQueue {
         .where(eq(workflowsTable.id, workflowId));
 
       logger.info({ executionId, workflowId, durationMs }, "[Queue] Workflow completed successfully");
+
+      publishEvent({
+        type: "execution.completed",
+        aggregateId: String(executionId),
+        aggregateType: "execution",
+        payload: { workflowId, workflowName, durationMs, triggerType },
+      });
     } else {
       const failedResult = results.find((r) => r.status === "failed");
       await db.update(executionsTable)
@@ -206,6 +214,13 @@ export class JobQueue {
       await db.update(workflowsTable)
         .set({ lastRunStatus: "failed", lastRunAt: new Date() })
         .where(eq(workflowsTable.id, workflowId));
+
+      publishEvent({
+        type: "execution.failed",
+        aggregateId: String(executionId),
+        aggregateType: "execution",
+        payload: { workflowId, workflowName, error: failedResult?.error, triggerType },
+      });
     }
   }
 
