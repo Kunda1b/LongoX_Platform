@@ -15,6 +15,9 @@ pnpm-lock.yaml
 **/generated/**
 **/src/.generated/**
 
+# CI / workflow definitions (not prettier-managed; require workflow scope to edit)
+.github
+
 # Infrastructure-as-code (Helm Go-templates / Terraform / k8s manifests)
 infrastructure
 **/*.tpl

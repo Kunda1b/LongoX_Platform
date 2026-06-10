@@ -73,7 +73,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @longox/db exec drizzle-kit check --config ./drizzle.config.ts || true
+      - run: pnpm --filter @autoflow/db exec drizzle-kit check --config ./drizzle.config.ts || true
 
   api-contract:
     name: API Contract Validation
@@ -91,7 +91,7 @@ jobs:
       - name: Validate OpenAPI Spec
         run: npx @redocly/cli lint lib/api-spec/openapi.yaml || true
       - name: Validate Zod Schemas
-        run: pnpm --filter @longox/api-zod exec tsx src/validate.ts || true
+        run: pnpm --filter @autoflow/api-zod exec tsx src/validate.ts || true
 
   graphql-check:
     name: GraphQL Schema Check
@@ -132,16 +132,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs:
-      [
-        lint,
-        typecheck,
-        dependency-audit,
-        schema-lint,
-        api-contract,
-        graphql-check,
-        test,
-      ]
+    needs: [lint, typecheck, dependency-audit, schema-lint, api-contract, graphql-check, test]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2
@@ -189,9 +180,9 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: longox_test
-          POSTGRES_USER: longox
-          POSTGRES_PASSWORD: longox
+          POSTGRES_DB: autoflow_test
+          POSTGRES_USER: autoflow
+          POSTGRES_PASSWORD: autoflow
         ports:
           - 5432:5432
         options: >-
@@ -210,14 +201,14 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - name: Build api-server
-        run: pnpm --filter @longox/api-server build
+        run: pnpm --filter @autoflow/api-server build
       - name: Start server and run smoke tests
         env:
-          DATABASE_URL: postgresql://longox:longox@localhost:5432/longox_test
+          DATABASE_URL: postgresql://autoflow:autoflow@localhost:5432/autoflow_test
           NODE_ENV: test
           PORT: 4000
         run: |
-          pnpm --filter @longox/api-server start &
+          pnpm --filter @autoflow/api-server start &
           SERVER_PID=$!
           sleep 5
           # Health check
