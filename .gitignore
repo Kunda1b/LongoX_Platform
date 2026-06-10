@@ -11,6 +11,11 @@ out-tsc
 # dependencies
 node_modules
 
+# pnpm content-addressable store (never commit)
+.pnpm-store/
+**/.pnpm-store/
+C:\\Users\\*\\.pnpm-store/
+
 # IDEs and editors
 /.idea
 .project
