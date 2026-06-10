@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { eq, sql } from "drizzle-orm";
 import { db, usersTable, tenantsTable } from "@longox/db";
-import { signToken, authMiddleware } from "../lib/auth";
+import { signToken, authMiddleware } from "./auth-lib";
 
 const router: IRouter = Router();
 

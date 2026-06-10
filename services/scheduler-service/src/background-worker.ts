@@ -118,7 +118,8 @@ export class ScheduleWorker {
       .where(eq(workflowsTable.id, workflowId));
 
     // Enqueue the workflow execution via the shared job queue
-    const { startWorkflowExecution } = await import("@longox/workflow-engine");
+    const { startWorkflowExecution } =
+      await import("@longox/execution-service/workflow-runner");
     await startWorkflowExecution(workflowId, workflow.name, nodes, "schedule", {
       _scheduleId: scheduleId,
     });

@@ -75,12 +75,13 @@ export class TokenTracker {
       totalOutputTokens += row.outputTokens;
       totalCost += Number(row.cost ?? 0);
 
-      if (!byModel[row.modelName]) {
-        byModel[row.modelName] = { inputTokens: 0, outputTokens: 0, cost: 0 };
+      const model = row.modelName ?? "unknown";
+      if (!byModel[model]) {
+        byModel[model] = { inputTokens: 0, outputTokens: 0, cost: 0 };
       }
-      byModel[row.modelName].inputTokens += row.inputTokens;
-      byModel[row.modelName].outputTokens += row.outputTokens;
-      byModel[row.modelName].cost += Number(row.cost ?? 0);
+      byModel[model].inputTokens += row.inputTokens;
+      byModel[model].outputTokens += row.outputTokens;
+      byModel[model].cost += Number(row.cost ?? 0);
     }
 
     return { totalInputTokens, totalOutputTokens, totalCost, byModel };

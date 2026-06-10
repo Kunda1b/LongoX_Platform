@@ -1,0 +1,21 @@
+{
+  "name": "@longox/marketplace-service",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@longox/db": "workspace:*",
+    "@longox/shared-auth": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "express": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "catalog:",
+    "tsx": "catalog:"
+  }
+}

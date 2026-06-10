@@ -9,6 +9,7 @@ import {
 
 export const usageEventsTable = pgTable("usage_events", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").notNull().default(0),
   workflowId: integer("workflow_id"),
   workflowName: text("workflow_name"),
   eventType: text("event_type").notNull(),

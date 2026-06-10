@@ -28,7 +28,7 @@ setInterval(() => {
 router.get(
   "/auth/sso/:provider/start",
   async (req: Request, res: Response): Promise<void> => {
-    const { provider } = req.params;
+    const provider = String(req.params.provider);
     const redirectUrl = (req.query.redirect as string) ?? "/dashboard";
 
     const [connection] = await db

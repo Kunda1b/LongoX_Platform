@@ -37,9 +37,3 @@ export class DeprecateTemplateCommand implements TemplateCommand {
     return { success: true, data: { deprecated: true, ...input } };
   }
 }
-export {
-  CreateTemplateCommand,
-  PublishTemplateCommand,
-  InstallTemplateCommand,
-  DeprecateTemplateCommand,
-};

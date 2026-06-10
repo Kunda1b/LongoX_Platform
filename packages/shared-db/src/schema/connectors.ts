@@ -76,6 +76,18 @@ export const connectorsTable = pgTable("connectors", {
       lastChecked?: string;
     }>()
     .default({}),
+  documentationUrl: text("documentation_url"),
+  status: text("status").notNull().default("active"),
+  metadata: jsonb("metadata")
+    .$type<Record<string, unknown>>()
+    .notNull()
+    .default({}),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export const connectorActionsTable = pgTable("connector_actions", {

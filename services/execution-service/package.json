@@ -1,0 +1,28 @@
+{
+  "name": "@longox/execution-service",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./workflow-runner": "./src/orchestrator/workflow-runner.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch src/orchestrator/executions-route.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@longox/api-zod": "workspace:*",
+    "@longox/db": "workspace:*",
+    "@longox/shared-logger": "workspace:*",
+    "@longox/shared-realtime": "workspace:*",
+    "@longox/workflow-engine": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "express": "^5.0.0",
+    "openai": "^6.42.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "catalog:",
+    "tsx": "catalog:"
+  }
+}

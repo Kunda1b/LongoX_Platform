@@ -1,10 +1,24 @@
-import { pgTable, text, serial, integer, timestamp } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  integer,
+  real,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 export const promptsTable = pgTable("prompts", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
-  content: text("content").notNull(),
+  content: text("content").notNull().default(""),
+  systemPrompt: text("system_prompt").notNull().default(""),
+  userTemplate: text("user_template").notNull().default(""),
+  model: text("model").notNull().default("gpt-4"),
+  provider: text("provider").notNull().default("openai"),
+  maxTokens: integer("max_tokens").notNull().default(1024),
+  temperature: real("temperature").notNull().default(0.7),
+  variables: text("variables"),
   version: integer("version").notNull().default(1),
   status: text("status").notNull().default("draft"),
   tags: text("tags").array(),

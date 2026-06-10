@@ -21,7 +21,16 @@ export class WorkflowVersion {
     nodes: WorkflowNode[],
     edges: WorkflowEdge[],
     changeNote: string | null,
-  ): Omit<WorkflowVersion, "id" | "createdAt" | "checksum"> {
+  ): Pick<
+    WorkflowVersion,
+    | "workflowId"
+    | "version"
+    | "name"
+    | "nodes"
+    | "edges"
+    | "changeNote"
+    | "published"
+  > {
     return {
       workflowId,
       version,

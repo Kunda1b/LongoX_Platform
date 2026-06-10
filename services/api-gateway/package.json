@@ -1,0 +1,27 @@
+{
+  "name": "@longox/api-gateway",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@longox/db": "workspace:*",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.6",
+    "drizzle-orm": "catalog:",
+    "express": "^5.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "pino-http": "^10.5.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "catalog:",
+    "tsx": "catalog:"
+  }
+}

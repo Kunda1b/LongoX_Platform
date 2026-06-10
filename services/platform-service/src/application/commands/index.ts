@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 export interface PlatformCommand {
   execute(
     input: Record<string, unknown>,
@@ -7,7 +9,7 @@ export class SetFeatureFlagCommand implements PlatformCommand {
   async execute(
     input: Record<string, unknown>,
   ): Promise<{ success: boolean; data?: unknown; error?: string }> {
-    return { success: true, data: { flagId: crypto.randomUUID(), ...input } };
+    return { success: true, data: { flagId: randomUUID(), ...input } };
   }
 }
 export class UpdateTenantCommand implements PlatformCommand {
@@ -21,7 +23,6 @@ export class CreatePolicyCommand implements PlatformCommand {
   async execute(
     input: Record<string, unknown>,
   ): Promise<{ success: boolean; data?: unknown; error?: string }> {
-    return { success: true, data: { policyId: crypto.randomUUID(), ...input } };
+    return { success: true, data: { policyId: randomUUID(), ...input } };
   }
 }
-export { SetFeatureFlagCommand, UpdateTenantCommand, CreatePolicyCommand };

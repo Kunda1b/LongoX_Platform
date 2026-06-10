@@ -6,6 +6,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "dependencies": {
+    "ioredis": "^5.4.1"
+  },
   "devDependencies": {
     "@types/node": "catalog:"
   }
