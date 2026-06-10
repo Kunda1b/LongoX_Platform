@@ -22,7 +22,7 @@ args = "API Server"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "FlowCraft"
+args = "LongoX"
 
 [[workflows.workflow]]
 name = "API Server"
@@ -33,11 +33,11 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PORT=8080 pnpm --filter @workspace/api-server dev"
+args = "PORT=8080 pnpm --filter @longox/api-server dev"
 waitForPort = 8080
 
 [[workflows.workflow]]
-name = "FlowCraft"
+name = "LongoX"
 author = "agent"
 
 [workflows.workflow.metadata]
@@ -45,7 +45,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PORT=25075 BASE_PATH=/ pnpm --filter @workspace/flowcraft dev"
+args = "PORT=25075 BASE_PATH=/ pnpm --filter @longox/flowcraft dev"
 waitForPort = 25075
 
 [agent]

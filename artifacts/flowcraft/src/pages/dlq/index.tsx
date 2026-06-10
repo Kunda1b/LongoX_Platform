@@ -5,11 +5,24 @@ import {
   useRetryDlqEntry,
   useDismissDlqEntry,
   getListDlqEntriesQueryKey,
-} from "@autoflow/api-client-react";
+} from "@longox/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertTriangle, CheckCircle2, RefreshCw, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -26,20 +39,33 @@ function nodeTypeColor(nodeType: string) {
 }
 
 export default function DlqPage() {
-  const [filter, setFilter] = useState<"all" | "pending" | "resolved">("pending");
+  const [filter, setFilter] = useState<"all" | "pending" | "resolved">(
+    "pending",
+  );
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const resolvedParam = filter === "pending" ? false : filter === "resolved" ? true : undefined;
-  const queryParams = resolvedParam !== undefined ? { resolved: resolvedParam } : {};
+  const resolvedParam =
+    filter === "pending" ? false : filter === "resolved" ? true : undefined;
+  const queryParams =
+    resolvedParam !== undefined ? { resolved: resolvedParam } : {};
 
-  const { data: entries = [], isLoading, refetch } = useListDlqEntries(queryParams);
+  const {
+    data: entries = [],
+    isLoading,
+    refetch,
+  } = useListDlqEntries(queryParams);
 
   const retryMutation = useRetryDlqEntry({
     mutation: {
       onSuccess: () => {
-        toast({ title: "Execution re-queued", description: "The workflow will run again shortly." });
-        queryClient.invalidateQueries({ queryKey: getListDlqEntriesQueryKey() });
+        toast({
+          title: "Execution re-queued",
+          description: "The workflow will run again shortly.",
+        });
+        queryClient.invalidateQueries({
+          queryKey: getListDlqEntriesQueryKey(),
+        });
       },
       onError: () => toast({ title: "Retry failed", variant: "destructive" }),
     },
@@ -49,7 +75,9 @@ export default function DlqPage() {
     mutation: {
       onSuccess: () => {
         toast({ title: "Entry dismissed" });
-        queryClient.invalidateQueries({ queryKey: getListDlqEntriesQueryKey() });
+        queryClient.invalidateQueries({
+          queryKey: getListDlqEntriesQueryKey(),
+        });
       },
       onError: () => toast({ title: "Dismiss failed", variant: "destructive" }),
     },
@@ -63,7 +91,9 @@ export default function DlqPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Dead-Letter Queue</h1>
-          <p className="text-muted-foreground text-sm mt-1">Failed job entries that exhausted all retry attempts</p>
+          <p className="text-muted-foreground text-sm mt-1">
+            Failed job entries that exhausted all retry attempts
+          </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()}>
           <RefreshCw className="h-4 w-4 mr-2" />
@@ -75,7 +105,9 @@ export default function DlqPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg"><AlertTriangle className="h-5 w-5 text-red-600" /></div>
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+              </div>
               <div>
                 <div className="text-2xl font-bold">{pending.length}</div>
                 <div className="text-sm text-muted-foreground">Pending</div>
@@ -86,7 +118,9 @@ export default function DlqPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg"><CheckCircle2 className="h-5 w-5 text-green-600" /></div>
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              </div>
               <div>
                 <div className="text-2xl font-bold">{resolved.length}</div>
                 <div className="text-sm text-muted-foreground">Resolved</div>
@@ -97,9 +131,13 @@ export default function DlqPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg"><RefreshCw className="h-5 w-5 text-blue-600" /></div>
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <RefreshCw className="h-5 w-5 text-blue-600" />
+              </div>
               <div>
-                <div className="text-2xl font-bold">{entries.filter((e) => e.resolution === "retried").length}</div>
+                <div className="text-2xl font-bold">
+                  {entries.filter((e) => e.resolution === "retried").length}
+                </div>
                 <div className="text-sm text-muted-foreground">Retried</div>
               </div>
             </div>
@@ -112,9 +150,16 @@ export default function DlqPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Failed Jobs</CardTitle>
-              <CardDescription>Jobs that failed after all retry attempts</CardDescription>
+              <CardDescription>
+                Jobs that failed after all retry attempts
+              </CardDescription>
             </div>
-            <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "pending" | "resolved")}>
+            <Tabs
+              value={filter}
+              onValueChange={(v) =>
+                setFilter(v as "all" | "pending" | "resolved")
+              }
+            >
               <TabsList>
                 <TabsTrigger value="pending">Pending</TabsTrigger>
                 <TabsTrigger value="resolved">Resolved</TabsTrigger>
@@ -125,11 +170,15 @@ export default function DlqPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex items-center justify-center py-12 text-muted-foreground">Loading…</div>
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              Loading…
+            </div>
           ) : entries.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
               <CheckCircle2 className="h-10 w-10 text-green-500" />
-              <p className="font-medium">No {filter !== "all" ? filter : ""} entries</p>
+              <p className="font-medium">
+                No {filter !== "all" ? filter : ""} entries
+              </p>
               <p className="text-sm">All jobs are running cleanly.</p>
             </div>
           ) : (
@@ -149,38 +198,61 @@ export default function DlqPage() {
                 {entries.map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell>
-                      <Link href={`/workflows/${entry.workflowId}`} className="font-medium text-primary hover:underline">
+                      <Link
+                        href={`/workflows/${entry.workflowId}`}
+                        className="font-medium text-primary hover:underline"
+                      >
                         {entry.workflowName}
                       </Link>
                       <div className="text-xs text-muted-foreground">
-                        <Link href={`/executions/${entry.executionId}`} className="hover:underline">
+                        <Link
+                          href={`/executions/${entry.executionId}`}
+                          className="hover:underline"
+                        >
                           Run #{entry.executionId}
                         </Link>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">{entry.nodeName}</div>
-                      <span className={`text-xs px-1.5 py-0.5 rounded font-mono ${nodeTypeColor(entry.nodeType)}`}>
+                      <span
+                        className={`text-xs px-1.5 py-0.5 rounded font-mono ${nodeTypeColor(entry.nodeType)}`}
+                      >
                         {entry.nodeType}
                       </span>
                     </TableCell>
                     <TableCell>
                       <div className="max-w-xs">
-                        <p className="text-sm text-destructive truncate" title={entry.errorMessage}>{entry.errorMessage}</p>
+                        <p
+                          className="text-sm text-destructive truncate"
+                          title={entry.errorMessage}
+                        >
+                          {entry.errorMessage}
+                        </p>
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary">{entry.attempts}×</Badge>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm text-muted-foreground" title={entry.createdAt}>
-                        {formatDistanceToNow(new Date(entry.createdAt), { addSuffix: true })}
+                      <span
+                        className="text-sm text-muted-foreground"
+                        title={entry.createdAt}
+                      >
+                        {formatDistanceToNow(new Date(entry.createdAt), {
+                          addSuffix: true,
+                        })}
                       </span>
                     </TableCell>
                     <TableCell>
                       {entry.resolvedAt ? (
-                        <Badge variant="outline" className="text-green-700 border-green-300">
-                          {entry.resolution === "retried" ? "Retried" : "Dismissed"}
+                        <Badge
+                          variant="outline"
+                          className="text-green-700 border-green-300"
+                        >
+                          {entry.resolution === "retried"
+                            ? "Retried"
+                            : "Dismissed"}
                         </Badge>
                       ) : (
                         <Badge variant="destructive">Pending</Badge>
@@ -192,7 +264,9 @@ export default function DlqPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => retryMutation.mutate({ id: entry.id })}
+                            onClick={() =>
+                              retryMutation.mutate({ id: entry.id })
+                            }
                             disabled={retryMutation.isPending}
                           >
                             <RefreshCw className="h-3 w-3 mr-1" />
@@ -202,7 +276,9 @@ export default function DlqPage() {
                             size="sm"
                             variant="ghost"
                             className="text-muted-foreground"
-                            onClick={() => dismissMutation.mutate({ id: entry.id })}
+                            onClick={() =>
+                              dismissMutation.mutate({ id: entry.id })
+                            }
                             disabled={dismissMutation.isPending}
                           >
                             <XCircle className="h-3 w-3 mr-1" />

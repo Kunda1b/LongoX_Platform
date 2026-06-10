@@ -1,5 +1,11 @@
-export { actions } from './actions';
-export { triggers } from './triggers';
-export { auth } from './auth';
-export { schemas } from './schemas';
-export const connector = { name: 'salesforce', version: '1.0.0', auth: ['api_key'], actions: [], triggers: [] };
+export { actions } from "./actions";
+export { triggers } from "./triggers";
+export { auth } from "./auth";
+export { schemas } from "./schemas";
+export const connector = {
+  name: "salesforce",
+  version: "1.0.0",
+  auth: ["api_key"],
+  actions: [],
+  triggers: [],
+};

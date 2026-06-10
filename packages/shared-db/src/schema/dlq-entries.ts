@@ -1,4 +1,11 @@
-import { pgTable, text, serial, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  timestamp,
+  integer,
+  jsonb,
+} from "drizzle-orm/pg-core";
 
 export const dlqEntriesTable = pgTable("dlq_entries", {
   id: serial("id").primaryKey(),
@@ -11,7 +18,9 @@ export const dlqEntriesTable = pgTable("dlq_entries", {
   errorMessage: text("error_message").notNull(),
   attempts: integer("attempts").notNull().default(1),
   jobData: jsonb("job_data").notNull().default({}),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   resolution: text("resolution"),
 });

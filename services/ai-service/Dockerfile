@@ -5,7 +5,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY services/ai-service/package.json ./services/ai-service/
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm --filter @autoflow/ai-service build
+RUN pnpm --filter @longox/ai-service build
 FROM node:20-alpine
 WORKDIR /app
 COPY --from=base /app .

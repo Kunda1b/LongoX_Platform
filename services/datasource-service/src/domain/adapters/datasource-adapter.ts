@@ -9,8 +9,17 @@ export interface QueryResult {
 
 export interface DataSourceAdapter {
   kind: DataSourceKind;
-  testConnection(config: DataSourceConfig): Promise<{ success: boolean; error?: string }>;
-  executeQuery(config: DataSourceConfig, query: string, params?: unknown[]): Promise<QueryResult>;
+  testConnection(
+    config: DataSourceConfig,
+  ): Promise<{ success: boolean; error?: string }>;
+  executeQuery(
+    config: DataSourceConfig,
+    query: string,
+    params?: unknown[],
+  ): Promise<QueryResult>;
   listTables(config: DataSourceConfig): Promise<string[]>;
-  getSchema(config: DataSourceConfig, table: string): Promise<{ column: string; type: string; nullable: boolean }[]>;
+  getSchema(
+    config: DataSourceConfig,
+    table: string,
+  ): Promise<{ column: string; type: string; nullable: boolean }[]>;
 }

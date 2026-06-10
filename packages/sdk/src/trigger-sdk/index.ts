@@ -33,47 +33,72 @@ export class TriggerClient {
   }
 
   async list(workflowId: string): Promise<TriggerDefinition[]> {
-    const res = await fetch(`${this.config.baseUrl}/api/workflows/${workflowId}/triggers`, {
-      headers: this.headers(),
-    });
+    const res = await fetch(
+      `${this.config.baseUrl}/api/workflows/${workflowId}/triggers`,
+      {
+        headers: this.headers(),
+      },
+    );
     if (!res.ok) throw new Error("Failed to list triggers");
     return res.json() as Promise<TriggerDefinition[]>;
   }
 
-  async create(workflowId: string, trigger: Omit<TriggerDefinition, "id">): Promise<TriggerDefinition> {
-    const res = await fetch(`${this.config.baseUrl}/api/workflows/${workflowId}/triggers`, {
-      method: "POST",
-      headers: this.headers(),
-      body: JSON.stringify(trigger),
-    });
+  async create(
+    workflowId: string,
+    trigger: Omit<TriggerDefinition, "id">,
+  ): Promise<TriggerDefinition> {
+    const res = await fetch(
+      `${this.config.baseUrl}/api/workflows/${workflowId}/triggers`,
+      {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify(trigger),
+      },
+    );
     if (!res.ok) throw new Error("Failed to create trigger");
     return res.json() as Promise<TriggerDefinition>;
   }
 
-  async update(workflowId: string, triggerId: string, trigger: Partial<TriggerDefinition>): Promise<TriggerDefinition> {
-    const res = await fetch(`${this.config.baseUrl}/api/workflows/${workflowId}/triggers/${triggerId}`, {
-      method: "PATCH",
-      headers: this.headers(),
-      body: JSON.stringify(trigger),
-    });
+  async update(
+    workflowId: string,
+    triggerId: string,
+    trigger: Partial<TriggerDefinition>,
+  ): Promise<TriggerDefinition> {
+    const res = await fetch(
+      `${this.config.baseUrl}/api/workflows/${workflowId}/triggers/${triggerId}`,
+      {
+        method: "PATCH",
+        headers: this.headers(),
+        body: JSON.stringify(trigger),
+      },
+    );
     if (!res.ok) throw new Error("Failed to update trigger");
     return res.json() as Promise<TriggerDefinition>;
   }
 
   async delete(workflowId: string, triggerId: string): Promise<void> {
-    const res = await fetch(`${this.config.baseUrl}/api/workflows/${workflowId}/triggers/${triggerId}`, {
-      method: "DELETE",
-      headers: this.headers(),
-    });
+    const res = await fetch(
+      `${this.config.baseUrl}/api/workflows/${workflowId}/triggers/${triggerId}`,
+      {
+        method: "DELETE",
+        headers: this.headers(),
+      },
+    );
     if (!res.ok) throw new Error("Failed to delete trigger");
   }
 
-  async createWebhook(workflowId: string, config?: Record<string, unknown>): Promise<WebhookResult> {
-    const res = await fetch(`${this.config.baseUrl}/api/workflows/${workflowId}/webhooks`, {
-      method: "POST",
-      headers: this.headers(),
-      body: config ? JSON.stringify({ config }) : undefined,
-    });
+  async createWebhook(
+    workflowId: string,
+    config?: Record<string, unknown>,
+  ): Promise<WebhookResult> {
+    const res = await fetch(
+      `${this.config.baseUrl}/api/workflows/${workflowId}/webhooks`,
+      {
+        method: "POST",
+        headers: this.headers(),
+        body: config ? JSON.stringify({ config }) : undefined,
+      },
+    );
     if (!res.ok) throw new Error("Failed to create webhook");
     return res.json() as Promise<WebhookResult>;
   }

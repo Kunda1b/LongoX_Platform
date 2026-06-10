@@ -1,4 +1,4 @@
-import { logger } from "@autoflow/shared-logger";
+import { logger } from "@longox/shared-logger";
 import { jobQueue } from "../queue/job-queue";
 
 export class WorkflowWorker {
@@ -30,7 +30,13 @@ export class WorkflowWorker {
     if (jobQueue.getQueueLength() === 0 || jobQueue.getActiveWorkers() >= 5) {
       return;
     }
-    logger.debug({ queueLength: jobQueue.getQueueLength(), activeWorkers: jobQueue.getActiveWorkers() }, "[Worker] Queue status");
+    logger.debug(
+      {
+        queueLength: jobQueue.getQueueLength(),
+        activeWorkers: jobQueue.getActiveWorkers(),
+      },
+      "[Worker] Queue status",
+    );
   }
 
   private sleep(ms: number): Promise<void> {

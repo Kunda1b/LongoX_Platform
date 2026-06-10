@@ -1,2 +1,4 @@
-import React from 'react';
-export default function input() { return <div>input component</div>; }
+import React from "react";
+export default function input() {
+  return <div>input component</div>;
+}

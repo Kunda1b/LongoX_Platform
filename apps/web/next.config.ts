@@ -12,11 +12,11 @@ const nextConfig: NextConfig = {
     ];
   },
   transpilePackages: [
-    "@autoflow/shared-types",
-    "@autoflow/api-client-react",
-    "@autoflow/shared-realtime",
-    "@autoflow/shared-events",
-    "@autoflow/workflow-canvas",
+    "@longox/shared-types",
+    "@longox/api-client-react",
+    "@longox/shared-realtime",
+    "@longox/shared-events",
+    "@longox/workflow-canvas",
   ],
   experimental: {
     optimizePackageImports: ["lucide-react", "@radix-ui/react-icons"],

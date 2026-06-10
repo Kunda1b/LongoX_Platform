@@ -1,4 +1,9 @@
-import type { NodeExecutor, WorkflowNode, ExecutionContext, NodeExecutionResult } from "@autoflow/workflow-engine";
+import type {
+  NodeExecutor,
+  WorkflowNode,
+  ExecutionContext,
+  NodeExecutionResult,
+} from "@longox/workflow-engine";
 import { vm } from "node:vm";
 
 export class CodeExecutor implements NodeExecutor {
@@ -29,7 +34,11 @@ export class CodeExecutor implements NodeExecutor {
     }
 
     try {
-      const sandbox = { input, output: {}, console: { log: (...args: unknown[]) => args } };
+      const sandbox = {
+        input,
+        output: {},
+        console: { log: (...args: unknown[]) => args },
+      };
       const context = vm.createContext(sandbox);
       const wrappedCode = `
         try {

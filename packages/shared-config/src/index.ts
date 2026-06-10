@@ -25,7 +25,10 @@ function envNumber(key: string, fallback: number): number {
 function envArray(key: string, fallback: string[]): string[] {
   const raw = process.env[key];
   if (!raw) return fallback;
-  return raw.split(",").map((s) => s.trim()).filter(Boolean);
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 export function loadConfig(): ServiceConfig {
@@ -34,7 +37,7 @@ export function loadConfig(): ServiceConfig {
     host: envString("HOST", "0.0.0.0"),
     nodeEnv: envString("NODE_ENV", "development"),
     logLevel: envString("LOG_LEVEL", "info"),
-    databaseUrl: envString("DATABASE_URL", "postgres://localhost:5432/autoflow"),
+    databaseUrl: envString("DATABASE_URL", "postgres://localhost:5432/longox"),
     jwtSecret: envString("JWT_SECRET", "change-me-in-production"),
     jwtExpiry: envString("JWT_EXPIRY", "24h"),
     redisUrl: envString("REDIS_URL", "redis://localhost:6379"),

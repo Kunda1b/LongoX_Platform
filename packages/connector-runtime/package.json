@@ -1,5 +1,5 @@
 {
-  "name": "@autoflow/connector-runtime",
+  "name": "@longox/connector-runtime",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@autoflow/shared-types": "workspace:*",
+    "@longox/shared-types": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -1,5 +1,5 @@
 {
-  "name": "@autoflow/shared-realtime",
+  "name": "@longox/shared-realtime",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,8 +7,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@autoflow/shared-events": "workspace:*",
-    "@autoflow/shared-logger": "workspace:*"
+    "@longox/shared-events": "workspace:*",
+    "@longox/shared-logger": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

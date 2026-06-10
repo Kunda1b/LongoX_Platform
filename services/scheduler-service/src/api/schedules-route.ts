@@ -1,8 +1,12 @@
 import { Router, type IRouter } from "express";
 import { eq, desc } from "drizzle-orm";
-import { db, schedulesTable } from "@autoflow/db";
+import { db, schedulesTable } from "@longox/db";
 import { PostgresScheduleRepository } from "../infrastructure";
-import { CreateScheduleCommand, UpdateScheduleCommand, DeleteScheduleCommand } from "../application";
+import {
+  CreateScheduleCommand,
+  UpdateScheduleCommand,
+  DeleteScheduleCommand,
+} from "../application";
 
 const router: IRouter = Router();
 const scheduleRepo = new PostgresScheduleRepository();
@@ -43,7 +47,8 @@ router.get("/schedules", async (req, res): Promise<void> => {
 
   let query = db.select().from(schedulesTable).$dynamic();
   if (tenantId) query = query.where(eq(schedulesTable.tenantId, tenantId));
-  if (workflowId) query = query.where(eq(schedulesTable.workflowId, workflowId));
+  if (workflowId)
+    query = query.where(eq(schedulesTable.workflowId, workflowId));
   if (status) query = query.where(eq(schedulesTable.status, status));
 
   const rows = await query.orderBy(desc(schedulesTable.createdAt)).limit(limit);
@@ -64,19 +69,45 @@ router.get("/schedules/stats", async (_req, res): Promise<void> => {
 
 router.get("/schedules/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
 
-  const [row] = await db.select().from(schedulesTable).where(eq(schedulesTable.id, id)).limit(1);
-  if (!row) { res.status(404).json({ error: "Schedule not found" }); return; }
+  const [row] = await db
+    .select()
+    .from(schedulesTable)
+    .where(eq(schedulesTable.id, id))
+    .limit(1);
+  if (!row) {
+    res.status(404).json({ error: "Schedule not found" });
+    return;
+  }
 
   res.json(serializeSchedule(row));
 });
 
 router.post("/schedules", async (req, res): Promise<void> => {
-  const { tenantId, workflowId, name, description, interval, cronExpression, timezone, startAt, endAt, maxRuns, retryOnFailure, maxRetries, metadata } = req.body as Record<string, unknown>;
+  const {
+    tenantId,
+    workflowId,
+    name,
+    description,
+    interval,
+    cronExpression,
+    timezone,
+    startAt,
+    endAt,
+    maxRuns,
+    retryOnFailure,
+    maxRetries,
+    metadata,
+  } = req.body as Record<string, unknown>;
 
   if (!tenantId || !workflowId || !name || !interval) {
-    res.status(400).json({ error: "tenantId, workflowId, name, and interval are required" });
+    res
+      .status(400)
+      .json({ error: "tenantId, workflowId, name, and interval are required" });
     return;
   }
 
@@ -104,7 +135,10 @@ router.post("/schedules", async (req, res): Promise<void> => {
 
 router.patch("/schedules/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
 
   try {
     const schedule = await updateSchedule.execute(id, req.body);
@@ -116,7 +150,10 @@ router.patch("/schedules/:id", async (req, res): Promise<void> => {
 
 router.delete("/schedules/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
 
   try {
     await deleteSchedule.execute(id);
@@ -128,27 +165,41 @@ router.delete("/schedules/:id", async (req, res): Promise<void> => {
 
 router.post("/schedules/:id/pause", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
 
-  const [row] = await db.update(schedulesTable)
+  const [row] = await db
+    .update(schedulesTable)
     .set({ status: "paused", updatedAt: new Date() })
     .where(eq(schedulesTable.id, id))
     .returning();
 
-  if (!row) { res.status(404).json({ error: "Schedule not found" }); return; }
+  if (!row) {
+    res.status(404).json({ error: "Schedule not found" });
+    return;
+  }
   res.json(serializeSchedule(row));
 });
 
 router.post("/schedules/:id/activate", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
 
-  const [row] = await db.update(schedulesTable)
+  const [row] = await db
+    .update(schedulesTable)
     .set({ status: "active", updatedAt: new Date() })
     .where(eq(schedulesTable.id, id))
     .returning();
 
-  if (!row) { res.status(404).json({ error: "Schedule not found" }); return; }
+  if (!row) {
+    res.status(404).json({ error: "Schedule not found" });
+    return;
+  }
   res.json(serializeSchedule(row));
 });
 

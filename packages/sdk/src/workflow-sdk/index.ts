@@ -52,18 +52,28 @@ export class WorkflowClient {
     return h;
   }
 
-  async list(params?: { page?: number; limit?: number; search?: string }): Promise<{ items: WorkflowDefinition[]; total: number }> {
+  async list(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<{ items: WorkflowDefinition[]; total: number }> {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set("page", String(params.page));
     if (params?.limit) searchParams.set("limit", String(params.limit));
     if (params?.search) searchParams.set("search", params.search);
 
-    const res = await fetch(`${this.config.baseUrl}/api/workflows?${searchParams}`, {
-      headers: this.headers(),
-    });
+    const res = await fetch(
+      `${this.config.baseUrl}/api/workflows?${searchParams}`,
+      {
+        headers: this.headers(),
+      },
+    );
 
     if (!res.ok) throw new Error("Failed to list workflows");
-    return res.json() as Promise<{ items: WorkflowDefinition[]; total: number }>;
+    return res.json() as Promise<{
+      items: WorkflowDefinition[];
+      total: number;
+    }>;
   }
 
   async get(id: string): Promise<WorkflowDefinition> {
@@ -75,7 +85,9 @@ export class WorkflowClient {
     return res.json() as Promise<WorkflowDefinition>;
   }
 
-  async create(def: Omit<WorkflowDefinition, "id" | "version">): Promise<WorkflowDefinition> {
+  async create(
+    def: Omit<WorkflowDefinition, "id" | "version">,
+  ): Promise<WorkflowDefinition> {
     const res = await fetch(`${this.config.baseUrl}/api/workflows`, {
       method: "POST",
       headers: this.headers(),
@@ -90,7 +102,10 @@ export class WorkflowClient {
     return res.json() as Promise<WorkflowDefinition>;
   }
 
-  async update(id: string, def: Partial<WorkflowDefinition>): Promise<WorkflowDefinition> {
+  async update(
+    id: string,
+    def: Partial<WorkflowDefinition>,
+  ): Promise<WorkflowDefinition> {
     const res = await fetch(`${this.config.baseUrl}/api/workflows/${id}`, {
       method: "PATCH",
       headers: this.headers(),
@@ -110,18 +125,27 @@ export class WorkflowClient {
     if (!res.ok) throw new Error("Failed to delete workflow");
   }
 
-  async execute(id: string, input?: Record<string, unknown>): Promise<ExecutionResult> {
-    const res = await fetch(`${this.config.baseUrl}/api/workflows/${id}/execute`, {
-      method: "POST",
-      headers: this.headers(),
-      body: input ? JSON.stringify({ input }) : undefined,
-    });
+  async execute(
+    id: string,
+    input?: Record<string, unknown>,
+  ): Promise<ExecutionResult> {
+    const res = await fetch(
+      `${this.config.baseUrl}/api/workflows/${id}/execute`,
+      {
+        method: "POST",
+        headers: this.headers(),
+        body: input ? JSON.stringify({ input }) : undefined,
+      },
+    );
 
     if (!res.ok) throw new Error("Failed to execute workflow");
     return res.json() as Promise<ExecutionResult>;
   }
 
-  async getExecution(workflowId: string, executionId: string): Promise<ExecutionResult> {
+  async getExecution(
+    workflowId: string,
+    executionId: string,
+  ): Promise<ExecutionResult> {
     const res = await fetch(
       `${this.config.baseUrl}/api/workflows/${workflowId}/executions/${executionId}`,
       { headers: this.headers() },

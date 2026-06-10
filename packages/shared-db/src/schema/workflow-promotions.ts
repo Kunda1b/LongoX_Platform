@@ -10,7 +10,10 @@ export const workflowPromotionsTable = pgTable("workflow_promotions", {
   promotedBy: text("promoted_by").notNull().default("user"),
   approvedBy: text("approved_by"),
   notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
-export type WorkflowPromotionRecord = typeof workflowPromotionsTable.$inferSelect;
+export type WorkflowPromotionRecord =
+  typeof workflowPromotionsTable.$inferSelect;

@@ -26,7 +26,10 @@ export const useNotificationStore = create<NotificationState>((set) => ({
   unreadCount: 0,
   panelOpen: false,
   setNotifications: (notifications) =>
-    set({ notifications, unreadCount: notifications.filter((n) => n.status === "unread").length }),
+    set({
+      notifications,
+      unreadCount: notifications.filter((n) => n.status === "unread").length,
+    }),
   addNotification: (n) =>
     set((s) => ({
       notifications: [n, ...s.notifications],
@@ -34,7 +37,9 @@ export const useNotificationStore = create<NotificationState>((set) => ({
     })),
   markRead: (id) =>
     set((s) => ({
-      notifications: s.notifications.map((n) => (n.id === id ? { ...n, status: "read" as const } : n)),
+      notifications: s.notifications.map((n) =>
+        n.id === id ? { ...n, status: "read" as const } : n,
+      ),
       unreadCount: Math.max(0, s.unreadCount - 1),
     })),
   togglePanel: () => set((s) => ({ panelOpen: !s.panelOpen })),

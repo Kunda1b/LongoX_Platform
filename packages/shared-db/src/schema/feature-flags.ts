@@ -1,4 +1,12 @@
-import { pgTable, text, serial, boolean, integer, jsonb, timestamp } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  boolean,
+  integer,
+  jsonb,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 export const featureFlagsTable = pgTable("feature_flags", {
   id: serial("id").primaryKey(),
@@ -8,8 +16,13 @@ export const featureFlagsTable = pgTable("feature_flags", {
   enabled: boolean("enabled").notNull().default(false),
   rolloutPercentage: integer("rollout_percentage").notNull().default(0),
   conditions: jsonb("conditions").default({}),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
 export type FeatureFlagRecord = typeof featureFlagsTable.$inferSelect;

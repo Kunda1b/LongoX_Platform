@@ -1,2 +1,2 @@
-export const workflows = { name: 'Workflows' };
+export const workflows = { name: "Workflows" };
 export default workflows;

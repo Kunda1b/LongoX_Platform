@@ -25,17 +25,29 @@ export const DEFAULT_RETRY_POLICY: RetryPolicy = {
   ],
 };
 
-export function shouldRetry(error: string, policy: RetryPolicy = DEFAULT_RETRY_POLICY): boolean {
+export function shouldRetry(
+  error: string,
+  policy: RetryPolicy = DEFAULT_RETRY_POLICY,
+): boolean {
   const lower = error.toLowerCase();
-  return policy.retryableErrors.some((pattern) => lower.includes(pattern.toLowerCase()));
+  return policy.retryableErrors.some((pattern) =>
+    lower.includes(pattern.toLowerCase()),
+  );
 }
 
-export function getRetryDelay(attempt: number, policy: RetryPolicy = DEFAULT_RETRY_POLICY): number {
-  const delay = policy.baseDelayMs * Math.pow(policy.backoffMultiplier, attempt - 1);
+export function getRetryDelay(
+  attempt: number,
+  policy: RetryPolicy = DEFAULT_RETRY_POLICY,
+): number {
+  const delay =
+    policy.baseDelayMs * Math.pow(policy.backoffMultiplier, attempt - 1);
   return Math.min(delay, policy.maxDelayMs);
 }
 
-export function calculateExponentialBackoff(attempt: number, baseMs: number = 1000): number {
+export function calculateExponentialBackoff(
+  attempt: number,
+  baseMs: number = 1000,
+): number {
   const delay = baseMs * Math.pow(2, attempt - 1);
   const jitter = Math.random() * 0.3 * delay;
   return Math.min(Math.floor(delay + jitter), 30_000);

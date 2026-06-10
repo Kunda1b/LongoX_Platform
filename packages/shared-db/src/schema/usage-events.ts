@@ -1,4 +1,11 @@
-import { pgTable, text, serial, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  timestamp,
+  integer,
+  jsonb,
+} from "drizzle-orm/pg-core";
 
 export const usageEventsTable = pgTable("usage_events", {
   id: serial("id").primaryKey(),
@@ -7,7 +14,9 @@ export const usageEventsTable = pgTable("usage_events", {
   eventType: text("event_type").notNull(),
   quantity: integer("quantity").notNull().default(1),
   metadata: jsonb("metadata").default({}),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export type UsageEventRecord = typeof usageEventsTable.$inferSelect;

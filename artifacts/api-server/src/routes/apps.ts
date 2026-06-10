@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, like, sql } from "drizzle-orm";
-import { db, appsTable } from "@autoflow/db";
+import { db, appsTable } from "@longox/db";
 import {
   ListAppsQueryParams,
   CreateAppBody,
@@ -8,7 +8,7 @@ import {
   UpdateAppParams,
   UpdateAppBody,
   DeleteAppParams,
-} from "@autoflow/api-zod";
+} from "@longox/api-zod";
 
 const router: IRouter = Router();
 
@@ -39,7 +39,10 @@ router.get("/apps/stats", async (_req, res): Promise<void> => {
   for (const app of apps) {
     byTypeMap[app.type] = (byTypeMap[app.type] ?? 0) + 1;
   }
-  const byType = Object.entries(byTypeMap).map(([type, count]) => ({ type, count }));
+  const byType = Object.entries(byTypeMap).map(([type, count]) => ({
+    type,
+    count,
+  }));
 
   res.json({ totalApps, publishedApps, draftApps, totalViews, byType });
 });
@@ -54,7 +57,11 @@ router.get("/apps", async (req, res): Promise<void> => {
   const apps = await db
     .select()
     .from(appsTable)
-    .where(params.data.search ? like(appsTable.name, `%${params.data.search}%`) : undefined)
+    .where(
+      params.data.search
+        ? like(appsTable.name, `%${params.data.search}%`)
+        : undefined,
+    )
     .orderBy(appsTable.updatedAt);
 
   res.json(apps.map(serializeApp));

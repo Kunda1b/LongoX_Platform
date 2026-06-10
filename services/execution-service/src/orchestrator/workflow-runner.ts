@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import OpenAI from "openai";
-import { publishEvent } from "@autoflow/shared-realtime";
+import { publishEvent } from "@longox/shared-realtime";
 import {
   db,
   executionsTable,
@@ -11,7 +11,7 @@ import {
   workflowsTable,
   tokenUsageTable,
   usageEventsTable,
-} from "@autoflow/db";
+} from "@longox/db";
 
 // ─── OpenAI client ─────────────────────────────────────────────────────────────
 
@@ -36,7 +36,7 @@ export async function writeAudit(
   resourceId: string,
   metadata?: Record<string, unknown>,
   actorType = "system",
-  actorId?: string
+  actorId?: string,
 ) {
   await db.insert(auditLogTable).values({
     action,
@@ -59,21 +59,31 @@ function nodeCategory(nodeTypeId: string): string {
 
 function nodeDurationMs(category: string): number {
   switch (category) {
-    case "trigger": return Math.floor(Math.random() * 80) + 20;
-    case "logic":   return Math.floor(Math.random() * 40) + 10;
-    case "data":    return Math.floor(Math.random() * 120) + 30;
-    case "ai":      return Math.floor(Math.random() * 1000) + 200;
-    default:        return Math.floor(Math.random() * 800) + 100;
+    case "trigger":
+      return Math.floor(Math.random() * 80) + 20;
+    case "logic":
+      return Math.floor(Math.random() * 40) + 10;
+    case "data":
+      return Math.floor(Math.random() * 120) + 30;
+    case "ai":
+      return Math.floor(Math.random() * 1000) + 200;
+    default:
+      return Math.floor(Math.random() * 800) + 100;
   }
 }
 
 function nodeFailureProbability(category: string): number {
   switch (category) {
-    case "trigger": return 0;
-    case "logic":   return 0.01;
-    case "data":    return 0.02;
-    case "ai":      return 0.02;  // lower now that it's real
-    default:        return 0.04;
+    case "trigger":
+      return 0;
+    case "logic":
+      return 0.01;
+    case "data":
+      return 0.02;
+    case "ai":
+      return 0.02; // lower now that it's real
+    default:
+      return 0.04;
   }
 }
 
@@ -83,7 +93,7 @@ async function executeAiNode(
   nodeTypeId: string,
   config: Record<string, unknown>,
   input: Record<string, unknown>,
-  workflowId: number
+  workflowId: number,
 ): Promise<Record<string, unknown>> {
   const model = String(config.model ?? "gpt-4o-mini");
   let messages: OpenAI.ChatCompletionMessageParam[];
@@ -92,27 +102,40 @@ async function executeAiNode(
   if (nodeTypeId === "ai.classify") {
     const categories = String(config.categories ?? "CategoryA,CategoryB");
     messages = [
-      { role: "system", content: `Classify the input into one of these categories: ${categories}. Respond with JSON: {"category": "...", "confidence": 0.0-1.0, "reasoning": "..."}` },
+      {
+        role: "system",
+        content: `Classify the input into one of these categories: ${categories}. Respond with JSON: {"category": "...", "confidence": 0.0-1.0, "reasoning": "..."}`,
+      },
       { role: "user", content: JSON.stringify(input) },
     ];
     responseFormat = "json";
   } else if (nodeTypeId === "ai.summarize") {
     const maxWords = Number(config.maxWords ?? 100);
     messages = [
-      { role: "system", content: `Summarize the input in at most ${maxWords} words. Respond with JSON: {"summary": "...", "wordCount": 0}` },
+      {
+        role: "system",
+        content: `Summarize the input in at most ${maxWords} words. Respond with JSON: {"summary": "...", "wordCount": 0}`,
+      },
       { role: "user", content: JSON.stringify(input) },
     ];
     responseFormat = "json";
   } else if (nodeTypeId === "ai.extract") {
     const fields = String(config.fields ?? "vendor,amount,date");
     messages = [
-      { role: "system", content: `Extract these fields from the input: ${fields}. Respond with JSON: {"extracted": {...}, "confidence": 0.0-1.0}` },
+      {
+        role: "system",
+        content: `Extract these fields from the input: ${fields}. Respond with JSON: {"extracted": {...}, "confidence": 0.0-1.0}`,
+      },
       { role: "user", content: JSON.stringify(input) },
     ];
     responseFormat = "json";
   } else {
     // Generic AI node — use system prompt from config or a sensible default
-    const systemPrompt = String(config.systemPrompt ?? config.prompt ?? "Process the following input and return a JSON result.");
+    const systemPrompt = String(
+      config.systemPrompt ??
+        config.prompt ??
+        "Process the following input and return a JSON result.",
+    );
     messages = [
       { role: "system", content: systemPrompt },
       { role: "user", content: JSON.stringify(input) },
@@ -123,7 +146,8 @@ async function executeAiNode(
   const completion = await openai.chat.completions.create({
     model,
     messages,
-    response_format: responseFormat === "json" ? { type: "json_object" } : undefined,
+    response_format:
+      responseFormat === "json" ? { type: "json_object" } : undefined,
     max_tokens: Number(config.maxTokens ?? 1024),
   });
 
@@ -159,7 +183,7 @@ async function executeAiNode(
 
 async function executeHttpNode(
   config: Record<string, unknown>,
-  input: Record<string, unknown>
+  input: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   const url = String(config.url ?? "");
   if (!url) throw new Error("action.http: no url configured");
@@ -167,13 +191,11 @@ async function executeHttpNode(
   const method = String(config.method ?? "GET").toUpperCase();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(config.headers as Record<string, string> ?? {}),
+    ...((config.headers as Record<string, string>) ?? {}),
   };
 
   const hasBody = ["POST", "PUT", "PATCH"].includes(method);
-  const body = hasBody
-    ? JSON.stringify(config.body ?? input)
-    : undefined;
+  const body = hasBody ? JSON.stringify(config.body ?? input) : undefined;
 
   const startMs = Date.now();
   const response = await fetch(url, { method, headers, body });
@@ -190,7 +212,9 @@ async function executeHttpNode(
   }
 
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status} ${response.statusText} from ${url}`);
+    throw new Error(
+      `HTTP ${response.status} ${response.statusText} from ${url}`,
+    );
   }
 
   return {
@@ -203,57 +227,140 @@ async function executeHttpNode(
 
 // ─── Fallback simulation for non-AI, non-HTTP nodes ───────────────────────────
 
-function simulateOutput(nodeTypeId: string, config: Record<string, unknown>, input: Record<string, unknown>): Record<string, unknown> {
+function simulateOutput(
+  nodeTypeId: string,
+  config: Record<string, unknown>,
+  input: Record<string, unknown>,
+): Record<string, unknown> {
   if (nodeTypeId.startsWith("trigger.")) {
-    return { triggeredAt: new Date().toISOString(), payload: input, source: nodeTypeId.replace("trigger.", "") };
+    return {
+      triggeredAt: new Date().toISOString(),
+      payload: input,
+      source: nodeTypeId.replace("trigger.", ""),
+    };
   }
   if (nodeTypeId === "action.send_email") {
-    return { messageId: `msg_${Math.random().toString(36).slice(2)}`, to: config.to ?? "recipient@example.com", subject: config.subject ?? "Notification", accepted: true, timestamp: new Date().toISOString() };
+    return {
+      messageId: `msg_${Math.random().toString(36).slice(2)}`,
+      to: config.to ?? "recipient@example.com",
+      subject: config.subject ?? "Notification",
+      accepted: true,
+      timestamp: new Date().toISOString(),
+    };
   }
   if (nodeTypeId === "action.slack") {
-    return { ts: `${Date.now() / 1000}`, channel: config.channel ?? "#general", ok: true, messageId: `slack_${Math.random().toString(36).slice(2)}` };
+    return {
+      ts: `${Date.now() / 1000}`,
+      channel: config.channel ?? "#general",
+      ok: true,
+      messageId: `slack_${Math.random().toString(36).slice(2)}`,
+    };
   }
   if (nodeTypeId === "action.create_record") {
-    return { id: Math.floor(Math.random() * 99999), object: config.object_type ?? "Record", createdAt: new Date().toISOString(), fields: { name: (input.name as string) ?? "New Record", status: "active" } };
+    return {
+      id: Math.floor(Math.random() * 99999),
+      object: config.object_type ?? "Record",
+      createdAt: new Date().toISOString(),
+      fields: {
+        name: (input.name as string) ?? "New Record",
+        status: "active",
+      },
+    };
   }
   if (nodeTypeId === "action.db_query") {
-    const rows = Array.from({ length: Math.floor(Math.random() * 8) + 1 }, (_, i) => ({ id: i + 1, value: Math.random() * 100 }));
-    return { rows, rowCount: rows.length, duration: `${Math.floor(Math.random() * 20) + 2}ms` };
+    const rows = Array.from(
+      { length: Math.floor(Math.random() * 8) + 1 },
+      (_, i) => ({ id: i + 1, value: Math.random() * 100 }),
+    );
+    return {
+      rows,
+      rowCount: rows.length,
+      duration: `${Math.floor(Math.random() * 20) + 2}ms`,
+    };
   }
   if (nodeTypeId === "action.spreadsheet") {
-    return { updatedRange: "Sheet1!A2:E100", updatedRows: Math.floor(Math.random() * 5) + 1, spreadsheetId: config.spreadsheetId ?? "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" };
+    return {
+      updatedRange: "Sheet1!A2:E100",
+      updatedRows: Math.floor(Math.random() * 5) + 1,
+      spreadsheetId:
+        config.spreadsheetId ?? "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms",
+    };
   }
   if (nodeTypeId === "logic.if" || nodeTypeId === "logic.router") {
-    return { branch: Math.random() > 0.5 ? "true" : "false", evaluated: true, condition: config.operator ?? "eq" };
+    return {
+      branch: Math.random() > 0.5 ? "true" : "false",
+      evaluated: true,
+      condition: config.operator ?? "eq",
+    };
   }
   if (nodeTypeId === "logic.filter") {
     const kept = Math.floor(Math.random() * 5) + 1;
-    return { filtered: kept, total: kept + Math.floor(Math.random() * 5), passedItems: kept };
+    return {
+      filtered: kept,
+      total: kept + Math.floor(Math.random() * 5),
+      passedItems: kept,
+    };
   }
   if (nodeTypeId === "logic.loop") {
     return { iterations: Math.floor(Math.random() * 8) + 2, completed: true };
   }
   if (nodeTypeId === "logic.delay") {
-    return { delayedMs: parseInt(String(config.duration ?? 1)) * 1000, resumedAt: new Date().toISOString() };
+    return {
+      delayedMs: parseInt(String(config.duration ?? 1)) * 1000,
+      resumedAt: new Date().toISOString(),
+    };
   }
   if (nodeTypeId === "data.transform") {
-    return { transformed: true, inputFields: Object.keys(input).length, outputFields: Object.keys(input).length + 2, schema: { id: "integer", name: "string", createdAt: "datetime" } };
+    return {
+      transformed: true,
+      inputFields: Object.keys(input).length,
+      outputFields: Object.keys(input).length + 2,
+      schema: { id: "integer", name: "string", createdAt: "datetime" },
+    };
   }
   if (nodeTypeId === "data.parse_doc") {
-    return { text: "Extracted document text content. Invoice #12345. Total: $2,450.00. Due: 2025-02-15.", pages: 1, wordCount: 18 };
+    return {
+      text: "Extracted document text content. Invoice #12345. Total: $2,450.00. Due: 2025-02-15.",
+      pages: 1,
+      wordCount: 18,
+    };
   }
-  return { processed: true, timestamp: new Date().toISOString(), nodeType: nodeTypeId };
+  return {
+    processed: true,
+    timestamp: new Date().toISOString(),
+    nodeType: nodeTypeId,
+  };
 }
 
 function simulateError(nodeTypeId: string): string {
   const errors: Record<string, string[]> = {
-    "action.send_email": ["SMTP connection refused", "Invalid recipient address", "Rate limit exceeded"],
-    "action.slack": ["Slack API error: channel_not_found", "Slack API error: not_in_channel"],
-    "action.create_record": ["Duplicate key constraint violation", "Required field 'email' missing"],
-    "action.db_query": ["Connection pool exhausted", "Query execution timeout (30s)", "Deadlock detected"],
+    "action.send_email": [
+      "SMTP connection refused",
+      "Invalid recipient address",
+      "Rate limit exceeded",
+    ],
+    "action.slack": [
+      "Slack API error: channel_not_found",
+      "Slack API error: not_in_channel",
+    ],
+    "action.create_record": [
+      "Duplicate key constraint violation",
+      "Required field 'email' missing",
+    ],
+    "action.db_query": [
+      "Connection pool exhausted",
+      "Query execution timeout (30s)",
+      "Deadlock detected",
+    ],
   };
-  const nodeErrors = errors[nodeTypeId] ?? ["Unexpected error: internal service failure", "Step execution timed out"];
-  return nodeErrors[Math.floor(Math.random() * nodeErrors.length)] ?? "Unexpected error";
+  const nodeErrors = errors[nodeTypeId] ?? [
+    "Unexpected error: internal service failure",
+    "Step execution timed out",
+  ];
+  return (
+    nodeErrors[Math.floor(Math.random() * nodeErrors.length)] ??
+    "Unexpected error"
+  );
 }
 
 // ─── Queue and Worker Engine ───────────────────────────────────────────────────
@@ -273,44 +380,55 @@ class WorkflowJobQueue {
 
   constructor() {
     // Start recovery process on initialization
-    this.recoverJobs().catch(err => {
+    this.recoverJobs().catch((err) => {
       console.error("[Queue] Failed to recover interrupted jobs:", err);
     });
   }
 
   private async recoverJobs() {
     // Wait slightly for database pool to initialize
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000));
     try {
       // Find executions stuck in "pending" or "running" in the database
-      const pendingExecutions = await db.select()
+      const pendingExecutions = await db
+        .select()
         .from(executionsTable)
         .where(sql`${executionsTable.status} IN ('pending', 'running')`)
         .orderBy(executionsTable.startedAt);
 
       if (pendingExecutions.length > 0) {
-        console.log(`[Queue] Recovered ${pendingExecutions.length} interrupted executions.`);
+        console.log(
+          `[Queue] Recovered ${pendingExecutions.length} interrupted executions.`,
+        );
       }
 
       for (const exec of pendingExecutions) {
-        const [workflow] = await db.select()
+        const [workflow] = await db
+          .select()
           .from(workflowsTable)
           .where(eq(workflowsTable.id, exec.workflowId))
           .limit(1);
 
         if (workflow) {
-          const nodes = Array.isArray(workflow.nodes) ? (workflow.nodes as any[]) : [];
+          const nodes = Array.isArray(workflow.nodes)
+            ? (workflow.nodes as any[])
+            : [];
           this.addJob("workflow-execution", {
             executionId: exec.id,
             workflowId: exec.workflowId,
             workflowName: exec.workflowName,
             nodes,
             triggerPayload: {},
-            triggerType: "manual"
+            triggerType: "manual",
           });
         } else {
-          await db.update(executionsTable)
-            .set({ status: "failed", errorMessage: "Workflow no longer exists", finishedAt: new Date() })
+          await db
+            .update(executionsTable)
+            .set({
+              status: "failed",
+              errorMessage: "Workflow no longer exists",
+              finishedAt: new Date(),
+            })
             .where(eq(executionsTable.id, exec.id));
         }
       }
@@ -319,13 +437,17 @@ class WorkflowJobQueue {
     }
   }
 
-  public addJob(type: "workflow-execution" | "webhook-delivery" | "ai-run", data: any, maxAttempts = 2) {
+  public addJob(
+    type: "workflow-execution" | "webhook-delivery" | "ai-run",
+    data: any,
+    maxAttempts = 2,
+  ) {
     const job: QueueJob = {
       id: `${type}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       type,
       data,
       attempts: 0,
-      maxAttempts
+      maxAttempts,
     };
     this.queue.push(job);
     this.processQueue();
@@ -339,35 +461,66 @@ class WorkflowJobQueue {
     const job = this.queue.shift()!;
     this.activeWorkers++;
 
-    this.runJob(job).catch(err => {
-      console.error(`[Queue] Job execution error on job ${job.id}:`, err);
-    }).finally(() => {
-      this.activeWorkers--;
-      this.processQueue();
-    });
+    this.runJob(job)
+      .catch((err) => {
+        console.error(`[Queue] Job execution error on job ${job.id}:`, err);
+      })
+      .finally(() => {
+        this.activeWorkers--;
+        this.processQueue();
+      });
 
     this.processQueue();
   }
 
   private async runJob(job: QueueJob) {
     job.attempts++;
-    console.log(`[Queue] Running job ${job.id} (attempt ${job.attempts}/${job.maxAttempts})`);
+    console.log(
+      `[Queue] Running job ${job.id} (attempt ${job.attempts}/${job.maxAttempts})`,
+    );
 
     try {
       if (job.type === "workflow-execution") {
-        const { executionId, workflowId, workflowName, nodes, triggerPayload, triggerType } = job.data;
-        
-        await db.update(executionsTable)
+        const {
+          executionId,
+          workflowId,
+          workflowName,
+          nodes,
+          triggerPayload,
+          triggerType,
+        } = job.data;
+
+        await db
+          .update(executionsTable)
           .set({ status: "running" })
           .where(eq(executionsTable.id, executionId));
 
-        await runWorkflow(executionId, workflowId, workflowName, nodes, triggerPayload, triggerType);
+        await runWorkflow(
+          executionId,
+          workflowId,
+          workflowName,
+          nodes,
+          triggerPayload,
+          triggerType,
+        );
       } else if (job.type === "webhook-delivery") {
         const { workflowId, payload } = job.data;
-        const [workflow] = await db.select().from(workflowsTable).where(eq(workflowsTable.id, workflowId)).limit(1);
+        const [workflow] = await db
+          .select()
+          .from(workflowsTable)
+          .where(eq(workflowsTable.id, workflowId))
+          .limit(1);
         if (workflow) {
-          const nodes = Array.isArray(workflow.nodes) ? (workflow.nodes as any[]) : [];
-          await startWorkflowExecution(workflowId, workflow.name, nodes, "webhook", payload);
+          const nodes = Array.isArray(workflow.nodes)
+            ? (workflow.nodes as any[])
+            : [];
+          await startWorkflowExecution(
+            workflowId,
+            workflow.name,
+            nodes,
+            "webhook",
+            payload,
+          );
         }
       } else if (job.type === "ai-run") {
         const { nodeTypeId, config, input, workflowId } = job.data;
@@ -386,15 +539,24 @@ class WorkflowJobQueue {
       } else {
         if (job.type === "workflow-execution") {
           const { executionId, workflowId } = job.data;
-          await db.update(executionsTable)
+          await db
+            .update(executionsTable)
             .set({
               status: "failed",
               finishedAt: new Date(),
-              errorMessage: `Job execution failed after max retry attempts: ${errMsg}`
+              errorMessage: `Job execution failed after max retry attempts: ${errMsg}`,
             })
             .where(eq(executionsTable.id, executionId));
-          await db.update(workflowsTable).set({ lastRunStatus: "failed", lastRunAt: new Date() }).where(eq(workflowsTable.id, workflowId));
-          await writeAudit("execution.failed", "execution", String(executionId), { workflowId, error: errMsg });
+          await db
+            .update(workflowsTable)
+            .set({ lastRunStatus: "failed", lastRunAt: new Date() })
+            .where(eq(workflowsTable.id, workflowId));
+          await writeAudit(
+            "execution.failed",
+            "execution",
+            String(executionId),
+            { workflowId, error: errMsg },
+          );
         }
       }
     }
@@ -411,28 +573,45 @@ export async function runWorkflow(
   workflowName: string,
   nodes: WorkflowNode[],
   triggerPayload: Record<string, unknown> = {},
-  triggerType = "manual"
+  triggerType = "manual",
 ): Promise<void> {
-  const sorted = [...nodes].sort((a, b) => (a.position?.x ?? 0) - (b.position?.x ?? 0));
+  const sorted = [...nodes].sort(
+    (a, b) => (a.position?.x ?? 0) - (b.position?.x ?? 0),
+  );
 
-  await writeAudit("execution.started", "execution", String(executionId), { workflowId, workflowName, triggerType, nodeCount: sorted.length });
+  await writeAudit("execution.started", "execution", String(executionId), {
+    workflowId,
+    workflowName,
+    triggerType,
+    nodeCount: sorted.length,
+  });
 
-  let currentInput: Record<string, unknown> = { ...triggerPayload, _triggerType: triggerType };
+  let currentInput: Record<string, unknown> = {
+    ...triggerPayload,
+    _triggerType: triggerType,
+  };
   let failed = false;
 
   // Resuming checkpoints check
-  const checkpoints = await db.select()
+  const checkpoints = await db
+    .select()
     .from(executionCheckpointsTable)
     .where(eq(executionCheckpointsTable.executionId, executionId))
     .orderBy(executionCheckpointsTable.startedAt);
 
-  const successfulCheckpoints = checkpoints.filter(c => c.status === "success");
-  const completedNodeIds = new Set(successfulCheckpoints.map(c => c.nodeId));
+  const successfulCheckpoints = checkpoints.filter(
+    (c) => c.status === "success",
+  );
+  const completedNodeIds = new Set(successfulCheckpoints.map((c) => c.nodeId));
 
   if (successfulCheckpoints.length > 0) {
-    const lastCompleted = successfulCheckpoints[successfulCheckpoints.length - 1];
+    const lastCompleted =
+      successfulCheckpoints[successfulCheckpoints.length - 1];
     if (lastCompleted.outputData) {
-      currentInput = { ...((lastCompleted.outputData ?? {}) as Record<string, unknown>), _prevNode: lastCompleted.nodeId };
+      currentInput = {
+        ...((lastCompleted.outputData ?? {}) as Record<string, unknown>),
+        _prevNode: lastCompleted.nodeId,
+      };
     }
   }
 
@@ -457,23 +636,31 @@ export async function runWorkflow(
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const startedAt = new Date();
 
-      const [checkpoint] = await db.insert(executionCheckpointsTable).values({
-        executionId,
-        nodeId: node.id,
-        nodeName: node.name,
-        nodeType: nodeTypeId,
-        status: "running",
-        attemptNumber: attempt,
-        inputData: currentInput,
-        startedAt,
-      }).returning();
+      const [checkpoint] = await db
+        .insert(executionCheckpointsTable)
+        .values({
+          executionId,
+          nodeId: node.id,
+          nodeName: node.name,
+          nodeType: nodeTypeId,
+          status: "running",
+          attemptNumber: attempt,
+          inputData: currentInput,
+          startedAt,
+        })
+        .returning();
 
       let output: Record<string, unknown>;
       let execError: string | null = null;
 
       try {
         if (isAiNode && process.env.OPENAI_API_KEY) {
-          output = await executeAiNode(nodeTypeId, config, currentInput, workflowId);
+          output = await executeAiNode(
+            nodeTypeId,
+            config,
+            currentInput,
+            workflowId,
+          );
         } else if (isHttpNode) {
           output = await executeHttpNode(config, currentInput);
         } else {
@@ -491,15 +678,27 @@ export async function runWorkflow(
 
       if (execError) {
         lastError = execError;
-        await db.update(executionCheckpointsTable)
-          .set({ status: "failed", errorMessage: lastError, completedAt: new Date(), durationMs: duration })
+        await db
+          .update(executionCheckpointsTable)
+          .set({
+            status: "failed",
+            errorMessage: lastError,
+            completedAt: new Date(),
+            durationMs: duration,
+          })
           .where(eq(executionCheckpointsTable.id, checkpoint.id));
         if (attempt < maxAttempts) await new Promise((r) => setTimeout(r, 500));
       } else {
         finalOutput = output!;
         finalDuration = duration;
-        await db.update(executionCheckpointsTable)
-          .set({ status: "success", outputData: output!, completedAt: new Date(), durationMs: duration })
+        await db
+          .update(executionCheckpointsTable)
+          .set({
+            status: "success",
+            outputData: output!,
+            completedAt: new Date(),
+            durationMs: duration,
+          })
           .where(eq(executionCheckpointsTable.id, checkpoint.id));
         succeeded = true;
         break;
@@ -519,17 +718,37 @@ export async function runWorkflow(
         jobData: { nodeTypeId, config, lastInput: currentInput },
       });
 
-      await writeAudit("execution.node_failed", "execution", String(executionId), { nodeId: node.id, nodeName: node.name, nodeType: nodeTypeId, error: lastError });
+      await writeAudit(
+        "execution.node_failed",
+        "execution",
+        String(executionId),
+        {
+          nodeId: node.id,
+          nodeName: node.name,
+          nodeType: nodeTypeId,
+          error: lastError,
+        },
+      );
 
-      await db.update(executionsTable).set({
-        status: "failed",
-        finishedAt: new Date(),
-        durationMs: sql`EXTRACT(EPOCH FROM (NOW() - ${executionsTable.startedAt})) * 1000`,
-        errorMessage: `Node "${node.name}" failed after ${maxAttempts} attempt(s): ${lastError}`,
-      }).where(eq(executionsTable.id, executionId));
+      await db
+        .update(executionsTable)
+        .set({
+          status: "failed",
+          finishedAt: new Date(),
+          durationMs: sql`EXTRACT(EPOCH FROM (NOW() - ${executionsTable.startedAt})) * 1000`,
+          errorMessage: `Node "${node.name}" failed after ${maxAttempts} attempt(s): ${lastError}`,
+        })
+        .where(eq(executionsTable.id, executionId));
 
-      await db.update(workflowsTable).set({ lastRunStatus: "failed", lastRunAt: new Date() }).where(eq(workflowsTable.id, workflowId));
-      await writeAudit("execution.failed", "execution", String(executionId), { workflowId, failedNode: node.name, error: lastError });
+      await db
+        .update(workflowsTable)
+        .set({ lastRunStatus: "failed", lastRunAt: new Date() })
+        .where(eq(workflowsTable.id, workflowId));
+      await writeAudit("execution.failed", "execution", String(executionId), {
+        workflowId,
+        failedNode: node.name,
+        error: lastError,
+      });
       failed = true;
       break;
     }
@@ -538,12 +757,25 @@ export async function runWorkflow(
   }
 
   if (!failed) {
-    const [exec] = await db.select().from(executionsTable).where(eq(executionsTable.id, executionId));
+    const [exec] = await db
+      .select()
+      .from(executionsTable)
+      .where(eq(executionsTable.id, executionId));
     const durationMs = exec ? Date.now() - exec.startedAt.getTime() : 0;
 
-    await db.update(executionsTable).set({ status: "success", finishedAt: new Date(), durationMs }).where(eq(executionsTable.id, executionId));
-    await db.update(workflowsTable).set({ lastRunStatus: "success", lastRunAt: new Date() }).where(eq(workflowsTable.id, workflowId));
-    await writeAudit("execution.completed", "execution", String(executionId), { workflowId, workflowName, durationMs });
+    await db
+      .update(executionsTable)
+      .set({ status: "success", finishedAt: new Date(), durationMs })
+      .where(eq(executionsTable.id, executionId));
+    await db
+      .update(workflowsTable)
+      .set({ lastRunStatus: "success", lastRunAt: new Date() })
+      .where(eq(workflowsTable.id, workflowId));
+    await writeAudit("execution.completed", "execution", String(executionId), {
+      workflowId,
+      workflowName,
+      durationMs,
+    });
 
     // Record metering event
     try {
@@ -552,7 +784,12 @@ export async function runWorkflow(
         workflowName,
         eventType: "workflow.execution.completed",
         quantity: sorted.length,
-        metadata: { executionId, durationMs, nodeCount: sorted.length, triggerType },
+        metadata: {
+          executionId,
+          durationMs,
+          nodeCount: sorted.length,
+          triggerType,
+        },
       });
     } catch {
       // Non-fatal
@@ -567,23 +804,35 @@ export async function startWorkflowExecution(
   workflowName: string,
   nodes: WorkflowNode[],
   triggerType: "manual" | "webhook" | "schedule" | "api",
-  triggerPayload: Record<string, unknown> = {}
+  triggerPayload: Record<string, unknown> = {},
 ): Promise<typeof executionsTable.$inferSelect> {
-  const [execution] = await db.insert(executionsTable).values({
-    workflowId,
-    workflowName,
-    status: "pending",
-    startedAt: new Date(),
-    steps: [],
-  }).returning();
+  const [execution] = await db
+    .insert(executionsTable)
+    .values({
+      workflowId,
+      workflowName,
+      status: "pending",
+      startedAt: new Date(),
+      steps: [],
+    })
+    .returning();
 
-  await db.update(workflowsTable).set({
-    executionCount: sql`${workflowsTable.executionCount} + 1`,
-    lastRunAt: new Date(),
-    lastRunStatus: "running",
-  }).where(eq(workflowsTable.id, workflowId));
+  await db
+    .update(workflowsTable)
+    .set({
+      executionCount: sql`${workflowsTable.executionCount} + 1`,
+      lastRunAt: new Date(),
+      lastRunStatus: "running",
+    })
+    .where(eq(workflowsTable.id, workflowId));
 
-  await writeAudit("execution.started", "workflow", String(workflowId), { executionId: execution.id, triggerType, workflowName }, triggerType === "webhook" ? "webhook" : "user");
+  await writeAudit(
+    "execution.started",
+    "workflow",
+    String(workflowId),
+    { executionId: execution.id, triggerType, workflowName },
+    triggerType === "webhook" ? "webhook" : "user",
+  );
 
   publishEvent({
     type: "execution.started",
@@ -596,32 +845,40 @@ export async function startWorkflowExecution(
 
   // Save a version snapshot on each run (only if nodes exist)
   if (nodes.length > 0) {
-    const existing = await db.select({ version: workflowVersionsTable.version })
+    const existing = await db
+      .select({ version: workflowVersionsTable.version })
       .from(workflowVersionsTable)
       .where(eq(workflowVersionsTable.workflowId, workflowId))
       .orderBy(sql`${workflowVersionsTable.version} DESC`)
       .limit(1);
     const nextVersion = (existing[0]?.version ?? 0) + 1;
     if (nextVersion <= 1 || nodes.length > 0) {
-      await db.insert(workflowVersionsTable).values({
-        workflowId,
-        version: nextVersion,
-        name: workflowName,
-        nodes,
-        changeNote: `Auto-snapshot on execution (${triggerType})`,
-      }).onConflictDoNothing();
+      await db
+        .insert(workflowVersionsTable)
+        .values({
+          workflowId,
+          version: nextVersion,
+          name: workflowName,
+          nodes,
+          changeNote: `Auto-snapshot on execution (${triggerType})`,
+        })
+        .onConflictDoNothing();
     }
   }
 
   // Queue the job instead of inline execution
-  jobQueue.addJob("workflow-execution", {
-    executionId: execution.id,
-    workflowId,
-    workflowName,
-    nodes,
-    triggerPayload,
-    triggerType
-  }, 2);
+  jobQueue.addJob(
+    "workflow-execution",
+    {
+      executionId: execution.id,
+      workflowId,
+      workflowName,
+      nodes,
+      triggerPayload,
+      triggerType,
+    },
+    2,
+  );
 
   return execution;
 }

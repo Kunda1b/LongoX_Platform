@@ -143,7 +143,10 @@ export function detectChanges(
       const detail: string[] = [];
       if (old.label !== node.label) detail.push("label");
       if (old.type !== node.type) detail.push("type");
-      if (old.position.x !== node.position.x || old.position.y !== node.position.y)
+      if (
+        old.position.x !== node.position.x ||
+        old.position.y !== node.position.y
+      )
         detail.push("position");
       changes.push({
         type: "node_modified",
@@ -156,12 +159,20 @@ export function detectChanges(
 
   for (const node of oldGraph.nodes) {
     if (!newNodeMap.has(node.id)) {
-      changes.push({ type: "node_removed", nodeId: node.id, label: node.label });
+      changes.push({
+        type: "node_removed",
+        nodeId: node.id,
+        label: node.label,
+      });
     }
   }
 
-  const oldEdgeSet = new Set(oldGraph.edges.map((e) => `${e.source}->${e.target}`));
-  const newEdgeSet = new Set(newGraph.edges.map((e) => `${e.source}->${e.target}`));
+  const oldEdgeSet = new Set(
+    oldGraph.edges.map((e) => `${e.source}->${e.target}`),
+  );
+  const newEdgeSet = new Set(
+    newGraph.edges.map((e) => `${e.source}->${e.target}`),
+  );
 
   for (const edge of newGraph.edges) {
     const key = `${edge.source}->${edge.target}`;

@@ -6,7 +6,7 @@ import {
   useCreateDashboard,
   useDeleteDashboard,
   getListDashboardsQueryKey,
-} from "@autoflow/api-client-react";
+} from "@longox/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -62,42 +62,52 @@ export default function DashboardsPage() {
 
   const { data: dashboards = [], isLoading } = useListDashboards(
     search ? { search } : {},
-    { query: { queryKey: getListDashboardsQueryKey(search ? { search } : {}) } }
+    {
+      query: { queryKey: getListDashboardsQueryKey(search ? { search } : {}) },
+    },
   );
 
   const createMutation = useCreateDashboard({
     mutation: {
       onSuccess: (d) => {
-        queryClient.invalidateQueries({ queryKey: getListDashboardsQueryKey() });
+        queryClient.invalidateQueries({
+          queryKey: getListDashboardsQueryKey(),
+        });
         setCreateOpen(false);
         setNewName("");
         setNewDesc("");
         toast({ title: "Dashboard created" });
         setLocation(`/dashboards/${d.id}`);
       },
-      onError: () => toast({ title: "Failed to create dashboard", variant: "destructive" }),
+      onError: () =>
+        toast({ title: "Failed to create dashboard", variant: "destructive" }),
     },
   });
 
   const deleteMutation = useDeleteDashboard({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListDashboardsQueryKey() });
+        queryClient.invalidateQueries({
+          queryKey: getListDashboardsQueryKey(),
+        });
         setDeleteId(null);
         toast({ title: "Dashboard deleted" });
       },
-      onError: () => toast({ title: "Failed to delete dashboard", variant: "destructive" }),
+      onError: () =>
+        toast({ title: "Failed to delete dashboard", variant: "destructive" }),
     },
   });
 
   const handleCreate = () => {
     if (!newName.trim()) return;
-    createMutation.mutate({ data: { name: newName.trim(), description: newDesc || undefined } });
+    createMutation.mutate({
+      data: { name: newName.trim(), description: newDesc || undefined },
+    });
   };
 
   const filteredDashboards = search
     ? dashboards.filter((d) =>
-        d.name.toLowerCase().includes(search.toLowerCase())
+        d.name.toLowerCase().includes(search.toLowerCase()),
       )
     : dashboards;
 
@@ -105,8 +115,12 @@ export default function DashboardsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard Builder</h1>
-          <p className="text-muted-foreground mt-1">Build and publish metric dashboards for your team</p>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Dashboard Builder
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Build and publish metric dashboards for your team
+          </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
@@ -125,7 +139,8 @@ export default function DashboardsPage() {
           />
         </div>
         <div className="text-sm text-muted-foreground">
-          {filteredDashboards.length} dashboard{filteredDashboards.length !== 1 ? "s" : ""}
+          {filteredDashboards.length} dashboard
+          {filteredDashboards.length !== 1 ? "s" : ""}
         </div>
       </div>
 
@@ -168,17 +183,27 @@ export default function DashboardsPage() {
                     <LayoutDashboard className="h-5 w-5" />
                   </div>
                   <Badge
-                    variant={dashboard.status === "published" ? "default" : "secondary"}
+                    variant={
+                      dashboard.status === "published" ? "default" : "secondary"
+                    }
                     className="text-xs"
                   >
                     {dashboard.status === "published" ? (
-                      <><Globe className="h-3 w-3 mr-1" />Live</>
+                      <>
+                        <Globe className="h-3 w-3 mr-1" />
+                        Live
+                      </>
                     ) : (
-                      <><FileStack className="h-3 w-3 mr-1" />Draft</>
+                      <>
+                        <FileStack className="h-3 w-3 mr-1" />
+                        Draft
+                      </>
                     )}
                   </Badge>
                 </div>
-                <h3 className="font-semibold text-base leading-tight mb-1">{dashboard.name}</h3>
+                <h3 className="font-semibold text-base leading-tight mb-1">
+                  {dashboard.name}
+                </h3>
                 {dashboard.description && (
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                     {dashboard.description}
@@ -187,22 +212,31 @@ export default function DashboardsPage() {
                 <div className="flex items-center gap-3 text-xs text-muted-foreground mt-3">
                   <span className="flex items-center gap-1">
                     <BarChart2 className="h-3.5 w-3.5" />
-                    {(dashboard.widgets as unknown[]).length} widget{(dashboard.widgets as unknown[]).length !== 1 ? "s" : ""}
+                    {(dashboard.widgets as unknown[]).length} widget
+                    {(dashboard.widgets as unknown[]).length !== 1 ? "s" : ""}
                   </span>
                   <span>
-                    Updated {formatDistanceToNow(new Date(dashboard.updatedAt), { addSuffix: true })}
+                    Updated{" "}
+                    {formatDistanceToNow(new Date(dashboard.updatedAt), {
+                      addSuffix: true,
+                    })}
                   </span>
                 </div>
               </Link>
               <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
+                  <DropdownMenuTrigger
+                    asChild
+                    onClick={(e) => e.preventDefault()}
+                  >
                     <Button variant="ghost" size="icon" className="h-8 w-8">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setLocation(`/dashboards/${dashboard.id}`)}>
+                    <DropdownMenuItem
+                      onClick={() => setLocation(`/dashboards/${dashboard.id}`)}
+                    >
                       <Pencil className="h-4 w-4 mr-2" />
                       Edit
                     </DropdownMenuItem>
@@ -253,26 +287,35 @@ export default function DashboardsPage() {
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button onClick={handleCreate} disabled={!newName.trim() || createMutation.isPending}>
+            <Button
+              onClick={handleCreate}
+              disabled={!newName.trim() || createMutation.isPending}
+            >
               {createMutation.isPending ? "Creating…" : "Create Dashboard"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={deleteId !== null} onOpenChange={(o) => !o && setDeleteId(null)}>
+      <AlertDialog
+        open={deleteId !== null}
+        onOpenChange={(o) => !o && setDeleteId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete dashboard?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the dashboard and all its widgets. This action cannot be undone.
+              This will permanently delete the dashboard and all its widgets.
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deleteId && deleteMutation.mutate({ id: deleteId })}
+              onClick={() =>
+                deleteId && deleteMutation.mutate({ id: deleteId })
+              }
             >
               Delete
             </AlertDialogAction>

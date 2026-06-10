@@ -10,10 +10,7 @@ export interface EvaluationResult {
 }
 
 export class EvaluationService {
-  evaluate(
-    output: string,
-    expected?: string,
-  ): EvaluationResult {
+  evaluate(output: string, expected?: string): EvaluationResult {
     const metrics = {
       relevance: this.evaluateRelevance(output, expected),
       accuracy: this.evaluateAccuracy(output, expected),
@@ -60,7 +57,8 @@ export class EvaluationService {
     const expectedNorm = expected.toLowerCase().trim();
 
     if (outputNorm === expectedNorm) return 1;
-    if (outputNorm.includes(expectedNorm) || expectedNorm.includes(outputNorm)) return 0.8;
+    if (outputNorm.includes(expectedNorm) || expectedNorm.includes(outputNorm))
+      return 0.8;
 
     return 0.5;
   }
@@ -73,7 +71,9 @@ export class EvaluationService {
       output.toLowerCase().includes(part.toLowerCase()),
     );
 
-    return expectedParts.length > 0 ? matchedParts.length / expectedParts.length : 1;
+    return expectedParts.length > 0
+      ? matchedParts.length / expectedParts.length
+      : 1;
   }
 
   private evaluateCoherence(output: string): number {

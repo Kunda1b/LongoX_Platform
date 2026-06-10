@@ -1,5 +1,5 @@
 {
-  "name": "@autoflow/dashboard-widgets",
+  "name": "@longox/dashboard-widgets",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,9 +7,9 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@autoflow/shared-types": "workspace:*",
-    "@autoflow/design-system": "workspace:*",
-    "@autoflow/dashboard-renderer": "workspace:*"
+    "@longox/shared-types": "workspace:*",
+    "@longox/design-system": "workspace:*",
+    "@longox/dashboard-renderer": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.3.1",

@@ -1,23 +1,35 @@
 import type { ActionContext, ActionResult } from "./types";
 import { validateAuth, getAuthHeaders } from "./auth";
 
-export async function executeHttpAction(context: ActionContext): Promise<ActionResult> {
+export async function executeHttpAction(
+  context: ActionContext,
+): Promise<ActionResult> {
   const { config, auth, input } = context;
   const url = String(config.url ?? "");
   if (!url) {
-    return { success: false, data: {}, error: "URL is required", durationMs: 0 };
+    return {
+      success: false,
+      data: {},
+      error: "URL is required",
+      durationMs: 0,
+    };
   }
 
   const authValidation = validateAuth(auth);
   if (!authValidation.valid) {
-    return { success: false, data: {}, error: authValidation.error ?? "Invalid auth", durationMs: 0 };
+    return {
+      success: false,
+      data: {},
+      error: authValidation.error ?? "Invalid auth",
+      durationMs: 0,
+    };
   }
 
   const method = String(config.method ?? "GET").toUpperCase();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...getAuthHeaders(auth),
-    ...(config.headers as Record<string, string> ?? {}),
+    ...((config.headers as Record<string, string>) ?? {}),
   };
 
   const hasBody = ["POST", "PUT", "PATCH"].includes(method);

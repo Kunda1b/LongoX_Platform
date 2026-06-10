@@ -17,11 +17,17 @@ export default function RBACPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">RBAC</h1>
-          <p className="text-sm text-muted-foreground">Role-based access control</p>
+          <p className="text-sm text-muted-foreground">
+            Role-based access control
+          </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline"><UserPlus className="mr-1 h-4 w-4" /> Invite User</Button>
-          <Button><Plus className="mr-1 h-4 w-4" /> Add Role</Button>
+          <Button variant="outline">
+            <UserPlus className="mr-1 h-4 w-4" /> Invite User
+          </Button>
+          <Button>
+            <Plus className="mr-1 h-4 w-4" /> Add Role
+          </Button>
         </div>
       </div>
 

@@ -8,7 +8,10 @@
       "type": "stat",
       "label": "Success Rate",
       "query": "executions:status:last_24h",
-      "config": { "aggregation": "percentage", "filter": { "status": "completed" } }
+      "config": {
+        "aggregation": "percentage",
+        "filter": { "status": "completed" }
+      }
     },
     {
       "id": "executions-trend",

@@ -19,14 +19,22 @@ export function generateSpanId(): string {
   return `span_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 }
 
-export function initObservability(serviceName: string, opts?: { tracing?: boolean; metrics?: boolean }): void {
+export function initObservability(
+  serviceName: string,
+  opts?: { tracing?: boolean; metrics?: boolean },
+): void {
   traceEnabled = opts?.tracing ?? false;
-  console.log(`[Observability] Initialized for ${serviceName} (tracing=${traceEnabled})`);
+  console.log(
+    `[Observability] Initialized for ${serviceName} (tracing=${traceEnabled})`,
+  );
 }
 
 export function tracingMiddleware(serviceName: string) {
   return (req: Request, res: Response, next: NextFunction): void => {
-    if (!traceEnabled) { next(); return; }
+    if (!traceEnabled) {
+      next();
+      return;
+    }
 
     const traceId = (req.headers["x-trace-id"] as string) ?? generateTraceId();
     const spanId = generateSpanId();
@@ -57,7 +65,9 @@ export function tracingMiddleware(serviceName: string) {
       };
 
       if (process.env.NODE_ENV === "development") {
-        console.log(`[Trace] ${serviceName} ${req.method} ${req.path} ${res.statusCode} ${durationMs}ms`);
+        console.log(
+          `[Trace] ${serviceName} ${req.method} ${req.path} ${res.statusCode} ${durationMs}ms`,
+        );
       } else {
         console.log(JSON.stringify({ type: "span", ...logData }));
       }
@@ -71,16 +81,28 @@ export function getTraceContext(traceId: string): TraceContext | undefined {
   return traceContextStorage.get(traceId);
 }
 
-export function recordMetric(name: string, value: number, tags?: Record<string, string>): void {
-  const entry = { metric: name, value, tags: tags ?? {}, timestamp: new Date().toISOString() };
+export function recordMetric(
+  name: string,
+  value: number,
+  tags?: Record<string, string>,
+): void {
+  const entry = {
+    metric: name,
+    value,
+    tags: tags ?? {},
+    timestamp: new Date().toISOString(),
+  };
   if (process.env.NODE_ENV === "production") {
     console.log(JSON.stringify({ type: "metric", ...entry }));
   }
 }
 
-export function recordEvent(eventType: string, data: Record<string, unknown>): void {
+export function recordEvent(
+  eventType: string,
+  data: Record<string, unknown>,
+): void {
   const entry = { event: eventType, data, timestamp: new Date().toISOString() };
   console.log(JSON.stringify({ type: "event", ...entry }));
 }
 
-export { InMemoryCache as MetricsStore } from "@autoflow/shared-cache";
+export { InMemoryCache as MetricsStore } from "@longox/shared-cache";

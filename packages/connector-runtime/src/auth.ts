@@ -2,14 +2,18 @@ import type { AuthConfig, AuthMethod } from "./types";
 
 export interface AuthValidator {
   type: AuthMethod;
-  validate(credentials: Record<string, unknown>): { valid: boolean; error?: string };
+  validate(credentials: Record<string, unknown>): {
+    valid: boolean;
+    error?: string;
+  };
   getHeaders(credentials: Record<string, unknown>): Record<string, string>;
 }
 
 const apiKeyValidator: AuthValidator = {
   type: "api_key",
   validate(credentials) {
-    if (!credentials.apiKey) return { valid: false, error: "apiKey is required" };
+    if (!credentials.apiKey)
+      return { valid: false, error: "apiKey is required" };
     return { valid: true };
   },
   getHeaders(credentials) {
@@ -22,12 +26,16 @@ const apiKeyValidator: AuthValidator = {
 const basicAuthValidator: AuthValidator = {
   type: "basic",
   validate(credentials) {
-    if (!credentials.username) return { valid: false, error: "username is required" };
-    if (!credentials.password) return { valid: false, error: "password is required" };
+    if (!credentials.username)
+      return { valid: false, error: "username is required" };
+    if (!credentials.password)
+      return { valid: false, error: "password is required" };
     return { valid: true };
   },
   getHeaders(credentials) {
-    const encoded = Buffer.from(`${credentials.username}:${credentials.password}`).toString("base64");
+    const encoded = Buffer.from(
+      `${credentials.username}:${credentials.password}`,
+    ).toString("base64");
     return { Authorization: `Basic ${encoded}` };
   },
 };
@@ -66,7 +74,10 @@ export function getAuthValidator(type: AuthMethod): AuthValidator {
   return validators[type] ?? noAuthValidator;
 }
 
-export function validateAuth(config: AuthConfig): { valid: boolean; error?: string } {
+export function validateAuth(config: AuthConfig): {
+  valid: boolean;
+  error?: string;
+} {
   return getAuthValidator(config.type).validate(config.credentials);
 }
 

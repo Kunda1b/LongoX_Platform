@@ -4,7 +4,10 @@ import { useAppStore } from "@/stores/app-store";
 import { TenantSwitcher } from "@/components/TenantSwitcher";
 import { EnvironmentSwitcher } from "@/components/EnvironmentSwitcher";
 import { NotificationCenter } from "@/components/NotificationCenter";
-import { CommandPalette, useCommandPalette } from "@/components/command-palette";
+import {
+  CommandPalette,
+  useCommandPalette,
+} from "@/components/command-palette";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +20,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Search, LogOut, Settings, User, Keyboard } from "lucide-react";
 
 export function GlobalNav() {
@@ -27,8 +36,13 @@ export function GlobalNav() {
   const [searchOpen, setSearchOpen] = useState(false);
 
   const userInitials = user?.name
-    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
-    : user?.email?.slice(0, 2).toUpperCase() ?? "??";
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : (user?.email?.slice(0, 2).toUpperCase() ?? "??");
 
   return (
     <>
@@ -87,7 +101,11 @@ export function GlobalNav() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+              >
                 <Avatar className="h-7 w-7">
                   <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
                     {userInitials}
@@ -103,7 +121,10 @@ export function GlobalNav() {
                     {user?.email}
                   </span>
                   {user?.role && (
-                    <Badge variant="outline" className="mt-1 text-[10px] w-fit capitalize">
+                    <Badge
+                      variant="outline"
+                      className="mt-1 text-[10px] w-fit capitalize"
+                    >
                       {user.role}
                     </Badge>
                   )}
@@ -111,17 +132,24 @@ export function GlobalNav() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem onClick={() => window.location.href = "/settings"}>
+                <DropdownMenuItem
+                  onClick={() => (window.location.href = "/settings")}
+                >
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.location.href = "/rbac"}>
+                <DropdownMenuItem
+                  onClick={() => (window.location.href = "/rbac")}
+                >
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Access Control</span>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
+              <DropdownMenuItem
+                onClick={logout}
+                className="text-destructive focus:text-destructive"
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>

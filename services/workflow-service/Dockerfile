@@ -5,7 +5,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY services/workflow-service/package.json ./services/workflow-service/
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm --filter @autoflow/workflow-service build
+RUN pnpm --filter @longox/workflow-service build
 FROM node:20-alpine
 WORKDIR /app
 COPY --from=base /app .

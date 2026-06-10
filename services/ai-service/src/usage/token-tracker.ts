@@ -1,4 +1,4 @@
-import { db, tokenUsageTable, usageEventsTable } from "@autoflow/db";
+import { db, tokenUsageTable, usageEventsTable } from "@longox/db";
 import { eq, sql, and, gte } from "drizzle-orm";
 
 export interface TokenUsageRecord {
@@ -48,17 +48,24 @@ export class TokenTracker {
     totalInputTokens: number;
     totalOutputTokens: number;
     totalCost: number;
-    byModel: Record<string, { inputTokens: number; outputTokens: number; cost: number }>;
+    byModel: Record<
+      string,
+      { inputTokens: number; outputTokens: number; cost: number }
+    >;
   }> {
     const conditions = [];
     if (workflowId) conditions.push(eq(tokenUsageTable.workflowId, workflowId));
     if (startDate) conditions.push(gte(tokenUsageTable.createdAt, startDate));
 
-    const rows = await db.select()
+    const rows = await db
+      .select()
       .from(tokenUsageTable)
       .where(conditions.length > 0 ? and(...conditions) : undefined);
 
-    const byModel: Record<string, { inputTokens: number; outputTokens: number; cost: number }> = {};
+    const byModel: Record<
+      string,
+      { inputTokens: number; outputTokens: number; cost: number }
+    > = {};
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let totalCost = 0;

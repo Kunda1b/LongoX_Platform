@@ -4,7 +4,9 @@ import type { DataSourceAdapter, QueryResult } from "./datasource-adapter";
 export class PostgresAdapter implements DataSourceAdapter {
   kind = "postgresql" as const;
 
-  async testConnection(config: DataSourceConfig): Promise<{ success: boolean; error?: string }> {
+  async testConnection(
+    config: DataSourceConfig,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       const url = config.url as string;
       if (!url) return { success: false, error: "Connection URL is required" };
@@ -18,7 +20,10 @@ export class PostgresAdapter implements DataSourceAdapter {
     }
   }
 
-  async executeQuery(config: DataSourceConfig, query: string): Promise<QueryResult> {
+  async executeQuery(
+    config: DataSourceConfig,
+    query: string,
+  ): Promise<QueryResult> {
     const start = Date.now();
     const url = config.url as string;
     if (!url) throw new Error("Connection URL is required");
@@ -47,20 +52,29 @@ export class PostgresAdapter implements DataSourceAdapter {
   }
 
   async listTables(config: DataSourceConfig): Promise<string[]> {
-    const result = await this.executeQuery(config, `
+    const result = await this.executeQuery(
+      config,
+      `
       SELECT table_name FROM information_schema.tables
       WHERE table_schema = 'public' ORDER BY table_name
-    `);
+    `,
+    );
     return result.rows.map((r) => String(r["table_name"] ?? ""));
   }
 
-  async getSchema(config: DataSourceConfig, table: string): Promise<{ column: string; type: string; nullable: boolean }[]> {
-    const result = await this.executeQuery(config, `
+  async getSchema(
+    config: DataSourceConfig,
+    table: string,
+  ): Promise<{ column: string; type: string; nullable: boolean }[]> {
+    const result = await this.executeQuery(
+      config,
+      `
       SELECT column_name, data_type, is_nullable
       FROM information_schema.columns
       WHERE table_schema = 'public' AND table_name = $1
       ORDER BY ordinal_position
-    `);
+    `,
+    );
     return result.rows.map((r) => ({
       column: String(r["column_name"] ?? ""),
       type: String(r["data_type"] ?? ""),

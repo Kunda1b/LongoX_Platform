@@ -29,12 +29,12 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <ApiClientBootstrap>
-      <AuthProvider>
-        <TooltipProvider>
-          {children}
-          <Toaster />
-        </TooltipProvider>
-      </AuthProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            {children}
+            <Toaster />
+          </TooltipProvider>
+        </AuthProvider>
       </ApiClientBootstrap>
     </QueryClientProvider>
   );

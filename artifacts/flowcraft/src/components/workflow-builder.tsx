@@ -1,4 +1,11 @@
-import { useCallback, useRef, useState, useMemo, DragEvent, useEffect } from "react";
+import {
+  useCallback,
+  useRef,
+  useState,
+  useMemo,
+  DragEvent,
+  useEffect,
+} from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -47,10 +54,10 @@ import {
   PanelLeftOpen,
   Menu,
 } from "lucide-react";
-import { useUpdateWorkflow } from "@autoflow/api-client-react";
+import { useUpdateWorkflow } from "@longox/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import type { NodeType } from "@autoflow/api-client-react";
-import type { WorkflowNode } from "@autoflow/api-client-react";
+import type { NodeType } from "@longox/api-client-react";
+import type { WorkflowNode } from "@longox/api-client-react";
 import { cn } from "@/lib/utils";
 
 // ─── Mobile detection ─────────────────────────────────────────────────────────
@@ -60,7 +67,7 @@ function useIsMobile() {
     typeof window !== "undefined"
       ? window.matchMedia("(max-width: 767px)").matches ||
         window.matchMedia("(pointer: coarse)").matches
-      : false
+      : false,
   );
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
@@ -138,7 +145,12 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
         { label: "Custom cron", value: "custom" },
       ],
     },
-    { key: "cron", label: "Cron expression (if Custom)", type: "text", placeholder: "0 9 * * 1-5" },
+    {
+      key: "cron",
+      label: "Cron expression (if Custom)",
+      type: "text",
+      placeholder: "0 9 * * 1-5",
+    },
     { key: "timezone", label: "Timezone", type: "text", placeholder: "UTC" },
   ],
   "trigger.webhook": [
@@ -153,7 +165,12 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
         { label: "PATCH", value: "PATCH" },
       ],
     },
-    { key: "path", label: "Path suffix", type: "text", placeholder: "/my-hook" },
+    {
+      key: "path",
+      label: "Path suffix",
+      type: "text",
+      placeholder: "/my-hook",
+    },
     {
       key: "auth",
       label: "Authentication",
@@ -167,8 +184,18 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
     },
   ],
   "trigger.email": [
-    { key: "inbox", label: "Inbox / address", type: "text", placeholder: "support@example.com" },
-    { key: "subject_filter", label: "Subject contains", type: "text", placeholder: "Optional filter" },
+    {
+      key: "inbox",
+      label: "Inbox / address",
+      type: "text",
+      placeholder: "support@example.com",
+    },
+    {
+      key: "subject_filter",
+      label: "Subject contains",
+      type: "text",
+      placeholder: "Optional filter",
+    },
     {
       key: "mark_read",
       label: "Mark as read",
@@ -180,12 +207,27 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
     },
   ],
   "trigger.form": [
-    { key: "form_id", label: "Form ID", type: "text", placeholder: "form_abc123" },
-    { key: "success_redirect", label: "Success redirect URL", type: "text", placeholder: "https://..." },
+    {
+      key: "form_id",
+      label: "Form ID",
+      type: "text",
+      placeholder: "form_abc123",
+    },
+    {
+      key: "success_redirect",
+      label: "Success redirect URL",
+      type: "text",
+      placeholder: "https://...",
+    },
   ],
   "trigger.manual": [],
   "action.http": [
-    { key: "url", label: "URL", type: "text", placeholder: "https://api.example.com/endpoint" },
+    {
+      key: "url",
+      label: "URL",
+      type: "text",
+      placeholder: "https://api.example.com/endpoint",
+    },
     {
       key: "method",
       label: "Method",
@@ -198,25 +240,90 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
         { label: "DELETE", value: "DELETE" },
       ],
     },
-    { key: "headers", label: "Headers (JSON)", type: "textarea", placeholder: '{"Authorization": "Bearer {{token}}"}' },
-    { key: "body", label: "Request body (JSON)", type: "textarea", placeholder: '{"key": "{{value}}"}' },
-    { key: "timeout", label: "Timeout (seconds)", type: "number", placeholder: "30" },
+    {
+      key: "headers",
+      label: "Headers (JSON)",
+      type: "textarea",
+      placeholder: '{"Authorization": "Bearer {{token}}"}',
+    },
+    {
+      key: "body",
+      label: "Request body (JSON)",
+      type: "textarea",
+      placeholder: '{"key": "{{value}}"}',
+    },
+    {
+      key: "timeout",
+      label: "Timeout (seconds)",
+      type: "number",
+      placeholder: "30",
+    },
   ],
   "action.send_email": [
-    { key: "to", label: "To", type: "text", placeholder: "user@example.com or {{email}}" },
-    { key: "subject", label: "Subject", type: "text", placeholder: "Hello {{name}}" },
-    { key: "body", label: "Body (HTML or plain)", type: "textarea", placeholder: "<p>Hi {{name}},</p>" },
-    { key: "from_name", label: "From name", type: "text", placeholder: "My App" },
-    { key: "reply_to", label: "Reply-to", type: "text", placeholder: "no-reply@example.com" },
+    {
+      key: "to",
+      label: "To",
+      type: "text",
+      placeholder: "user@example.com or {{email}}",
+    },
+    {
+      key: "subject",
+      label: "Subject",
+      type: "text",
+      placeholder: "Hello {{name}}",
+    },
+    {
+      key: "body",
+      label: "Body (HTML or plain)",
+      type: "textarea",
+      placeholder: "<p>Hi {{name}},</p>",
+    },
+    {
+      key: "from_name",
+      label: "From name",
+      type: "text",
+      placeholder: "My App",
+    },
+    {
+      key: "reply_to",
+      label: "Reply-to",
+      type: "text",
+      placeholder: "no-reply@example.com",
+    },
   ],
   "action.slack": [
-    { key: "channel", label: "Channel", type: "text", placeholder: "#general or @username" },
-    { key: "message", label: "Message", type: "textarea", placeholder: "Hello from FlowCraft! 🚀" },
-    { key: "username", label: "Bot username", type: "text", placeholder: "FlowCraft Bot" },
-    { key: "icon_emoji", label: "Icon emoji", type: "text", placeholder: ":robot_face:" },
+    {
+      key: "channel",
+      label: "Channel",
+      type: "text",
+      placeholder: "#general or @username",
+    },
+    {
+      key: "message",
+      label: "Message",
+      type: "textarea",
+      placeholder: "Hello from LongoX! 🚀",
+    },
+    {
+      key: "username",
+      label: "Bot username",
+      type: "text",
+      placeholder: "LongoX Bot",
+    },
+    {
+      key: "icon_emoji",
+      label: "Icon emoji",
+      type: "text",
+      placeholder: ":robot_face:",
+    },
   ],
   "action.db_query": [
-    { key: "connection", label: "Connection name", type: "text", placeholder: "my-postgres" },
+    {
+      key: "connection",
+      label: "Connection name",
+      type: "text",
+      placeholder: "my-postgres",
+    },
     {
       key: "operation",
       label: "Operation",
@@ -229,11 +336,26 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
         { label: "Raw SQL", value: "raw" },
       ],
     },
-    { key: "query", label: "SQL query", type: "textarea", placeholder: "SELECT * FROM users WHERE id = {{userId}}" },
+    {
+      key: "query",
+      label: "SQL query",
+      type: "textarea",
+      placeholder: "SELECT * FROM users WHERE id = {{userId}}",
+    },
   ],
   "action.spreadsheet": [
-    { key: "spreadsheet_id", label: "Spreadsheet ID", type: "text", placeholder: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" },
-    { key: "sheet_name", label: "Sheet name", type: "text", placeholder: "Sheet1" },
+    {
+      key: "spreadsheet_id",
+      label: "Spreadsheet ID",
+      type: "text",
+      placeholder: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms",
+    },
+    {
+      key: "sheet_name",
+      label: "Sheet name",
+      type: "text",
+      placeholder: "Sheet1",
+    },
     {
       key: "operation",
       label: "Operation",
@@ -245,15 +367,40 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
         { label: "Delete row", value: "delete" },
       ],
     },
-    { key: "row_data", label: "Row data (JSON)", type: "textarea", placeholder: '{"Name": "{{name}}", "Email": "{{email}}"}' },
+    {
+      key: "row_data",
+      label: "Row data (JSON)",
+      type: "textarea",
+      placeholder: '{"Name": "{{name}}", "Email": "{{email}}"}',
+    },
   ],
   "action.create_record": [
-    { key: "object_type", label: "Object type", type: "text", placeholder: "Contact, Deal, Lead…" },
-    { key: "fields", label: "Fields (JSON)", type: "textarea", placeholder: '{"firstName": "{{first}}", "email": "{{email}}"}' },
-    { key: "connection", label: "Connection name", type: "text", placeholder: "my-crm" },
+    {
+      key: "object_type",
+      label: "Object type",
+      type: "text",
+      placeholder: "Contact, Deal, Lead…",
+    },
+    {
+      key: "fields",
+      label: "Fields (JSON)",
+      type: "textarea",
+      placeholder: '{"firstName": "{{first}}", "email": "{{email}}"}',
+    },
+    {
+      key: "connection",
+      label: "Connection name",
+      type: "text",
+      placeholder: "my-crm",
+    },
   ],
   "logic.if": [
-    { key: "field", label: "Field / expression", type: "text", placeholder: "{{user.age}}" },
+    {
+      key: "field",
+      label: "Field / expression",
+      type: "text",
+      placeholder: "{{user.age}}",
+    },
     {
       key: "operator",
       label: "Operator",
@@ -271,7 +418,12 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
     { key: "value", label: "Value", type: "text", placeholder: "18" },
   ],
   "logic.filter": [
-    { key: "field", label: "Field / expression", type: "text", placeholder: "{{status}}" },
+    {
+      key: "field",
+      label: "Field / expression",
+      type: "text",
+      placeholder: "{{status}}",
+    },
     {
       key: "operator",
       label: "Operator",
@@ -283,14 +435,34 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
         { label: "is empty", value: "empty" },
       ],
     },
-    { key: "value", label: "Value to match", type: "text", placeholder: "active" },
+    {
+      key: "value",
+      label: "Value to match",
+      type: "text",
+      placeholder: "active",
+    },
   ],
   "logic.router": [
-    { key: "routes", label: "Number of routes", type: "number", placeholder: "2" },
+    {
+      key: "routes",
+      label: "Number of routes",
+      type: "number",
+      placeholder: "2",
+    },
   ],
   "logic.loop": [
-    { key: "array_field", label: "Array expression", type: "text", placeholder: "{{items}}" },
-    { key: "batch_size", label: "Batch size (0 = one at a time)", type: "number", placeholder: "0" },
+    {
+      key: "array_field",
+      label: "Array expression",
+      type: "text",
+      placeholder: "{{items}}",
+    },
+    {
+      key: "batch_size",
+      label: "Batch size (0 = one at a time)",
+      type: "number",
+      placeholder: "0",
+    },
   ],
   "logic.delay": [
     { key: "duration", label: "Duration", type: "number", placeholder: "5" },
@@ -308,8 +480,18 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
   ],
   "logic.merge": [],
   "logic.sub_workflow": [
-    { key: "workflow_id", label: "Workflow ID", type: "number", placeholder: "42" },
-    { key: "input_mapping", label: "Input mapping (JSON)", type: "textarea", placeholder: '{"userId": "{{id}}"}' },
+    {
+      key: "workflow_id",
+      label: "Workflow ID",
+      type: "number",
+      placeholder: "42",
+    },
+    {
+      key: "input_mapping",
+      label: "Input mapping (JSON)",
+      type: "textarea",
+      placeholder: '{"userId": "{{id}}"}',
+    },
   ],
   "ai.llm": [
     {
@@ -325,14 +507,44 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
         { label: "Gemini 1.5 Flash", value: "gemini-1.5-flash" },
       ],
     },
-    { key: "system_prompt", label: "System prompt", type: "textarea", placeholder: "You are a helpful assistant…" },
-    { key: "user_prompt", label: "User prompt", type: "textarea", placeholder: "Summarise: {{text}}" },
-    { key: "temperature", label: "Temperature (0–2)", type: "number", placeholder: "0.7" },
-    { key: "max_tokens", label: "Max tokens", type: "number", placeholder: "1024" },
+    {
+      key: "system_prompt",
+      label: "System prompt",
+      type: "textarea",
+      placeholder: "You are a helpful assistant…",
+    },
+    {
+      key: "user_prompt",
+      label: "User prompt",
+      type: "textarea",
+      placeholder: "Summarise: {{text}}",
+    },
+    {
+      key: "temperature",
+      label: "Temperature (0–2)",
+      type: "number",
+      placeholder: "0.7",
+    },
+    {
+      key: "max_tokens",
+      label: "Max tokens",
+      type: "number",
+      placeholder: "1024",
+    },
   ],
   "ai.classify": [
-    { key: "input_field", label: "Input expression", type: "text", placeholder: "{{email.body}}" },
-    { key: "categories", label: "Categories (comma-separated)", type: "text", placeholder: "Billing, Technical, Sales, Other" },
+    {
+      key: "input_field",
+      label: "Input expression",
+      type: "text",
+      placeholder: "{{email.body}}",
+    },
+    {
+      key: "categories",
+      label: "Categories (comma-separated)",
+      type: "text",
+      placeholder: "Billing, Technical, Sales, Other",
+    },
     {
       key: "model",
       label: "Model",
@@ -345,8 +557,18 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
     },
   ],
   "ai.summarize": [
-    { key: "input_field", label: "Input expression", type: "text", placeholder: "{{document.text}}" },
-    { key: "max_length", label: "Max length (words)", type: "number", placeholder: "150" },
+    {
+      key: "input_field",
+      label: "Input expression",
+      type: "text",
+      placeholder: "{{document.text}}",
+    },
+    {
+      key: "max_length",
+      label: "Max length (words)",
+      type: "number",
+      placeholder: "150",
+    },
     {
       key: "format",
       label: "Format",
@@ -369,8 +591,18 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
     },
   ],
   "ai.extract": [
-    { key: "input_field", label: "Input expression", type: "text", placeholder: "{{email.body}}" },
-    { key: "schema", label: "Output schema (JSON)", type: "textarea", placeholder: '{"name": "string", "amount": "number"}' },
+    {
+      key: "input_field",
+      label: "Input expression",
+      type: "text",
+      placeholder: "{{email.body}}",
+    },
+    {
+      key: "schema",
+      label: "Output schema (JSON)",
+      type: "textarea",
+      placeholder: '{"name": "string", "amount": "number"}',
+    },
     {
       key: "model",
       label: "Model",
@@ -383,7 +615,12 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
     },
   ],
   "ai.agent": [
-    { key: "goal", label: "Goal / instructions", type: "textarea", placeholder: "Research the company {{name}} and return key info as JSON." },
+    {
+      key: "goal",
+      label: "Goal / instructions",
+      type: "textarea",
+      placeholder: "Research the company {{name}} and return key info as JSON.",
+    },
     {
       key: "model",
       label: "Model",
@@ -397,8 +634,18 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
     { key: "max_steps", label: "Max steps", type: "number", placeholder: "10" },
   ],
   "ai.scraper": [
-    { key: "url", label: "URL", type: "text", placeholder: "https://example.com or {{url}}" },
-    { key: "instructions", label: "What to extract", type: "textarea", placeholder: "Extract all product names and prices." },
+    {
+      key: "url",
+      label: "URL",
+      type: "text",
+      placeholder: "https://example.com or {{url}}",
+    },
+    {
+      key: "instructions",
+      label: "What to extract",
+      type: "textarea",
+      placeholder: "Extract all product names and prices.",
+    },
     {
       key: "output_format",
       label: "Output format",
@@ -411,15 +658,41 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
     },
   ],
   "data.transform": [
-    { key: "expression", label: "Transform expression (JS)", type: "textarea", placeholder: "return { fullName: input.first + ' ' + input.last };" },
-    { key: "output_field", label: "Output field name", type: "text", placeholder: "transformed" },
+    {
+      key: "expression",
+      label: "Transform expression (JS)",
+      type: "textarea",
+      placeholder: "return { fullName: input.first + ' ' + input.last };",
+    },
+    {
+      key: "output_field",
+      label: "Output field name",
+      type: "text",
+      placeholder: "transformed",
+    },
   ],
   "data.code": [
-    { key: "code", label: "JavaScript code", type: "textarea", placeholder: "const result = items.map(i => ({ ...i, processed: true }));\nreturn result;" },
-    { key: "timeout", label: "Timeout (seconds)", type: "number", placeholder: "10" },
+    {
+      key: "code",
+      label: "JavaScript code",
+      type: "textarea",
+      placeholder:
+        "const result = items.map(i => ({ ...i, processed: true }));\nreturn result;",
+    },
+    {
+      key: "timeout",
+      label: "Timeout (seconds)",
+      type: "number",
+      placeholder: "10",
+    },
   ],
   "data.parse_doc": [
-    { key: "file_field", label: "File expression", type: "text", placeholder: "{{attachment.url}}" },
+    {
+      key: "file_field",
+      label: "File expression",
+      type: "text",
+      placeholder: "{{attachment.url}}",
+    },
     {
       key: "output",
       label: "Extract",
@@ -432,24 +705,58 @@ const NODE_FIELDS: Record<string, FieldDef[]> = {
     },
   ],
   "data.store_get": [
-    { key: "key", label: "Variable key", type: "text", placeholder: "user_score" },
-    { key: "default_value", label: "Default if missing", type: "text", placeholder: "0" },
+    {
+      key: "key",
+      label: "Variable key",
+      type: "text",
+      placeholder: "user_score",
+    },
+    {
+      key: "default_value",
+      label: "Default if missing",
+      type: "text",
+      placeholder: "0",
+    },
   ],
   "data.store_set": [
-    { key: "key", label: "Variable key", type: "text", placeholder: "user_score" },
-    { key: "value", label: "Value expression", type: "text", placeholder: "{{result.score}}" },
+    {
+      key: "key",
+      label: "Variable key",
+      type: "text",
+      placeholder: "user_score",
+    },
+    {
+      key: "value",
+      label: "Value expression",
+      type: "text",
+      placeholder: "{{result.score}}",
+    },
   ],
   "data.note": [
-    { key: "content", label: "Note content", type: "textarea", placeholder: "Explain what this section does…" },
+    {
+      key: "content",
+      label: "Note content",
+      type: "textarea",
+      placeholder: "Explain what this section does…",
+    },
   ],
 };
 
 // ─── Flow node component ──────────────────────────────────────────────────────
 
-const HANDLE_STYLE = { width: 10, height: 10, borderRadius: "50%", border: "2px solid" };
+const HANDLE_STYLE = {
+  width: 10,
+  height: 10,
+  borderRadius: "50%",
+  border: "2px solid",
+};
 
 const HANDLE_COLORS: Record<string, string> = {
-  trigger: "#22d3ee", action: "#818cf8", logic: "#fbbf24", ai: "#c084fc", data: "#60a5fa",
+  trigger: "#22d3ee",
+  action: "#818cf8",
+  logic: "#fbbf24",
+  ai: "#c084fc",
+  data: "#60a5fa",
 };
 
 function FlowNode({ data, selected }: { data: any; selected: boolean }) {
@@ -460,39 +767,79 @@ function FlowNode({ data, selected }: { data: any; selected: boolean }) {
     <div
       className={cn(
         "relative rounded-lg border bg-card shadow-md min-w-[220px] max-w-[240px] transition-all cursor-pointer",
-        selected ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : "hover:shadow-lg",
-        meta.border, "border"
+        selected
+          ? "ring-2 ring-primary ring-offset-1 ring-offset-background"
+          : "hover:shadow-lg",
+        meta.border,
+        "border",
       )}
     >
       {data.inputs > 0 && (
-        <Handle type="target" position={Position.Left}
-          style={{ ...HANDLE_STYLE, borderColor: hc, backgroundColor: "#1e1e2e", left: -6 }} />
+        <Handle
+          type="target"
+          position={Position.Left}
+          style={{
+            ...HANDLE_STYLE,
+            borderColor: hc,
+            backgroundColor: "#1e1e2e",
+            left: -6,
+          }}
+        />
       )}
-      <div className={cn("px-3 py-2 rounded-t-lg flex items-center gap-2", meta.bg)}>
-        <span className={cn("p-1 rounded", meta.bg, meta.color)}>{meta.icon}</span>
-        <span className="font-semibold text-xs truncate flex-1">{data.label}</span>
-        <Badge variant="outline"
-          className={cn("text-[9px] px-1.5 py-0 uppercase tracking-wide", meta.color, meta.border)}>
+      <div
+        className={cn(
+          "px-3 py-2 rounded-t-lg flex items-center gap-2",
+          meta.bg,
+        )}
+      >
+        <span className={cn("p-1 rounded", meta.bg, meta.color)}>
+          {meta.icon}
+        </span>
+        <span className="font-semibold text-xs truncate flex-1">
+          {data.label}
+        </span>
+        <Badge
+          variant="outline"
+          className={cn(
+            "text-[9px] px-1.5 py-0 uppercase tracking-wide",
+            meta.color,
+            meta.border,
+          )}
+        >
           {data.category}
         </Badge>
       </div>
       <div className="px-3 py-2">
-        <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{data.description}</p>
+        <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
+          {data.description}
+        </p>
         {data.nodeTypeName && (
-          <p className="text-[10px] text-muted-foreground/50 mt-1 font-mono">{data.nodeTypeName}</p>
+          <p className="text-[10px] text-muted-foreground/50 mt-1 font-mono">
+            {data.nodeTypeName}
+          </p>
         )}
-        {data.config && Object.keys(data.config).filter(k => data.config[k]).length > 0 && (
-          <div className="flex items-center gap-1 mt-1.5">
-            <Settings2 className="h-2.5 w-2.5 text-muted-foreground/40" />
-            <span className="text-[9px] text-muted-foreground/40">
-              {Object.keys(data.config).filter(k => data.config[k]).length} field(s) configured
-            </span>
-          </div>
-        )}
+        {data.config &&
+          Object.keys(data.config).filter((k) => data.config[k]).length > 0 && (
+            <div className="flex items-center gap-1 mt-1.5">
+              <Settings2 className="h-2.5 w-2.5 text-muted-foreground/40" />
+              <span className="text-[9px] text-muted-foreground/40">
+                {Object.keys(data.config).filter((k) => data.config[k]).length}{" "}
+                field(s) configured
+              </span>
+            </div>
+          )}
       </div>
       {data.outputs > 0 && (
-        <Handle type="source" position={Position.Right}
-          style={{ ...HANDLE_STYLE, borderColor: hc, backgroundColor: "#1e1e2e", right: -6 }} />
+        <Handle
+          type="source"
+          position={Position.Right}
+          style={{
+            ...HANDLE_STYLE,
+            borderColor: hc,
+            backgroundColor: "#1e1e2e",
+            right: -6,
+          }}
+        />
       )}
     </div>
   );
@@ -505,12 +852,22 @@ const nodeTypes: NodeTypes = { flowNode: FlowNode };
 interface ConfigPanelProps {
   node: Node | null;
   onClose: () => void;
-  onChange: (nodeId: string, label: string, config: Record<string, string>) => void;
+  onChange: (
+    nodeId: string,
+    label: string,
+    config: Record<string, string>,
+  ) => void;
   onDelete?: (nodeId: string) => void;
   mobile?: boolean;
 }
 
-function ConfigPanelContent({ node, onClose, onChange, onDelete, mobile }: ConfigPanelProps) {
+function ConfigPanelContent({
+  node,
+  onClose,
+  onChange,
+  onDelete,
+  mobile,
+}: ConfigPanelProps) {
   const [label, setLabel] = useState("");
   const [config, setConfig] = useState<Record<string, string>>({});
 
@@ -525,7 +882,8 @@ function ConfigPanelContent({ node, onClose, onChange, onDelete, mobile }: Confi
 
   const nodeTypeId = node.data.nodeTypeId as string;
   const fields = NODE_FIELDS[nodeTypeId] ?? [];
-  const meta = CATEGORY_META[node.data.category as string] ?? CATEGORY_META.action;
+  const meta =
+    CATEGORY_META[node.data.category as string] ?? CATEGORY_META.action;
 
   const handleFieldChange = (key: string, value: string) => {
     const next = { ...config, [key]: value };
@@ -541,7 +899,12 @@ function ConfigPanelContent({ node, onClose, onChange, onDelete, mobile }: Confi
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className={cn("px-4 py-3 border-b flex items-start justify-between gap-2", meta.bg)}>
+      <div
+        className={cn(
+          "px-4 py-3 border-b flex items-start justify-between gap-2",
+          meta.bg,
+        )}
+      >
         <div className="flex items-center gap-2 min-w-0">
           <span className={cn("shrink-0", meta.color)}>{meta.icon}</span>
           <div className="min-w-0">
@@ -559,12 +922,20 @@ function ConfigPanelContent({ node, onClose, onChange, onDelete, mobile }: Confi
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-destructive hover:text-destructive"
-              onClick={() => { onDelete(node.id); onClose(); }}
+              onClick={() => {
+                onDelete(node.id);
+                onClose();
+              }}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           )}
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={onClose}
+          >
             <X className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -607,7 +978,11 @@ function ConfigPanelContent({ node, onClose, onChange, onDelete, mobile }: Confi
                   </SelectTrigger>
                   <SelectContent>
                     {field.options?.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                      <SelectItem
+                        key={opt.value}
+                        value={opt.value}
+                        className="text-xs"
+                      >
                         {opt.label}
                       </SelectItem>
                     ))}
@@ -623,7 +998,13 @@ function ConfigPanelContent({ node, onClose, onChange, onDelete, mobile }: Confi
                 />
               ) : (
                 <Input
-                  type={field.type === "password" ? "password" : field.type === "number" ? "number" : "text"}
+                  type={
+                    field.type === "password"
+                      ? "password"
+                      : field.type === "number"
+                        ? "number"
+                        : "text"
+                  }
                   value={config[field.key] ?? ""}
                   onChange={(e) => handleFieldChange(field.key, e.target.value)}
                   placeholder={field.placeholder}
@@ -632,7 +1013,9 @@ function ConfigPanelContent({ node, onClose, onChange, onDelete, mobile }: Confi
               )}
 
               {field.hint && (
-                <p className="text-[10px] text-muted-foreground/60">{field.hint}</p>
+                <p className="text-[10px] text-muted-foreground/60">
+                  {field.hint}
+                </p>
               )}
             </div>
           ))}
@@ -677,7 +1060,9 @@ function MobileConfigSheet({
       <div
         className={cn(
           "fixed inset-0 z-40 bg-black/50 transition-opacity duration-200",
-          isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          isOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none",
         )}
         onClick={onClose}
       />
@@ -686,7 +1071,7 @@ function MobileConfigSheet({
         className={cn(
           "fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-2xl border-t shadow-2xl",
           "transition-transform duration-300 ease-out",
-          isOpen ? "translate-y-0" : "translate-y-full"
+          isOpen ? "translate-y-0" : "translate-y-full",
         )}
         style={{ maxHeight: "80vh" }}
       >
@@ -716,7 +1101,11 @@ interface NodeCatalogContentProps {
   mobile?: boolean;
 }
 
-function NodeCatalogContent({ nodeTypes: nts, onAddNode, mobile }: NodeCatalogContentProps) {
+function NodeCatalogContent({
+  nodeTypes: nts,
+  onAddNode,
+  mobile,
+}: NodeCatalogContentProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [activeCategory, setActiveCategory] = useState<string>("trigger");
   const categories = ["trigger", "action", "logic", "ai", "data"];
@@ -726,12 +1115,16 @@ function NodeCatalogContent({ nodeTypes: nts, onAddNode, mobile }: NodeCatalogCo
     .filter((g) => g.items.length > 0);
 
   const onDragStart = (e: DragEvent, nt: NodeType) => {
-    e.dataTransfer.setData("application/flowcraft-nodetype", JSON.stringify(nt));
+    e.dataTransfer.setData(
+      "application/flowcraft-nodetype",
+      JSON.stringify(nt),
+    );
     e.dataTransfer.effectAllowed = "move";
   };
 
   if (mobile) {
-    const activeGroup = groups.find((g) => g.cat === activeCategory) ?? groups[0];
+    const activeGroup =
+      groups.find((g) => g.cat === activeCategory) ?? groups[0];
     return (
       <div className="flex flex-col" style={{ maxHeight: "65vh" }}>
         {/* Category tab bar */}
@@ -746,7 +1139,7 @@ function NodeCatalogContent({ nodeTypes: nts, onAddNode, mobile }: NodeCatalogCo
                   "flex items-center gap-1.5 px-3 py-2 rounded-t-md text-xs font-medium whitespace-nowrap transition-colors border-b-2",
                   activeCategory === cat
                     ? cn("border-primary", meta.color)
-                    : "border-transparent text-muted-foreground hover:text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
                 )}
               >
                 <span>{meta.icon}</span>
@@ -768,12 +1161,24 @@ function NodeCatalogContent({ nodeTypes: nts, onAddNode, mobile }: NodeCatalogCo
                   className={cn(
                     "flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-all active:scale-95",
                     "hover:shadow-md",
-                    meta.bg, meta.border
+                    meta.bg,
+                    meta.border,
                   )}
                 >
-                  <span className={cn("p-1.5 rounded-lg", meta.bg, meta.color)}>{meta.icon}</span>
-                  <span className={cn("text-xs font-semibold leading-tight", meta.color)}>{nt.name}</span>
-                  <span className="text-[10px] text-muted-foreground/70 leading-tight line-clamp-2">{nt.description}</span>
+                  <span className={cn("p-1.5 rounded-lg", meta.bg, meta.color)}>
+                    {meta.icon}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-xs font-semibold leading-tight",
+                      meta.color,
+                    )}
+                  >
+                    {nt.name}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground/70 leading-tight line-clamp-2">
+                    {nt.description}
+                  </span>
                 </button>
               );
             })}
@@ -788,8 +1193,12 @@ function NodeCatalogContent({ nodeTypes: nts, onAddNode, mobile }: NodeCatalogCo
   return (
     <div className="flex flex-col h-full">
       <div className="px-3 py-3 border-b">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Node Catalog</h2>
-        <p className="text-[10px] text-muted-foreground/60 mt-0.5">Drag onto canvas to add</p>
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          Node Catalog
+        </h2>
+        <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+          Drag onto canvas to add
+        </p>
       </div>
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
@@ -800,12 +1209,20 @@ function NodeCatalogContent({ nodeTypes: nts, onAddNode, mobile }: NodeCatalogCo
               <div key={cat}>
                 <button
                   className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50 transition-colors"
-                  onClick={() => setCollapsed((c) => ({ ...c, [cat]: !c[cat] }))}
+                  onClick={() =>
+                    setCollapsed((c) => ({ ...c, [cat]: !c[cat] }))
+                  }
                 >
                   <span className={cn("p-0.5", meta.color)}>{meta.icon}</span>
-                  <span className="text-xs font-medium flex-1 text-left capitalize">{cat}</span>
+                  <span className="text-xs font-medium flex-1 text-left capitalize">
+                    {cat}
+                  </span>
                   <span className="text-muted-foreground/50">
-                    {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                    {open ? (
+                      <ChevronDown className="h-3 w-3" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3" />
+                    )}
                   </span>
                 </button>
                 {open && (
@@ -818,11 +1235,16 @@ function NodeCatalogContent({ nodeTypes: nts, onAddNode, mobile }: NodeCatalogCo
                         className={cn(
                           "flex items-center gap-2 px-2 py-2 rounded-md cursor-grab active:cursor-grabbing",
                           "border transition-colors text-xs hover:bg-muted/70 select-none",
-                          meta.bg, meta.border
+                          meta.bg,
+                          meta.border,
                         )}
                       >
-                        <span className={cn("shrink-0", meta.color)}>{meta.icon}</span>
-                        <span className="truncate font-medium text-[11px]">{nt.name}</span>
+                        <span className={cn("shrink-0", meta.color)}>
+                          {meta.icon}
+                        </span>
+                        <span className="truncate font-medium text-[11px]">
+                          {nt.name}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -857,7 +1279,9 @@ function MobileNodeSheet({
       <div
         className={cn(
           "fixed inset-0 z-40 bg-black/50 transition-opacity duration-200",
-          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          open
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none",
         )}
         onClick={onClose}
       />
@@ -865,21 +1289,31 @@ function MobileNodeSheet({
         className={cn(
           "fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-2xl border-t shadow-2xl",
           "transition-transform duration-300 ease-out",
-          open ? "translate-y-0" : "translate-y-full"
+          open ? "translate-y-0" : "translate-y-full",
         )}
       >
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <div>
             <h2 className="text-sm font-semibold">Add Node</h2>
-            <p className="text-[10px] text-muted-foreground/60">Tap a node to add it to the canvas</p>
+            <p className="text-[10px] text-muted-foreground/60">
+              Tap a node to add it to the canvas
+            </p>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={onClose}
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
         <NodeCatalogContent
           nodeTypes={nts}
-          onAddNode={(nt) => { onAddNode(nt); onClose(); }}
+          onAddNode={(nt) => {
+            onAddNode(nt);
+            onClose();
+          }}
           mobile
         />
       </div>
@@ -890,9 +1324,14 @@ function MobileNodeSheet({
 // ─── Conversion helpers ───────────────────────────────────────────────────────
 
 let nodeIdCounter = 1000;
-function generateNodeId() { return `node_${Date.now()}_${nodeIdCounter++}`; }
+function generateNodeId() {
+  return `node_${Date.now()}_${nodeIdCounter++}`;
+}
 
-function workflowNodesToFlow(wfNodes: WorkflowNode[], nodeTypeMap: Map<string, NodeType>): Node[] {
+function workflowNodesToFlow(
+  wfNodes: WorkflowNode[],
+  nodeTypeMap: Map<string, NodeType>,
+): Node[] {
   return (wfNodes ?? []).map((wn) => {
     const nt = nodeTypeMap.get(wn.nodeTypeId ?? wn.type);
     return {
@@ -933,7 +1372,12 @@ interface WorkflowBuilderInnerProps {
   onSaved?: () => void;
 }
 
-function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved }: WorkflowBuilderInnerProps) {
+function WorkflowBuilderInner({
+  workflowId,
+  initialNodes,
+  nodeTypesList,
+  onSaved,
+}: WorkflowBuilderInnerProps) {
   const { toast } = useToast();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition, getViewport } = useReactFlow();
@@ -946,7 +1390,7 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
   }, [nodeTypesList]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(
-    workflowNodesToFlow(initialNodes, nodeTypeMap)
+    workflowNodesToFlow(initialNodes, nodeTypeMap),
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -957,7 +1401,7 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
 
   const selectedNode = useMemo(
     () => nodes.find((n) => n.id === selectedNodeId) ?? null,
-    [nodes, selectedNodeId]
+    [nodes, selectedNodeId],
   );
 
   const updateMutation = useUpdateWorkflow({
@@ -978,7 +1422,7 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
       setEdges((eds) => addEdge({ ...connection, animated: true }, eds));
       setIsDirty(true);
     },
-    [setEdges]
+    [setEdges],
   );
 
   const onDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
@@ -992,7 +1436,11 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
       const raw = e.dataTransfer.getData("application/flowcraft-nodetype");
       if (!raw) return;
       let nt: NodeType;
-      try { nt = JSON.parse(raw); } catch { return; }
+      try {
+        nt = JSON.parse(raw);
+      } catch {
+        return;
+      }
 
       const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
       const newNode: Node = {
@@ -1014,7 +1462,7 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
       setSelectedNodeId(newNode.id);
       setIsDirty(true);
     },
-    [screenToFlowPosition, setNodes]
+    [screenToFlowPosition, setNodes],
   );
 
   // Mobile tap-to-add: place node in the visible center of the canvas
@@ -1048,23 +1496,28 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
       setSelectedNodeId(newNode.id);
       setIsDirty(true);
     },
-    [screenToFlowPosition, setNodes, nodes.length]
+    [screenToFlowPosition, setNodes, nodes.length],
   );
 
   const onNodesChangeWrapped: typeof onNodesChange = useCallback(
     (changes) => {
       onNodesChange(changes);
-      const isDone = changes.some((c) => c.type === "position" && c.dragging === false);
+      const isDone = changes.some(
+        (c) => c.type === "position" && c.dragging === false,
+      );
       if (isDone) setIsDirty(true);
       const removed = changes.filter((c) => c.type === "remove");
       if (removed.length) {
         setIsDirty(true);
-        if (selectedNodeId && removed.some((c: any) => c.id === selectedNodeId)) {
+        if (
+          selectedNodeId &&
+          removed.some((c: any) => c.id === selectedNodeId)
+        ) {
           setSelectedNodeId(null);
         }
       }
     },
-    [onNodesChange, selectedNodeId]
+    [onNodesChange, selectedNodeId],
   );
 
   const handleNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
@@ -1079,12 +1532,12 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
     (nodeId: string, label: string, config: Record<string, string>) => {
       setNodes((nds) =>
         nds.map((n) =>
-          n.id === nodeId ? { ...n, data: { ...n.data, label, config } } : n
-        )
+          n.id === nodeId ? { ...n, data: { ...n.data, label, config } } : n,
+        ),
       );
       setIsDirty(true);
     },
-    [setNodes]
+    [setNodes],
   );
 
   const deleteSelected = useCallback(() => {
@@ -1097,11 +1550,13 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
   const deleteNode = useCallback(
     (nodeId: string) => {
       setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-      setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+      setEdges((eds) =>
+        eds.filter((e) => e.source !== nodeId && e.target !== nodeId),
+      );
       setSelectedNodeId(null);
       setIsDirty(true);
     },
-    [setNodes, setEdges]
+    [setNodes, setEdges],
   );
 
   const handleSave = useCallback(() => {
@@ -1124,7 +1579,10 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
     deleteKeyCode: ["Backspace", "Delete"] as string[],
     multiSelectionKeyCode: "Shift",
     className: "bg-zinc-950",
-    defaultEdgeOptions: { animated: true, style: { stroke: "#6366f1", strokeWidth: 2 } },
+    defaultEdgeOptions: {
+      animated: true,
+      style: { stroke: "#6366f1", strokeWidth: 2 },
+    },
     // Touch / mobile settings
     panOnDrag: true,
     zoomOnPinch: true,
@@ -1142,7 +1600,9 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
         {/* Compact top bar */}
         <div className="flex items-center gap-2 px-3 py-2 border-b bg-card z-10">
           <PanelLeftOpen className="h-4 w-4 text-muted-foreground/60 shrink-0" />
-          <span className="text-xs font-semibold flex-1 truncate text-muted-foreground">Workflow Canvas</span>
+          <span className="text-xs font-semibold flex-1 truncate text-muted-foreground">
+            Workflow Canvas
+          </span>
           {selectedNodeId && (
             <Button
               size="sm"
@@ -1167,12 +1627,13 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
 
         {/* Full-screen canvas */}
         <div className="flex-1 relative" ref={reactFlowWrapper}>
-          <ReactFlow
-            {...canvasProps}
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-          >
-            <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#27272a" />
+          <ReactFlow {...canvasProps} onDrop={onDrop} onDragOver={onDragOver}>
+            <Background
+              variant={BackgroundVariant.Dots}
+              gap={20}
+              size={1}
+              color="#27272a"
+            />
             <Controls
               showZoom
               showFitView
@@ -1185,7 +1646,11 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
               <Panel position="top-center">
                 <div className="flex flex-col items-center gap-2 text-muted-foreground text-sm bg-card border rounded-xl px-5 py-4 shadow-sm mt-10">
                   <Plus className="h-5 w-5" />
-                  <span className="text-xs text-center">Tap the <strong>+</strong> button below<br />to add your first node</span>
+                  <span className="text-xs text-center">
+                    Tap the <strong>+</strong> button below
+                    <br />
+                    to add your first node
+                  </span>
                 </div>
               </Panel>
             )}
@@ -1194,7 +1659,9 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
               <Panel position="top-center">
                 <button
                   className="flex items-center gap-1.5 bg-primary text-primary-foreground text-xs px-3 py-1.5 rounded-full shadow-md mt-2"
-                  onClick={() => {/* already selected, sheet will open */}}
+                  onClick={() => {
+                    /* already selected, sheet will open */
+                  }}
                 >
                   <Settings2 className="h-3 w-3" />
                   Tap node to configure
@@ -1212,7 +1679,7 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
               "bg-primary text-primary-foreground",
               "flex items-center justify-center",
               "transition-transform active:scale-90",
-              "border-2 border-primary-foreground/20"
+              "border-2 border-primary-foreground/20",
             )}
             aria-label="Add node"
           >
@@ -1227,7 +1694,7 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
               "h-10 px-4 rounded-full shadow-lg",
               "bg-card border text-foreground",
               "flex items-center gap-2 text-xs font-medium",
-              "transition-transform active:scale-95"
+              "transition-transform active:scale-95",
             )}
             aria-label="Browse nodes"
           >
@@ -1266,28 +1733,43 @@ function WorkflowBuilderInner({ workflowId, initialNodes, nodeTypesList, onSaved
 
       {/* Center: Canvas */}
       <div className="flex-1 relative min-w-0" ref={reactFlowWrapper}>
-        <ReactFlow
-          {...canvasProps}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
-        >
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#27272a" />
+        <ReactFlow {...canvasProps} onDrop={onDrop} onDragOver={onDragOver}>
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={20}
+            size={1}
+            color="#27272a"
+          />
           <Controls className="!bg-card !border-border !shadow-md" />
           <MiniMap
             className="!bg-card !border-border"
-            nodeColor={(n) => HANDLE_COLORS[n.data?.category as string] ?? "#6b7280"}
+            nodeColor={(n) =>
+              HANDLE_COLORS[n.data?.category as string] ?? "#6b7280"
+            }
             maskColor="rgba(0,0,0,0.5)"
           />
           <Panel position="top-right" className="flex gap-2">
-            <Button size="sm" variant="outline" className="gap-1.5 h-8 text-xs bg-card"
-              onClick={deleteSelected}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 h-8 text-xs bg-card"
+              onClick={deleteSelected}
+            >
               <Trash2 className="h-3.5 w-3.5" />
               Delete Selected
             </Button>
-            <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={handleSave}
-              disabled={updateMutation.isPending || !isDirty}>
+            <Button
+              size="sm"
+              className="gap-1.5 h-8 text-xs"
+              onClick={handleSave}
+              disabled={updateMutation.isPending || !isDirty}
+            >
               <Save className="h-3.5 w-3.5" />
-              {updateMutation.isPending ? "Saving…" : isDirty ? "Save Changes" : "Saved"}
+              {updateMutation.isPending
+                ? "Saving…"
+                : isDirty
+                  ? "Save Changes"
+                  : "Saved"}
             </Button>
           </Panel>
           {nodes.length === 0 && (

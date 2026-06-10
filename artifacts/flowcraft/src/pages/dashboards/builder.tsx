@@ -7,8 +7,8 @@ import {
   usePublishDashboard,
   getGetDashboardQueryKey,
   getListDashboardsQueryKey,
-} from "@autoflow/api-client-react";
-import type { DashboardWidget } from "@autoflow/api-client-react";
+} from "@longox/api-client-react";
+import type { DashboardWidget } from "@longox/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,7 +66,12 @@ const WIDGET_TYPES: {
     description: "Metric, label, and trend",
     icon: <TrendingUp className="h-4 w-4" />,
     color: "bg-blue-500/10 text-blue-500",
-    defaultConfig: { label: "Total Executions", value: "1,234", trend: "+12%", trendUp: true },
+    defaultConfig: {
+      label: "Total Executions",
+      value: "1,234",
+      trend: "+12%",
+      trendUp: true,
+    },
     defaultColSpan: 3,
     defaultRowSpan: 2,
   },
@@ -86,7 +91,10 @@ const WIDGET_TYPES: {
     description: "Tabular data view",
     icon: <Table2 className="h-4 w-4" />,
     color: "bg-emerald-500/10 text-emerald-500",
-    defaultConfig: { title: "Recent Runs", columns: ["Name", "Status", "Duration"] },
+    defaultConfig: {
+      title: "Recent Runs",
+      columns: ["Name", "Status", "Duration"],
+    },
     defaultColSpan: 8,
     defaultRowSpan: 4,
   },
@@ -124,7 +132,13 @@ const WIDGET_TYPES: {
 
 // ─── Widget canvas preview ─────────────────────────────────────────────────
 
-function WidgetPreview({ widget, selected }: { widget: DashboardWidget; selected: boolean }) {
+function WidgetPreview({
+  widget,
+  selected,
+}: {
+  widget: DashboardWidget;
+  selected: boolean;
+}) {
   const meta = WIDGET_TYPES.find((w) => w.type === widget.type);
   const cfg = (widget.config ?? {}) as Record<string, unknown>;
 
@@ -134,20 +148,34 @@ function WidgetPreview({ widget, selected }: { widget: DashboardWidget; selected
         "h-full rounded-lg border-2 transition-all p-3 flex flex-col overflow-hidden",
         selected
           ? "border-primary shadow-[0_0_0_2px_hsl(var(--primary)/0.25)]"
-          : "border-transparent bg-card hover:border-muted-foreground/30"
+          : "border-transparent bg-card hover:border-muted-foreground/30",
       )}
     >
-      <div className={cn("flex items-center gap-1.5 mb-2 text-xs font-medium rounded px-1.5 py-0.5 self-start", meta?.color)}>
+      <div
+        className={cn(
+          "flex items-center gap-1.5 mb-2 text-xs font-medium rounded px-1.5 py-0.5 self-start",
+          meta?.color,
+        )}
+      >
         {meta?.icon}
         {meta?.label}
       </div>
 
       {widget.type === "kpi" && (
         <div className="flex-1 flex flex-col justify-center">
-          <div className="text-2xl font-bold truncate">{String(cfg.value ?? "—")}</div>
-          <div className="text-xs text-muted-foreground truncate">{String(cfg.label ?? "Metric")}</div>
+          <div className="text-2xl font-bold truncate">
+            {String(cfg.value ?? "—")}
+          </div>
+          <div className="text-xs text-muted-foreground truncate">
+            {String(cfg.label ?? "Metric")}
+          </div>
           {!!cfg.trend && (
-            <div className={cn("text-xs font-medium mt-1", cfg.trendUp ? "text-green-500" : "text-red-500")}>
+            <div
+              className={cn(
+                "text-xs font-medium mt-1",
+                cfg.trendUp ? "text-green-500" : "text-red-500",
+              )}
+            >
               {String(cfg.trend)}
             </div>
           )}
@@ -156,10 +184,16 @@ function WidgetPreview({ widget, selected }: { widget: DashboardWidget; selected
 
       {widget.type === "chart" && (
         <div className="flex-1 flex flex-col justify-between">
-          <span className="text-xs font-medium text-muted-foreground truncate">{String(cfg.title ?? "Chart")}</span>
+          <span className="text-xs font-medium text-muted-foreground truncate">
+            {String(cfg.title ?? "Chart")}
+          </span>
           <div className="flex items-end gap-0.5 h-12 mt-2">
             {[40, 65, 50, 80, 70, 90, 60].map((h, i) => (
-              <div key={i} className="flex-1 bg-primary/30 rounded-t" style={{ height: `${h}%` }} />
+              <div
+                key={i}
+                className="flex-1 bg-primary/30 rounded-t"
+                style={{ height: `${h}%` }}
+              />
             ))}
           </div>
         </div>
@@ -167,15 +201,22 @@ function WidgetPreview({ widget, selected }: { widget: DashboardWidget; selected
 
       {widget.type === "table" && (
         <div className="flex-1 overflow-hidden">
-          <p className="text-xs font-medium text-muted-foreground mb-1.5 truncate">{String(cfg.title ?? "Table")}</p>
+          <p className="text-xs font-medium text-muted-foreground mb-1.5 truncate">
+            {String(cfg.title ?? "Table")}
+          </p>
           <div className="space-y-1">
             {[1, 2, 3].map((r) => (
               <div key={r} className="flex gap-1">
-                {((cfg.columns as string[]) ?? ["Col"]).slice(0, 3).map((col, c) => (
-                  <div key={c} className="flex-1 h-3 bg-muted rounded text-[8px] px-1 flex items-center text-muted-foreground truncate">
-                    {r === 1 ? col : ""}
-                  </div>
-                ))}
+                {((cfg.columns as string[]) ?? ["Col"])
+                  .slice(0, 3)
+                  .map((col, c) => (
+                    <div
+                      key={c}
+                      className="flex-1 h-3 bg-muted rounded text-[8px] px-1 flex items-center text-muted-foreground truncate"
+                    >
+                      {r === 1 ? col : ""}
+                    </div>
+                  ))}
               </div>
             ))}
           </div>
@@ -197,7 +238,11 @@ function WidgetPreview({ widget, selected }: { widget: DashboardWidget; selected
       {widget.type === "separator" && (
         <div className="flex-1 flex items-center gap-2">
           <div className="flex-1 h-px bg-border" />
-          {!!cfg.label && <span className="text-xs text-muted-foreground">{String(cfg.label)}</span>}
+          {!!cfg.label && (
+            <span className="text-xs text-muted-foreground">
+              {String(cfg.label)}
+            </span>
+          )}
           {!!cfg.label && <div className="flex-1 h-px bg-border" />}
         </div>
       )}
@@ -224,7 +269,10 @@ function WidgetConfigPanel({
 
   const setSize = (field: "colSpan" | "rowSpan", delta: number) => {
     const limits = field === "colSpan" ? [1, 12] : [1, 8];
-    const next = Math.min(limits[1], Math.max(limits[0], widget[field] + delta));
+    const next = Math.min(
+      limits[1],
+      Math.max(limits[0], widget[field] + delta),
+    );
     onUpdate({ ...widget, [field]: next });
   };
 
@@ -232,14 +280,18 @@ function WidgetConfigPanel({
     <div className="flex flex-col h-full">
       <div className="px-4 py-3 border-b">
         <p className="text-sm font-semibold">Widget Config</p>
-        <p className="text-xs text-muted-foreground capitalize">{widget.type}</p>
+        <p className="text-xs text-muted-foreground capitalize">
+          {widget.type}
+        </p>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4">
           {/* Size controls */}
           <div className="space-y-3">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Size</Label>
+            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Size
+            </Label>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Width (cols)</Label>
@@ -250,7 +302,9 @@ function WidgetConfigPanel({
                   >
                     <ChevronLeft className="h-3 w-3" />
                   </button>
-                  <span className="flex-1 text-center text-sm font-medium">{widget.colSpan}</span>
+                  <span className="flex-1 text-center text-sm font-medium">
+                    {widget.colSpan}
+                  </span>
                   <button
                     className="px-2 py-1.5 hover:bg-muted transition-colors rounded-r-md"
                     onClick={() => setSize("colSpan", 1)}
@@ -268,7 +322,9 @@ function WidgetConfigPanel({
                   >
                     <ChevronDown className="h-3 w-3" />
                   </button>
-                  <span className="flex-1 text-center text-sm font-medium">{widget.rowSpan}</span>
+                  <span className="flex-1 text-center text-sm font-medium">
+                    {widget.rowSpan}
+                  </span>
                   <button
                     className="px-2 py-1.5 hover:bg-muted transition-colors rounded-r-md"
                     onClick={() => setSize("rowSpan", 1)}
@@ -284,7 +340,9 @@ function WidgetConfigPanel({
 
           {/* Type-specific config */}
           <div className="space-y-3">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Content</Label>
+            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Content
+            </Label>
 
             {widget.type === "kpi" && (
               <>
@@ -321,7 +379,9 @@ function WidgetConfigPanel({
                     value={cfg.trendUp ? "up" : "down"}
                     onValueChange={(v) => setConfig("trendUp", v === "up")}
                   >
-                    <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="up">↑ Up (green)</SelectItem>
                       <SelectItem value="down">↓ Down (red)</SelectItem>
@@ -348,7 +408,9 @@ function WidgetConfigPanel({
                     value={String(cfg.chartType ?? "bar")}
                     onValueChange={(v) => setConfig("chartType", v)}
                   >
-                    <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="bar">Bar chart</SelectItem>
                       <SelectItem value="line">Line chart</SelectItem>
@@ -469,35 +531,59 @@ export default function DashboardBuilder() {
   const updateMutation = useUpdateDashboard({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey(dashboardId) });
-        queryClient.invalidateQueries({ queryKey: getListDashboardsQueryKey() });
+        queryClient.invalidateQueries({
+          queryKey: getGetDashboardQueryKey(dashboardId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: getListDashboardsQueryKey(),
+        });
         setIsDirty(false);
         toast({ title: "Dashboard saved" });
       },
-      onError: () => toast({ title: "Failed to save dashboard", variant: "destructive" }),
+      onError: () =>
+        toast({ title: "Failed to save dashboard", variant: "destructive" }),
     },
   });
 
   const publishMutation = usePublishDashboard({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey(dashboardId) });
-        queryClient.invalidateQueries({ queryKey: getListDashboardsQueryKey() });
+        queryClient.invalidateQueries({
+          queryKey: getGetDashboardQueryKey(dashboardId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: getListDashboardsQueryKey(),
+        });
         toast({ title: "Dashboard published", description: "It's now live." });
       },
-      onError: () => toast({ title: "Failed to publish", variant: "destructive" }),
+      onError: () =>
+        toast({ title: "Failed to publish", variant: "destructive" }),
     },
   });
 
   const handleSave = useCallback(() => {
-    updateMutation.mutate({ id: dashboardId, data: { widgets: widgets as Parameters<typeof updateMutation.mutate>[0]["data"]["widgets"] } });
+    updateMutation.mutate({
+      id: dashboardId,
+      data: {
+        widgets: widgets as Parameters<
+          typeof updateMutation.mutate
+        >[0]["data"]["widgets"],
+      },
+    });
   }, [dashboardId, widgets, updateMutation]);
 
   const handlePublish = () => {
     if (isDirty) {
       updateMutation.mutate(
-        { id: dashboardId, data: { widgets: widgets as Parameters<typeof updateMutation.mutate>[0]["data"]["widgets"] } },
-        { onSuccess: () => publishMutation.mutate({ id: dashboardId }) }
+        {
+          id: dashboardId,
+          data: {
+            widgets: widgets as Parameters<
+              typeof updateMutation.mutate
+            >[0]["data"]["widgets"],
+          },
+        },
+        { onSuccess: () => publishMutation.mutate({ id: dashboardId }) },
       );
     } else {
       publishMutation.mutate({ id: dashboardId });
@@ -507,7 +593,10 @@ export default function DashboardBuilder() {
   const addWidget = (type: DashboardWidget["type"]) => {
     const meta = WIDGET_TYPES.find((w) => w.type === type)!;
     // Place widget on next available row
-    const maxRow = widgets.reduce((max, w) => Math.max(max, w.gridRow + w.rowSpan - 1), 0);
+    const maxRow = widgets.reduce(
+      (max, w) => Math.max(max, w.gridRow + w.rowSpan - 1),
+      0,
+    );
     const newWidget: DashboardWidget = {
       id: uid(),
       type,
@@ -552,7 +641,9 @@ export default function DashboardBuilder() {
       <div className="h-14 shrink-0 flex items-center justify-between px-4 border-b bg-card gap-4">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-            <Link href="/dashboards"><ArrowLeft className="h-4 w-4" /></Link>
+            <Link href="/dashboards">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
           </Button>
           <div>
             <span className="font-semibold text-sm">{dashboard.name}</span>
@@ -562,13 +653,18 @@ export default function DashboardBuilder() {
             className="text-xs"
           >
             {dashboard.status === "published" ? (
-              <><Globe className="h-3 w-3 mr-1" />Live</>
+              <>
+                <Globe className="h-3 w-3 mr-1" />
+                Live
+              </>
             ) : (
               "Draft"
             )}
           </Badge>
           {isDirty && (
-            <span className="text-xs text-muted-foreground">Unsaved changes</span>
+            <span className="text-xs text-muted-foreground">
+              Unsaved changes
+            </span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -599,7 +695,9 @@ export default function DashboardBuilder() {
         {/* Left: Widget palette */}
         <div className="w-56 shrink-0 border-r bg-sidebar flex flex-col">
           <div className="px-3 py-2.5 border-b">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Widgets</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Widgets
+            </p>
           </div>
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
@@ -613,8 +711,12 @@ export default function DashboardBuilder() {
                     {wt.icon}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-medium leading-tight">{wt.label}</p>
-                    <p className="text-[10px] text-muted-foreground leading-tight truncate">{wt.description}</p>
+                    <p className="text-xs font-medium leading-tight">
+                      {wt.label}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground leading-tight truncate">
+                      {wt.description}
+                    </p>
                   </div>
                   <Plus className="h-3 w-3 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                 </button>
@@ -624,14 +726,18 @@ export default function DashboardBuilder() {
         </div>
 
         {/* Center: Canvas */}
-        <div className="flex-1 bg-muted/30 overflow-auto" onClick={() => setSelectedId(null)}>
+        <div
+          className="flex-1 bg-muted/30 overflow-auto"
+          onClick={() => setSelectedId(null)}
+        >
           {widgets.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-8">
               <div className="bg-background rounded-xl border-2 border-dashed p-10 max-w-sm">
                 <GripVertical className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
                 <h3 className="font-semibold mb-1">Start building</h3>
                 <p className="text-sm text-muted-foreground">
-                  Click any widget type from the panel on the left to add it to your dashboard
+                  Click any widget type from the panel on the left to add it to
+                  your dashboard
                 </p>
               </div>
             </div>
@@ -653,11 +759,16 @@ export default function DashboardBuilder() {
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSelectedId(widget.id === selectedId ? null : widget.id);
+                      setSelectedId(
+                        widget.id === selectedId ? null : widget.id,
+                      );
                     }}
                     className="cursor-pointer min-h-0"
                   >
-                    <WidgetPreview widget={widget} selected={widget.id === selectedId} />
+                    <WidgetPreview
+                      widget={widget}
+                      selected={widget.id === selectedId}
+                    />
                   </div>
                 ))}
               </div>

@@ -6,6 +6,7 @@ description: Production connector manifest pattern — DB schema, seeding, API r
 ## Connector manifest pattern
 
 The connector framework adds 4 new tables to `lib/db/src/schema/connectors.ts`:
+
 - `connector_actions` — per-connector actions with JSON Schema for input/output
 - `connector_triggers` — per-connector triggers (webhook or polling) with config and pollingInterval
 - `connector_executions` — observability/audit log for each execution
@@ -22,6 +23,7 @@ A `seeded` module-level boolean guard prevents duplicate seeding on each request
 ## Route ordering (critical)
 
 In `artifacts/api-server/src/routes/connectors.ts`, register:
+
 1. `GET /connectors/categories` (seed trigger)
 2. `GET /connectors` (list with filters)
 3. `GET /connectors/executions` ← MUST be before `/:id`
@@ -36,12 +38,15 @@ In `artifacts/api-server/src/routes/connectors.ts`, register:
 ## Frontend integration
 
 For the new sub-resource endpoints (actions, triggers, executions), use direct `useQuery` with `fetch`:
+
 ```tsx
 const { data: actions = [] } = useQuery<ConnectorAction[]>({
   queryKey: ["connectorActions", connector.id],
-  queryFn: () => fetch(`/api/connectors/${connector.id}/actions`).then(r => r.json()),
+  queryFn: () =>
+    fetch(`/api/connectors/${connector.id}/actions`).then((r) => r.json()),
 });
 ```
+
 This avoids manually adding typed hooks to the generated `api-client-react` files.
 
 ## certificationLevel filter

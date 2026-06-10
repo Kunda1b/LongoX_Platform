@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { createHash, randomBytes } from "node:crypto";
 import { eq, and } from "drizzle-orm";
-import { db, userMfaTable, usersTable } from "@autoflow/db";
+import { db, userMfaTable, usersTable } from "@longox/db";
 import { authMiddleware } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -10,7 +10,10 @@ function generateTotpSecret(): string {
   return randomBytes(20).toString("base64url");
 }
 
-function generateTotpCode(secret: string, timestamp: number = Date.now()): string {
+function generateTotpCode(
+  secret: string,
+  timestamp: number = Date.now(),
+): string {
   const timeStep = Math.floor(timestamp / 30000);
   const timeBuffer = Buffer.alloc(8);
   timeBuffer.writeBigInt64BE(BigInt(timeStep), 0);
@@ -35,111 +38,163 @@ function verifyTotpCode(secret: string, code: string): boolean {
   return false;
 }
 
-function generateTotpUri(secret: string, email: string, issuer: string = "FlowCraft"): string {
+function generateTotpUri(
+  secret: string,
+  email: string,
+  issuer: string = "LongoX",
+): string {
   return `otpauth://totp/${issuer}:${email}?secret=${secret}&issuer=${issuer}&algorithm=SHA1&digits=6&period=30`;
 }
 
-router.post("/auth/mfa/setup", authMiddleware, async (req: Request, res: Response): Promise<void> => {
-  const userId = req.user!.id;
+router.post(
+  "/auth/mfa/setup",
+  authMiddleware,
+  async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user!.id;
 
-  const [existing] = await db.select().from(userMfaTable)
-    .where(and(eq(userMfaTable.userId, userId), eq(userMfaTable.method, "totp")))
-    .limit(1);
+    const [existing] = await db
+      .select()
+      .from(userMfaTable)
+      .where(
+        and(eq(userMfaTable.userId, userId), eq(userMfaTable.method, "totp")),
+      )
+      .limit(1);
 
-  if (existing?.enabled) {
-    res.status(400).json({ error: "MFA is already enabled" });
-    return;
-  }
+    if (existing?.enabled) {
+      res.status(400).json({ error: "MFA is already enabled" });
+      return;
+    }
 
-  const secret = existing?.secret ?? generateTotpSecret();
+    const secret = existing?.secret ?? generateTotpSecret();
 
-  if (!existing) {
-    await db.insert(userMfaTable).values({
-      userId,
-      method: "totp",
+    if (!existing) {
+      await db.insert(userMfaTable).values({
+        userId,
+        method: "totp",
+        secret,
+        enabled: false,
+      });
+    }
+
+    const [user] = await db
+      .select({ email: usersTable.email })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+
+    res.json({
       secret,
-      enabled: false,
+      uri: generateTotpUri(secret, user!.email),
     });
-  }
+  },
+);
 
-  const [user] = await db.select({ email: usersTable.email }).from(usersTable)
-    .where(eq(usersTable.id, userId)).limit(1);
+router.post(
+  "/auth/mfa/verify",
+  authMiddleware,
+  async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user!.id;
+    const { code } = req.body as { code?: string };
 
-  res.json({
-    secret,
-    uri: generateTotpUri(secret, user!.email),
-  });
-});
+    if (!code || !/^\d{6}$/.test(code)) {
+      res.status(400).json({ error: "A valid 6-digit code is required" });
+      return;
+    }
 
-router.post("/auth/mfa/verify", authMiddleware, async (req: Request, res: Response): Promise<void> => {
-  const userId = req.user!.id;
-  const { code } = req.body as { code?: string };
+    const [mfa] = await db
+      .select()
+      .from(userMfaTable)
+      .where(
+        and(eq(userMfaTable.userId, userId), eq(userMfaTable.method, "totp")),
+      )
+      .limit(1);
 
-  if (!code || !/^\d{6}$/.test(code)) {
-    res.status(400).json({ error: "A valid 6-digit code is required" });
-    return;
-  }
+    if (!mfa) {
+      res
+        .status(400)
+        .json({ error: "MFA not set up. Call /auth/mfa/setup first." });
+      return;
+    }
 
-  const [mfa] = await db.select().from(userMfaTable)
-    .where(and(eq(userMfaTable.userId, userId), eq(userMfaTable.method, "totp")))
-    .limit(1);
+    if (!verifyTotpCode(mfa.secret, code)) {
+      res.status(401).json({ error: "Invalid verification code" });
+      return;
+    }
 
-  if (!mfa) {
-    res.status(400).json({ error: "MFA not set up. Call /auth/mfa/setup first." });
-    return;
-  }
+    await db
+      .update(userMfaTable)
+      .set({ enabled: true, verifiedAt: new Date() })
+      .where(eq(userMfaTable.id, mfa.id));
 
-  if (!verifyTotpCode(mfa.secret, code)) {
-    res.status(401).json({ error: "Invalid verification code" });
-    return;
-  }
+    res.json({ success: true, message: "MFA enabled successfully" });
+  },
+);
 
-  await db.update(userMfaTable)
-    .set({ enabled: true, verifiedAt: new Date() })
-    .where(eq(userMfaTable.id, mfa.id));
+router.post(
+  "/auth/mfa/challenge",
+  async (req: Request, res: Response): Promise<void> => {
+    const { userId, code } = req.body as { userId?: number; code?: string };
 
-  res.json({ success: true, message: "MFA enabled successfully" });
-});
+    if (!userId || !code) {
+      res.status(400).json({ error: "userId and code are required" });
+      return;
+    }
 
-router.post("/auth/mfa/challenge", async (req: Request, res: Response): Promise<void> => {
-  const { userId, code } = req.body as { userId?: number; code?: string };
+    const [mfa] = await db
+      .select()
+      .from(userMfaTable)
+      .where(
+        and(
+          eq(userMfaTable.userId, userId),
+          eq(userMfaTable.method, "totp"),
+          eq(userMfaTable.enabled, true),
+        ),
+      )
+      .limit(1);
 
-  if (!userId || !code) {
-    res.status(400).json({ error: "userId and code are required" });
-    return;
-  }
+    if (!mfa) {
+      res.json({ verified: true });
+      return;
+    }
 
-  const [mfa] = await db.select().from(userMfaTable)
-    .where(and(eq(userMfaTable.userId, userId), eq(userMfaTable.method, "totp"), eq(userMfaTable.enabled, true)))
-    .limit(1);
+    const verified = verifyTotpCode(mfa.secret, code);
+    res.json({ verified });
+  },
+);
 
-  if (!mfa) {
-    res.json({ verified: true });
-    return;
-  }
+router.delete(
+  "/auth/mfa",
+  authMiddleware,
+  async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user!.id;
+    await db
+      .delete(userMfaTable)
+      .where(
+        and(eq(userMfaTable.userId, userId), eq(userMfaTable.method, "totp")),
+      );
+    res.json({ success: true, message: "MFA disabled" });
+  },
+);
 
-  const verified = verifyTotpCode(mfa.secret, code);
-  res.json({ verified });
-});
+router.get(
+  "/auth/mfa/status",
+  authMiddleware,
+  async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user!.id;
+    const [mfa] = await db
+      .select()
+      .from(userMfaTable)
+      .where(
+        and(eq(userMfaTable.userId, userId), eq(userMfaTable.method, "totp")),
+      )
+      .limit(1);
 
-router.delete("/auth/mfa", authMiddleware, async (req: Request, res: Response): Promise<void> => {
-  const userId = req.user!.id;
-  await db.delete(userMfaTable)
-    .where(and(eq(userMfaTable.userId, userId), eq(userMfaTable.method, "totp")));
-  res.json({ success: true, message: "MFA disabled" });
-});
-
-router.get("/auth/mfa/status", authMiddleware, async (req: Request, res: Response): Promise<void> => {
-  const userId = req.user!.id;
-  const [mfa] = await db.select().from(userMfaTable)
-    .where(and(eq(userMfaTable.userId, userId), eq(userMfaTable.method, "totp")))
-    .limit(1);
-
-  res.json({
-    enabled: mfa?.enabled ?? false,
-    method: mfa?.method ?? null,
-    verifiedAt: mfa?.verifiedAt?.toISOString() ?? null,
-  });
-});
+    res.json({
+      enabled: mfa?.enabled ?? false,
+      method: mfa?.method ?? null,
+      verifiedAt: mfa?.verifiedAt?.toISOString() ?? null,
+    });
+  },
+);
 
 export default router;

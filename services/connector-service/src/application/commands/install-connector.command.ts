@@ -1,4 +1,4 @@
-import { db, tenantConnectorInstallsTable } from "@autoflow/db";
+import { db, tenantConnectorInstallsTable } from "@longox/db";
 import type { ConnectorRepository } from "../../domain";
 import { ConnectorInstallation } from "../../domain";
 
@@ -19,17 +19,22 @@ export class InstallConnectorCommand {
       throw new Error(`Connector with id ${input.connectorId} not found`);
     }
     if (connector.status === "disabled") {
-      throw new Error(`Connector "${connector.name}" is disabled and cannot be installed`);
+      throw new Error(
+        `Connector "${connector.name}" is disabled and cannot be installed`,
+      );
     }
 
-    const [row] = await db.insert(tenantConnectorInstallsTable).values({
-      tenantId: input.tenantId,
-      connectorId: input.connectorId,
-      connectorVersionId: input.connectorVersionId ?? null,
-      status: "active",
-      config: input.config,
-      installedBy: input.installedBy,
-    }).returning();
+    const [row] = await db
+      .insert(tenantConnectorInstallsTable)
+      .values({
+        tenantId: input.tenantId,
+        connectorId: input.connectorId,
+        connectorVersionId: input.connectorVersionId ?? null,
+        status: "active",
+        config: input.config,
+        installedBy: input.installedBy,
+      })
+      .returning();
 
     return new ConnectorInstallation({
       id: row.id,

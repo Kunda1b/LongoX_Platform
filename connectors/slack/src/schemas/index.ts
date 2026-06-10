@@ -5,7 +5,10 @@ export const slackSchemas = {
       properties: {
         channel: { type: "string", description: "Slack channel ID or name" },
         text: { type: "string", description: "Message text" },
-        threadTs: { type: "string", description: "Thread timestamp to reply in thread" },
+        threadTs: {
+          type: "string",
+          description: "Thread timestamp to reply in thread",
+        },
       },
       required: ["channel", "text"],
     },

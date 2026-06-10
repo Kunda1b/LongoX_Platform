@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import type { PlatformEventType } from "@autoflow/shared-events";
+import type { PlatformEventType } from "@longox/shared-events";
 
 interface ExecutionUpdate {
   executionId: string;
@@ -63,7 +63,10 @@ export function useRealtime(options: UseRealtimeOptions = {}) {
         ) {
           callbacksRef.current.onExecutionUpdate({
             executionId: event.aggregateId,
-            status: event.type.replace("execution.", "") as ExecutionUpdate["status"],
+            status: event.type.replace(
+              "execution.",
+              "",
+            ) as ExecutionUpdate["status"],
             ...event.payload,
             timestamp: event.timestamp,
           } as ExecutionUpdate);

@@ -12,9 +12,7 @@ export function WorkspaceLayout({ children, className }: WorkspaceLayoutProps) {
   return (
     <SidebarInset className={cn("flex flex-col", className)}>
       <GlobalNav />
-      <main className="flex-1 overflow-auto p-6 md:p-8">
-        {children}
-      </main>
+      <main className="flex-1 overflow-auto p-6 md:p-8">{children}</main>
     </SidebarInset>
   );
 }

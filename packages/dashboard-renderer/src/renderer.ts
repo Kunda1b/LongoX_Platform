@@ -1,7 +1,14 @@
 export type WidgetType =
-  | "kpi-card" | "time-series-chart" | "data-table" | "kanban-board"
-  | "form-panel" | "map-widget" | "file-widget" | "ai-insight-card"
-  | "audit-feed" | "task-queue";
+  | "kpi-card"
+  | "time-series-chart"
+  | "data-table"
+  | "kanban-board"
+  | "form-panel"
+  | "map-widget"
+  | "file-widget"
+  | "ai-insight-card"
+  | "audit-feed"
+  | "task-queue";
 export interface DashboardLayout {
   columns: number;
   rows: number;
@@ -41,19 +48,31 @@ export interface RenderContext {
   permissions: DashboardPermissions;
   environment: string;
 }
-export function resolveWidgetData(binding: DataBinding | undefined, context: RenderContext): unknown {
+export function resolveWidgetData(
+  binding: DataBinding | undefined,
+  context: RenderContext,
+): unknown {
   if (!binding) return null;
   if (binding.source === "manual") return binding.parameters;
   const key = binding.query ?? binding.source;
   return context.data[key] ?? null;
 }
-export function checkWidgetVisibility(widget: WidgetInstance, permissions: DashboardPermissions): boolean {
+export function checkWidgetVisibility(
+  widget: WidgetInstance,
+  permissions: DashboardPermissions,
+): boolean {
   if (permissions.visibility === "public") return true;
   const override = permissions.widgetOverrides[widget.id];
   const allowed = override?.allowedRoles ?? permissions.allowedRoles;
   return allowed.length === 0;
 }
 export const defaultLayout: DashboardLayout = {
-  columns: 12, rows: 0, gap: 16,
-  breakpoints: { sm: { columns: 4, gap: 8 }, md: { columns: 8, gap: 12 }, lg: { columns: 12, gap: 16 } },
+  columns: 12,
+  rows: 0,
+  gap: 16,
+  breakpoints: {
+    sm: { columns: 4, gap: 8 },
+    md: { columns: 8, gap: 12 },
+    lg: { columns: 12, gap: 16 },
+  },
 };

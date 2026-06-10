@@ -1,11 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  Check,
-  ChevronsUpDown,
-  Building2,
-  Plus,
-} from "lucide-react";
+import { Check, ChevronsUpDown, Building2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -73,7 +68,7 @@ export function TenantSwitcher() {
                   <Check
                     className={cn(
                       "ml-auto h-4 w-4",
-                      tenant?.id === t.id ? "opacity-100" : "opacity-0"
+                      tenant?.id === t.id ? "opacity-100" : "opacity-0",
                     )}
                   />
                 </CommandItem>

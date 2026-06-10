@@ -16,8 +16,8 @@ import {
   getListTemplatesQueryKey,
   getListWorkflowVersionsQueryKey,
   getListWorkflowPromotionsQueryKey,
-} from "@autoflow/api-client-react";
-import type { Environment, WorkflowPromotion } from "@autoflow/api-client-react";
+} from "@longox/api-client-react";
+import type { Environment, WorkflowPromotion } from "@longox/api-client-react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,7 +66,15 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow, format } from "date-fns";
 
-const CATEGORIES = ["Sales", "Support", "Data", "Reporting", "Operations", "Developer", "Research"];
+const CATEGORIES = [
+  "Sales",
+  "Support",
+  "Data",
+  "Reporting",
+  "Operations",
+  "Developer",
+  "Research",
+];
 
 export default function WorkflowDetail() {
   const { id } = useParams<{ id: string }>();
@@ -79,7 +87,9 @@ export default function WorkflowDetail() {
   const [templateName, setTemplateName] = useState("");
   const [templateDesc, setTemplateDesc] = useState("");
   const [templateCategory, setTemplateCategory] = useState("Operations");
-  const [templateComplexity, setTemplateComplexity] = useState<"beginner" | "intermediate" | "advanced">("beginner");
+  const [templateComplexity, setTemplateComplexity] = useState<
+    "beginner" | "intermediate" | "advanced"
+  >("beginner");
   const [templateTags, setTemplateTags] = useState("");
 
   const [publishOpen, setPublishOpen] = useState(false);
@@ -91,18 +101,25 @@ export default function WorkflowDetail() {
   const [deployTo, setDeployTo] = useState("staging");
   const [deployNotes, setDeployNotes] = useState("");
 
-  const { data: workflow, isLoading: isLoadingWf } = useGetWorkflow(workflowId, {
-    query: { enabled: !!workflowId, queryKey: getGetWorkflowQueryKey(workflowId) },
-  });
+  const { data: workflow, isLoading: isLoadingWf } = useGetWorkflow(
+    workflowId,
+    {
+      query: {
+        enabled: !!workflowId,
+        queryKey: getGetWorkflowQueryKey(workflowId),
+      },
+    },
+  );
 
   const { data: nodeTypes = [] } = useListNodeTypes();
 
-  const { data: versions = [], isLoading: versionsLoading } = useListWorkflowVersions(workflowId, {
-    query: {
-      enabled: versionHistoryOpen && !!workflowId,
-      queryKey: getListWorkflowVersionsQueryKey(workflowId),
-    },
-  });
+  const { data: versions = [], isLoading: versionsLoading } =
+    useListWorkflowVersions(workflowId, {
+      query: {
+        enabled: versionHistoryOpen && !!workflowId,
+        queryKey: getListWorkflowVersionsQueryKey(workflowId),
+      },
+    });
 
   const { data: promotions = [] } = useListWorkflowPromotions(workflowId, {
     query: {
@@ -116,7 +133,11 @@ export default function WorkflowDetail() {
     queryFn: () => fetch("/api/environments").then((r) => r.json()),
   });
 
-  const promoteMutation = useMutation<WorkflowPromotion, Error, { fromEnvironment: string; toEnvironment: string; notes: string }>({
+  const promoteMutation = useMutation<
+    WorkflowPromotion,
+    Error,
+    { fromEnvironment: string; toEnvironment: string; notes: string }
+  >({
     mutationFn: ({ fromEnvironment, toEnvironment, notes }) =>
       fetch(`/api/workflows/${workflowId}/promotions`, {
         method: "POST",
@@ -124,10 +145,15 @@ export default function WorkflowDetail() {
         body: JSON.stringify({ fromEnvironment, toEnvironment, notes }),
       }).then((r) => r.json()),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: getListWorkflowPromotionsQueryKey(workflowId) });
+      queryClient.invalidateQueries({
+        queryKey: getListWorkflowPromotionsQueryKey(workflowId),
+      });
       setDeployOpen(false);
       setDeployNotes("");
-      toast({ title: `Promoted to ${deployTo}`, description: "Workflow deployed successfully." });
+      toast({
+        title: `Promoted to ${deployTo}`,
+        description: "Workflow deployed successfully.",
+      });
     },
     onError: () => toast({ title: "Promotion failed", variant: "destructive" }),
   });
@@ -135,11 +161,16 @@ export default function WorkflowDetail() {
   const runMutation = useRunWorkflow({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetWorkflowQueryKey(workflowId) });
-        queryClient.invalidateQueries({ queryKey: getListExecutionsQueryKey() });
+        queryClient.invalidateQueries({
+          queryKey: getGetWorkflowQueryKey(workflowId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: getListExecutionsQueryKey(),
+        });
         toast({ title: "Workflow started successfully" });
       },
-      onError: () => toast({ title: "Failed to start workflow", variant: "destructive" }),
+      onError: () =>
+        toast({ title: "Failed to start workflow", variant: "destructive" }),
     },
   });
 
@@ -150,7 +181,11 @@ export default function WorkflowDetail() {
         toast({ title: "Workflow duplicated" });
         setLocation(`/workflows/${newWf.id}`);
       },
-      onError: () => toast({ title: "Failed to duplicate workflow", variant: "destructive" }),
+      onError: () =>
+        toast({
+          title: "Failed to duplicate workflow",
+          variant: "destructive",
+        }),
     },
   });
 
@@ -158,18 +193,26 @@ export default function WorkflowDetail() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListTemplatesQueryKey() });
-        toast({ title: "Saved as template!", description: "Find it in the Templates gallery." });
+        toast({
+          title: "Saved as template!",
+          description: "Find it in the Templates gallery.",
+        });
         setSaveAsTemplateOpen(false);
       },
-      onError: () => toast({ title: "Failed to save as template", variant: "destructive" }),
+      onError: () =>
+        toast({ title: "Failed to save as template", variant: "destructive" }),
     },
   });
 
   const publishMutation = usePublishWorkflow({
     mutation: {
       onSuccess: (version) => {
-        queryClient.invalidateQueries({ queryKey: getGetWorkflowQueryKey(workflowId) });
-        queryClient.invalidateQueries({ queryKey: getListWorkflowVersionsQueryKey(workflowId) });
+        queryClient.invalidateQueries({
+          queryKey: getGetWorkflowQueryKey(workflowId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: getListWorkflowVersionsQueryKey(workflowId),
+        });
         queryClient.invalidateQueries({ queryKey: getListWorkflowsQueryKey() });
         setPublishOpen(false);
         setChangeNote("");
@@ -184,8 +227,13 @@ export default function WorkflowDetail() {
 
   const handleSaveAsTemplate = () => {
     if (!workflow) return;
-    const tags = templateTags.split(",").map((t) => t.trim()).filter(Boolean);
-    const nodes = (workflow.nodes ?? []) as Parameters<typeof saveAsTemplateMutation.mutate>[0]["data"]["nodes"];
+    const tags = templateTags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const nodes = (workflow.nodes ?? []) as Parameters<
+      typeof saveAsTemplateMutation.mutate
+    >[0]["data"]["nodes"];
     saveAsTemplateMutation.mutate({
       data: {
         name: templateName || workflow.name,
@@ -204,7 +252,9 @@ export default function WorkflowDetail() {
   };
 
   const handleSaved = () => {
-    queryClient.invalidateQueries({ queryKey: getGetWorkflowQueryKey(workflowId) });
+    queryClient.invalidateQueries({
+      queryKey: getGetWorkflowQueryKey(workflowId),
+    });
   };
 
   const openSaveAsTemplate = () => {
@@ -223,13 +273,17 @@ export default function WorkflowDetail() {
       <header className="flex items-center justify-between pb-4 border-b shrink-0">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link href="/workflows"><ArrowLeft className="h-4 w-4" /></Link>
+            <Link href="/workflows">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
           </Button>
           <div>
             <h1 className="text-2xl font-bold">{workflow.name}</h1>
             <div className="flex items-center gap-2 mt-1">
               <StatusBadge status={workflow.status} />
-              <span className="text-sm text-muted-foreground border-l pl-2">{workflow.triggerType}</span>
+              <span className="text-sm text-muted-foreground border-l pl-2">
+                {workflow.triggerType}
+              </span>
             </div>
           </div>
         </div>
@@ -333,7 +387,8 @@ export default function WorkflowDetail() {
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Publishing creates an immutable version snapshot and marks this workflow as <strong>active</strong>.
+              Publishing creates an immutable version snapshot and marks this
+              workflow as <strong>active</strong>.
             </p>
           </div>
           <DialogFooter>
@@ -361,7 +416,8 @@ export default function WorkflowDetail() {
               Version History
             </SheetTitle>
             <SheetDescription>
-              Published snapshots and deployments of <strong>{workflow.name}</strong>
+              Published snapshots and deployments of{" "}
+              <strong>{workflow.name}</strong>
             </SheetDescription>
           </SheetHeader>
 
@@ -372,7 +428,10 @@ export default function WorkflowDetail() {
             {versionsLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-20 rounded-lg bg-muted animate-pulse" />
+                  <div
+                    key={i}
+                    className="h-20 rounded-lg bg-muted animate-pulse"
+                  />
                 ))}
               </div>
             ) : versions.length === 0 ? (
@@ -380,33 +439,58 @@ export default function WorkflowDetail() {
                 <History className="h-10 w-10 text-muted-foreground mb-3" />
                 <p className="font-medium">No published versions yet</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Click <strong>Publish</strong> to create the first immutable snapshot.
+                  Click <strong>Publish</strong> to create the first immutable
+                  snapshot.
                 </p>
               </div>
             ) : (
               <div className="space-y-2 pb-4">
                 {[...versions].reverse().map((v, idx) => (
-                  <div key={v.id} className="rounded-lg border bg-card p-4 space-y-2">
+                  <div
+                    key={v.id}
+                    className="rounded-lg border bg-card p-4 space-y-2"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Badge variant={v.published ? "default" : "secondary"} className="text-xs">
-                          {v.published && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                        <Badge
+                          variant={v.published ? "default" : "secondary"}
+                          className="text-xs"
+                        >
+                          {v.published && (
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                          )}
                           v{v.version}
                         </Badge>
                         {idx === 0 && (
-                          <Badge variant="outline" className="text-xs text-primary border-primary/40">Latest</Badge>
+                          <Badge
+                            variant="outline"
+                            className="text-xs text-primary border-primary/40"
+                          >
+                            Latest
+                          </Badge>
                         )}
                       </div>
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {formatDistanceToNow(new Date(v.createdAt), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(v.createdAt), {
+                          addSuffix: true,
+                        })}
                       </span>
                     </div>
-                    {v.changeNote && <p className="text-sm text-muted-foreground">{v.changeNote}</p>}
+                    {v.changeNote && (
+                      <p className="text-sm text-muted-foreground">
+                        {v.changeNote}
+                      </p>
+                    )}
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span>{(v.nodes as unknown[]).length} nodes</span>
                       <span>·</span>
-                      <span>{format(new Date(v.createdAt), "MMM d, yyyy 'at' h:mm a")}</span>
+                      <span>
+                        {format(
+                          new Date(v.createdAt),
+                          "MMM d, yyyy 'at' h:mm a",
+                        )}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -421,15 +505,28 @@ export default function WorkflowDetail() {
                 </p>
                 <div className="space-y-2 pb-4">
                   {promotions.map((p) => (
-                    <div key={p.id} className="rounded-lg border bg-muted/30 p-3 flex items-center gap-3">
+                    <div
+                      key={p.id}
+                      className="rounded-lg border bg-muted/30 p-3 flex items-center gap-3"
+                    >
                       <div className="flex items-center gap-1.5 text-sm font-medium flex-1 min-w-0">
-                        <Badge variant="outline" className="text-xs shrink-0">{p.fromEnvironment}</Badge>
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          {p.fromEnvironment}
+                        </Badge>
                         <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <Badge className="text-xs shrink-0 bg-emerald-600">{p.toEnvironment}</Badge>
-                        {p.notes && <span className="text-xs text-muted-foreground truncate ml-1">{p.notes}</span>}
+                        <Badge className="text-xs shrink-0 bg-emerald-600">
+                          {p.toEnvironment}
+                        </Badge>
+                        {p.notes && (
+                          <span className="text-xs text-muted-foreground truncate ml-1">
+                            {p.notes}
+                          </span>
+                        )}
                       </div>
                       <span className="text-xs text-muted-foreground shrink-0">
-                        {formatDistanceToNow(new Date(p.createdAt), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(p.createdAt), {
+                          addSuffix: true,
+                        })}
                       </span>
                     </div>
                   ))}
@@ -442,14 +539,20 @@ export default function WorkflowDetail() {
             <Button
               variant="outline"
               className="flex-1 gap-2"
-              onClick={() => { setVersionHistoryOpen(false); setDeployOpen(true); }}
+              onClick={() => {
+                setVersionHistoryOpen(false);
+                setDeployOpen(true);
+              }}
             >
               <Globe className="h-4 w-4" />
               Deploy
             </Button>
             <Button
               className="flex-1 gap-2"
-              onClick={() => { setVersionHistoryOpen(false); setPublishOpen(true); }}
+              onClick={() => {
+                setVersionHistoryOpen(false);
+                setPublishOpen(true);
+              }}
             >
               <Rocket className="h-4 w-4" />
               Publish
@@ -483,7 +586,9 @@ export default function WorkflowDetail() {
                   </SelectTrigger>
                   <SelectContent>
                     {environments.map((e) => (
-                      <SelectItem key={e.id} value={e.type}>{e.name}</SelectItem>
+                      <SelectItem key={e.id} value={e.type}>
+                        {e.name}
+                      </SelectItem>
                     ))}
                     {environments.length === 0 && (
                       <>
@@ -503,7 +608,9 @@ export default function WorkflowDetail() {
                   </SelectTrigger>
                   <SelectContent>
                     {environments.map((e) => (
-                      <SelectItem key={e.id} value={e.type}>{e.name}</SelectItem>
+                      <SelectItem key={e.id} value={e.type}>
+                        {e.name}
+                      </SelectItem>
                     ))}
                     {environments.length === 0 && (
                       <>
@@ -532,12 +639,20 @@ export default function WorkflowDetail() {
               <Button variant="outline">Cancel</Button>
             </DialogClose>
             <Button
-              onClick={() => promoteMutation.mutate({ fromEnvironment: deployFrom, toEnvironment: deployTo, notes: deployNotes })}
+              onClick={() =>
+                promoteMutation.mutate({
+                  fromEnvironment: deployFrom,
+                  toEnvironment: deployTo,
+                  notes: deployNotes,
+                })
+              }
               disabled={promoteMutation.isPending || deployFrom === deployTo}
               className="gap-2"
             >
               <Globe className="h-4 w-4" />
-              {promoteMutation.isPending ? "Deploying…" : `Deploy to ${deployTo}`}
+              {promoteMutation.isPending
+                ? "Deploying…"
+                : `Deploy to ${deployTo}`}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -552,7 +667,9 @@ export default function WorkflowDetail() {
 
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label>Template Name <span className="text-destructive">*</span></Label>
+              <Label>
+                Template Name <span className="text-destructive">*</span>
+              </Label>
               <Input
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
@@ -573,18 +690,34 @@ export default function WorkflowDetail() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Category</Label>
-                <Select value={templateCategory} onValueChange={setTemplateCategory}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={templateCategory}
+                  onValueChange={setTemplateCategory}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {CATEGORIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-1.5">
                 <Label>Complexity</Label>
-                <Select value={templateComplexity} onValueChange={(v) => setTemplateComplexity(v as typeof templateComplexity)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={templateComplexity}
+                  onValueChange={(v) =>
+                    setTemplateComplexity(v as typeof templateComplexity)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="beginner">Beginner</SelectItem>
                     <SelectItem value="intermediate">Intermediate</SelectItem>
@@ -604,7 +737,9 @@ export default function WorkflowDetail() {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              The workflow's current nodes ({(workflow.nodes ?? []).length} nodes) and trigger type ({workflow.triggerType}) will be saved with the template.
+              The workflow's current nodes ({(workflow.nodes ?? []).length}{" "}
+              nodes) and trigger type ({workflow.triggerType}) will be saved
+              with the template.
             </p>
           </div>
 
@@ -614,7 +749,9 @@ export default function WorkflowDetail() {
             </DialogClose>
             <Button
               onClick={handleSaveAsTemplate}
-              disabled={!templateName.trim() || saveAsTemplateMutation.isPending}
+              disabled={
+                !templateName.trim() || saveAsTemplateMutation.isPending
+              }
             >
               {saveAsTemplateMutation.isPending ? "Saving..." : "Save Template"}
             </Button>

@@ -85,7 +85,7 @@ loki:
           period: 24h
   storage_config:
     aws:
-      bucketnames: autoflow-logs-${var.environment}
+      bucketnames: longox-logs-${var.environment}
       region: us-east-1
 singleBinary:
   replicas: 1

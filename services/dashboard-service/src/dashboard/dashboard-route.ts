@@ -1,7 +1,13 @@
 import { Router, type IRouter } from "express";
-import { db, workflowsTable, executionsTable, connectorsTable, appsTable } from "@autoflow/db";
+import {
+  db,
+  workflowsTable,
+  executionsTable,
+  connectorsTable,
+  appsTable,
+} from "@longox/db";
 import { eq, gte } from "drizzle-orm";
-import { GetRecentActivityQueryParams } from "@autoflow/api-zod";
+import { GetRecentActivityQueryParams } from "@longox/api-zod";
 
 const router: IRouter = Router();
 
@@ -17,7 +23,8 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
   const activeWorkflows = workflows.filter((w) => w.status === "active").length;
   const totalExecutions = executions.length;
   const successCount = executions.filter((e) => e.status === "success").length;
-  const successRate = totalExecutions > 0 ? (successCount / totalExecutions) * 100 : 0;
+  const successRate =
+    totalExecutions > 0 ? (successCount / totalExecutions) * 100 : 0;
   const totalApps = apps.length;
   const totalConnectors = connectors.filter((c) => c.isInstalled).length;
 
@@ -63,7 +70,7 @@ router.get("/dashboard/activity", async (req, res): Promise<void> => {
       startedAt: e.startedAt.toISOString(),
       durationMs: e.durationMs ?? null,
       errorMessage: e.errorMessage ?? null,
-    }))
+    })),
   );
 });
 

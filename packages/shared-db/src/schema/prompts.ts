@@ -8,8 +8,13 @@ export const promptsTable = pgTable("prompts", {
   version: integer("version").notNull().default(1),
   status: text("status").notNull().default("draft"),
   tags: text("tags").array(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
 export const promptVersionsTable = pgTable("prompt_versions", {
@@ -19,7 +24,9 @@ export const promptVersionsTable = pgTable("prompt_versions", {
   version: integer("version").notNull(),
   status: text("status").notNull().default("draft"),
   notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export type PromptRecord = typeof promptsTable.$inferSelect;

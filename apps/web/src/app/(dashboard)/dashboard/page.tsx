@@ -9,13 +9,17 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Overview of your workflows and system health</p>
+        <p className="text-sm text-muted-foreground">
+          Overview of your workflows and system health
+        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Workflows</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Workflows
+            </CardTitle>
             <Workflow className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -67,14 +71,25 @@ export default function DashboardPage() {
                 { name: "Data Sync Pipeline", status: "active", runs: 89 },
                 { name: "Email Notification", status: "paused", runs: 34 },
               ].map((wf) => (
-                <div key={wf.name} className="flex items-center justify-between">
+                <div
+                  key={wf.name}
+                  className="flex items-center justify-between"
+                >
                   <div className="flex items-center gap-2">
-                    <div className={`h-2 w-2 rounded-full ${wf.status === "active" ? "bg-emerald-500" : "bg-amber-500"}`} />
+                    <div
+                      className={`h-2 w-2 rounded-full ${wf.status === "active" ? "bg-emerald-500" : "bg-amber-500"}`}
+                    />
                     <span className="text-sm">{wf.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">{wf.runs} runs</span>
-                    <Badge variant={wf.status === "active" ? "success" : "warning"}>{wf.status}</Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {wf.runs} runs
+                    </span>
+                    <Badge
+                      variant={wf.status === "active" ? "success" : "warning"}
+                    >
+                      {wf.status}
+                    </Badge>
                   </div>
                 </div>
               ))}
@@ -88,16 +103,34 @@ export default function DashboardPage() {
           <CardContent>
             <div className="space-y-3">
               {[
-                { id: "exec-001", workflow: "Order Processing", status: "completed" },
-                { id: "exec-002", workflow: "Data Sync Pipeline", status: "running" },
-                { id: "exec-003", workflow: "Email Notification", status: "failed" },
+                {
+                  id: "exec-001",
+                  workflow: "Order Processing",
+                  status: "completed",
+                },
+                {
+                  id: "exec-002",
+                  workflow: "Data Sync Pipeline",
+                  status: "running",
+                },
+                {
+                  id: "exec-003",
+                  workflow: "Email Notification",
+                  status: "failed",
+                },
               ].map((ex) => (
                 <div key={ex.id} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-sm">{ex.workflow}</span>
                   </div>
                   <Badge
-                    variant={ex.status === "completed" ? "success" : ex.status === "running" ? "info" : "destructive"}
+                    variant={
+                      ex.status === "completed"
+                        ? "success"
+                        : ex.status === "running"
+                          ? "info"
+                          : "destructive"
+                    }
                   >
                     {ex.status}
                   </Badge>

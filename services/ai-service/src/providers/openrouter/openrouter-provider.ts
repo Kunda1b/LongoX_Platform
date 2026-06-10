@@ -1,4 +1,8 @@
-import type { ChatMessage, ChatCompletionOptions, ChatCompletionResult } from "../openai";
+import type {
+  ChatMessage,
+  ChatCompletionOptions,
+  ChatCompletionResult,
+} from "../openai";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -22,7 +26,7 @@ export class OpenRouterProvider {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.apiKey}`,
-        "HTTP-Referer": process.env.APP_URL ?? "https://flowbuilder.io",
+        "HTTP-Referer": process.env.APP_URL ?? "https://longox.io",
         "X-Title": "Flow Builder Nexus",
       },
       body: JSON.stringify({
@@ -33,7 +37,7 @@ export class OpenRouterProvider {
       }),
     });
 
-    const data = await response.json() as {
+    const data = (await response.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
       usage?: { prompt_tokens: number; completion_tokens: number };
     };

@@ -7,10 +7,30 @@ import { Switch } from "@/components/ui/switch";
 import { Flag, Plus } from "lucide-react";
 
 const flags = [
-  { name: "new-dashboard", description: "New dashboard UI", enabled: true, percentage: 100 },
-  { name: "ai-features", description: "AI-powered workflow suggestions", enabled: false, percentage: 0 },
-  { name: "dark-mode", description: "Dark mode support", enabled: true, percentage: 50 },
-  { name: "beta-connectors", description: "New connector integrations", enabled: true, percentage: 25 },
+  {
+    name: "new-dashboard",
+    description: "New dashboard UI",
+    enabled: true,
+    percentage: 100,
+  },
+  {
+    name: "ai-features",
+    description: "AI-powered workflow suggestions",
+    enabled: false,
+    percentage: 0,
+  },
+  {
+    name: "dark-mode",
+    description: "Dark mode support",
+    enabled: true,
+    percentage: 50,
+  },
+  {
+    name: "beta-connectors",
+    description: "New connector integrations",
+    enabled: true,
+    percentage: 25,
+  },
 ];
 
 export default function FeatureFlagsPage() {
@@ -21,10 +41,14 @@ export default function FeatureFlagsPage() {
           <Flag className="h-5 w-5" />
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Feature Flags</h1>
-            <p className="text-sm text-muted-foreground">Manage feature rollouts</p>
+            <p className="text-sm text-muted-foreground">
+              Manage feature rollouts
+            </p>
           </div>
         </div>
-        <Button><Plus className="mr-1 h-4 w-4" /> New Flag</Button>
+        <Button>
+          <Plus className="mr-1 h-4 w-4" /> New Flag
+        </Button>
       </div>
 
       <div className="space-y-3">
@@ -35,7 +59,9 @@ export default function FeatureFlagsPage() {
                 <Switch defaultChecked={f.enabled} />
                 <div>
                   <p className="text-sm font-medium">{f.name}</p>
-                  <p className="text-xs text-muted-foreground">{f.description}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {f.description}
+                  </p>
                 </div>
               </div>
               <Badge variant={f.enabled ? "success" : "secondary"}>

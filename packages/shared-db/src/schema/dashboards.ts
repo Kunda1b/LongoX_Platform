@@ -9,10 +9,19 @@ export const dashboardsTable = pgTable("dashboards", {
   status: text("status").notNull().default("draft"),
   widgets: jsonb("widgets").notNull().default([]),
   publishedAt: timestamp("published_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
-export const insertDashboardSchema = createInsertSchema(dashboardsTable).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertDashboardSchema = createInsertSchema(dashboardsTable).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
 export type InsertDashboard = z.infer<typeof insertDashboardSchema>;
 export type DashboardRecord = typeof dashboardsTable.$inferSelect;

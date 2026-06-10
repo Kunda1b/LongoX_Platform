@@ -1,4 +1,4 @@
-import { logger } from "@autoflow/shared-logger";
+import { logger } from "@longox/shared-logger";
 
 export interface RegionConfig {
   id: string;
@@ -57,7 +57,9 @@ export class RegionManager {
   }
 
   getAllRegions(): RegionConfig[] {
-    return Array.from(this.regions.values()).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+    return Array.from(this.regions.values()).sort(
+      (a, b) => (b.priority ?? 0) - (a.priority ?? 0),
+    );
   }
 
   getLocalRegionId(): string {
@@ -154,7 +156,11 @@ export class RegionManager {
     return healthy[0];
   }
 
-  async forwardRequest(regionId: string, path: string, options?: RequestInit): Promise<Response> {
+  async forwardRequest(
+    regionId: string,
+    path: string,
+    options?: RequestInit,
+  ): Promise<Response> {
     const region = this.regions.get(regionId);
     if (!region) {
       throw new Error(`Unknown region: ${regionId}`);

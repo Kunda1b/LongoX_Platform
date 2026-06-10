@@ -10,11 +10,17 @@ export default function BuilderPage() {
       <div className="flex items-center justify-between border-b pb-4 mb-4">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold tracking-tight">Workflow Builder</h1>
-          <span className="text-xs text-muted-foreground">Untitled Workflow</span>
+          <span className="text-xs text-muted-foreground">
+            Untitled Workflow
+          </span>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm"><Save className="mr-1 h-4 w-4" /> Save</Button>
-          <Button size="sm"><Play className="mr-1 h-4 w-4" /> Run</Button>
+          <Button variant="outline" size="sm">
+            <Save className="mr-1 h-4 w-4" /> Save
+          </Button>
+          <Button size="sm">
+            <Play className="mr-1 h-4 w-4" /> Run
+          </Button>
         </div>
       </div>
 
@@ -24,8 +30,18 @@ export default function BuilderPage() {
             <CardTitle className="text-sm">Nodes</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {["Trigger", "Action", "Condition", "Transform", "Delay", "Notification"].map((node) => (
-              <div key={node} className="flex cursor-grab items-center gap-2 rounded-lg border p-2 text-sm transition-colors hover:bg-muted/50">
+            {[
+              "Trigger",
+              "Action",
+              "Condition",
+              "Transform",
+              "Delay",
+              "Notification",
+            ].map((node) => (
+              <div
+                key={node}
+                className="flex cursor-grab items-center gap-2 rounded-lg border p-2 text-sm transition-colors hover:bg-muted/50"
+              >
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
                 {node}
               </div>
@@ -40,7 +56,9 @@ export default function BuilderPage() {
               <p className="mt-4 text-sm text-muted-foreground">
                 Drag nodes from the sidebar to start building your workflow
               </p>
-              <Button variant="outline" className="mt-4"><Plus className="mr-1 h-4 w-4" /> Add Trigger</Button>
+              <Button variant="outline" className="mt-4">
+                <Plus className="mr-1 h-4 w-4" /> Add Trigger
+              </Button>
             </div>
           </CardContent>
         </Card>

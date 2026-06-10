@@ -1,4 +1,11 @@
-import { pgTable, text, serial, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  timestamp,
+  integer,
+  jsonb,
+} from "drizzle-orm/pg-core";
 export const platformEventsTable = pgTable("platform_events", {
   id: serial("id").primaryKey(),
   eventType: text("event_type").notNull(),
@@ -7,7 +14,9 @@ export const platformEventsTable = pgTable("platform_events", {
   payloadJson: jsonb("payload_json").notNull().default({}),
   actorId: text("actor_id"),
   correlationId: text("correlation_id"),
-  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+  occurredAt: timestamp("occurred_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 export const webhookDeliveriesTable = pgTable("webhook_deliveries", {
   id: serial("id").primaryKey(),
@@ -20,5 +29,7 @@ export const webhookDeliveriesTable = pgTable("webhook_deliveries", {
   retryCount: integer("retry_count").notNull().default(0),
   deliveredAt: timestamp("delivered_at", { withTimezone: true }),
   nextRetryAt: timestamp("next_retry_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });

@@ -1,5 +1,5 @@
 {
-  "name": "@autoflow/shared-observability",
+  "name": "@longox/shared-observability",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,6 +7,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@autoflow/shared-cache": "workspace:*"
+    "@longox/shared-cache": "workspace:*"
   }
 }

@@ -1,4 +1,10 @@
-export type NodeRunStatus = "idle" | "running" | "success" | "failed" | "skipped" | "pending";
+export type NodeRunStatus =
+  | "idle"
+  | "running"
+  | "success"
+  | "failed"
+  | "skipped"
+  | "pending";
 
 export interface NodeRuntimeAnnotation {
   nodeId: string;

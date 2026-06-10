@@ -14,10 +14,18 @@ export interface ReviewProps {
 export class Review {
   constructor(private props: ReviewProps) {}
 
-  get id(): number { return this.props.id; }
-  get listingId(): number { return this.props.listingId; }
-  get rating(): number { return this.props.rating; }
-  get verified(): boolean { return this.props.verified; }
+  get id(): number {
+    return this.props.id;
+  }
+  get listingId(): number {
+    return this.props.listingId;
+  }
+  get rating(): number {
+    return this.props.rating;
+  }
+  get verified(): boolean {
+    return this.props.verified;
+  }
 
   toJSON() {
     return { ...this.props };

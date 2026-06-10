@@ -1,8 +1,22 @@
 import { eq, desc, and, sql } from "drizzle-orm";
-import { db, workflowsTable, workflowVersionsTable, executionsTable, executionCheckpointsTable, dashboardsTable, dashboardVersionsTable, connectorsTable, connectorVersionsTable, templatesTable, templateVersionsTable, usersTable, tenantsTable } from "@autoflow/db";
-import { realtimeHub } from "@autoflow/shared-realtime";
-import { createEvent } from "@autoflow/shared-events";
-import type { PlatformEventType } from "@autoflow/shared-events";
+import {
+  db,
+  workflowsTable,
+  workflowVersionsTable,
+  executionsTable,
+  executionCheckpointsTable,
+  dashboardsTable,
+  dashboardVersionsTable,
+  connectorsTable,
+  connectorVersionsTable,
+  templatesTable,
+  templateVersionsTable,
+  usersTable,
+  tenantsTable,
+} from "@longox/db";
+import { realtimeHub } from "@longox/shared-realtime";
+import { createEvent } from "@longox/shared-events";
+import type { PlatformEventType } from "@longox/shared-events";
 
 interface ResolverContext {
   user?: {
@@ -15,26 +29,37 @@ interface ResolverContext {
 }
 
 async function listWorkflows(limit = 50, offset = 0) {
-  const rows = await db.select().from(workflowsTable)
+  const rows = await db
+    .select()
+    .from(workflowsTable)
     .orderBy(desc(workflowsTable.updatedAt))
-    .limit(limit).offset(offset);
+    .limit(limit)
+    .offset(offset);
   return rows.map(serializeWorkflow);
 }
 
 async function getWorkflow(id: number) {
-  const [row] = await db.select().from(workflowsTable).where(eq(workflowsTable.id, id));
+  const [row] = await db
+    .select()
+    .from(workflowsTable)
+    .where(eq(workflowsTable.id, id));
   if (!row) return null;
   return serializeWorkflow(row);
 }
 
 async function getWorkflowVersion(id: number) {
-  const [row] = await db.select().from(workflowVersionsTable).where(eq(workflowVersionsTable.id, id));
+  const [row] = await db
+    .select()
+    .from(workflowVersionsTable)
+    .where(eq(workflowVersionsTable.id, id));
   if (!row) return null;
   return serializeVersion(row);
 }
 
 async function getWorkflowVersions(workflowId: number) {
-  const rows = await db.select().from(workflowVersionsTable)
+  const rows = await db
+    .select()
+    .from(workflowVersionsTable)
     .where(eq(workflowVersionsTable.workflowId, workflowId))
     .orderBy(desc(workflowVersionsTable.version));
   return rows.map(serializeVersion);
@@ -44,17 +69,25 @@ async function listExecutions(workflowId?: number, limit = 50, offset = 0) {
   const conditions = [];
   if (workflowId) conditions.push(eq(executionsTable.workflowId, workflowId));
 
-  const rows = await db.select().from(executionsTable)
+  const rows = await db
+    .select()
+    .from(executionsTable)
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(executionsTable.startedAt))
-    .limit(limit).offset(offset);
+    .limit(limit)
+    .offset(offset);
   return rows.map(serializeExecution);
 }
 
 async function getExecution(id: number) {
-  const [row] = await db.select().from(executionsTable).where(eq(executionsTable.id, id));
+  const [row] = await db
+    .select()
+    .from(executionsTable)
+    .where(eq(executionsTable.id, id));
   if (!row) return null;
-  const steps = await db.select().from(executionCheckpointsTable)
+  const steps = await db
+    .select()
+    .from(executionCheckpointsTable)
     .where(eq(executionCheckpointsTable.executionId, id));
   return { ...serializeExecution(row), steps: steps.map(serializeStep) };
 }
@@ -85,8 +118,10 @@ function serializeWorkflow(row: typeof workflowsTable.$inferSelect) {
     })),
     versions: [],
     currentVersion: null,
-    createdAt: (row.createdAt as any)?.toISOString?.() ?? new Date().toISOString(),
-    updatedAt: (row.updatedAt as any)?.toISOString?.() ?? new Date().toISOString(),
+    createdAt:
+      (row.createdAt as any)?.toISOString?.() ?? new Date().toISOString(),
+    updatedAt:
+      (row.updatedAt as any)?.toISOString?.() ?? new Date().toISOString(),
     lastRunStatus: row.lastRunStatus ?? null,
     lastRunAt: row.lastRunAt?.toISOString?.() ?? null,
     executionCount: row.executionCount ?? 0,
@@ -101,7 +136,8 @@ function serializeVersion(row: typeof workflowVersionsTable.$inferSelect) {
     checksum: (row as any).checksum ?? null,
     status: "published",
     message: (row as any).changeNote ?? null,
-    createdAt: (row.createdAt as any)?.toISOString?.() ?? new Date().toISOString(),
+    createdAt:
+      (row.createdAt as any)?.toISOString?.() ?? new Date().toISOString(),
     isActive: false,
   };
 }
@@ -140,7 +176,10 @@ export const resolvers = {
   Query: {
     me: async (_: unknown, __: unknown, ctx: ResolverContext) => {
       if (!ctx.user) return null;
-      const [user] = await db.select().from(usersTable).where(eq(usersTable.id, ctx.user.id));
+      const [user] = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.id, ctx.user.id));
       if (!user) return null;
       return {
         id: String(user.id),
@@ -165,16 +204,29 @@ export const resolvers = {
     workflowVersion: async (_: unknown, args: { id: string }) =>
       getWorkflowVersion(Number(args.id)),
 
-    executions: async (_: unknown, args: { workflowId?: string; limit?: number; offset?: number }) =>
-      listExecutions(args.workflowId ? Number(args.workflowId) : undefined, args.limit ?? 50, args.offset ?? 0),
+    executions: async (
+      _: unknown,
+      args: { workflowId?: string; limit?: number; offset?: number },
+    ) =>
+      listExecutions(
+        args.workflowId ? Number(args.workflowId) : undefined,
+        args.limit ?? 50,
+        args.offset ?? 0,
+      ),
 
     execution: async (_: unknown, args: { id: string }) =>
       getExecution(Number(args.id)),
 
-    dashboards: async (_: unknown, args: { limit?: number; offset?: number }) => {
-      const rows = await db.select().from(dashboardsTable)
+    dashboards: async (
+      _: unknown,
+      args: { limit?: number; offset?: number },
+    ) => {
+      const rows = await db
+        .select()
+        .from(dashboardsTable)
         .orderBy(desc(dashboardsTable.updatedAt))
-        .limit(args.limit ?? 50).offset(args.offset ?? 0);
+        .limit(args.limit ?? 50)
+        .offset(args.offset ?? 0);
       return rows.map((r) => ({
         id: String(r.id),
         title: r.title,
@@ -186,9 +238,15 @@ export const resolvers = {
       }));
     },
 
-    connectors: async (_: unknown, args: { limit?: number; offset?: number }) => {
-      const rows = await db.select().from(connectorsTable)
-        .limit(args.limit ?? 50).offset(args.offset ?? 0);
+    connectors: async (
+      _: unknown,
+      args: { limit?: number; offset?: number },
+    ) => {
+      const rows = await db
+        .select()
+        .from(connectorsTable)
+        .limit(args.limit ?? 50)
+        .offset(args.offset ?? 0);
       return rows.map((r) => ({
         id: String(r.id),
         name: r.name,
@@ -201,9 +259,15 @@ export const resolvers = {
       }));
     },
 
-    templates: async (_: unknown, args: { limit?: number; offset?: number }) => {
-      const rows = await db.select().from(templatesTable)
-        .limit(args.limit ?? 50).offset(args.offset ?? 0);
+    templates: async (
+      _: unknown,
+      args: { limit?: number; offset?: number },
+    ) => {
+      const rows = await db
+        .select()
+        .from(templatesTable)
+        .limit(args.limit ?? 50)
+        .offset(args.offset ?? 0);
       return rows.map((r) => ({
         id: String(r.id),
         name: r.name,
@@ -216,27 +280,39 @@ export const resolvers = {
   },
 
   Mutation: {
-    publishWorkflow: async (_: unknown, args: { id: string; message?: string }, ctx: ResolverContext) => {
+    publishWorkflow: async (
+      _: unknown,
+      args: { id: string; message?: string },
+      ctx: ResolverContext,
+    ) => {
       const wfId = Number(args.id);
-      const [workflow] = await db.select().from(workflowsTable).where(eq(workflowsTable.id, wfId));
+      const [workflow] = await db
+        .select()
+        .from(workflowsTable)
+        .where(eq(workflowsTable.id, wfId));
       if (!workflow) throw new Error("Workflow not found");
 
-      const existing = await db.select({ version: workflowVersionsTable.version })
+      const existing = await db
+        .select({ version: workflowVersionsTable.version })
         .from(workflowVersionsTable)
         .where(eq(workflowVersionsTable.workflowId, wfId))
         .orderBy(desc(workflowVersionsTable.version))
         .limit(1);
       const nextVersion = (existing[0]?.version ?? 0) + 1;
 
-      const [version] = await db.insert(workflowVersionsTable).values({
-        workflowId: wfId,
-        version: nextVersion,
-        name: workflow.name,
-        nodes: workflow.nodes as any[],
-        changeNote: args.message ?? "",
-      }).returning();
+      const [version] = await db
+        .insert(workflowVersionsTable)
+        .values({
+          workflowId: wfId,
+          version: nextVersion,
+          name: workflow.name,
+          nodes: workflow.nodes as any[],
+          changeNote: args.message ?? "",
+        })
+        .returning();
 
-      await db.update(workflowsTable)
+      await db
+        .update(workflowsTable)
         .set({ status: "published", updatedAt: new Date() })
         .where(eq(workflowsTable.id, wfId));
 
@@ -255,25 +331,35 @@ export const resolvers = {
       };
     },
 
-    createExecution: async (_: unknown, args: { workflowId: string; triggerType: string }) => {
+    createExecution: async (
+      _: unknown,
+      args: { workflowId: string; triggerType: string },
+    ) => {
       const wfId = Number(args.workflowId);
-      const [workflow] = await db.select().from(workflowsTable).where(eq(workflowsTable.id, wfId));
+      const [workflow] = await db
+        .select()
+        .from(workflowsTable)
+        .where(eq(workflowsTable.id, wfId));
       if (!workflow) throw new Error("Workflow not found");
 
-      const [execution] = await db.insert(executionsTable).values({
-        workflowId: wfId,
-        workflowName: workflow.name,
-        status: "pending",
-        startedAt: new Date(),
-        steps: [],
-      }).returning();
+      const [execution] = await db
+        .insert(executionsTable)
+        .values({
+          workflowId: wfId,
+          workflowName: workflow.name,
+          status: "pending",
+          startedAt: new Date(),
+          steps: [],
+        })
+        .returning();
 
       return serializeExecution(execution);
     },
 
     cancelExecution: async (_: unknown, args: { id: string }) => {
       const execId = Number(args.id);
-      await db.update(executionsTable)
+      await db
+        .update(executionsTable)
         .set({ status: "cancelled", finishedAt: new Date() })
         .where(eq(executionsTable.id, execId));
       return getExecution(execId);
@@ -286,7 +372,11 @@ export const resolvers = {
         const eventTarget = new EventTarget();
         const handler = (event: any) => {
           const payload = event.detail;
-          if (args.workflowId && payload.payload?.workflowId !== Number(args.workflowId)) return;
+          if (
+            args.workflowId &&
+            payload.payload?.workflowId !== Number(args.workflowId)
+          )
+            return;
 
           eventTarget.dispatchEvent(
             new CustomEvent("data", {
@@ -297,7 +387,7 @@ export const resolvers = {
                 timestamp: payload.timestamp,
                 message: payload.payload?.error ?? null,
               },
-            })
+            }),
           );
         };
 

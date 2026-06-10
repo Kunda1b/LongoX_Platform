@@ -52,11 +52,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen overflow-hidden w-full bg-background">
         <Sidebar className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
           <SidebarHeader className="h-14 flex items-center justify-center border-b border-sidebar-border px-4">
-            <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-primary w-full">
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 font-bold text-xl text-primary w-full"
+            >
               <div className="bg-primary text-primary-foreground p-1.5 rounded-md">
                 <WorkflowIcon size={20} />
               </div>
-              <span>FlowCraft</span>
+              <span>LongoX</span>
             </Link>
           </SidebarHeader>
           <SidebarContent>
@@ -65,7 +68,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location === "/dashboard"}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/dashboard"}
+                    >
                       <Link href="/dashboard">
                         <LayoutDashboard />
                         <span>Dashboard</span>
@@ -81,7 +87,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/workflows")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/workflows")}
+                    >
                       <Link href="/workflows">
                         <Cable />
                         <span>Workflows</span>
@@ -89,7 +98,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/templates")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/templates")}
+                    >
                       <Link href="/templates">
                         <Layers />
                         <span>Templates</span>
@@ -97,7 +109,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/executions")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/executions")}
+                    >
                       <Link href="/executions">
                         <Activity />
                         <span>Executions</span>
@@ -105,7 +120,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/analytics")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/analytics")}
+                    >
                       <Link href="/analytics">
                         <BarChart2 />
                         <span>Analytics</span>
@@ -113,7 +131,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/connectors")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/connectors")}
+                    >
                       <Link href="/connectors">
                         <AppWindow />
                         <span>Connectors</span>
@@ -121,7 +142,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/webhook-endpoints")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/webhook-endpoints")}
+                    >
                       <Link href="/webhook-endpoints">
                         <Webhook />
                         <span>Webhook Triggers</span>
@@ -137,7 +161,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location === "/ai/playground"}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/ai/playground"}
+                    >
                       <Link href="/ai/playground">
                         <BrainCircuit />
                         <span>Playground</span>
@@ -145,7 +172,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location === "/ai/models"}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/ai/models"}
+                    >
                       <Link href="/ai/models">
                         <Bot />
                         <span>Models</span>
@@ -153,7 +183,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location === "/ai/prompts"}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/ai/prompts"}
+                    >
                       <Link href="/ai/prompts">
                         <MessageSquareText />
                         <span>Prompts</span>
@@ -161,7 +194,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location === "/ai/analytics"}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/ai/analytics"}
+                    >
                       <Link href="/ai/analytics">
                         <ChartLine />
                         <span>AI Analytics</span>
@@ -177,7 +213,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/dlq")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/dlq")}
+                    >
                       <Link href="/dlq">
                         <AlertTriangle />
                         <span>Dead-Letter Queue</span>
@@ -185,7 +224,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/audit-log")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/audit-log")}
+                    >
                       <Link href="/audit-log">
                         <Shield />
                         <span>Audit Log</span>
@@ -201,7 +243,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/dashboards")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/dashboards")}
+                    >
                       <Link href="/dashboards">
                         <PanelTop />
                         <span>Dashboards</span>
@@ -209,7 +254,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location === "/apps" || (location.startsWith("/apps/") && location !== "/apps/stats")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={
+                        location === "/apps" ||
+                        (location.startsWith("/apps/") &&
+                          location !== "/apps/stats")
+                      }
+                    >
                       <Link href="/apps">
                         <AppWindow />
                         <span>Apps</span>
@@ -217,7 +269,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location === "/apps/stats"}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/apps/stats"}
+                    >
                       <Link href="/apps/stats">
                         <BarChart />
                         <span>App Stats</span>
@@ -233,7 +288,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/environments")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/environments")}
+                    >
                       <Link href="/environments">
                         <Globe />
                         <span>Environments</span>
@@ -241,7 +299,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/billing")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/billing")}
+                    >
                       <Link href="/billing">
                         <Receipt />
                         <span>Billing</span>
@@ -257,7 +318,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/credentials")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/credentials")}
+                    >
                       <Link href="/credentials">
                         <KeyRound />
                         <span>Credentials</span>
@@ -265,7 +329,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/rbac")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/rbac")}
+                    >
                       <Link href="/rbac">
                         <Shield />
                         <span>Access Control</span>
@@ -273,7 +340,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/tenants")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/tenants")}
+                    >
                       <Link href="/tenants">
                         <Building2 />
                         <span>Tenants</span>
@@ -281,7 +351,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/feature-flags")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/feature-flags")}
+                    >
                       <Link href="/feature-flags">
                         <Flag />
                         <span>Feature Flags</span>
@@ -289,7 +362,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/notifications")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/notifications")}
+                    >
                       <Link href="/notifications">
                         <Bell />
                         <span>Notifications</span>
@@ -297,7 +373,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/settings/regions")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/settings/regions")}
+                    >
                       <Link href="/settings/regions">
                         <MapPin />
                         <span>Regions</span>
@@ -310,9 +389,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </SidebarContent>
         </Sidebar>
 
-        <WorkspaceLayout>
-          {children}
-        </WorkspaceLayout>
+        <WorkspaceLayout>{children}</WorkspaceLayout>
       </div>
     </SidebarProvider>
   );

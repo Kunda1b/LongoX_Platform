@@ -62,10 +62,30 @@
   ],
   "edges": [
     { "id": "e1", "source": "start", "target": "validate" },
-    { "id": "e2", "source": "validate", "target": "auto_approve", "conditions": { "result": true } },
-    { "id": "e3", "source": "validate", "target": "manager_approval", "conditions": { "result": false } },
-    { "id": "e4", "source": "manager_approval", "target": "approved", "conditions": { "decision": "approve" } },
-    { "id": "e5", "source": "manager_approval", "target": "timeout", "conditions": { "decision": "timeout" } },
+    {
+      "id": "e2",
+      "source": "validate",
+      "target": "auto_approve",
+      "conditions": { "result": true }
+    },
+    {
+      "id": "e3",
+      "source": "validate",
+      "target": "manager_approval",
+      "conditions": { "result": false }
+    },
+    {
+      "id": "e4",
+      "source": "manager_approval",
+      "target": "approved",
+      "conditions": { "decision": "approve" }
+    },
+    {
+      "id": "e5",
+      "source": "manager_approval",
+      "target": "timeout",
+      "conditions": { "decision": "timeout" }
+    },
     { "id": "e6", "source": "auto_approve", "target": "approved" }
   ]
 }

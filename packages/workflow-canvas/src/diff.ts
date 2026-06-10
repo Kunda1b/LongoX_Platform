@@ -1,5 +1,10 @@
 import type { WorkflowGraph } from "./graph";
-import { normalizeGraph, detectChanges, type GraphChange, type NormalizedGraph } from "./normalizer";
+import {
+  normalizeGraph,
+  detectChanges,
+  type GraphChange,
+  type NormalizedGraph,
+} from "./normalizer";
 
 export interface VersionSnapshot {
   id: string;
@@ -51,10 +56,7 @@ export function computeDiff(
   };
 }
 
-export function isGraphEqual(
-  a: WorkflowGraph,
-  b: WorkflowGraph,
-): boolean {
+export function isGraphEqual(a: WorkflowGraph, b: WorkflowGraph): boolean {
   const normA = normalizeGraph(a);
   const normB = normalizeGraph(b);
   return normA.checksum === normB.checksum;

@@ -1,6 +1,12 @@
 import { Router, type IRouter } from "express";
 import { eq, sql, gte, and } from "drizzle-orm";
-import { db, usageEventsTable, executionsTable, workflowsTable, connectorsTable } from "@autoflow/db";
+import {
+  db,
+  usageEventsTable,
+  executionsTable,
+  workflowsTable,
+  connectorsTable,
+} from "@longox/db";
 
 const router: IRouter = Router();
 
@@ -12,16 +18,21 @@ async function ensureUsageEvents() {
   if (seeded) return;
   seeded = true;
 
-  const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(usageEventsTable);
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(usageEventsTable);
   if (count > 0) return;
 
-  const executions = await db.select({
-    id: executionsTable.id,
-    workflowId: executionsTable.workflowId,
-    workflowName: executionsTable.workflowName,
-    startedAt: executionsTable.startedAt,
-    status: executionsTable.status,
-  }).from(executionsTable).limit(200);
+  const executions = await db
+    .select({
+      id: executionsTable.id,
+      workflowId: executionsTable.workflowId,
+      workflowName: executionsTable.workflowName,
+      startedAt: executionsTable.startedAt,
+      status: executionsTable.status,
+    })
+    .from(executionsTable)
+    .limit(200);
 
   if (executions.length === 0) return;
 
@@ -30,19 +41,24 @@ async function ensureUsageEvents() {
     workflowName: e.workflowName,
     eventType: "workflow.run",
     quantity: 1,
-    metadata: { executionId: e.id, status: e.status } as Record<string, unknown>,
+    metadata: { executionId: e.id, status: e.status } as Record<
+      string,
+      unknown
+    >,
     createdAt: e.startedAt,
   }));
 
   // Also seed some connector.call events
-  const connectorEvents = executions.slice(0, Math.floor(executions.length * 0.7)).map((e) => ({
-    workflowId: e.workflowId,
-    workflowName: e.workflowName,
-    eventType: "connector.call",
-    quantity: Math.floor(Math.random() * 5) + 1,
-    metadata: { executionId: e.id } as Record<string, unknown>,
-    createdAt: e.startedAt,
-  }));
+  const connectorEvents = executions
+    .slice(0, Math.floor(executions.length * 0.7))
+    .map((e) => ({
+      workflowId: e.workflowId,
+      workflowName: e.workflowName,
+      eventType: "connector.call",
+      quantity: Math.floor(Math.random() * 5) + 1,
+      metadata: { executionId: e.id } as Record<string, unknown>,
+      createdAt: e.startedAt,
+    }));
 
   await db.insert(usageEventsTable).values([...events, ...connectorEvents]);
 }
@@ -55,21 +71,34 @@ router.get("/usage", async (_req, res): Promise<void> => {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [allExecs] = await db.select({ count: sql<number>`count(*)::int` }).from(executionsTable);
-  const [monthExecs] = await db.select({ count: sql<number>`count(*)::int` })
+  const [allExecs] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(executionsTable);
+  const [monthExecs] = await db
+    .select({ count: sql<number>`count(*)::int` })
     .from(executionsTable)
     .where(gte(executionsTable.startedAt, monthStart));
-  const [allWorkflows] = await db.select({ count: sql<number>`count(*)::int` }).from(workflowsTable);
-  const [activeWorkflows] = await db.select({ count: sql<number>`count(*)::int` })
+  const [allWorkflows] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(workflowsTable);
+  const [activeWorkflows] = await db
+    .select({ count: sql<number>`count(*)::int` })
     .from(workflowsTable)
     .where(eq(workflowsTable.status, "active"));
-  const [allConnectors] = await db.select({ count: sql<number>`count(*)::int` }).from(connectorsTable);
-  const [installedConnectors] = await db.select({ count: sql<number>`count(*)::int` })
+  const [allConnectors] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(connectorsTable);
+  const [installedConnectors] = await db
+    .select({ count: sql<number>`count(*)::int` })
     .from(connectorsTable)
     .where(eq(connectorsTable.isInstalled, true));
 
   // Compute current period cost from usage events
-  const monthEvents = await db.select({ eventType: usageEventsTable.eventType, quantity: usageEventsTable.quantity })
+  const monthEvents = await db
+    .select({
+      eventType: usageEventsTable.eventType,
+      quantity: usageEventsTable.quantity,
+    })
     .from(usageEventsTable)
     .where(gte(usageEventsTable.createdAt, monthStart));
 
@@ -79,7 +108,10 @@ router.get("/usage", async (_req, res): Promise<void> => {
     "webhook.received": 0.002,
   };
 
-  const cost = monthEvents.reduce((sum, e) => sum + (prices[e.eventType] ?? 0.001) * e.quantity, 0);
+  const cost = monthEvents.reduce(
+    (sum, e) => sum + (prices[e.eventType] ?? 0.001) * e.quantity,
+    0,
+  );
 
   res.json({
     totalExecutions: allExecs.count,
@@ -106,20 +138,24 @@ router.get("/usage/events", async (req, res): Promise<void> => {
   if (workflowId) conditions.push(eq(usageEventsTable.workflowId, workflowId));
   if (eventType) conditions.push(eq(usageEventsTable.eventType, eventType));
 
-  const events = await db.select().from(usageEventsTable)
+  const events = await db
+    .select()
+    .from(usageEventsTable)
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(sql`${usageEventsTable.createdAt} desc`)
     .limit(limit);
 
-  res.json(events.map((e) => ({
-    id: e.id,
-    workflowId: e.workflowId ?? null,
-    workflowName: e.workflowName ?? null,
-    eventType: e.eventType,
-    quantity: e.quantity,
-    metadata: e.metadata ?? {},
-    createdAt: e.createdAt.toISOString(),
-  })));
+  res.json(
+    events.map((e) => ({
+      id: e.id,
+      workflowId: e.workflowId ?? null,
+      workflowName: e.workflowName ?? null,
+      eventType: e.eventType,
+      quantity: e.quantity,
+      metadata: e.metadata ?? {},
+      createdAt: e.createdAt.toISOString(),
+    })),
+  );
 });
 
 // ─── Billing – current period ─────────────────────────────────────────────────
@@ -129,9 +165,20 @@ router.get("/billing/current", async (_req, res): Promise<void> => {
 
   const now = new Date();
   const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+  const periodEnd = new Date(
+    now.getFullYear(),
+    now.getMonth() + 1,
+    0,
+    23,
+    59,
+    59,
+  );
 
-  const events = await db.select({ eventType: usageEventsTable.eventType, quantity: usageEventsTable.quantity })
+  const events = await db
+    .select({
+      eventType: usageEventsTable.eventType,
+      quantity: usageEventsTable.quantity,
+    })
     .from(usageEventsTable)
     .where(gte(usageEventsTable.createdAt, periodStart));
 
@@ -143,7 +190,8 @@ router.get("/billing/current", async (_req, res): Promise<void> => {
 
   const breakdown: Record<string, { quantity: number; total: number }> = {};
   for (const e of events) {
-    if (!breakdown[e.eventType]) breakdown[e.eventType] = { quantity: 0, total: 0 };
+    if (!breakdown[e.eventType])
+      breakdown[e.eventType] = { quantity: 0, total: 0 };
     breakdown[e.eventType].quantity += e.quantity;
     breakdown[e.eventType].total += (prices[e.eventType] ?? 0.001) * e.quantity;
   }
@@ -180,20 +228,35 @@ router.get("/billing/invoices", async (_req, res): Promise<void> => {
 
   for (let i = 1; i <= 3; i++) {
     const periodStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const periodEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+    const periodEnd = new Date(
+      now.getFullYear(),
+      now.getMonth() - i + 1,
+      0,
+      23,
+      59,
+      59,
+    );
 
-    const events = await db.select({ eventType: usageEventsTable.eventType, quantity: usageEventsTable.quantity })
+    const events = await db
+      .select({
+        eventType: usageEventsTable.eventType,
+        quantity: usageEventsTable.quantity,
+      })
       .from(usageEventsTable)
-      .where(and(
-        gte(usageEventsTable.createdAt, periodStart),
-        sql`${usageEventsTable.createdAt} <= ${periodEnd}`,
-      ));
+      .where(
+        and(
+          gte(usageEventsTable.createdAt, periodStart),
+          sql`${usageEventsTable.createdAt} <= ${periodEnd}`,
+        ),
+      );
 
     const breakdown: Record<string, { quantity: number; total: number }> = {};
     for (const e of events) {
-      if (!breakdown[e.eventType]) breakdown[e.eventType] = { quantity: 0, total: 0 };
+      if (!breakdown[e.eventType])
+        breakdown[e.eventType] = { quantity: 0, total: 0 };
       breakdown[e.eventType].quantity += e.quantity;
-      breakdown[e.eventType].total += (prices[e.eventType] ?? 0.001) * e.quantity;
+      breakdown[e.eventType].total +=
+        (prices[e.eventType] ?? 0.001) * e.quantity;
     }
 
     const lineItems = Object.entries(breakdown).map(([label, data]) => ({

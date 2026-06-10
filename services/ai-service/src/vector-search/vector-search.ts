@@ -11,7 +11,11 @@ export class VectorSearch {
   private documents: IndexedDocument[] = [];
   private dimensions: number = 1536;
 
-  async index(id: string, content: string, metadata: Record<string, unknown> = {}): Promise<void> {
+  async index(
+    id: string,
+    content: string,
+    metadata: Record<string, unknown> = {},
+  ): Promise<void> {
     const { vector } = await embeddingService.generateEmbedding(content);
     this.documents.push({ id, content, metadata, embedding: vector });
   }
@@ -20,8 +24,16 @@ export class VectorSearch {
     query: string,
     topK: number = 10,
     filter?: (doc: IndexedDocument) => boolean,
-  ): Promise<Array<{ id: string; content: string; metadata: Record<string, unknown>; score: number }>> {
-    const { vector: queryVector } = await embeddingService.generateEmbedding(query);
+  ): Promise<
+    Array<{
+      id: string;
+      content: string;
+      metadata: Record<string, unknown>;
+      score: number;
+    }>
+  > {
+    const { vector: queryVector } =
+      await embeddingService.generateEmbedding(query);
 
     let candidates = this.documents;
 

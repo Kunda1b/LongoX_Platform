@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
-import { realtimeHub } from "@autoflow/shared-realtime";
-import { createEvent, type PlatformEventType } from "@autoflow/shared-events";
+import { realtimeHub } from "@longox/shared-realtime";
+import { createEvent, type PlatformEventType } from "@longox/shared-events";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -14,7 +14,15 @@ router.post("/events/publish", (req: Request, res: Response) => {
     return;
   }
 
-  const { type, aggregateId, aggregateType, payload, actorId, actorType, correlationId } = req.body as {
+  const {
+    type,
+    aggregateId,
+    aggregateType,
+    payload,
+    actorId,
+    actorType,
+    correlationId,
+  } = req.body as {
     type: PlatformEventType;
     aggregateId: string;
     aggregateType: string;
@@ -25,7 +33,9 @@ router.post("/events/publish", (req: Request, res: Response) => {
   };
 
   if (!type || !aggregateId || !aggregateType) {
-    res.status(400).json({ error: "Missing required fields: type, aggregateId, aggregateType" });
+    res.status(400).json({
+      error: "Missing required fields: type, aggregateId, aggregateType",
+    });
     return;
   }
 
@@ -40,7 +50,10 @@ router.post("/events/publish", (req: Request, res: Response) => {
 
   realtimeHub.broadcast(event);
 
-  logger.info({ eventType: type, aggregateId }, "[EventsBridge] Event published");
+  logger.info(
+    { eventType: type, aggregateId },
+    "[EventsBridge] Event published",
+  );
 
   res.json({ success: true, eventId: event.id });
 });

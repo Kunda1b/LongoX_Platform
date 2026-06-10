@@ -26,7 +26,7 @@ patches:
           value: "production"
 
 images:
-  - name: autoflow/api-gateway
+  - name: longox/api-gateway
     newTag: production
-  - name: autoflow/execution-service
+  - name: longox/execution-service
     newTag: production

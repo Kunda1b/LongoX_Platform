@@ -68,11 +68,17 @@ export function clearSelection(): SelectionState {
   return createEmptySelection();
 }
 
-export function isNodeSelected(selection: SelectionState, nodeId: string): boolean {
+export function isNodeSelected(
+  selection: SelectionState,
+  nodeId: string,
+): boolean {
   return selection.nodeIds.includes(nodeId);
 }
 
-export function isEdgeSelected(selection: SelectionState, edgeId: string): boolean {
+export function isEdgeSelected(
+  selection: SelectionState,
+  edgeId: string,
+): boolean {
   return selection.edgeIds.includes(edgeId);
 }
 
@@ -96,7 +102,12 @@ export function selectAll(
 }
 
 export function selectInRect(
-  allNodes: Array<{ id: string; position: { x: number; y: number }; width?: number; height?: number }>,
+  allNodes: Array<{
+    id: string;
+    position: { x: number; y: number };
+    width?: number;
+    height?: number;
+  }>,
   allEdges: Array<{ id: string; source: string; target: string }>,
   rect: { x: number; y: number; width: number; height: number },
 ): { nodeIds: string[]; edgeIds: string[] } {

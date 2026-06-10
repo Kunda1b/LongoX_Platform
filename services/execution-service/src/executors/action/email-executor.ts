@@ -1,4 +1,9 @@
-import type { NodeExecutor, WorkflowNode, ExecutionContext, NodeExecutionResult } from "@autoflow/workflow-engine";
+import type {
+  NodeExecutor,
+  WorkflowNode,
+  ExecutionContext,
+  NodeExecutionResult,
+} from "@longox/workflow-engine";
 
 export class EmailExecutor implements NodeExecutor {
   canHandle(nodeTypeId: string): boolean {
@@ -39,13 +44,14 @@ export class EmailExecutor implements NodeExecutor {
           nodeType: "action.send_email",
           status: "failed",
           output: {},
-          error: "Email API key not configured (RESEND_API_KEY or SENDGRID_API_KEY)",
+          error:
+            "Email API key not configured (RESEND_API_KEY or SENDGRID_API_KEY)",
           durationMs: Date.now() - startTime,
           attemptNumber: 1,
         };
       }
 
-      const from = String(config.from ?? "noreply@flowbuilder.io");
+      const from = String(config.from ?? "noreply@longox.io");
 
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -61,7 +67,7 @@ export class EmailExecutor implements NodeExecutor {
         }),
       });
 
-      const data = await response.json() as { id?: string; error?: string };
+      const data = (await response.json()) as { id?: string; error?: string };
 
       if (!response.ok) {
         return {

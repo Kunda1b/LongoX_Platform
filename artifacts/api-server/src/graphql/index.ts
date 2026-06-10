@@ -34,7 +34,7 @@ const yoga = createYoga({
   },
   graphqlEndpoint: "/api/graphql",
   graphiql: {
-    title: "FlowCraft GraphQL",
+    title: "LongoX GraphQL",
   },
   maskedErrors: false,
 });

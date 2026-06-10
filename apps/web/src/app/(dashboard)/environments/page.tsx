@@ -5,9 +5,24 @@ import { Badge } from "@/components/ui/badge";
 import { Globe } from "lucide-react";
 
 const environments = [
-  { name: "Production", color: "destructive", status: "healthy", url: "https://api.flowcraft.io" },
-  { name: "Staging", color: "warning", status: "healthy", url: "https://staging.api.flowcraft.io" },
-  { name: "Development", color: "info", status: "degraded", url: "https://dev.api.flowcraft.io" },
+  {
+    name: "Production",
+    color: "destructive",
+    status: "healthy",
+    url: "https://api.longox.io",
+  },
+  {
+    name: "Staging",
+    color: "warning",
+    status: "healthy",
+    url: "https://staging.api.longox.io",
+  },
+  {
+    name: "Development",
+    color: "info",
+    status: "degraded",
+    url: "https://dev.api.longox.io",
+  },
 ];
 
 export default function EnvironmentsPage() {
@@ -15,7 +30,9 @@ export default function EnvironmentsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Environments</h1>
-        <p className="text-sm text-muted-foreground">Manage deployment environments</p>
+        <p className="text-sm text-muted-foreground">
+          Manage deployment environments
+        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -26,8 +43,12 @@ export default function EnvironmentsPage() {
               <Globe className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent className="space-y-2">
-              <Badge variant={env.status === "healthy" ? "success" : "warning"}>{env.status}</Badge>
-              <p className="text-xs text-muted-foreground truncate">{env.url}</p>
+              <Badge variant={env.status === "healthy" ? "success" : "warning"}>
+                {env.status}
+              </Badge>
+              <p className="text-xs text-muted-foreground truncate">
+                {env.url}
+              </p>
             </CardContent>
           </Card>
         ))}

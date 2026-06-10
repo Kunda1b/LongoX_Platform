@@ -1,6 +1,9 @@
 import { Router, type IRouter } from "express";
 import { PostgresListingRepository } from "../infrastructure";
-import { SearchListingsQuery, InstallListingCommand } from "../application/search-listings.query";
+import {
+  SearchListingsQuery,
+  InstallListingCommand,
+} from "../application/search-listings.query";
 import type { Request } from "express";
 
 const router: IRouter = Router();
@@ -9,7 +12,14 @@ const searchQuery = new SearchListingsQuery(repository);
 const installCommand = new InstallListingCommand(repository);
 
 router.get("/marketplace/listings", async (req, res): Promise<void> => {
-  const { type, category, search, featured, limit: limitStr, offset: offsetStr } = req.query as Record<string, string | undefined>;
+  const {
+    type,
+    category,
+    search,
+    featured,
+    limit: limitStr,
+    offset: offsetStr,
+  } = req.query as Record<string, string | undefined>;
 
   const result = await searchQuery.execute({
     type: type as any,
@@ -25,16 +35,23 @@ router.get("/marketplace/listings", async (req, res): Promise<void> => {
 
 router.get("/marketplace/listings/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
 
   const listing = await repository.findById(id);
-  if (!listing) { res.status(404).json({ error: "Listing not found" }); return; }
+  if (!listing) {
+    res.status(404).json({ error: "Listing not found" });
+    return;
+  }
 
   res.json(listing.toJSON());
 });
 
 router.post("/marketplace/listings", async (req, res): Promise<void> => {
-  const { title, description, listingType, category, tags, version, metadata } = req.body as Record<string, unknown>;
+  const { title, description, listingType, category, tags, version, metadata } =
+    req.body as Record<string, unknown>;
   if (!title || !listingType) {
     res.status(400).json({ error: "title and listingType are required" });
     return;
@@ -62,32 +79,47 @@ router.post("/marketplace/listings", async (req, res): Promise<void> => {
   res.status(201).json(listing.toJSON());
 });
 
-router.post("/marketplace/listings/:id/install", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+router.post(
+  "/marketplace/listings/:id/install",
+  async (req, res): Promise<void> => {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
 
-  try {
-    await installCommand.execute({
-      listingId: id,
-      tenantId: req.user?.tenantId ?? 0,
-      installedBy: req.user?.id ?? 0,
-    });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
-  }
-});
+    try {
+      await installCommand.execute({
+        listingId: id,
+        tenantId: req.user?.tenantId ?? 0,
+        installedBy: req.user?.id ?? 0,
+      });
+      res.json({ success: true });
+    } catch (err) {
+      res.status(400).json({ error: (err as Error).message });
+    }
+  },
+);
 
-router.post("/marketplace/listings/:id/publish", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+router.post(
+  "/marketplace/listings/:id/publish",
+  async (req, res): Promise<void> => {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
 
-  const listing = await repository.findById(id);
-  if (!listing) { res.status(404).json({ error: "Listing not found" }); return; }
+    const listing = await repository.findById(id);
+    if (!listing) {
+      res.status(404).json({ error: "Listing not found" });
+      return;
+    }
 
-  listing.publish();
-  await repository.update(id, { status: "published" } as any);
-  res.json(listing.toJSON());
-});
+    listing.publish();
+    await repository.update(id, { status: "published" } as any);
+    res.json(listing.toJSON());
+  },
+);
 
 export default router;

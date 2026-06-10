@@ -1,1 +1,3 @@
-export interface PostgresTemplateRepository { query(sql: string, params?: unknown[]): Promise<unknown>; }
+export interface PostgresTemplateRepository {
+  query(sql: string, params?: unknown[]): Promise<unknown>;
+}

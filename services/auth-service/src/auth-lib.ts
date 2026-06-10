@@ -1,9 +1,11 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
-import { db, usersTable } from "@autoflow/db";
+import { db, usersTable } from "@longox/db";
 
-const JWT_SECRET = process.env["JWT_SECRET"] ?? "flow-builder-nexus-dev-secret-change-in-production";
+const JWT_SECRET =
+  process.env["JWT_SECRET"] ??
+  "flow-builder-nexus-dev-secret-change-in-production";
 const JWT_EXPIRY = "24h";
 
 export interface AuthUser {
@@ -34,7 +36,11 @@ export function verifyToken(token: string): AuthUser | null {
   }
 }
 
-export async function authMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function authMiddleware(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   const header = req.headers["authorization"];
   const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
 
@@ -49,7 +55,8 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     return;
   }
 
-  const [dbUser] = await db.select({ id: usersTable.id, isActive: usersTable.isActive })
+  const [dbUser] = await db
+    .select({ id: usersTable.id, isActive: usersTable.isActive })
     .from(usersTable)
     .where(eq(usersTable.id, user.id))
     .limit(1);

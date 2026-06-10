@@ -1,4 +1,11 @@
-import { pgTable, text, serial, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  timestamp,
+  integer,
+  jsonb,
+} from "drizzle-orm/pg-core";
 
 export const templateVersionsTable = pgTable("template_versions", {
   id: serial("id").primaryKey(),
@@ -7,7 +14,9 @@ export const templateVersionsTable = pgTable("template_versions", {
   name: text("name").notNull(),
   nodes: jsonb("nodes").notNull().default([]),
   changeNote: text("change_note"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export type TemplateVersionRecord = typeof templateVersionsTable.$inferSelect;

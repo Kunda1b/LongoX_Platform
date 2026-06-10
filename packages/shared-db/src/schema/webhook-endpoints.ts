@@ -1,4 +1,12 @@
-import { pgTable, serial, text, integer, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  serial,
+  text,
+  integer,
+  timestamp,
+  boolean,
+  jsonb,
+} from "drizzle-orm/pg-core";
 
 export const webhookEndpointsTable = pgTable("webhook_endpoints", {
   id: serial("id").primaryKey(),
@@ -11,6 +19,10 @@ export const webhookEndpointsTable = pgTable("webhook_endpoints", {
   triggerCount: integer("trigger_count").notNull().default(0),
   allowedIps: jsonb("allowed_ips").default([]),
   headers: jsonb("headers").default({}),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });

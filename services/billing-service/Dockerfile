@@ -5,7 +5,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY services/billing-service/package.json ./services/billing-service/
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm --filter @autoflow/billing-service build
+RUN pnpm --filter @longox/billing-service build
 FROM node:20-alpine
 WORKDIR /app
 COPY --from=base /app .

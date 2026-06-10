@@ -27,6 +27,9 @@ export const logger = pino({
 
 export type Logger = typeof logger;
 
-export function createChildLogger(name: string, metadata?: Record<string, unknown>) {
+export function createChildLogger(
+  name: string,
+  metadata?: Record<string, unknown>,
+) {
   return logger.child({ module: name, ...metadata });
 }

@@ -1,4 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@autoflow/design-system";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@longox/design-system";
 import { Skeleton } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -19,7 +24,11 @@ export function StatsGrid({ stats, columns = 4 }: StatsGridProps) {
   return (
     <div
       className={`grid gap-3 sm:gap-4 ${
-        columns === 2 ? "grid-cols-2" : columns === 3 ? "grid-cols-1 md:grid-cols-3" : "grid-cols-2 md:grid-cols-4"
+        columns === 2
+          ? "grid-cols-2"
+          : columns === 3
+            ? "grid-cols-1 md:grid-cols-3"
+            : "grid-cols-2 md:grid-cols-4"
       }`}
     >
       {stats.map((stat, i) => (
@@ -37,7 +46,9 @@ export function StatsGrid({ stats, columns = 4 }: StatsGridProps) {
               <div className="text-xl sm:text-2xl font-bold">{stat.value}</div>
             )}
             {stat.description && (
-              <p className="text-xs text-muted-foreground mt-1 hidden sm:block">{stat.description}</p>
+              <p className="text-xs text-muted-foreground mt-1 hidden sm:block">
+                {stat.description}
+              </p>
             )}
           </CardContent>
         </Card>

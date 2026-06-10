@@ -4,7 +4,7 @@ metadata:
   name: {{ .Values.apiGateway.name }}
   labels:
     app: {{ .Values.apiGateway.name }}
-    {{- include "autoflow.labels" $ | nindent 4 }}
+    {{- include "longox.labels" $ | nindent 4 }}
 spec:
   replicas: {{ .Values.apiGateway.replicaCount }}
   selector:

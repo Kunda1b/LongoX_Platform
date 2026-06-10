@@ -9,8 +9,8 @@ import {
   type DiffResult,
   type GraphChange,
   getChangeDescription,
-} from "@autoflow/workflow-canvas";
-import type { WorkflowGraph } from "@autoflow/workflow-canvas";
+} from "@longox/workflow-canvas";
+import type { WorkflowGraph } from "@longox/workflow-canvas";
 import {
   PlusCircle,
   MinusCircle,
@@ -35,14 +35,24 @@ const CHANGE_ICONS: Record<string, typeof PlusCircle> = {
 };
 
 const CHANGE_COLORS: Record<string, string> = {
-  node_added: "text-green-500 border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900",
-  node_removed: "text-red-500 border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900",
-  node_modified: "text-amber-500 border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900",
-  edge_added: "text-blue-500 border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900",
-  edge_removed: "text-red-500 border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900",
+  node_added:
+    "text-green-500 border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900",
+  node_removed:
+    "text-red-500 border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900",
+  node_modified:
+    "text-amber-500 border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900",
+  edge_added:
+    "text-blue-500 border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900",
+  edge_removed:
+    "text-red-500 border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900",
 };
 
-export function DiffViewer({ fromGraph, toGraph, fromVersion, toVersion }: DiffViewerProps) {
+export function DiffViewer({
+  fromGraph,
+  toGraph,
+  fromVersion,
+  toVersion,
+}: DiffViewerProps) {
   const diff = useMemo(
     () => computeDiff(fromGraph, toGraph, fromVersion, toVersion),
     [fromGraph, toGraph, fromVersion, toVersion],
@@ -56,9 +66,21 @@ export function DiffViewer({ fromGraph, toGraph, fromVersion, toVersion }: DiffV
             Changes from v{fromVersion} → v{toVersion}
           </CardTitle>
           <div className="flex items-center gap-2">
-            <DiffBadge count={diff.summary.nodesAdded} label="added" variant="success" />
-            <DiffBadge count={diff.summary.nodesRemoved} label="removed" variant="destructive" />
-            <DiffBadge count={diff.summary.nodesModified} label="modified" variant="warning" />
+            <DiffBadge
+              count={diff.summary.nodesAdded}
+              label="added"
+              variant="success"
+            />
+            <DiffBadge
+              count={diff.summary.nodesRemoved}
+              label="removed"
+              variant="destructive"
+            />
+            <DiffBadge
+              count={diff.summary.nodesModified}
+              label="modified"
+              variant="warning"
+            />
           </div>
         </div>
       </CardHeader>
@@ -79,17 +101,20 @@ export function DiffViewer({ fromGraph, toGraph, fromVersion, toVersion }: DiffV
                     key={i}
                     className={cn(
                       "flex items-start gap-3 px-4 py-3 text-xs",
-                      colorClass.split(" ").slice(2).join(" ")
+                      colorClass.split(" ").slice(2).join(" "),
                     )}
                   >
                     <Icon className="h-4 w-4 mt-0.5 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium">{getChangeDescription(change)}</p>
-                      {change.type === "node_modified" && "detail" in change && (
-                        <p className="text-muted-foreground mt-0.5 text-[10px]">
-                          {change.detail}
-                        </p>
-                      )}
+                      <p className="font-medium">
+                        {getChangeDescription(change)}
+                      </p>
+                      {change.type === "node_modified" &&
+                        "detail" in change && (
+                          <p className="text-muted-foreground mt-0.5 text-[10px]">
+                            {change.detail}
+                          </p>
+                        )}
                     </div>
                   </div>
                 );
@@ -113,12 +138,17 @@ function DiffBadge({
 }) {
   if (count === 0) return null;
   const colors = {
-    success: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+    success:
+      "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
     destructive: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
-    warning: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
+    warning:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
   };
   return (
-    <Badge variant="outline" className={cn("text-[10px] px-1.5", colors[variant])}>
+    <Badge
+      variant="outline"
+      className={cn("text-[10px] px-1.5", colors[variant])}
+    >
       {count} {label}
     </Badge>
   );

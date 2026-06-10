@@ -42,7 +42,16 @@ export interface DataSource {
   tenantId: number;
   name: string;
   description: string | null;
-  kind: "postgresql" | "mysql" | "mongodb" | "rest_api" | "graphql" | "bigquery" | "snowflake" | "csv_upload" | "custom";
+  kind:
+    | "postgresql"
+    | "mysql"
+    | "mongodb"
+    | "rest_api"
+    | "graphql"
+    | "bigquery"
+    | "snowflake"
+    | "csv_upload"
+    | "custom";
   config: Record<string, unknown>;
   status: "active" | "inactive" | "error" | "testing";
   lastTestedAt: string | null;

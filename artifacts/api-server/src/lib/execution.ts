@@ -1,4 +1,4 @@
-import { db, executionsTable, auditLogTable, workflowsTable } from "@autoflow/db";
+import { db, executionsTable, auditLogTable, workflowsTable } from "@longox/db";
 import { eq } from "drizzle-orm";
 
 export async function startWorkflowExecution(
@@ -8,15 +8,18 @@ export async function startWorkflowExecution(
   triggerType: string,
   payload?: Record<string, unknown>,
 ) {
-  const [execution] = await db.insert(executionsTable).values({
-    workflowId,
-    workflowName,
-    status: "pending",
-    startedAt: new Date(),
-    triggerType,
-    input: payload ?? {},
-    steps: [],
-  }).returning();
+  const [execution] = await db
+    .insert(executionsTable)
+    .values({
+      workflowId,
+      workflowName,
+      status: "pending",
+      startedAt: new Date(),
+      triggerType,
+      input: payload ?? {},
+      steps: [],
+    })
+    .returning();
 
   // Delegate actual execution to the execution-service worker
   // which picks up 'pending' executions via its recovery mechanism.

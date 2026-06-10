@@ -19,9 +19,13 @@ export default function ConnectorsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Connectors</h1>
-          <p className="text-sm text-muted-foreground">Manage external service connections</p>
+          <p className="text-sm text-muted-foreground">
+            Manage external service connections
+          </p>
         </div>
-        <Button><Plus className="mr-1 h-4 w-4" /> Add Connector</Button>
+        <Button>
+          <Plus className="mr-1 h-4 w-4" /> Add Connector
+        </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -32,14 +36,24 @@ export default function ConnectorsPage() {
                 <span className="text-xl">{c.icon}</span>
                 <div>
                   <CardTitle className="text-sm">{c.name}</CardTitle>
-                  <p className="text-xs text-muted-foreground capitalize">{c.type}</p>
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {c.type}
+                  </p>
                 </div>
               </div>
-              <Plug className={`h-4 w-4 ${c.status === "connected" ? "text-emerald-500" : c.status === "error" ? "text-destructive" : "text-muted-foreground"}`} />
+              <Plug
+                className={`h-4 w-4 ${c.status === "connected" ? "text-emerald-500" : c.status === "error" ? "text-destructive" : "text-muted-foreground"}`}
+              />
             </CardHeader>
             <CardContent>
               <Badge
-                variant={c.status === "connected" ? "success" : c.status === "error" ? "destructive" : "secondary"}
+                variant={
+                  c.status === "connected"
+                    ? "success"
+                    : c.status === "error"
+                      ? "destructive"
+                      : "secondary"
+                }
               >
                 {c.status}
               </Badge>

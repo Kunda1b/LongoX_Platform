@@ -43,7 +43,15 @@ export class Workflow {
     name: string,
     description: string | null,
     triggerType: TriggerType,
-  ): Omit<Workflow, "id" | "createdAt" | "updatedAt" | "executionCount" | "lastRunAt" | "lastRunStatus"> {
+  ): Omit<
+    Workflow,
+    | "id"
+    | "createdAt"
+    | "updatedAt"
+    | "executionCount"
+    | "lastRunAt"
+    | "lastRunStatus"
+  > {
     return {
       name,
       description,

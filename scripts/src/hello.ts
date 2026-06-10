@@ -1,1 +1,1 @@
-console.log("Hello from @autoflow/scripts");
+console.log("Hello from @longox/scripts");

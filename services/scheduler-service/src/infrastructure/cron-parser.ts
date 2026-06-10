@@ -10,7 +10,9 @@ export class CronParser {
   parse(expression: string): ParsedCron {
     const parts = expression.trim().split(/\s+/);
     if (parts.length !== 5) {
-      throw new Error(`Invalid cron expression: "${expression}". Expected 5 fields.`);
+      throw new Error(
+        `Invalid cron expression: "${expression}". Expected 5 fields.`,
+      );
     }
 
     return {
@@ -36,7 +38,8 @@ export class CronParser {
       if (!cron.month.includes(candidate.getMonth() + 1)) continue;
 
       const dow = candidate.getDay();
-      if (!cron.dayOfWeek.includes(dow) && !cron.dayOfWeek.includes(7)) continue;
+      if (!cron.dayOfWeek.includes(dow) && !cron.dayOfWeek.includes(7))
+        continue;
 
       return candidate;
     }
@@ -54,12 +57,15 @@ export class CronParser {
     if (field.includes("/")) {
       const [range, stepStr] = field.split("/");
       const step = parseInt(stepStr, 10);
-      const values = range === "*" ? this.range(min, max) : this.parseRange(range, min, max);
+      const values =
+        range === "*" ? this.range(min, max) : this.parseRange(range, min, max);
       return values.filter((_, i) => i % step === 0);
     }
 
     if (field.includes(",")) {
-      return field.split(",").flatMap((f) => this.parseField(f.trim(), min, max));
+      return field
+        .split(",")
+        .flatMap((f) => this.parseField(f.trim(), min, max));
     }
 
     if (field.includes("-")) {
@@ -77,7 +83,8 @@ export class CronParser {
     const [startStr, endStr] = range.split("-");
     const start = parseInt(startStr, 10);
     const end = parseInt(endStr, 10);
-    if (isNaN(start) || isNaN(end)) throw new Error(`Invalid cron range: "${range}"`);
+    if (isNaN(start) || isNaN(end))
+      throw new Error(`Invalid cron range: "${range}"`);
     return this.range(Math.max(start, min), Math.min(end, max));
   }
 

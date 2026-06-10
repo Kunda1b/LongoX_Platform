@@ -5,7 +5,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY services/datasource-service/package.json ./services/datasource-service/
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm --filter @autoflow/datasource-service build
+RUN pnpm --filter @longox/datasource-service build
 FROM node:20-alpine
 WORKDIR /app
 COPY --from=base /app .

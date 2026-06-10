@@ -1,5 +1,9 @@
 export type ListingType = "connector" | "template" | "bundle";
-export type ListingStatus = "published" | "draft" | "archived" | "pending_review";
+export type ListingStatus =
+  | "published"
+  | "draft"
+  | "archived"
+  | "pending_review";
 
 export interface ListingProps {
   id: number;
@@ -30,14 +34,30 @@ export interface ListingProps {
 export class Listing {
   constructor(private props: ListingProps) {}
 
-  get id(): number { return this.props.id; }
-  get title(): string { return this.props.title; }
-  get listingType(): ListingType { return this.props.listingType; }
-  get status(): ListingStatus { return this.props.status; }
-  get rating(): number { return this.props.rating; }
-  get installCount(): number { return this.props.installCount; }
-  get featured(): boolean { return this.props.featured; }
-  get verified(): boolean { return this.props.verified; }
+  get id(): number {
+    return this.props.id;
+  }
+  get title(): string {
+    return this.props.title;
+  }
+  get listingType(): ListingType {
+    return this.props.listingType;
+  }
+  get status(): ListingStatus {
+    return this.props.status;
+  }
+  get rating(): number {
+    return this.props.rating;
+  }
+  get installCount(): number {
+    return this.props.installCount;
+  }
+  get featured(): boolean {
+    return this.props.featured;
+  }
+  get verified(): boolean {
+    return this.props.verified;
+  }
 
   publish(): void {
     this.props.status = "published";

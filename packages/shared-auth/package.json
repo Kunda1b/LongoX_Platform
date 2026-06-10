@@ -1,5 +1,5 @@
 {
-  "name": "@autoflow/shared-auth",
+  "name": "@longox/shared-auth",
   "version": "0.0.0",
   "private": true,
   "type": "module",

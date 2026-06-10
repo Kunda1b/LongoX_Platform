@@ -4,16 +4,23 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { 
-  useListApps, 
+import {
+  useListApps,
   useCreateApp,
-  getListAppsQueryKey
-} from "@autoflow/api-client-react";
+  getListAppsQueryKey,
+} from "@longox/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge, TypeBadge } from "@/components/badges";
-import { Plus, Search, AppWindow, Settings, BarChart2, LayoutGrid } from "lucide-react";
+import {
+  Plus,
+  Search,
+  AppWindow,
+  Settings,
+  BarChart2,
+  LayoutGrid,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -30,7 +37,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const createSchema = z.object({
@@ -52,8 +65,8 @@ export default function Apps() {
         queryClient.invalidateQueries({ queryKey: getListAppsQueryKey() });
         setIsCreateOpen(false);
         toast({ title: "App created successfully" });
-      }
-    }
+      },
+    },
   });
 
   const form = useForm<z.infer<typeof createSchema>>({
@@ -70,7 +83,9 @@ export default function Apps() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Internal Apps</h1>
-          <p className="text-muted-foreground mt-1">Build and manage custom tools for your team.</p>
+          <p className="text-muted-foreground mt-1">
+            Build and manage custom tools for your team.
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
@@ -91,7 +106,10 @@ export default function Apps() {
                 <DialogTitle>Create New App</DialogTitle>
               </DialogHeader>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-4"
+                >
                   <FormField
                     control={form.control}
                     name="name"
@@ -99,7 +117,10 @@ export default function Apps() {
                       <FormItem>
                         <FormLabel>Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g. Customer Support Tool" {...field} />
+                          <Input
+                            placeholder="e.g. Customer Support Tool"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -112,7 +133,10 @@ export default function Apps() {
                       <FormItem>
                         <FormLabel>Description</FormLabel>
                         <FormControl>
-                          <Input placeholder="What is this app used for?" {...field} />
+                          <Input
+                            placeholder="What is this app used for?"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -124,7 +148,10 @@ export default function Apps() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>App Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select type" />
@@ -156,8 +183,8 @@ export default function Apps() {
       <div className="flex items-center gap-2">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search apps..." 
+          <Input
+            placeholder="Search apps..."
             className="pl-9"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -176,14 +203,24 @@ export default function Apps() {
               <LayoutGrid className="size-6" />
             </div>
             <div className="flex max-w-sm flex-col items-center gap-1 text-center">
-              <div className="text-lg font-medium tracking-tight text-foreground">No apps yet</div>
-              <p className="text-muted-foreground text-sm/relaxed">Build internal dashboards, CRUD interfaces, forms, and reports without writing code.</p>
+              <div className="text-lg font-medium tracking-tight text-foreground">
+                No apps yet
+              </div>
+              <p className="text-muted-foreground text-sm/relaxed">
+                Build internal dashboards, CRUD interfaces, forms, and reports
+                without writing code.
+              </p>
             </div>
-            <Button onClick={() => setIsCreateOpen(true)} className="mt-2">Create your first app</Button>
+            <Button onClick={() => setIsCreateOpen(true)} className="mt-2">
+              Create your first app
+            </Button>
           </div>
         ) : (
           apps?.map((app) => (
-            <Card key={app.id} className="hover:border-primary/50 transition-colors flex flex-col">
+            <Card
+              key={app.id}
+              className="hover:border-primary/50 transition-colors flex flex-col"
+            >
               <CardContent className="p-6 flex-1 flex flex-col">
                 <div className="flex items-start justify-between mb-4">
                   <div className="bg-primary/10 text-primary p-2.5 rounded-lg">
@@ -193,7 +230,7 @@ export default function Apps() {
                     <TypeBadge type={app.type} />
                   </div>
                 </div>
-                
+
                 <h3 className="font-semibold text-lg mb-1">{app.name}</h3>
                 <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">
                   {app.description || "No description provided."}

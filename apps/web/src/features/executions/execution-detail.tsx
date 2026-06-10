@@ -10,7 +10,7 @@ import {
   useListNodeTypes,
   getGetExecutionQueryKey,
   getListExecutionsQueryKey,
-} from "@autoflow/api-client-react";
+} from "@longox/api-client-react";
 import { StatusBadge } from "@/components/badges";
 import {
   ArrowLeft,
@@ -62,12 +62,40 @@ interface Step {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const CATEGORY_META: Record<string, { color: string; bg: string; border: string; icon: React.ReactNode }> = {
-  trigger: { color: "text-cyan-400",   bg: "bg-cyan-500/10",   border: "border-cyan-500/30",   icon: <Zap className="h-3.5 w-3.5" /> },
-  action:  { color: "text-indigo-400", bg: "bg-indigo-500/10", border: "border-indigo-500/30", icon: <Blocks className="h-3.5 w-3.5" /> },
-  logic:   { color: "text-amber-400",  bg: "bg-amber-500/10",  border: "border-amber-500/30",  icon: <Cpu className="h-3.5 w-3.5" /> },
-  ai:      { color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/30", icon: <BrainCircuit className="h-3.5 w-3.5" /> },
-  data:    { color: "text-blue-400",   bg: "bg-blue-500/10",   border: "border-blue-500/30",   icon: <Database className="h-3.5 w-3.5" /> },
+const CATEGORY_META: Record<
+  string,
+  { color: string; bg: string; border: string; icon: React.ReactNode }
+> = {
+  trigger: {
+    color: "text-cyan-400",
+    bg: "bg-cyan-500/10",
+    border: "border-cyan-500/30",
+    icon: <Zap className="h-3.5 w-3.5" />,
+  },
+  action: {
+    color: "text-indigo-400",
+    bg: "bg-indigo-500/10",
+    border: "border-indigo-500/30",
+    icon: <Blocks className="h-3.5 w-3.5" />,
+  },
+  logic: {
+    color: "text-amber-400",
+    bg: "bg-amber-500/10",
+    border: "border-amber-500/30",
+    icon: <Cpu className="h-3.5 w-3.5" />,
+  },
+  ai: {
+    color: "text-purple-400",
+    bg: "bg-purple-500/10",
+    border: "border-purple-500/30",
+    icon: <BrainCircuit className="h-3.5 w-3.5" />,
+  },
+  data: {
+    color: "text-blue-400",
+    bg: "bg-blue-500/10",
+    border: "border-blue-500/30",
+    icon: <Database className="h-3.5 w-3.5" />,
+  },
 };
 
 function getCategoryFromNodeType(nodeTypeId?: string | null) {
@@ -81,12 +109,22 @@ function formatDuration(ms?: number | null) {
   return `${(ms / 1000).toFixed(2)}s`;
 }
 
-function StatusIcon({ status, className }: { status: Step["status"] | "cancelled"; className?: string }) {
+function StatusIcon({
+  status,
+  className,
+}: {
+  status: Step["status"] | "cancelled";
+  className?: string;
+}) {
   const cls = cn("h-5 w-5 shrink-0", className);
-  if (status === "success")  return <CheckCircle2 className={cn(cls, "text-emerald-500")} />;
-  if (status === "failed")   return <XCircle className={cn(cls, "text-destructive")} />;
-  if (status === "skipped")  return <SkipForward className={cn(cls, "text-muted-foreground")} />;
-  if (status === "running")  return <Loader2 className={cn(cls, "text-primary animate-spin")} />;
+  if (status === "success")
+    return <CheckCircle2 className={cn(cls, "text-emerald-500")} />;
+  if (status === "failed")
+    return <XCircle className={cn(cls, "text-destructive")} />;
+  if (status === "skipped")
+    return <SkipForward className={cn(cls, "text-muted-foreground")} />;
+  if (status === "running")
+    return <Loader2 className={cn(cls, "text-primary animate-spin")} />;
   return <XCircle className={cn(cls, "text-muted-foreground")} />;
 }
 
@@ -106,12 +144,18 @@ function JsonViewer({ data, label }: { data: unknown; label: string }) {
   return (
     <div className="rounded-lg border border-border overflow-hidden shadow-sm">
       <div className="flex items-center justify-between bg-muted/60 px-3 py-1.5 border-b">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+          {label}
+        </span>
         <button
           onClick={copy}
           className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
         >
-          {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+          {copied ? (
+            <Check className="h-3 w-3 text-emerald-500" />
+          ) : (
+            <Copy className="h-3 w-3" />
+          )}
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
@@ -124,7 +168,15 @@ function JsonViewer({ data, label }: { data: unknown; label: string }) {
 
 // ─── Step detail panel ────────────────────────────────────────────────────────
 
-function StepDetail({ step, nodeTypeName, onBack }: { step: Step; nodeTypeName?: string; onBack?: () => void }) {
+function StepDetail({
+  step,
+  nodeTypeName,
+  onBack,
+}: {
+  step: Step;
+  nodeTypeName?: string;
+  onBack?: () => void;
+}) {
   const category = getCategoryFromNodeType(step.nodeType);
   const meta = CATEGORY_META[category] ?? CATEGORY_META.action;
 
@@ -147,7 +199,10 @@ function StepDetail({ step, nodeTypeName, onBack }: { step: Step; nodeTypeName?:
         </div>
         <div className="flex items-center gap-3 mt-2 flex-wrap">
           {nodeTypeName && (
-            <Badge variant="outline" className={cn("text-[10px] gap-1", meta.color, meta.border)}>
+            <Badge
+              variant="outline"
+              className={cn("text-[10px] gap-1", meta.color, meta.border)}
+            >
               {nodeTypeName}
             </Badge>
           )}
@@ -173,18 +228,31 @@ function StepDetail({ step, nodeTypeName, onBack }: { step: Step; nodeTypeName?:
             <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 flex gap-2.5">
               <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-semibold text-destructive mb-1">Error</p>
-                <p className="text-[11px] font-mono text-destructive/90 leading-relaxed break-all">{step.errorMessage}</p>
+                <p className="text-xs font-semibold text-destructive mb-1">
+                  Error
+                </p>
+                <p className="text-[11px] font-mono text-destructive/90 leading-relaxed break-all">
+                  {step.errorMessage}
+                </p>
               </div>
             </div>
           )}
 
           <Tabs defaultValue={step.status === "failed" ? "error" : "output"}>
             <TabsList className="h-8 text-xs">
-              <TabsTrigger value="output" className="text-xs h-6 px-3">Output</TabsTrigger>
-              <TabsTrigger value="input" className="text-xs h-6 px-3">Input</TabsTrigger>
+              <TabsTrigger value="output" className="text-xs h-6 px-3">
+                Output
+              </TabsTrigger>
+              <TabsTrigger value="input" className="text-xs h-6 px-3">
+                Input
+              </TabsTrigger>
               {step.errorMessage && (
-                <TabsTrigger value="error" className="text-xs h-6 px-3 data-[state=active]:text-destructive">Error</TabsTrigger>
+                <TabsTrigger
+                  value="error"
+                  className="text-xs h-6 px-3 data-[state=active]:text-destructive"
+                >
+                  Error
+                </TabsTrigger>
               )}
             </TabsList>
             <TabsContent value="output" className="mt-3">
@@ -197,7 +265,9 @@ function StepDetail({ step, nodeTypeName, onBack }: { step: Step; nodeTypeName?:
               <TabsContent value="error" className="mt-3">
                 <div className="rounded-lg border border-destructive/30 overflow-hidden">
                   <div className="bg-destructive/10 px-3 py-1.5 border-b border-destructive/20">
-                    <span className="text-[10px] font-semibold uppercase tracking-widest text-destructive">Error details</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-destructive">
+                      Error details
+                    </span>
                   </div>
                   <pre className="p-4 bg-zinc-950 text-red-400 text-[11px] font-mono overflow-auto max-h-60 whitespace-pre-wrap leading-relaxed">
                     {step.errorMessage}
@@ -215,18 +285,32 @@ function StepDetail({ step, nodeTypeName, onBack }: { step: Step; nodeTypeName?:
 // ─── Timeline step row ────────────────────────────────────────────────────────
 
 function TimelineStep({
-  step, index, total, isSelected, nodeTypeName, totalDuration, onClick,
+  step,
+  index,
+  total,
+  isSelected,
+  nodeTypeName,
+  totalDuration,
+  onClick,
 }: {
-  step: Step; index: number; total: number; isSelected: boolean;
-  nodeTypeName?: string; totalDuration: number; onClick: () => void;
+  step: Step;
+  index: number;
+  total: number;
+  isSelected: boolean;
+  nodeTypeName?: string;
+  totalDuration: number;
+  onClick: () => void;
 }) {
   const category = getCategoryFromNodeType(step.nodeType);
   const meta = CATEGORY_META[category] ?? CATEGORY_META.action;
-  const widthPct = totalDuration > 0 ? Math.max(((step.durationMs ?? 0) / totalDuration) * 100, 2) : 0;
+  const widthPct =
+    totalDuration > 0
+      ? Math.max(((step.durationMs ?? 0) / totalDuration) * 100, 2)
+      : 0;
 
   const statusBg: Record<string, string> = {
     success: "bg-emerald-500",
-    failed:  "bg-destructive",
+    failed: "bg-destructive",
     running: "bg-primary",
     skipped: "bg-muted-foreground",
   };
@@ -234,18 +318,31 @@ function TimelineStep({
   return (
     <div className="flex gap-0">
       <div className="flex flex-col items-center w-8 sm:w-10 shrink-0">
-        <div className={cn(
-          "h-7 w-7 sm:h-8 sm:w-8 rounded-full border-2 flex items-center justify-center z-10 bg-card transition-colors",
-          isSelected ? "border-primary shadow-[0_0_0_3px_hsl(var(--primary)/0.2)]" : "border-border",
-          step.status === "failed"  ? "border-destructive/60"  : "",
-          step.status === "success" ? "border-emerald-500/60"  : "",
-        )}>
-          <span className="text-[10px] font-bold text-muted-foreground">{index + 1}</span>
+        <div
+          className={cn(
+            "h-7 w-7 sm:h-8 sm:w-8 rounded-full border-2 flex items-center justify-center z-10 bg-card transition-colors",
+            isSelected
+              ? "border-primary shadow-[0_0_0_3px_hsl(var(--primary)/0.2)]"
+              : "border-border",
+            step.status === "failed" ? "border-destructive/60" : "",
+            step.status === "success" ? "border-emerald-500/60" : "",
+          )}
+        >
+          <span className="text-[10px] font-bold text-muted-foreground">
+            {index + 1}
+          </span>
         </div>
         {index < total - 1 && (
-          <div className={cn("w-px flex-1 min-h-[20px]",
-            step.status === "success" ? "bg-emerald-500/30" : step.status === "failed" ? "bg-destructive/30" : "bg-border"
-          )} />
+          <div
+            className={cn(
+              "w-px flex-1 min-h-[20px]",
+              step.status === "success"
+                ? "bg-emerald-500/30"
+                : step.status === "failed"
+                  ? "bg-destructive/30"
+                  : "bg-border",
+            )}
+          />
         )}
       </div>
 
@@ -256,35 +353,60 @@ function TimelineStep({
           isSelected
             ? "border-primary/50 bg-primary/5 shadow-sm"
             : step.status === "failed"
-            ? "border-destructive/30 bg-destructive/5"
-            : "border-border bg-card/50",
+              ? "border-destructive/30 bg-destructive/5"
+              : "border-border bg-card/50",
         )}
         onClick={onClick}
       >
         <div className="px-3 py-2.5">
           <div className="flex items-center gap-2 mb-1.5">
             <StatusIcon status={step.status} className="h-3.5 w-3.5" />
-            <span className="font-medium text-xs flex-1 truncate">{step.nodeName}</span>
-            <span className={cn("text-[10px] font-mono shrink-0", step.status === "failed" ? "text-destructive" : "text-muted-foreground")}>
+            <span className="font-medium text-xs flex-1 truncate">
+              {step.nodeName}
+            </span>
+            <span
+              className={cn(
+                "text-[10px] font-mono shrink-0",
+                step.status === "failed"
+                  ? "text-destructive"
+                  : "text-muted-foreground",
+              )}
+            >
               {formatDuration(step.durationMs)}
             </span>
-            <ChevronRight className={cn("h-3 w-3 text-muted-foreground/40 transition-transform shrink-0", isSelected ? "rotate-90" : "")} />
+            <ChevronRight
+              className={cn(
+                "h-3 w-3 text-muted-foreground/40 transition-transform shrink-0",
+                isSelected ? "rotate-90" : "",
+              )}
+            />
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             {nodeTypeName && (
-              <span className={cn("text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded", meta.bg, meta.color)}>
+              <span
+                className={cn(
+                  "text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded",
+                  meta.bg,
+                  meta.color,
+                )}
+              >
                 {nodeTypeName}
               </span>
             )}
             {step.itemCount != null && step.itemCount > 0 && (
-              <span className="text-[10px] text-muted-foreground/60">{step.itemCount} item{step.itemCount !== 1 ? "s" : ""}</span>
+              <span className="text-[10px] text-muted-foreground/60">
+                {step.itemCount} item{step.itemCount !== 1 ? "s" : ""}
+              </span>
             )}
           </div>
 
           <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
             <div
-              className={cn("h-full rounded-full transition-all", statusBg[step.status] ?? "bg-muted-foreground")}
+              className={cn(
+                "h-full rounded-full transition-all",
+                statusBg[step.status] ?? "bg-muted-foreground",
+              )}
               style={{ width: `${widthPct}%`, opacity: 0.7 }}
             />
           </div>
@@ -304,7 +426,9 @@ export function ExecutionDetail() {
   const queryClient = useQueryClient();
   const [selectedStepId, setSelectedStepId] = useState<number | null>(null);
   // Mobile: "timeline" | "detail"
-  const [mobileView, setMobileView] = useState<"timeline" | "detail">("timeline");
+  const [mobileView, setMobileView] = useState<"timeline" | "detail">(
+    "timeline",
+  );
 
   const { data: exec, isLoading } = useGetExecution(execId, {
     query: {
@@ -324,9 +448,11 @@ export function ExecutionDetail() {
 
   const retryMutation = useRetryExecution({
     mutation: {
-      onSuccess: (newExec: never) => {
+      onSuccess: (newExec) => {
         const e = newExec as { id: number };
-        queryClient.invalidateQueries({ queryKey: getListExecutionsQueryKey() });
+        queryClient.invalidateQueries({
+          queryKey: getListExecutionsQueryKey(),
+        });
         toast({ title: "Execution retried" });
         router.push(`/executions/${e.id}`);
       },
@@ -347,16 +473,23 @@ export function ExecutionDetail() {
   if (!exec) return <div className="p-8">Execution not found</div>;
 
   const steps: Step[] = (exec as never as { steps?: Step[] }).steps ?? [];
-  const totalDuration = steps.reduce((s, step) => s + (step.durationMs ?? 0), 0);
-  const selectedStep = steps.find((s) => s.id === selectedStepId) ?? (steps.length > 0 ? steps[steps.length - 1] : null);
+  const totalDuration = steps.reduce(
+    (s, step) => s + (step.durationMs ?? 0),
+    0,
+  );
+  const selectedStep =
+    steps.find((s) => s.id === selectedStepId) ??
+    (steps.length > 0 ? steps[steps.length - 1] : null);
 
   const getNodeTypeName = (nodeTypeId?: string | null) => {
     if (!nodeTypeId) return undefined;
-    return (nodeTypes as never as { id: string; name: string }[]).find((nt) => nt.id === nodeTypeId)?.name;
+    return (nodeTypes as never as { id: string; name: string }[]).find(
+      (nt) => nt.id === nodeTypeId,
+    )?.name;
   };
 
   const successCount = steps.filter((s) => s.status === "success").length;
-  const failedCount  = steps.filter((s) => s.status === "failed").length;
+  const failedCount = steps.filter((s) => s.status === "failed").length;
 
   function handleStepClick(stepId: number) {
     setSelectedStepId(stepId);
@@ -367,16 +500,28 @@ export function ExecutionDetail() {
     <div className="h-full flex flex-col">
       {/* Header */}
       <header className="flex items-start sm:items-center gap-3 border-b pb-4 shrink-0">
-        <Button variant="ghost" size="icon" className="shrink-0 mt-0.5 sm:mt-0" asChild>
-          <Link href="/executions"><ArrowLeft className="h-4 w-4" /></Link>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0 mt-0.5 sm:mt-0"
+          asChild
+        >
+          <Link href="/executions">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
         </Button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-lg sm:text-xl font-bold">Execution #{exec.id}</h1>
+            <h1 className="text-lg sm:text-xl font-bold">
+              Execution #{exec.id}
+            </h1>
             <StatusBadge status={exec.status} />
             <span className="text-sm text-muted-foreground hidden sm:inline">
               in{" "}
-              <Link href={`/workflows/${exec.workflowId}`} className="text-primary hover:underline font-medium">
+              <Link
+                href={`/workflows/${exec.workflowId}`}
+                className="text-primary hover:underline font-medium"
+              >
                 {exec.workflowName}
               </Link>
             </span>
@@ -384,8 +529,14 @@ export function ExecutionDetail() {
           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              <span className="hidden sm:inline">{format(new Date(exec.startedAt), "PPp")}</span>
-              <span className="sm:hidden">{formatDistanceToNow(new Date(exec.startedAt), { addSuffix: true })}</span>
+              <span className="hidden sm:inline">
+                {format(new Date(exec.startedAt), "PPp")}
+              </span>
+              <span className="sm:hidden">
+                {formatDistanceToNow(new Date(exec.startedAt), {
+                  addSuffix: true,
+                })}
+              </span>
             </span>
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
@@ -397,12 +548,14 @@ export function ExecutionDetail() {
             </span>
             {successCount > 0 && (
               <span className="flex items-center gap-1 text-emerald-500">
-                <CheckCircle2 className="h-3 w-3" />{successCount}
+                <CheckCircle2 className="h-3 w-3" />
+                {successCount}
               </span>
             )}
             {failedCount > 0 && (
               <span className="flex items-center gap-1 text-destructive">
-                <XCircle className="h-3 w-3" />{failedCount}
+                <XCircle className="h-3 w-3" />
+                {failedCount}
               </span>
             )}
           </div>
@@ -414,8 +567,15 @@ export function ExecutionDetail() {
             disabled={retryMutation.isPending}
             className="gap-2 shrink-0"
           >
-            <RefreshCw className={cn("h-3.5 w-3.5", retryMutation.isPending && "animate-spin")} />
-            <span className="hidden sm:inline">{retryMutation.isPending ? "Retrying…" : "Retry"}</span>
+            <RefreshCw
+              className={cn(
+                "h-3.5 w-3.5",
+                retryMutation.isPending && "animate-spin",
+              )}
+            />
+            <span className="hidden sm:inline">
+              {retryMutation.isPending ? "Retrying…" : "Retry"}
+            </span>
           </Button>
         )}
       </header>
@@ -425,12 +585,26 @@ export function ExecutionDetail() {
         <div className="mt-3 mb-1 shrink-0">
           <div className="flex h-2 rounded-full overflow-hidden gap-px bg-muted">
             {steps.map((step) => {
-              const pct = totalDuration > 0 ? ((step.durationMs ?? 0) / totalDuration) * 100 : 100 / steps.length;
-              const color = step.status === "success" ? "bg-emerald-500" : step.status === "failed" ? "bg-destructive" : step.status === "running" ? "bg-primary" : "bg-muted-foreground/40";
+              const pct =
+                totalDuration > 0
+                  ? ((step.durationMs ?? 0) / totalDuration) * 100
+                  : 100 / steps.length;
+              const color =
+                step.status === "success"
+                  ? "bg-emerald-500"
+                  : step.status === "failed"
+                    ? "bg-destructive"
+                    : step.status === "running"
+                      ? "bg-primary"
+                      : "bg-muted-foreground/40";
               return (
                 <button
                   key={step.id}
-                  className={cn("h-full rounded-sm transition-opacity cursor-pointer hover:opacity-90", color, selectedStepId === step.id ? "opacity-100" : "opacity-60")}
+                  className={cn(
+                    "h-full rounded-sm transition-opacity cursor-pointer hover:opacity-90",
+                    color,
+                    selectedStepId === step.id ? "opacity-100" : "opacity-60",
+                  )}
                   style={{ width: `${pct}%`, minWidth: 4 }}
                   onClick={() => handleStepClick(step.id)}
                   title={`${step.nodeName} — ${formatDuration(step.durationMs)}`}
@@ -449,7 +623,9 @@ export function ExecutionDetail() {
       {exec.errorMessage && (
         <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 flex gap-2.5 shrink-0">
           <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-          <p className="text-xs font-mono text-destructive/90 break-all">{exec.errorMessage}</p>
+          <p className="text-xs font-mono text-destructive/90 break-all">
+            {exec.errorMessage}
+          </p>
         </div>
       )}
 
@@ -459,7 +635,9 @@ export function ExecutionDetail() {
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3 text-center p-6">
             <Activity className="h-10 w-10 opacity-15" />
             <p className="text-sm">No step data recorded for this execution.</p>
-            <p className="text-xs opacity-60">Steps are generated when a workflow with nodes is run.</p>
+            <p className="text-xs opacity-60">
+              Steps are generated when a workflow with nodes is run.
+            </p>
           </div>
         ) : (
           <>
@@ -489,7 +667,10 @@ export function ExecutionDetail() {
 
               <div className="flex-1 min-w-0 rounded-lg border bg-card overflow-hidden">
                 {selectedStep ? (
-                  <StepDetail step={selectedStep} nodeTypeName={getNodeTypeName(selectedStep.nodeType)} />
+                  <StepDetail
+                    step={selectedStep}
+                    nodeTypeName={getNodeTypeName(selectedStep.nodeType)}
+                  />
                 ) : (
                   <div className="flex items-center justify-center h-full text-muted-foreground gap-2 text-sm">
                     <ChevronRight className="h-4 w-4" />
@@ -534,7 +715,11 @@ export function ExecutionDetail() {
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2 p-6">
                       <p className="text-sm">No step selected</p>
-                      <Button variant="ghost" size="sm" onClick={() => setMobileView("timeline")}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setMobileView("timeline")}
+                      >
                         Back to steps
                       </Button>
                     </div>

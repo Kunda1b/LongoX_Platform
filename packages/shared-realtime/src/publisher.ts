@@ -1,8 +1,10 @@
-import type { PlatformEventType } from "@autoflow/shared-events";
-import { logger } from "@autoflow/shared-logger";
+import type { PlatformEventType } from "@longox/shared-events";
+import { logger } from "@longox/shared-logger";
 
 const INTERNAL_API_KEY = process.env["INTERNAL_API_KEY"];
-const EVENTS_BRIDGE_URL = process.env["EVENTS_BRIDGE_URL"] ?? "http://localhost:8080/api/events/publish";
+const EVENTS_BRIDGE_URL =
+  process.env["EVENTS_BRIDGE_URL"] ??
+  "http://localhost:8080/api/events/publish";
 
 interface PublishOptions {
   type: PlatformEventType;
@@ -37,6 +39,9 @@ export async function publishEvent(options: PublishOptions): Promise<void> {
       );
     }
   } catch (err) {
-    logger.error({ err, eventType: options.type }, "[EventPublisher] Error publishing event");
+    logger.error(
+      { err, eventType: options.type },
+      "[EventPublisher] Error publishing event",
+    );
   }
 }

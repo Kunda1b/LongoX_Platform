@@ -8,7 +8,13 @@ export interface ScheduledJob {
   nextRunAt: string | null;
 }
 
-function parseCronExpression(cron: string): { minute: number; hour: number; dayOfMonth: number; month: number; dayOfWeek: number } {
+function parseCronExpression(cron: string): {
+  minute: number;
+  hour: number;
+  dayOfMonth: number;
+  month: number;
+  dayOfWeek: number;
+} {
   const parts = cron.split(/\s+/);
   if (parts.length !== 5) {
     throw new Error(`Invalid cron expression: "${cron}". Expected 5 fields.`);
@@ -43,8 +49,17 @@ export function shouldRunNow(job: ScheduledJob): boolean {
     const localNow = new Date(now.getTime() + tzOffset);
 
     if (localNow.getMinutes() !== cronParsed.minute) return false;
-    if (cronParsed.hour !== 0 && localNow.getHours() !== 0 && localNow.getHours() !== cronParsed.hour) return false;
-    if (cronParsed.dayOfMonth !== 1 && localNow.getDate() !== cronParsed.dayOfMonth) return false;
+    if (
+      cronParsed.hour !== 0 &&
+      localNow.getHours() !== 0 &&
+      localNow.getHours() !== cronParsed.hour
+    )
+      return false;
+    if (
+      cronParsed.dayOfMonth !== 1 &&
+      localNow.getDate() !== cronParsed.dayOfMonth
+    )
+      return false;
 
     return true;
   } catch {
@@ -54,7 +69,7 @@ export function shouldRunNow(job: ScheduledJob): boolean {
 
 function getTimezoneOffset(timezone: string): number {
   const tzOffsets: Record<string, number> = {
-    "UTC": 0,
+    UTC: 0,
     "America/New_York": -5 * 60 * 60 * 1000,
     "America/Chicago": -6 * 60 * 60 * 1000,
     "America/Denver": -7 * 60 * 60 * 1000,

@@ -1,4 +1,4 @@
-import { db, executionCheckpointsTable } from "@autoflow/db";
+import { db, executionCheckpointsTable } from "@longox/db";
 import { eq, and } from "drizzle-orm";
 
 export interface CheckpointData {
@@ -15,7 +15,8 @@ export interface CheckpointData {
 
 export class CheckpointManager {
   async saveCheckpoint(data: CheckpointData): Promise<number> {
-    const [checkpoint] = await db.insert(executionCheckpointsTable)
+    const [checkpoint] = await db
+      .insert(executionCheckpointsTable)
       .values({
         executionId: data.executionId,
         nodeId: data.nodeId,
@@ -34,27 +35,37 @@ export class CheckpointManager {
     return checkpoint.id;
   }
 
-  async updateCheckpoint(id: number, updates: Partial<{
-    status: "running" | "success" | "failed";
-    outputData: Record<string, unknown> | null;
-    errorMessage: string | null;
-    completedAt: Date;
-    durationMs: number;
-  }>): Promise<void> {
-    await db.update(executionCheckpointsTable)
+  async updateCheckpoint(
+    id: number,
+    updates: Partial<{
+      status: "running" | "success" | "failed";
+      outputData: Record<string, unknown> | null;
+      errorMessage: string | null;
+      completedAt: Date;
+      durationMs: number;
+    }>,
+  ): Promise<void> {
+    await db
+      .update(executionCheckpointsTable)
       .set(updates)
       .where(eq(executionCheckpointsTable.id, id));
   }
 
-  async getCheckpoints(executionId: number): Promise<typeof executionCheckpointsTable.$inferSelect[]> {
-    return db.select()
+  async getCheckpoints(
+    executionId: number,
+  ): Promise<(typeof executionCheckpointsTable.$inferSelect)[]> {
+    return db
+      .select()
       .from(executionCheckpointsTable)
       .where(eq(executionCheckpointsTable.executionId, executionId))
       .orderBy(executionCheckpointsTable.id);
   }
 
-  async getLatestCheckpoint(executionId: number): Promise<typeof executionCheckpointsTable.$inferSelect | null> {
-    const [checkpoint] = await db.select()
+  async getLatestCheckpoint(
+    executionId: number,
+  ): Promise<typeof executionCheckpointsTable.$inferSelect | null> {
+    const [checkpoint] = await db
+      .select()
       .from(executionCheckpointsTable)
       .where(eq(executionCheckpointsTable.executionId, executionId))
       .orderBy(executionCheckpointsTable.id)
@@ -64,7 +75,8 @@ export class CheckpointManager {
   }
 
   async getCompletedNodeIds(executionId: number): Promise<Set<string>> {
-    const checkpoints = await db.select({ nodeId: executionCheckpointsTable.nodeId })
+    const checkpoints = await db
+      .select({ nodeId: executionCheckpointsTable.nodeId })
       .from(executionCheckpointsTable)
       .where(
         and(
@@ -76,8 +88,11 @@ export class CheckpointManager {
     return new Set(checkpoints.map((c) => c.nodeId));
   }
 
-  async getLastOutput(executionId: number): Promise<Record<string, unknown> | null> {
-    const [checkpoint] = await db.select()
+  async getLastOutput(
+    executionId: number,
+  ): Promise<Record<string, unknown> | null> {
+    const [checkpoint] = await db
+      .select()
       .from(executionCheckpointsTable)
       .where(
         and(

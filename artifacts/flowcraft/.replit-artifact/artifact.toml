@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "FlowCraft"
+title = "LongoX"
 version = "1.0.0"
 id = "artifacts/flowcraft"
 router = "path"
@@ -15,10 +15,10 @@ paths = [ "/" ]
 localPort = 25075
 
 [services.development]
-run = "pnpm --filter @workspace/flowcraft run dev"
+run = "pnpm --filter @longox/flowcraft run dev"
 
 [services.production]
-build = [ "pnpm", "--filter", "@workspace/flowcraft", "run", "build" ]
+build = [ "pnpm", "--filter", "@longox/flowcraft", "run", "build" ]
 publicDir = "artifacts/flowcraft/dist/public"
 serve = "static"
 

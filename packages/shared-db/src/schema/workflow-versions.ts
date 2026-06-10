@@ -1,4 +1,12 @@
-import { pgTable, text, serial, timestamp, integer, jsonb, boolean } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  timestamp,
+  integer,
+  jsonb,
+  boolean,
+} from "drizzle-orm/pg-core";
 
 export const workflowVersionsTable = pgTable("workflow_versions", {
   id: serial("id").primaryKey(),
@@ -8,7 +16,9 @@ export const workflowVersionsTable = pgTable("workflow_versions", {
   nodes: jsonb("nodes").notNull().default([]),
   changeNote: text("change_note"),
   published: boolean("published").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export type WorkflowVersion = typeof workflowVersionsTable.$inferSelect;

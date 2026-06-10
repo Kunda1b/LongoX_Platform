@@ -14,7 +14,10 @@ export interface TokenPayload extends AuthUser {
 }
 
 function getSecret(): string {
-  return process.env["JWT_SECRET"] ?? "flow-builder-nexus-dev-secret-change-in-production";
+  return (
+    process.env["JWT_SECRET"] ??
+    "flow-builder-nexus-dev-secret-change-in-production"
+  );
 }
 
 function getExpiry(): string {

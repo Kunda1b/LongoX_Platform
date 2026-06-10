@@ -4,18 +4,26 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { 
-  useListWorkflows, 
-  useCreateWorkflow, 
-  useToggleWorkflow, 
+import {
+  useListWorkflows,
+  useCreateWorkflow,
+  useToggleWorkflow,
   useDeleteWorkflow,
-  getListWorkflowsQueryKey
-} from "@autoflow/api-client-react";
+  getListWorkflowsQueryKey,
+} from "@longox/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/badges";
-import { Plus, Search, Cable, MoreVertical, Trash2, Power, PowerOff } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Cable,
+  MoreVertical,
+  Trash2,
+  Power,
+  PowerOff,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
@@ -38,7 +46,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const createSchema = z.object({
@@ -59,8 +73,8 @@ export default function Workflows() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListWorkflowsQueryKey() });
         toast({ title: "Workflow status updated" });
-      }
-    }
+      },
+    },
   });
 
   const deleteMutation = useDeleteWorkflow({
@@ -68,8 +82,8 @@ export default function Workflows() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListWorkflowsQueryKey() });
         toast({ title: "Workflow deleted" });
-      }
-    }
+      },
+    },
   });
 
   const createMutation = useCreateWorkflow({
@@ -78,8 +92,8 @@ export default function Workflows() {
         queryClient.invalidateQueries({ queryKey: getListWorkflowsQueryKey() });
         setIsCreateOpen(false);
         toast({ title: "Workflow created" });
-      }
-    }
+      },
+    },
   });
 
   const form = useForm<z.infer<typeof createSchema>>({
@@ -95,8 +109,12 @@ export default function Workflows() {
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Workflows</h1>
-          <p className="text-muted-foreground mt-1">Design and manage your automation pipelines.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Workflows
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Design and manage your automation pipelines.
+          </p>
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
@@ -110,7 +128,10 @@ export default function Workflows() {
               <DialogTitle>Create Workflow</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-4"
+              >
                 <FormField
                   control={form.control}
                   name="name"
@@ -118,7 +139,10 @@ export default function Workflows() {
                     <FormItem>
                       <FormLabel>Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. Sync Salesforce to Postgres" {...field} />
+                        <Input
+                          placeholder="e.g. Sync Salesforce to Postgres"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -143,7 +167,10 @@ export default function Workflows() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Trigger</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select trigger" />
@@ -173,8 +200,8 @@ export default function Workflows() {
       <div className="flex items-center gap-2">
         <div className="relative flex-1 max-w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search workflows..." 
+          <Input
+            placeholder="Search workflows..."
             className="pl-9"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -193,14 +220,24 @@ export default function Workflows() {
               <Cable className="size-6" />
             </div>
             <div className="flex max-w-sm flex-col items-center gap-1">
-              <div className="text-lg font-medium tracking-tight">No workflows yet</div>
-              <p className="text-muted-foreground text-sm/relaxed">Automate repetitive tasks by connecting triggers, actions, and logic nodes.</p>
+              <div className="text-lg font-medium tracking-tight">
+                No workflows yet
+              </div>
+              <p className="text-muted-foreground text-sm/relaxed">
+                Automate repetitive tasks by connecting triggers, actions, and
+                logic nodes.
+              </p>
             </div>
-            <Button onClick={() => setIsCreateOpen(true)} className="mt-2">Create your first workflow</Button>
+            <Button onClick={() => setIsCreateOpen(true)} className="mt-2">
+              Create your first workflow
+            </Button>
           </div>
         ) : (
           workflows?.map((wf) => (
-            <Card key={wf.id} className="hover:border-primary/50 transition-colors">
+            <Card
+              key={wf.id}
+              className="hover:border-primary/50 transition-colors"
+            >
               <CardContent className="p-4 sm:p-6">
                 <div className="flex items-start gap-4">
                   {/* Icon */}
@@ -210,18 +247,25 @@ export default function Workflows() {
 
                   {/* Main content — min-w-0 allows truncation */}
                   <div className="flex-1 min-w-0">
-                    <Link href={`/workflows/${wf.id}`} className="font-semibold text-base sm:text-lg hover:underline block truncate">
+                    <Link
+                      href={`/workflows/${wf.id}`}
+                      className="font-semibold text-base sm:text-lg hover:underline block truncate"
+                    >
                       {wf.name}
                     </Link>
                     {wf.description && (
-                      <p className="text-muted-foreground text-sm mt-0.5 truncate">{wf.description}</p>
+                      <p className="text-muted-foreground text-sm mt-0.5 truncate">
+                        {wf.description}
+                      </p>
                     )}
                     <div className="flex items-center flex-wrap gap-2 mt-2">
                       <StatusBadge status={wf.status} />
                       <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-md">
                         {wf.triggerType}
                       </span>
-                      <span className="text-xs text-muted-foreground">{wf.nodeCount} nodes</span>
+                      <span className="text-xs text-muted-foreground">
+                        {wf.nodeCount} nodes
+                      </span>
                       <span className="text-xs text-muted-foreground">
                         {wf.executionCount?.toLocaleString() ?? 0} runs
                       </span>
@@ -231,19 +275,27 @@ export default function Workflows() {
                   {/* Actions */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="shrink-0 h-9 w-9">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0 h-9 w-9"
+                      >
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => toggleMutation.mutate({ id: wf.id })}
                         className="gap-2"
                       >
-                        {wf.status === 'active' ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
-                        {wf.status === 'active' ? "Deactivate" : "Activate"}
+                        {wf.status === "active" ? (
+                          <PowerOff className="h-4 w-4" />
+                        ) : (
+                          <Power className="h-4 w-4" />
+                        )}
+                        {wf.status === "active" ? "Deactivate" : "Activate"}
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         className="text-destructive gap-2 focus:text-destructive"
                         onClick={() => {
                           if (confirm("Delete this workflow?")) {

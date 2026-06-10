@@ -8,8 +8,16 @@
       "type": "email",
       "authType": "basic",
       "actions": [
-        { "id": "send_email", "name": "Send Email", "description": "Send an email via SMTP" },
-        { "id": "send_template", "name": "Send Template", "description": "Send a templated email" }
+        {
+          "id": "send_email",
+          "name": "Send Email",
+          "description": "Send an email via SMTP"
+        },
+        {
+          "id": "send_template",
+          "name": "Send Template",
+          "description": "Send a templated email"
+        }
       ]
     },
     {
@@ -17,7 +25,11 @@
       "type": "email",
       "authType": "basic",
       "triggers": [
-        { "id": "new_email", "name": "New Email", "description": "Triggered when a new email arrives" }
+        {
+          "id": "new_email",
+          "name": "New Email",
+          "description": "Triggered when a new email arrives"
+        }
       ]
     }
   ]

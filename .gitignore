@@ -8,8 +8,19 @@ out-tsc
 .expo
 .expo-shared
 
+# Next.js build output
+.next/
+**/.next/
+out/
+**/out/
+
 # dependencies
 node_modules
+
+# pnpm content-addressable store (never commit)
+.pnpm-store/
+**/.pnpm-store/
+C:\\Users\\*\\.pnpm-store/
 
 # IDEs and editors
 /.idea

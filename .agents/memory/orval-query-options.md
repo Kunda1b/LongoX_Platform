@@ -4,6 +4,7 @@ description: How to correctly pass options to orval-generated useQuery hooks wit
 ---
 
 ## Rule
+
 In react-query v5, `UseQueryOptions` requires `queryKey`. Orval-generated hooks wrap options as `{ query?: UseQueryOptions, request?: ... }`. Passing `{ query: { refetchInterval: N } }` fails because `UseQueryOptions` needs `queryKey`.
 
 **Why:** react-query v5 made `queryKey` required in `UseQueryOptions`. Orval's generated `getXxxQueryOptions()` adds the key internally, but the type definition still requires it when you construct the object externally.

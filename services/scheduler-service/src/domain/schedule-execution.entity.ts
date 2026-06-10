@@ -1,4 +1,9 @@
-export type ScheduleExecutionStatus = "pending" | "running" | "completed" | "failed" | "skipped";
+export type ScheduleExecutionStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "skipped";
 
 export interface ScheduleExecutionProps {
   id: number;
@@ -18,17 +23,39 @@ export interface ScheduleExecutionProps {
 export class ScheduleExecution {
   constructor(private props: ScheduleExecutionProps) {}
 
-  get id(): number { return this.props.id; }
-  get scheduleId(): number { return this.props.scheduleId; }
-  get tenantId(): number { return this.props.tenantId; }
-  get workflowId(): number { return this.props.workflowId; }
-  get scheduledAt(): Date { return this.props.scheduledAt; }
-  get startedAt(): Date | undefined { return this.props.startedAt; }
-  get completedAt(): Date | undefined { return this.props.completedAt; }
-  get executionId(): number | undefined { return this.props.executionId; }
-  get status(): ScheduleExecutionStatus { return this.props.status; }
-  get error(): string | undefined { return this.props.error; }
-  get retryCount(): number { return this.props.retryCount; }
+  get id(): number {
+    return this.props.id;
+  }
+  get scheduleId(): number {
+    return this.props.scheduleId;
+  }
+  get tenantId(): number {
+    return this.props.tenantId;
+  }
+  get workflowId(): number {
+    return this.props.workflowId;
+  }
+  get scheduledAt(): Date {
+    return this.props.scheduledAt;
+  }
+  get startedAt(): Date | undefined {
+    return this.props.startedAt;
+  }
+  get completedAt(): Date | undefined {
+    return this.props.completedAt;
+  }
+  get executionId(): number | undefined {
+    return this.props.executionId;
+  }
+  get status(): ScheduleExecutionStatus {
+    return this.props.status;
+  }
+  get error(): string | undefined {
+    return this.props.error;
+  }
+  get retryCount(): number {
+    return this.props.retryCount;
+  }
 
   start(executionId: number): void {
     this.props.startedAt = new Date();

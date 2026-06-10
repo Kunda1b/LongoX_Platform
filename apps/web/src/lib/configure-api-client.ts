@@ -1,4 +1,4 @@
-import { setAuthTokenGetter, setBaseUrl } from "@autoflow/api-client-react";
+import { setAuthTokenGetter, setBaseUrl } from "@longox/api-client-react";
 
 function readStoredToken(): string | null {
   if (typeof window === "undefined") return null;
