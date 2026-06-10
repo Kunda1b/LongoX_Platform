@@ -6,3 +6,5 @@ export { TriggerExecutor } from "./trigger/trigger-executor";
 export { ConditionExecutor } from "./condition/condition-executor";
 export { TransformExecutor } from "./transform/transform-executor";
 export { AiExecutor } from "./ai/ai-executor";
+export { ApprovalExecutor } from "./approval/approval-executor";
+export { CodeExecutor } from "./code/code-executor";

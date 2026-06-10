@@ -1,0 +1,12 @@
+{
+  "name": "@autoflow/shared-observability",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@autoflow/shared-cache": "workspace:*"
+  }
+}

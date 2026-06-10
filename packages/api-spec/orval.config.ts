@@ -1,0 +1,1 @@
+../../lib/api-spec/orval.config.ts

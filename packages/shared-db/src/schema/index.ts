@@ -32,3 +32,5 @@ export * from "./approval-tasks";
 export * from "./billing";
 export * from "./platform-events";
 export * from "./user-mfa";
+export * from "./schedules";
+export * from "./tenant-connector-installs";

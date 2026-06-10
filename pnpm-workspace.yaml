@@ -9,6 +9,7 @@ packages:
 
 allowBuilds:
   esbuild: true
+  sharp: true
 
 autoInstallPeers: false
 
@@ -32,10 +33,12 @@ catalog:
   tailwind-merge: ^3.3.1
   tailwindcss: ^4.1.14
   tsx: ^4.21.0
+  typescript: ~5.9.3
   vite: ^7.3.2
   wouter: ^3.3.5
   zod: ^3.25.76
-minimumReleaseAge: 1440
+
+minimumReleaseAge: "1440"
 
 minimumReleaseAgeExclude:
   - '@replit/*'
