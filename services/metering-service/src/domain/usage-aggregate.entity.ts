@@ -17,13 +17,27 @@ export interface UsageAggregateProps {
 export class UsageAggregate {
   constructor(private props: UsageAggregateProps) {}
 
-  get id(): number { return this.props.id; }
-  get tenantId(): number { return this.props.tenantId; }
-  get eventType(): string { return this.props.eventType; }
-  get period(): AggregatePeriod { return this.props.period; }
-  get periodStart(): Date { return this.props.periodStart; }
-  get totalQuantity(): number { return this.props.totalQuantity; }
-  get totalCount(): number { return this.props.totalCount; }
+  get id(): number {
+    return this.props.id;
+  }
+  get tenantId(): number {
+    return this.props.tenantId;
+  }
+  get eventType(): string {
+    return this.props.eventType;
+  }
+  get period(): AggregatePeriod {
+    return this.props.period;
+  }
+  get periodStart(): Date {
+    return this.props.periodStart;
+  }
+  get totalQuantity(): number {
+    return this.props.totalQuantity;
+  }
+  get totalCount(): number {
+    return this.props.totalCount;
+  }
 
   addUsage(quantity: number): void {
     this.props.totalQuantity += quantity;

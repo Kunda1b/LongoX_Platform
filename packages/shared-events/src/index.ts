@@ -52,7 +52,10 @@ export function createEvent(
   aggregateId: string,
   aggregateType: string,
   payload: Record<string, unknown> = {},
-  actor: { id?: string; type?: "user" | "system" | "webhook" | "schedule" } = {},
+  actor: {
+    id?: string;
+    type?: "user" | "system" | "webhook" | "schedule";
+  } = {},
   correlationId?: string,
 ): PlatformEvent {
   return {
@@ -133,7 +136,7 @@ export class RedisEventBus implements EventBus {
   private publisher: import("ioredis").Redis | null = null;
   private localHandlers = new Map<string, Set<EventHandler<PlatformEvent>>>();
   private subscribedChannels = new Set<string>();
-  private channelPrefix = "flowcraft:events:";
+  private channelPrefix = "longox:events:";
 
   constructor(private redisUrl?: string) {
     if (redisUrl) this.connect().catch(() => {});
@@ -142,11 +145,20 @@ export class RedisEventBus implements EventBus {
   private async connect(): Promise<void> {
     try {
       const { Redis } = await import("ioredis");
-      this.subscriber = new Redis(this.redisUrl!, { maxRetriesPerRequest: 3, lazyConnect: true });
-      this.publisher = new Redis(this.redisUrl!, { maxRetriesPerRequest: 3, lazyConnect: true });
+      this.subscriber = new Redis(this.redisUrl!, {
+        maxRetriesPerRequest: 3,
+        lazyConnect: true,
+      });
+      this.publisher = new Redis(this.redisUrl!, {
+        maxRetriesPerRequest: 3,
+        lazyConnect: true,
+      });
       await Promise.all([this.subscriber.connect(), this.publisher.connect()]);
     } catch (err) {
-      console.warn("[RedisEventBus] Failed to connect, falling back to in-memory:", err);
+      console.warn(
+        "[RedisEventBus] Failed to connect, falling back to in-memory:",
+        err,
+      );
       this.subscriber = null;
       this.publisher = null;
     }
@@ -167,8 +179,13 @@ export class RedisEventBus implements EventBus {
       try {
         const channel = `${this.channelPrefix}${event.type}`;
         await this.publisher.publish(channel, JSON.stringify(fullEvent));
-        await this.publisher.publish(`${this.channelPrefix}*`, JSON.stringify(fullEvent));
-      } catch { /* silent fallback */ }
+        await this.publisher.publish(
+          `${this.channelPrefix}*`,
+          JSON.stringify(fullEvent),
+        );
+      } catch {
+        /* silent fallback */
+      }
     }
   }
 
@@ -181,7 +198,10 @@ export class RedisEventBus implements EventBus {
           const result = handler(event);
           if (result instanceof Promise) promises.push(result);
         } catch (err) {
-          console.error(`[RedisEventBus] Handler error for ${event.type}:`, err);
+          console.error(
+            `[RedisEventBus] Handler error for ${event.type}:`,
+            err,
+          );
         }
       }
       await Promise.allSettled(promises);
@@ -213,14 +233,20 @@ export class RedisEventBus implements EventBus {
       this.subscribedChannels.add(type);
       const channel = `${this.channelPrefix}${type}`;
       this.subscriber.subscribe(channel, (err) => {
-        if (err) console.warn(`[RedisEventBus] Failed to subscribe to ${channel}:`, err);
+        if (err)
+          console.warn(
+            `[RedisEventBus] Failed to subscribe to ${channel}:`,
+            err,
+          );
       });
       this.subscriber!.on("message", (ch, message) => {
         if (ch === channel || ch === `${this.channelPrefix}*`) {
           try {
             const event = JSON.parse(message) as PlatformEvent;
             this.publishLocal(event).catch(() => {});
-          } catch { /* ignore parse errors */ }
+          } catch {
+            /* ignore parse errors */
+          }
         }
       });
     }

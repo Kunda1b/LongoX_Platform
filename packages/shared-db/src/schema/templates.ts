@@ -1,4 +1,13 @@
-import { pgTable, text, serial, timestamp, integer, jsonb, real, boolean } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  timestamp,
+  integer,
+  jsonb,
+  real,
+  boolean,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -16,9 +25,14 @@ export const templatesTable = pgTable("templates", {
   isCustom: boolean("is_custom").notNull().default(false),
   templateType: text("template_type").notNull().default("workflow"),
   metadata: jsonb("metadata").notNull().default({}),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
-export const insertTemplateSchema = createInsertSchema(templatesTable).omit({ id: true, createdAt: true });
+export const insertTemplateSchema = createInsertSchema(templatesTable).omit({
+  id: true,
+  createdAt: true,
+});
 export type InsertTemplate = z.infer<typeof insertTemplateSchema>;
 export type Template = typeof templatesTable.$inferSelect;

@@ -1,4 +1,4 @@
-import { logger } from "@autoflow/shared-logger";
+import { logger } from "@longox/shared-logger";
 
 interface MetricPoint {
   name: string;
@@ -48,7 +48,10 @@ class MetricsCollector {
     logger.info({ metrics: points.length }, "[Metrics] Flushing metrics");
 
     for (const point of points) {
-      logger.debug({ metric: point.name, value: point.value, tags: point.tags }, "[Metrics] Point");
+      logger.debug(
+        { metric: point.name, value: point.value, tags: point.tags },
+        "[Metrics] Point",
+      );
     }
   }
 }

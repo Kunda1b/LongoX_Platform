@@ -1,4 +1,4 @@
-import { logger } from "@autoflow/shared-logger";
+import { logger } from "@longox/shared-logger";
 
 export type StorageProvider = "s3" | "minio" | "local" | "gcs" | "azure";
 
@@ -42,7 +42,9 @@ export class StorageClient {
   }
 
   private getFullKey(key: string): string {
-    return this.config.basePath ? `${this.config.basePath}/${key}`.replace(/\/+/g, "/") : key;
+    return this.config.basePath
+      ? `${this.config.basePath}/${key}`.replace(/\/+/g, "/")
+      : key;
   }
 
   async upload(object: StorageObject): Promise<boolean> {
@@ -55,7 +57,9 @@ export class StorageClient {
     return this.uploadS3(fullKey, object);
   }
 
-  async download(key: string): Promise<{ body: ReadableStream | null; metadata: ObjectMetadata } | null> {
+  async download(
+    key: string,
+  ): Promise<{ body: ReadableStream | null; metadata: ObjectMetadata } | null> {
     const fullKey = this.getFullKey(key);
 
     if (this.config.provider === "local") {
@@ -119,7 +123,10 @@ export class StorageClient {
     return `/storage/${fullKey}`;
   }
 
-  private async uploadLocal(fullKey: string, object: StorageObject): Promise<boolean> {
+  private async uploadLocal(
+    fullKey: string,
+    object: StorageObject,
+  ): Promise<boolean> {
     try {
       const { mkdir, writeFile } = await import("node:fs/promises");
       const { dirname, join } = await import("node:path");
@@ -127,7 +134,8 @@ export class StorageClient {
       const filePath = join(this.config.bucket, fullKey);
       await mkdir(dirname(filePath), { recursive: true });
 
-      const content = typeof object.body === "string" ? object.body : object.body.toString();
+      const content =
+        typeof object.body === "string" ? object.body : object.body.toString();
       await writeFile(filePath, content);
 
       return true;
@@ -137,7 +145,9 @@ export class StorageClient {
     }
   }
 
-  private async downloadLocal(fullKey: string): Promise<{ body: ReadableStream | null; metadata: ObjectMetadata } | null> {
+  private async downloadLocal(
+    fullKey: string,
+  ): Promise<{ body: ReadableStream | null; metadata: ObjectMetadata } | null> {
     try {
       const { readFile, stat } = await import("node:fs/promises");
       const { join } = await import("node:path");
@@ -194,16 +204,27 @@ export class StorageClient {
     }
   }
 
-  private async uploadS3(fullKey: string, object: StorageObject): Promise<boolean> {
+  private async uploadS3(
+    fullKey: string,
+    object: StorageObject,
+  ): Promise<boolean> {
     try {
-      const body = typeof object.body === "string" ? object.body : object.body.toString();
+      const body =
+        typeof object.body === "string" ? object.body : object.body.toString();
       const url = this.buildS3Url(fullKey);
 
       const res = await fetch(url, {
         method: "PUT",
         headers: {
           "Content-Type": object.contentType ?? "application/octet-stream",
-          ...(object.metadata ? Object.fromEntries(Object.entries(object.metadata).map(([k, v]) => [`x-amz-meta-${k}`, v])) : {}),
+          ...(object.metadata
+            ? Object.fromEntries(
+                Object.entries(object.metadata).map(([k, v]) => [
+                  `x-amz-meta-${k}`,
+                  v,
+                ]),
+              )
+            : {}),
         },
         body,
       });
@@ -215,7 +236,9 @@ export class StorageClient {
     }
   }
 
-  private async downloadS3(fullKey: string): Promise<{ body: ReadableStream | null; metadata: ObjectMetadata } | null> {
+  private async downloadS3(
+    fullKey: string,
+  ): Promise<{ body: ReadableStream | null; metadata: ObjectMetadata } | null> {
     try {
       const url = this.buildS3Url(fullKey);
       const res = await fetch(url);
@@ -224,9 +247,11 @@ export class StorageClient {
 
       const metadata: ObjectMetadata = {
         key: fullKey,
-        contentType: res.headers.get("content-type") ?? "application/octet-stream",
+        contentType:
+          res.headers.get("content-type") ?? "application/octet-stream",
         contentLength: parseInt(res.headers.get("content-length") ?? "0"),
-        lastModified: res.headers.get("last-modified") ?? new Date().toISOString(),
+        lastModified:
+          res.headers.get("last-modified") ?? new Date().toISOString(),
         etag: res.headers.get("etag") ?? undefined,
         metadata: {},
       };

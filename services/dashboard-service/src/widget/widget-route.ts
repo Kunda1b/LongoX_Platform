@@ -9,7 +9,10 @@ router.get("/widgets/catalog", (_req, res): void => {
 
 router.get("/widgets/catalog/:id", (req, res): void => {
   const widget = WIDGET_CATALOG.find((w) => w.id === req.params.id);
-  if (!widget) { res.status(404).json({ error: "Widget not found" }); return; }
+  if (!widget) {
+    res.status(404).json({ error: "Widget not found" });
+    return;
+  }
   res.json(widget);
 });
 

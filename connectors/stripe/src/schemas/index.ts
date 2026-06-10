@@ -4,7 +4,10 @@ export const stripeSchemas = {
       type: "object",
       properties: {
         amount: { type: "number", description: "Amount in cents" },
-        currency: { type: "string", description: "Three-letter currency code (e.g. usd)" },
+        currency: {
+          type: "string",
+          description: "Three-letter currency code (e.g. usd)",
+        },
         customerId: { type: "string", description: "Stripe customer ID" },
       },
       required: ["amount"],

@@ -1,4 +1,13 @@
-export type DataSourceKind = "postgresql" | "mysql" | "mongodb" | "rest_api" | "graphql" | "bigquery" | "snowflake" | "csv_upload" | "custom";
+export type DataSourceKind =
+  | "postgresql"
+  | "mysql"
+  | "mongodb"
+  | "rest_api"
+  | "graphql"
+  | "bigquery"
+  | "snowflake"
+  | "csv_upload"
+  | "custom";
 export type DataSourceStatus = "active" | "inactive" | "error" | "testing";
 
 export interface DataSourceConfig {
@@ -32,16 +41,36 @@ export interface DataSourceProps {
 export class DataSource {
   constructor(private props: DataSourceProps) {}
 
-  get id(): number { return this.props.id; }
-  get tenantId(): number { return this.props.tenantId; }
-  get name(): string { return this.props.name; }
-  get description(): string | undefined { return this.props.description; }
-  get kind(): DataSourceKind { return this.props.kind; }
-  get config(): DataSourceConfig { return { ...this.props.config }; }
-  get status(): DataSourceStatus { return this.props.status; }
-  get lastTestedAt(): Date | undefined { return this.props.lastTestedAt; }
-  get lastTestError(): string | undefined { return this.props.lastTestError; }
-  get createdBy(): number { return this.props.createdBy; }
+  get id(): number {
+    return this.props.id;
+  }
+  get tenantId(): number {
+    return this.props.tenantId;
+  }
+  get name(): string {
+    return this.props.name;
+  }
+  get description(): string | undefined {
+    return this.props.description;
+  }
+  get kind(): DataSourceKind {
+    return this.props.kind;
+  }
+  get config(): DataSourceConfig {
+    return { ...this.props.config };
+  }
+  get status(): DataSourceStatus {
+    return this.props.status;
+  }
+  get lastTestedAt(): Date | undefined {
+    return this.props.lastTestedAt;
+  }
+  get lastTestError(): string | undefined {
+    return this.props.lastTestError;
+  }
+  get createdBy(): number {
+    return this.props.createdBy;
+  }
 
   updateConfig(config: Partial<DataSourceConfig>): void {
     this.props.config = { ...this.props.config, ...config };

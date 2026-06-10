@@ -1,8 +1,8 @@
-{{- define "autoflow.name" -}}
+{{- define "longox.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{- define "autoflow.fullname" -}}
+{{- define "longox.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -15,16 +15,16 @@
 {{- end }}
 {{- end }}
 
-{{- define "autoflow.labels" -}}
-helm.sh/chart: {{ include "autoflow.name" . }}-{{ .Chart.Version | replace "+" "_" }}
-{{ include "autoflow.selectorLabels" . }}
+{{- define "longox.labels" -}}
+helm.sh/chart: {{ include "longox.name" . }}-{{ .Chart.Version | replace "+" "_" }}
+{{ include "longox.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
-{{- define "autoflow.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "autoflow.name" . }}
+{{- define "longox.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "longox.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}

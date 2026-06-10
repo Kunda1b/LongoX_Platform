@@ -6,12 +6,12 @@ variable "num_cache_nodes" { type = number }
 variable "multi_az" { type = bool, default = false }
 
 resource "aws_elasticache_subnet_group" "main" {
-  name       = "autoflow-redis-${var.environment}"
+  name       = "longox-redis-${var.environment}"
   subnet_ids = var.private_subnet_ids
 }
 
 resource "aws_security_group" "redis" {
-  name        = "autoflow-redis-${var.environment}"
+  name        = "longox-redis-${var.environment}"
   description = "Redis security group"
   vpc_id      = var.vpc_id
 
@@ -31,8 +31,8 @@ resource "aws_security_group" "redis" {
 }
 
 resource "aws_elasticache_replication_group" "main" {
-  replication_group_id = "autoflow-redis-${var.environment}"
-  description         = "Redis cluster for AutoFlow ${var.environment}"
+  replication_group_id = "longox-redis-${var.environment}"
+  description         = "Redis cluster for LongoX ${var.environment}"
 
   node_type            = var.node_type
   num_cache_clusters   = var.num_cache_nodes

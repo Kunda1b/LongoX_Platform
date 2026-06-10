@@ -1,4 +1,9 @@
-import type { WorkflowNode, ExecutionContext, NodeExecutionResult, NodeExecutor } from "./types";
+import type {
+  WorkflowNode,
+  ExecutionContext,
+  NodeExecutionResult,
+  NodeExecutor,
+} from "./types";
 import type { WorkflowGraph } from "./types";
 import { topologicalSort } from "./graph";
 

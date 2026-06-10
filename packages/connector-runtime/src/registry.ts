@@ -1,4 +1,10 @@
-import type { ConnectorDefinition, ActionContext, ActionResult, TriggerContext, TriggerEvent } from "./types";
+import type {
+  ConnectorDefinition,
+  ActionContext,
+  ActionResult,
+  TriggerContext,
+  TriggerEvent,
+} from "./types";
 
 export interface ActionHandler {
   (context: ActionContext): Promise<ActionResult>;
@@ -9,12 +15,25 @@ export interface TriggerHandler {
 }
 
 interface RegisteredAction {
-  definition: { id: string; name: string; description: string; inputSchema: Record<string, unknown>; outputSchema: Record<string, unknown>; idempotent: boolean };
+  definition: {
+    id: string;
+    name: string;
+    description: string;
+    inputSchema: Record<string, unknown>;
+    outputSchema: Record<string, unknown>;
+    idempotent: boolean;
+  };
   handler: ActionHandler;
 }
 
 interface RegisteredTrigger {
-  definition: { id: string; name: string; description: string; type: "webhook" | "polling" | "event"; outputSchema: Record<string, unknown> };
+  definition: {
+    id: string;
+    name: string;
+    description: string;
+    type: "webhook" | "polling" | "event";
+    outputSchema: Record<string, unknown>;
+  };
   handler: TriggerHandler;
 }
 
@@ -47,10 +66,18 @@ class ConnectorRegistry {
     return this.triggers.get(fullId)?.handler;
   }
 
-  async executeAction(fullId: string, context: ActionContext): Promise<ActionResult> {
+  async executeAction(
+    fullId: string,
+    context: ActionContext,
+  ): Promise<ActionResult> {
     const handler = this.actions.get(fullId)?.handler;
     if (!handler) {
-      return { success: false, data: {}, error: `Action "${fullId}" not found`, durationMs: 0 };
+      return {
+        success: false,
+        data: {},
+        error: `Action "${fullId}" not found`,
+        durationMs: 0,
+      };
     }
     const start = Date.now();
     try {
@@ -66,7 +93,10 @@ class ConnectorRegistry {
     }
   }
 
-  async executeTrigger(fullId: string, context: TriggerContext): Promise<TriggerEvent[]> {
+  async executeTrigger(
+    fullId: string,
+    context: TriggerContext,
+  ): Promise<TriggerEvent[]> {
     const handler = this.triggers.get(fullId)?.handler;
     if (!handler) return [];
     try {

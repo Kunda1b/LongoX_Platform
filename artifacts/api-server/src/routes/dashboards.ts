@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, like, and } from "drizzle-orm";
-import { db, dashboardsTable } from "@autoflow/db";
+import { db, dashboardsTable } from "@longox/db";
 
 const router: IRouter = Router();
 
@@ -23,7 +23,9 @@ router.get("/dashboards/stats", async (_req, res): Promise<void> => {
   const published = all.filter((d) => d.status === "published").length;
   const draft = all.filter((d) => d.status === "draft").length;
   const totalWidgets = all.reduce((sum, d) => {
-    const widgets = Array.isArray(d.widgets) ? (d.widgets as unknown[]).length : 0;
+    const widgets = Array.isArray(d.widgets)
+      ? (d.widgets as unknown[]).length
+      : 0;
     return sum + widgets;
   }, 0);
   res.json({ total, published, draft, totalWidgets });
@@ -31,8 +33,10 @@ router.get("/dashboards/stats", async (_req, res): Promise<void> => {
 
 router.get("/dashboards", async (req, res): Promise<void> => {
   const conditions = [];
-  if (req.query.status) conditions.push(eq(dashboardsTable.status, String(req.query.status)));
-  if (req.query.search) conditions.push(like(dashboardsTable.name, `%${req.query.search}%`));
+  if (req.query.status)
+    conditions.push(eq(dashboardsTable.status, String(req.query.status)));
+  if (req.query.search)
+    conditions.push(like(dashboardsTable.name, `%${req.query.search}%`));
 
   const dashboards = await db
     .select()
@@ -69,17 +73,29 @@ router.post("/dashboards", async (req, res): Promise<void> => {
 
 router.get("/dashboards/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
 
-  const [dashboard] = await db.select().from(dashboardsTable).where(eq(dashboardsTable.id, id));
-  if (!dashboard) { res.status(404).json({ error: "Dashboard not found" }); return; }
+  const [dashboard] = await db
+    .select()
+    .from(dashboardsTable)
+    .where(eq(dashboardsTable.id, id));
+  if (!dashboard) {
+    res.status(404).json({ error: "Dashboard not found" });
+    return;
+  }
 
   res.json(serializeDashboard(dashboard));
 });
 
 router.patch("/dashboards/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
 
   const { name, description, widgets, status } = req.body as {
     name?: string;
@@ -100,24 +116,39 @@ router.patch("/dashboards/:id", async (req, res): Promise<void> => {
     .where(eq(dashboardsTable.id, id))
     .returning();
 
-  if (!dashboard) { res.status(404).json({ error: "Dashboard not found" }); return; }
+  if (!dashboard) {
+    res.status(404).json({ error: "Dashboard not found" });
+    return;
+  }
 
   res.json(serializeDashboard(dashboard));
 });
 
 router.delete("/dashboards/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
 
-  const [dashboard] = await db.delete(dashboardsTable).where(eq(dashboardsTable.id, id)).returning();
-  if (!dashboard) { res.status(404).json({ error: "Dashboard not found" }); return; }
+  const [dashboard] = await db
+    .delete(dashboardsTable)
+    .where(eq(dashboardsTable.id, id))
+    .returning();
+  if (!dashboard) {
+    res.status(404).json({ error: "Dashboard not found" });
+    return;
+  }
 
   res.sendStatus(204);
 });
 
 router.post("/dashboards/:id/publish", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
 
   const [dashboard] = await db
     .update(dashboardsTable)
@@ -125,7 +156,10 @@ router.post("/dashboards/:id/publish", async (req, res): Promise<void> => {
     .where(eq(dashboardsTable.id, id))
     .returning();
 
-  if (!dashboard) { res.status(404).json({ error: "Dashboard not found" }); return; }
+  if (!dashboard) {
+    res.status(404).json({ error: "Dashboard not found" });
+    return;
+  }
 
   res.json(serializeDashboard(dashboard));
 });

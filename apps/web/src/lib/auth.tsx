@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 
 export type User = {
@@ -27,7 +34,11 @@ function getStoredAuth(): { token: string; user: User } | null {
   if (typeof window === "undefined") return null;
   const raw = localStorage.getItem("auth");
   if (!raw) return null;
-  try { return JSON.parse(raw); } catch { return null; }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 function setStoredAuth(token: string, user: User) {
@@ -53,22 +64,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const res = await fetch(`${API}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: "Login failed" }));
-      throw new Error(err.error);
-    }
-    const data = await res.json() as { token: string; user: User };
-    setToken(data.token);
-    setUser(data.user);
-    setStoredAuth(data.token, data.user);
-    router.push("/dashboard");
-  }, [router]);
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const res = await fetch(`${API}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Login failed" }));
+        throw new Error(err.error);
+      }
+      const data = (await res.json()) as { token: string; user: User };
+      setToken(data.token);
+      setUser(data.user);
+      setStoredAuth(data.token, data.user);
+      router.push("/dashboard");
+    },
+    [router],
+  );
 
   const logout = useCallback(() => {
     setToken(null);

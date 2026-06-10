@@ -7,7 +7,7 @@ apiGateway:
   name: api-gateway
   replicaCount: 2
   image:
-    repository: autoflow/api-gateway
+    repository: longox/api-gateway
     tag: latest
     pullPolicy: Always
   service:
@@ -35,7 +35,7 @@ executionWorker:
   name: execution-worker
   replicaCount: 3
   image:
-    repository: autoflow/execution-service
+    repository: longox/execution-service
     tag: latest
     pullPolicy: Always
   resources:
@@ -55,7 +55,7 @@ webApp:
   name: web-app
   replicaCount: 2
   image:
-    repository: autoflow/web-app
+    repository: longox/web-app
     tag: latest
     pullPolicy: Always
   service:
@@ -88,8 +88,8 @@ ingress:
 postgresql:
   enabled: true
   auth:
-    database: autoflow
-    username: autoflow_admin
+    database: longox
+    username: longox_admin
   primary:
     persistence:
       size: 50Gi

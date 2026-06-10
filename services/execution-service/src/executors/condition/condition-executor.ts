@@ -1,4 +1,9 @@
-import type { NodeExecutor, WorkflowNode, ExecutionContext, NodeExecutionResult } from "@autoflow/workflow-engine";
+import type {
+  NodeExecutor,
+  WorkflowNode,
+  ExecutionContext,
+  NodeExecutionResult,
+} from "@longox/workflow-engine";
 
 export class ConditionExecutor implements NodeExecutor {
   canHandle(nodeTypeId: string): boolean {
@@ -22,15 +27,32 @@ export class ConditionExecutor implements NodeExecutor {
 
       let matched = false;
       switch (operator) {
-        case "eq": matched = actualValue === value; break;
-        case "neq": matched = actualValue !== value; break;
-        case "contains": matched = actualValue.includes(value); break;
-        case "gt": matched = Number(actualValue) > Number(value); break;
-        case "gte": matched = Number(actualValue) >= Number(value); break;
-        case "lt": matched = Number(actualValue) < Number(value); break;
-        case "lte": matched = Number(actualValue) <= Number(value); break;
-        case "is_empty": matched = actualValue === "" || actualValue === undefined; break;
-        default: matched = actualValue === value;
+        case "eq":
+          matched = actualValue === value;
+          break;
+        case "neq":
+          matched = actualValue !== value;
+          break;
+        case "contains":
+          matched = actualValue.includes(value);
+          break;
+        case "gt":
+          matched = Number(actualValue) > Number(value);
+          break;
+        case "gte":
+          matched = Number(actualValue) >= Number(value);
+          break;
+        case "lt":
+          matched = Number(actualValue) < Number(value);
+          break;
+        case "lte":
+          matched = Number(actualValue) <= Number(value);
+          break;
+        case "is_empty":
+          matched = actualValue === "" || actualValue === undefined;
+          break;
+        default:
+          matched = actualValue === value;
       }
 
       return {
@@ -38,7 +60,14 @@ export class ConditionExecutor implements NodeExecutor {
         nodeName: node.name,
         nodeType: "logic.if",
         status: "success",
-        output: { branch: matched ? "true" : "false", evaluated: true, condition: operator, field, expected: value, actual: actualValue },
+        output: {
+          branch: matched ? "true" : "false",
+          evaluated: true,
+          condition: operator,
+          field,
+          expected: value,
+          actual: actualValue,
+        },
         error: null,
         durationMs: Date.now() - startTime,
         attemptNumber: 1,
@@ -46,7 +75,12 @@ export class ConditionExecutor implements NodeExecutor {
     }
 
     if (nodeTypeId === "logic.router") {
-      const rules = (config.rules ?? []) as Array<{ field: string; operator: string; value: string; output: string }>;
+      const rules = (config.rules ?? []) as Array<{
+        field: string;
+        operator: string;
+        value: string;
+        output: string;
+      }>;
       let matchedBranch = "default";
 
       for (const rule of rules) {
@@ -81,12 +115,18 @@ export class ConditionExecutor implements NodeExecutor {
       const value = String(config.value ?? "");
 
       const filtered = items.filter((item: unknown) => {
-        const itemValue = String((item as Record<string, unknown>)[field] ?? "");
+        const itemValue = String(
+          (item as Record<string, unknown>)[field] ?? "",
+        );
         switch (operator) {
-          case "eq": return itemValue === value;
-          case "neq": return itemValue !== value;
-          case "contains": return itemValue.includes(value);
-          default: return true;
+          case "eq":
+            return itemValue === value;
+          case "neq":
+            return itemValue !== value;
+          case "contains":
+            return itemValue.includes(value);
+          default:
+            return true;
         }
       });
 
@@ -95,7 +135,11 @@ export class ConditionExecutor implements NodeExecutor {
         nodeName: node.name,
         nodeType: "logic.filter",
         status: "success",
-        output: { filtered: filtered.length, total: items.length, items: filtered },
+        output: {
+          filtered: filtered.length,
+          total: items.length,
+          items: filtered,
+        },
         error: null,
         durationMs: Date.now() - startTime,
         attemptNumber: 1,

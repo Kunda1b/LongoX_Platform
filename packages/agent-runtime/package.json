@@ -1,5 +1,5 @@
 {
-  "name": "@autoflow/agent-runtime",
+  "name": "@longox/agent-runtime",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,9 +7,9 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@autoflow/shared-types": "workspace:*",
-    "@autoflow/shared-events": "workspace:*",
-    "@autoflow/shared-logger": "workspace:*",
+    "@longox/shared-types": "workspace:*",
+    "@longox/shared-events": "workspace:*",
+    "@longox/shared-logger": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

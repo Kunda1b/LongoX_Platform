@@ -1,13 +1,21 @@
 import { eq, and as andOp, gte, lte, sql, desc } from "drizzle-orm";
-import { db, usageEventsTable } from "@autoflow/db";
+import { db, usageEventsTable } from "@longox/db";
 import { MeteringEvent } from "../domain/metering-event.entity";
 import { UsageAggregate } from "../domain/usage-aggregate.entity";
 import type { MeteringRepository } from "../domain/metering-repository";
-import type { MeteringEventProps, EventType } from "../domain/metering-event.entity";
-import type { UsageAggregateProps, AggregatePeriod } from "../domain/usage-aggregate.entity";
+import type {
+  MeteringEventProps,
+  EventType,
+} from "../domain/metering-event.entity";
+import type {
+  UsageAggregateProps,
+  AggregatePeriod,
+} from "../domain/usage-aggregate.entity";
 
 export class PostgresMeteringRepository implements MeteringRepository {
-  private eventToDomain(row: typeof usageEventsTable.$inferSelect): MeteringEvent {
+  private eventToDomain(
+    row: typeof usageEventsTable.$inferSelect,
+  ): MeteringEvent {
     return new MeteringEvent({
       id: row.id,
       tenantId: row.tenantId ?? 0,
@@ -24,26 +32,46 @@ export class PostgresMeteringRepository implements MeteringRepository {
     });
   }
 
-  async recordEvent(props: Omit<MeteringEventProps, "id" | "createdAt">): Promise<MeteringEvent> {
-    const [row] = await db.insert(usageEventsTable).values({
-      tenantId: props.tenantId,
-      eventType: props.eventType,
-      quantity: props.quantity,
-      workflowId: props.workflowId,
-      metadata: props.metadata,
-      createdAt: props.timestamp,
-    }).returning();
+  async recordEvent(
+    props: Omit<MeteringEventProps, "id" | "createdAt">,
+  ): Promise<MeteringEvent> {
+    const [row] = await db
+      .insert(usageEventsTable)
+      .values({
+        tenantId: props.tenantId,
+        eventType: props.eventType,
+        quantity: props.quantity,
+        workflowId: props.workflowId,
+        metadata: props.metadata,
+        createdAt: props.timestamp,
+      })
+      .returning();
     return this.eventToDomain(row);
   }
 
-  async findEvents(tenantId: number, filters?: { eventType?: EventType; from?: Date; to?: Date; workflowId?: number; limit?: number }): Promise<MeteringEvent[]> {
+  async findEvents(
+    tenantId: number,
+    filters?: {
+      eventType?: EventType;
+      from?: Date;
+      to?: Date;
+      workflowId?: number;
+      limit?: number;
+    },
+  ): Promise<MeteringEvent[]> {
     const conditions = [eq(usageEventsTable.tenantId, tenantId)];
-    if (filters?.eventType) conditions.push(eq(usageEventsTable.eventType, filters.eventType));
-    if (filters?.from) conditions.push(gte(usageEventsTable.createdAt, filters.from));
-    if (filters?.to) conditions.push(lte(usageEventsTable.createdAt, filters.to));
-    if (filters?.workflowId) conditions.push(eq(usageEventsTable.workflowId, filters.workflowId));
+    if (filters?.eventType)
+      conditions.push(eq(usageEventsTable.eventType, filters.eventType));
+    if (filters?.from)
+      conditions.push(gte(usageEventsTable.createdAt, filters.from));
+    if (filters?.to)
+      conditions.push(lte(usageEventsTable.createdAt, filters.to));
+    if (filters?.workflowId)
+      conditions.push(eq(usageEventsTable.workflowId, filters.workflowId));
 
-    const rows = await db.select().from(usageEventsTable)
+    const rows = await db
+      .select()
+      .from(usageEventsTable)
       .where(andOp(...conditions))
       .orderBy(desc(usageEventsTable.createdAt))
       .limit(filters?.limit ?? 100);
@@ -51,8 +79,15 @@ export class PostgresMeteringRepository implements MeteringRepository {
     return rows.map(this.eventToDomain);
   }
 
-  async getAggregate(tenantId: number, eventType: string, _period: AggregatePeriod, _periodStart: Date): Promise<UsageAggregate | null> {
-    const events = await this.findEvents(tenantId, { eventType: eventType as EventType });
+  async getAggregate(
+    tenantId: number,
+    eventType: string,
+    _period: AggregatePeriod,
+    _periodStart: Date,
+  ): Promise<UsageAggregate | null> {
+    const events = await this.findEvents(tenantId, {
+      eventType: eventType as EventType,
+    });
     if (events.length === 0) return null;
 
     return new UsageAggregate({
@@ -70,8 +105,15 @@ export class PostgresMeteringRepository implements MeteringRepository {
     });
   }
 
-  async upsertAggregate(_props: Omit<UsageAggregateProps, "id" | "createdAt" | "updatedAt">): Promise<UsageAggregate> {
-    const existing = await this.getAggregate(_props.tenantId, _props.eventType, _props.period, _props.periodStart);
+  async upsertAggregate(
+    _props: Omit<UsageAggregateProps, "id" | "createdAt" | "updatedAt">,
+  ): Promise<UsageAggregate> {
+    const existing = await this.getAggregate(
+      _props.tenantId,
+      _props.eventType,
+      _props.period,
+      _props.periodStart,
+    );
     if (existing) {
       existing.addUsage(_props.totalQuantity);
       return existing;
@@ -84,12 +126,19 @@ export class PostgresMeteringRepository implements MeteringRepository {
     });
   }
 
-  async getUsageSummary(tenantId: number, from: Date, to: Date): Promise<{ eventType: string; totalQuantity: number; totalCount: number }[]> {
-    const rows = await db.select({
-      eventType: usageEventsTable.eventType,
-      totalQuantity: sql<number>`sum(${usageEventsTable.quantity})`,
-      totalCount: sql<number>`count(*)::int`,
-    })
+  async getUsageSummary(
+    tenantId: number,
+    from: Date,
+    to: Date,
+  ): Promise<
+    { eventType: string; totalQuantity: number; totalCount: number }[]
+  > {
+    const rows = await db
+      .select({
+        eventType: usageEventsTable.eventType,
+        totalQuantity: sql<number>`sum(${usageEventsTable.quantity})`,
+        totalCount: sql<number>`count(*)::int`,
+      })
       .from(usageEventsTable)
       .where(
         andOp(
@@ -100,6 +149,10 @@ export class PostgresMeteringRepository implements MeteringRepository {
       )
       .groupBy(usageEventsTable.eventType);
 
-    return rows as { eventType: string; totalQuantity: number; totalCount: number }[];
+    return rows as {
+      eventType: string;
+      totalQuantity: number;
+      totalCount: number;
+    }[];
   }
 }

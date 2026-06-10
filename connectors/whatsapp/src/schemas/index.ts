@@ -3,7 +3,10 @@ export const whatsappSchemas = {
     input: {
       type: "object",
       properties: {
-        to: { type: "string", description: "Recipient phone number in international format" },
+        to: {
+          type: "string",
+          description: "Recipient phone number in international format",
+        },
         text: { type: "string", description: "Message text" },
         previewUrl: { type: "boolean", description: "Show URL preview" },
       },

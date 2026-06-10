@@ -2,10 +2,23 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useListExecutions } from "@autoflow/api-client-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useListExecutions } from "@longox/api-client-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { StatusBadge } from "@/components/badges";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { format, formatDistanceToNow } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Activity } from "lucide-react";
@@ -22,8 +35,12 @@ export function ExecutionsList() {
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Executions</h1>
-          <p className="mt-1 text-sm text-muted-foreground">History and logs of your workflow runs.</p>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Executions
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            History and logs of your workflow runs.
+          </p>
         </div>
         <div className="w-full sm:w-[180px]">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -57,11 +74,21 @@ export function ExecutionsList() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-16" /></TableCell>
-                    <TableCell><Skeleton className="ml-auto h-5 w-12" /></TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-32" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-20" />
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      <Skeleton className="h-5 w-24" />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <Skeleton className="h-5 w-16" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="ml-auto h-5 w-12" />
+                    </TableCell>
                   </TableRow>
                 ))
               ) : executions?.length === 0 ? (
@@ -72,8 +99,12 @@ export function ExecutionsList() {
                         <Activity className="size-6" />
                       </div>
                       <div className="flex max-w-sm flex-col items-center gap-1">
-                        <div className="text-lg font-medium tracking-tight">No executions yet</div>
-                        <p className="text-sm text-muted-foreground">Run a workflow to see its execution history here.</p>
+                        <div className="text-lg font-medium tracking-tight">
+                          No executions yet
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Run a workflow to see its execution history here.
+                        </p>
                       </div>
                       <Button variant="outline" asChild className="mt-2">
                         <Link href="/workflows">Go to workflows</Link>
@@ -86,11 +117,16 @@ export function ExecutionsList() {
                   <TableRow key={exec.id}>
                     <TableCell className="font-medium">
                       <div className="min-w-0">
-                        <Link href={`/workflows/${exec.workflowId}`} className="block max-w-[140px] truncate hover:underline sm:max-w-none">
+                        <Link
+                          href={`/workflows/${exec.workflowId}`}
+                          className="block max-w-[140px] truncate hover:underline sm:max-w-none"
+                        >
                           {exec.workflowName}
                         </Link>
                         <span className="mt-0.5 block text-xs text-muted-foreground sm:hidden">
-                          {formatDistanceToNow(new Date(exec.startedAt), { addSuffix: true })}
+                          {formatDistanceToNow(new Date(exec.startedAt), {
+                            addSuffix: true,
+                          })}
                         </span>
                       </div>
                     </TableCell>
@@ -101,7 +137,9 @@ export function ExecutionsList() {
                       {format(new Date(exec.startedAt), "MMM d, HH:mm")}
                     </TableCell>
                     <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
-                      {exec.durationMs != null ? `${(exec.durationMs / 1000).toFixed(1)}s` : "—"}
+                      {exec.durationMs != null
+                        ? `${(exec.durationMs / 1000).toFixed(1)}s`
+                        : "—"}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm" asChild>

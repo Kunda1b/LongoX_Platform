@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: api-gateway
-          image: autoflow/api-gateway:latest
+          image: longox/api-gateway:latest
           ports:
             - containerPort: 3001
               protocol: TCP

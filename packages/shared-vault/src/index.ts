@@ -1,4 +1,4 @@
-import { logger } from "@autoflow/shared-logger";
+import { logger } from "@longox/shared-logger";
 
 export interface VaultConfig {
   url: string;
@@ -58,12 +58,12 @@ export class VaultClient {
       throw new Error(`Vault AppRole login failed: ${res.status}`);
     }
 
-    const data = await res.json() as {
+    const data = (await res.json()) as {
       auth: { client_token: string; lease_duration: number };
     };
 
     this.cachedToken = data.auth.client_token;
-    this.tokenExpiry = Date.now() + (data.auth.lease_duration * 1000) - 60000;
+    this.tokenExpiry = Date.now() + data.auth.lease_duration * 1000 - 60000;
 
     return this.cachedToken;
   }
@@ -76,7 +76,9 @@ export class VaultClient {
       const res = await fetch(fullPath, {
         headers: {
           "X-Vault-Token": token,
-          ...(this.config.namespace ? { "X-Vault-Namespace": this.config.namespace } : {}),
+          ...(this.config.namespace
+            ? { "X-Vault-Namespace": this.config.namespace }
+            : {}),
         },
       });
 
@@ -86,8 +88,11 @@ export class VaultClient {
         return null;
       }
 
-      const body = await res.json() as {
-        data: { data: Record<string, unknown>; metadata: VaultSecret["metadata"] };
+      const body = (await res.json()) as {
+        data: {
+          data: Record<string, unknown>;
+          metadata: VaultSecret["metadata"];
+        };
         lease_id?: string;
         lease_duration?: number;
         renewable?: boolean;
@@ -116,7 +121,9 @@ export class VaultClient {
         headers: {
           "Content-Type": "application/json",
           "X-Vault-Token": token,
-          ...(this.config.namespace ? { "X-Vault-Namespace": this.config.namespace } : {}),
+          ...(this.config.namespace
+            ? { "X-Vault-Namespace": this.config.namespace }
+            : {}),
         },
         body: JSON.stringify({ data }),
       });
@@ -137,7 +144,9 @@ export class VaultClient {
         method: "DELETE",
         headers: {
           "X-Vault-Token": token,
-          ...(this.config.namespace ? { "X-Vault-Namespace": this.config.namespace } : {}),
+          ...(this.config.namespace
+            ? { "X-Vault-Namespace": this.config.namespace }
+            : {}),
         },
       });
 
@@ -157,14 +166,16 @@ export class VaultClient {
         method: "LIST",
         headers: {
           "X-Vault-Token": token,
-          ...(this.config.namespace ? { "X-Vault-Namespace": this.config.namespace } : {}),
+          ...(this.config.namespace
+            ? { "X-Vault-Namespace": this.config.namespace }
+            : {}),
         },
       });
 
       if (res.status === 404) return [];
       if (!res.ok) return null;
 
-      const body = await res.json() as { data: { keys: string[] } };
+      const body = (await res.json()) as { data: { keys: string[] } };
       return body.data.keys;
     } catch (err) {
       logger.error({ err, prefix }, "[Vault] List error");
@@ -172,11 +183,19 @@ export class VaultClient {
     }
   }
 
-  async health(): Promise<{ initialized: boolean; sealed: boolean; version: string } | null> {
+  async health(): Promise<{
+    initialized: boolean;
+    sealed: boolean;
+    version: string;
+  } | null> {
     try {
       const res = await fetch(`${this.config.url}/v1/sys/health`);
       if (!res.ok) return null;
-      const body = await res.json() as { initialized: boolean; sealed: boolean; version: string };
+      const body = (await res.json()) as {
+        initialized: boolean;
+        sealed: boolean;
+        version: string;
+      };
       return body;
     } catch {
       return null;

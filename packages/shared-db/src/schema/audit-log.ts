@@ -8,7 +8,9 @@ export const auditLogTable = pgTable("audit_log", {
   resourceType: text("resource_type").notNull(),
   resourceId: text("resource_id").notNull(),
   metadata: jsonb("metadata"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export type AuditLogEntry = typeof auditLogTable.$inferSelect;

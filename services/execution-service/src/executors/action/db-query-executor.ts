@@ -1,5 +1,10 @@
-import type { NodeExecutor, WorkflowNode, ExecutionContext, NodeExecutionResult } from "@autoflow/workflow-engine";
-import { db } from "@autoflow/db";
+import type {
+  NodeExecutor,
+  WorkflowNode,
+  ExecutionContext,
+  NodeExecutionResult,
+} from "@longox/workflow-engine";
+import { db } from "@longox/db";
 import { sql } from "drizzle-orm";
 
 export class DbQueryExecutor implements NodeExecutor {

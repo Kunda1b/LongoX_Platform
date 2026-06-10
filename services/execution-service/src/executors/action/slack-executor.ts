@@ -1,4 +1,9 @@
-import type { NodeExecutor, WorkflowNode, ExecutionContext, NodeExecutionResult } from "@autoflow/workflow-engine";
+import type {
+  NodeExecutor,
+  WorkflowNode,
+  ExecutionContext,
+  NodeExecutionResult,
+} from "@longox/workflow-engine";
 
 export class SlackExecutor implements NodeExecutor {
   canHandle(nodeTypeId: string): boolean {
@@ -40,7 +45,11 @@ export class SlackExecutor implements NodeExecutor {
         body: JSON.stringify({ channel, text }),
       });
 
-      const data = await response.json() as { ok: boolean; ts?: string; error?: string };
+      const data = (await response.json()) as {
+        ok: boolean;
+        ts?: string;
+        error?: string;
+      };
 
       if (!data.ok) {
         return {

@@ -5,7 +5,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY services/template-service/package.json ./services/template-service/
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm --filter @autoflow/template-service build
+RUN pnpm --filter @longox/template-service build
 FROM node:20-alpine
 WORKDIR /app
 COPY --from=base /app .

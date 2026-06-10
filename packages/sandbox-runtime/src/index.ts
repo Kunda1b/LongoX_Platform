@@ -21,27 +21,45 @@ export interface SandboxResult {
 }
 export class SandboxRuntime {
   private config: SandboxConfig;
-  constructor(config: SandboxConfig) { this.config = config; }
-  async execute(code: string, context: Record<string, unknown>): Promise<SandboxResult> {
+  constructor(config: SandboxConfig) {
+    this.config = config;
+  }
+  async execute(
+    code: string,
+    context: Record<string, unknown>,
+  ): Promise<SandboxResult> {
     const startTime = Date.now();
     try {
       const sandboxedFn = new Function(...Object.keys(context), code);
       const result = sandboxedFn(...Object.values(context));
       return {
-        success: true, stdout: String(result), stderr: "", exitCode: 0,
+        success: true,
+        stdout: String(result),
+        stderr: "",
+        exitCode: 0,
         durationMs: Date.now() - startTime,
       };
     } catch (err) {
       return {
-        success: false, stdout: "", stderr: String(err), exitCode: 1,
+        success: false,
+        stdout: "",
+        stderr: String(err),
+        exitCode: 1,
         durationMs: Date.now() - startTime,
         error: err instanceof Error ? err.message : String(err),
       };
     }
   }
   async validate(code: string): Promise<{ valid: boolean; errors: string[] }> {
-    try { new Function(code); return { valid: true, errors: [] }; }
-    catch (err) { return { valid: false, errors: [err instanceof Error ? err.message : String(err)] }; }
+    try {
+      new Function(code);
+      return { valid: true, errors: [] };
+    } catch (err) {
+      return {
+        valid: false,
+        errors: [err instanceof Error ? err.message : String(err)],
+      };
+    }
   }
 }
 export function createSandbox(config: SandboxConfig): SandboxRuntime {

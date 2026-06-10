@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, credentialsTable } from "@autoflow/db";
-import { CreateCredentialBody, DeleteCredentialParams } from "@autoflow/api-zod";
+import { db, credentialsTable } from "@longox/db";
+import { CreateCredentialBody, DeleteCredentialParams } from "@longox/api-zod";
 
 const router: IRouter = Router();
 

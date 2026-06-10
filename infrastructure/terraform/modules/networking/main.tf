@@ -9,7 +9,7 @@ resource "aws_vpc" "main" {
   enable_dns_support   = true
 
   tags = {
-    Name        = "autoflow-${var.environment}"
+    Name        = "longox-${var.environment}"
     Environment = var.environment
   }
 }
@@ -18,7 +18,7 @@ resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name        = "autoflow-${var.environment}-igw"
+    Name        = "longox-${var.environment}-igw"
     Environment = var.environment
   }
 }
@@ -31,7 +31,7 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name        = "autoflow-${var.environment}-public-${count.index}"
+    Name        = "longox-${var.environment}-public-${count.index}"
     Environment = var.environment
   }
 }
@@ -43,7 +43,7 @@ resource "aws_subnet" "private" {
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
   tags = {
-    Name        = "autoflow-${var.environment}-private-${count.index}"
+    Name        = "longox-${var.environment}-private-${count.index}"
     Environment = var.environment
   }
 }
@@ -53,7 +53,7 @@ resource "aws_eip" "nat" {
   domain = "vpc"
 
   tags = {
-    Name        = "autoflow-${var.environment}-nat-${count.index}"
+    Name        = "longox-${var.environment}-nat-${count.index}"
     Environment = var.environment
   }
 }
@@ -64,7 +64,7 @@ resource "aws_nat_gateway" "main" {
   subnet_id     = aws_subnet.public[count.index].id
 
   tags = {
-    Name        = "autoflow-${var.environment}-nat-${count.index}"
+    Name        = "longox-${var.environment}-nat-${count.index}"
     Environment = var.environment
   }
 }
@@ -78,7 +78,7 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name        = "autoflow-${var.environment}-public"
+    Name        = "longox-${var.environment}-public"
     Environment = var.environment
   }
 }
@@ -93,7 +93,7 @@ resource "aws_route_table" "private" {
   }
 
   tags = {
-    Name        = "autoflow-${var.environment}-private-${count.index}"
+    Name        = "longox-${var.environment}-private-${count.index}"
     Environment = var.environment
   }
 }

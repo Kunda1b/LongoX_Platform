@@ -42,8 +42,14 @@ export interface GetUsageSummaryInput {
 export class GetUsageSummaryQuery {
   constructor(private repository: MeteringRepository) {}
 
-  async execute(input: GetUsageSummaryInput): Promise<{ eventType: string; totalQuantity: number; totalCount: number }[]> {
-    const from = input.from ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  async execute(
+    input: GetUsageSummaryInput,
+  ): Promise<
+    { eventType: string; totalQuantity: number; totalCount: number }[]
+  > {
+    const from =
+      input.from ??
+      new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const to = input.to ?? new Date();
     return this.repository.getUsageSummary(input.tenantId, from, to);
   }

@@ -56,24 +56,33 @@ export class TestingClient {
   }
 
   async runTestCase(testCaseId: string): Promise<TestRun> {
-    const res = await fetch(`${this.config.baseUrl}/api/testing/test-cases/${testCaseId}/run`, {
-      method: "POST",
-      headers: this.headers(),
-    });
+    const res = await fetch(
+      `${this.config.baseUrl}/api/testing/test-cases/${testCaseId}/run`,
+      {
+        method: "POST",
+        headers: this.headers(),
+      },
+    );
     if (!res.ok) throw new Error("Test run failed");
     return res.json() as Promise<TestRun>;
   }
 
   async runSuite(workflowId: string): Promise<TestSuiteResult[]> {
-    const res = await fetch(`${this.config.baseUrl}/api/testing/suites/${workflowId}/run`, {
-      method: "POST",
-      headers: this.headers(),
-    });
+    const res = await fetch(
+      `${this.config.baseUrl}/api/testing/suites/${workflowId}/run`,
+      {
+        method: "POST",
+        headers: this.headers(),
+      },
+    );
     if (!res.ok) throw new Error("Test suite run failed");
     return res.json() as Promise<TestSuiteResult[]>;
   }
 
-  simulate(workflow: WorkflowDefinition, input: Record<string, unknown>): Promise<{ steps: unknown[]; output: Record<string, unknown> }> {
+  simulate(
+    workflow: WorkflowDefinition,
+    input: Record<string, unknown>,
+  ): Promise<{ steps: unknown[]; output: Record<string, unknown> }> {
     return Promise.resolve({ steps: [], output: {} });
   }
 }

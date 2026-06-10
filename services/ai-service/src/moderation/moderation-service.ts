@@ -24,7 +24,10 @@ export class ModerationService {
       return {
         flagged: result.flagged,
         categories: result.categories as unknown as Record<string, boolean>,
-        categoryScores: result.category_scores as unknown as Record<string, number>,
+        categoryScores: result.category_scores as unknown as Record<
+          string,
+          number
+        >,
       };
     } catch {
       return {
@@ -58,7 +61,9 @@ export class ModerationService {
     for (const [category, threshold] of Object.entries(thresholds)) {
       const score = result.categoryScores[category] ?? 0;
       if (score > threshold) {
-        reasons.push(`${category} (score: ${score.toFixed(3)}, threshold: ${threshold})`);
+        reasons.push(
+          `${category} (score: ${score.toFixed(3)}, threshold: ${threshold})`,
+        );
       }
     }
 

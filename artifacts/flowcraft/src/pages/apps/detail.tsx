@@ -3,26 +3,33 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { 
-  useGetApp, 
-  useUpdateApp, 
+import {
+  useGetApp,
+  useUpdateApp,
   useDeleteApp,
   getGetAppQueryKey,
-  getListAppsQueryKey
-} from "@autoflow/api-client-react";
+  getListAppsQueryKey,
+} from "@longox/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatusBadge, TypeBadge } from "@/components/badges";
 import { ArrowLeft, Save, Trash2, Layout, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useEffect, useRef } from "react";
 
 const updateSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  status: z.enum(["published", "draft"])
+  status: z.enum(["published", "draft"]),
 });
 
 export default function AppDetail() {
@@ -33,7 +40,7 @@ export default function AppDetail() {
   const queryClient = useQueryClient();
 
   const { data: app, isLoading } = useGetApp(appId, {
-    query: { enabled: !!appId, queryKey: getGetAppQueryKey(appId) }
+    query: { enabled: !!appId, queryKey: getGetAppQueryKey(appId) },
   });
 
   const updateMutation = useUpdateApp({
@@ -42,8 +49,8 @@ export default function AppDetail() {
         queryClient.invalidateQueries({ queryKey: getGetAppQueryKey(appId) });
         queryClient.invalidateQueries({ queryKey: getListAppsQueryKey() });
         toast({ title: "App settings updated" });
-      }
-    }
+      },
+    },
   });
 
   const deleteMutation = useDeleteApp({
@@ -52,13 +59,13 @@ export default function AppDetail() {
         queryClient.invalidateQueries({ queryKey: getListAppsQueryKey() });
         toast({ title: "App deleted" });
         setLocation("/apps");
-      }
-    }
+      },
+    },
   });
 
   const form = useForm<z.infer<typeof updateSchema>>({
     resolver: zodResolver(updateSchema),
-    defaultValues: { name: "", description: "", status: "draft" }
+    defaultValues: { name: "", description: "", status: "draft" },
   });
 
   const initRef = useRef(false);
@@ -67,7 +74,7 @@ export default function AppDetail() {
       form.reset({
         name: app.name,
         description: app.description || "",
-        status: app.status as any
+        status: app.status as any,
       });
       initRef.current = true;
     }
@@ -85,7 +92,9 @@ export default function AppDetail() {
       <header className="flex items-center justify-between pb-4 border-b">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link href="/apps"><ArrowLeft className="h-4 w-4" /></Link>
+            <Link href="/apps">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
           </Button>
           <div>
             <div className="flex items-center gap-3">
@@ -93,7 +102,9 @@ export default function AppDetail() {
               <StatusBadge status={app.status} />
               <TypeBadge type={app.type} />
             </div>
-            <p className="text-sm text-muted-foreground mt-1">ID: {app.id} • Views: {app.viewCount}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              ID: {app.id} • Views: {app.viewCount}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -116,7 +127,10 @@ export default function AppDetail() {
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-4"
+                >
                   <FormField
                     control={form.control}
                     name="name"
@@ -150,7 +164,7 @@ export default function AppDetail() {
                       <FormItem>
                         <FormLabel>Status</FormLabel>
                         <FormControl>
-                          <select 
+                          <select
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             {...field}
                           >
@@ -163,11 +177,13 @@ export default function AppDetail() {
                     )}
                   />
                   <div className="pt-4 flex items-center justify-between">
-                    <Button 
-                      type="button" 
-                      variant="destructive" 
+                    <Button
+                      type="button"
+                      variant="destructive"
                       onClick={() => {
-                        if (confirm("Are you sure you want to delete this app?")) {
+                        if (
+                          confirm("Are you sure you want to delete this app?")
+                        ) {
                           deleteMutation.mutate({ id: app.id });
                         }
                       }}
@@ -175,7 +191,11 @@ export default function AppDetail() {
                       <Trash2 className="h-4 w-4 mr-2" />
                       Delete App
                     </Button>
-                    <Button type="submit" disabled={updateMutation.isPending} className="gap-2">
+                    <Button
+                      type="submit"
+                      disabled={updateMutation.isPending}
+                      className="gap-2"
+                    >
                       <Save className="h-4 w-4" />
                       {updateMutation.isPending ? "Saving..." : "Save Changes"}
                     </Button>
@@ -202,11 +222,17 @@ export default function AppDetail() {
               </div>
               <div>
                 <p className="text-muted-foreground">Created</p>
-                <p className="font-medium">{new Date(app.createdAt).toLocaleDateString()}</p>
+                <p className="font-medium">
+                  {new Date(app.createdAt).toLocaleDateString()}
+                </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Last Edited</p>
-                <p className="font-medium">{app.lastEditedAt ? new Date(app.lastEditedAt).toLocaleDateString() : 'Never'}</p>
+                <p className="font-medium">
+                  {app.lastEditedAt
+                    ? new Date(app.lastEditedAt).toLocaleDateString()
+                    : "Never"}
+                </p>
               </div>
             </CardContent>
           </Card>

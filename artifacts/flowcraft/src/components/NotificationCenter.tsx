@@ -49,13 +49,18 @@ const CHANNEL_ICONS: Record<string, typeof Monitor> = {
 export function NotificationCenter() {
   const { token } = useAuth();
   const queryClient = useQueryClient();
-  const { notifications, unreadCount, panelOpen, setNotifications, markRead, setPanelOpen } =
-    useNotificationStore();
+  const {
+    notifications,
+    unreadCount,
+    panelOpen,
+    setNotifications,
+    markRead,
+    setPanelOpen,
+  } = useNotificationStore();
 
   const { data } = useQuery<Notification[]>({
     queryKey: ["notifications", "recent"],
-    queryFn: () =>
-      fetch("/api/notifications?limit=20").then((r) => r.json()),
+    queryFn: () => fetch("/api/notifications?limit=20").then((r) => r.json()),
     enabled: !!token,
   });
 
@@ -80,9 +85,7 @@ export function NotificationCenter() {
         <Button variant="ghost" size="icon" className="relative h-8 w-8">
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
-            <Badge
-              className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[9px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground"
-            >
+            <Badge className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[9px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground">
               {unreadCount > 9 ? "9+" : unreadCount}
             </Badge>
           )}
@@ -118,7 +121,8 @@ export function NotificationCenter() {
           ) : (
             <div className="divide-y">
               {notifications.slice(0, 20).map((n) => {
-                const { color, icon: Icon } = TYPE_STYLES[n.type] ?? TYPE_STYLES.info;
+                const { color, icon: Icon } =
+                  TYPE_STYLES[n.type] ?? TYPE_STYLES.info;
                 const ChannelIcon = CHANNEL_ICONS[n.channel] ?? Monitor;
                 return (
                   <div
@@ -127,7 +131,7 @@ export function NotificationCenter() {
                       "flex items-start gap-3 px-4 py-3 transition-colors",
                       n.status === "unread"
                         ? "bg-blue-50/50 dark:bg-blue-950/10"
-                        : "hover:bg-muted/30"
+                        : "hover:bg-muted/30",
                     )}
                   >
                     <Icon className={cn("h-4 w-4 mt-0.5 shrink-0", color)} />

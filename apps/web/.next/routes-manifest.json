@@ -1,0 +1,246 @@
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [
+      {
+        "source": "/api/:path*",
+        "destination": "http://localhost:8080/api/:path*",
+        "regex": "^/api(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      }
+    ],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/dashboards/[id]",
+      "regex": "^/dashboards/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/dashboards/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/executions/[id]",
+      "regex": "^/executions/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/executions/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/workflows/[id]",
+      "regex": "^/workflows/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/workflows/(?<nxtPid>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/ai/analytics",
+      "regex": "^/ai/analytics(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/ai/analytics(?:/)?$"
+    },
+    {
+      "page": "/ai/models",
+      "regex": "^/ai/models(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/ai/models(?:/)?$"
+    },
+    {
+      "page": "/ai/playground",
+      "regex": "^/ai/playground(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/ai/playground(?:/)?$"
+    },
+    {
+      "page": "/ai/prompts",
+      "regex": "^/ai/prompts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/ai/prompts(?:/)?$"
+    },
+    {
+      "page": "/analytics",
+      "regex": "^/analytics(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/analytics(?:/)?$"
+    },
+    {
+      "page": "/apps",
+      "regex": "^/apps(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/apps(?:/)?$"
+    },
+    {
+      "page": "/audit-log",
+      "regex": "^/audit\\-log(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/audit\\-log(?:/)?$"
+    },
+    {
+      "page": "/billing",
+      "regex": "^/billing(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/billing(?:/)?$"
+    },
+    {
+      "page": "/builder",
+      "regex": "^/builder(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/builder(?:/)?$"
+    },
+    {
+      "page": "/connectors",
+      "regex": "^/connectors(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/connectors(?:/)?$"
+    },
+    {
+      "page": "/credentials",
+      "regex": "^/credentials(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/credentials(?:/)?$"
+    },
+    {
+      "page": "/dashboard",
+      "regex": "^/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard(?:/)?$"
+    },
+    {
+      "page": "/dashboards",
+      "regex": "^/dashboards(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboards(?:/)?$"
+    },
+    {
+      "page": "/dlq",
+      "regex": "^/dlq(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dlq(?:/)?$"
+    },
+    {
+      "page": "/environments",
+      "regex": "^/environments(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/environments(?:/)?$"
+    },
+    {
+      "page": "/executions",
+      "regex": "^/executions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/executions(?:/)?$"
+    },
+    {
+      "page": "/feature-flags",
+      "regex": "^/feature\\-flags(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/feature\\-flags(?:/)?$"
+    },
+    {
+      "page": "/login",
+      "regex": "^/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/marketplace",
+      "regex": "^/marketplace(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/marketplace(?:/)?$"
+    },
+    {
+      "page": "/notifications",
+      "regex": "^/notifications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/notifications(?:/)?$"
+    },
+    {
+      "page": "/rbac",
+      "regex": "^/rbac(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/rbac(?:/)?$"
+    },
+    {
+      "page": "/settings",
+      "regex": "^/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/settings(?:/)?$"
+    },
+    {
+      "page": "/settings/regions",
+      "regex": "^/settings/regions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/settings/regions(?:/)?$"
+    },
+    {
+      "page": "/templates",
+      "regex": "^/templates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/templates(?:/)?$"
+    },
+    {
+      "page": "/tenants",
+      "regex": "^/tenants(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/tenants(?:/)?$"
+    },
+    {
+      "page": "/webhook-endpoints",
+      "regex": "^/webhook\\-endpoints(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/webhook\\-endpoints(?:/)?$"
+    },
+    {
+      "page": "/workflows",
+      "regex": "^/workflows(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/workflows(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments"
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

@@ -5,7 +5,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY services/marketplace-service/package.json ./services/marketplace-service/
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm --filter @autoflow/marketplace-service build
+RUN pnpm --filter @longox/marketplace-service build
 FROM node:20-alpine
 WORKDIR /app
 COPY --from=base /app .

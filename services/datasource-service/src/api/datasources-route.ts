@@ -1,9 +1,14 @@
 import { Router, type IRouter } from "express";
 import { eq, desc } from "drizzle-orm";
-import { db, dataSourcesTable } from "@autoflow/db";
+import { db, dataSourcesTable } from "@longox/db";
 import { PostgresDataSourceRepository } from "../infrastructure";
 import { AdapterRegistry } from "../infrastructure";
-import { CreateDataSourceCommand, UpdateDataSourceCommand, DeleteDataSourceCommand, TestDataSourceConnectionCommand } from "../application";
+import {
+  CreateDataSourceCommand,
+  UpdateDataSourceCommand,
+  DeleteDataSourceCommand,
+  TestDataSourceConnectionCommand,
+} from "../application";
 
 const router: IRouter = Router();
 const dsRepo = new PostgresDataSourceRepository();
@@ -11,7 +16,10 @@ const adapterRegistry = new AdapterRegistry();
 const createDs = new CreateDataSourceCommand(dsRepo);
 const updateDs = new UpdateDataSourceCommand(dsRepo);
 const deleteDs = new DeleteDataSourceCommand(dsRepo);
-const testDs = new TestDataSourceConnectionCommand(dsRepo, adapterRegistry as any);
+const testDs = new TestDataSourceConnectionCommand(
+  dsRepo,
+  adapterRegistry as any,
+);
 
 function serializeDs(row: typeof dataSourcesTable.$inferSelect) {
   return {
@@ -39,7 +47,9 @@ router.get("/datasources", async (req, res): Promise<void> => {
   if (tenantId) query = query.where(eq(dataSourcesTable.tenantId, tenantId));
   if (kind) query = query.where(eq(dataSourcesTable.kind, kind));
 
-  const rows = await query.orderBy(desc(dataSourcesTable.createdAt)).limit(limit);
+  const rows = await query
+    .orderBy(desc(dataSourcesTable.createdAt))
+    .limit(limit);
   res.json(rows.map(serializeDs));
 });
 
@@ -50,19 +60,32 @@ router.get("/datasources/adapters", async (_req, res): Promise<void> => {
 
 router.get("/datasources/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
 
-  const [row] = await db.select().from(dataSourcesTable).where(eq(dataSourcesTable.id, id)).limit(1);
-  if (!row) { res.status(404).json({ error: "Data source not found" }); return; }
+  const [row] = await db
+    .select()
+    .from(dataSourcesTable)
+    .where(eq(dataSourcesTable.id, id))
+    .limit(1);
+  if (!row) {
+    res.status(404).json({ error: "Data source not found" });
+    return;
+  }
 
   res.json(serializeDs(row));
 });
 
 router.post("/datasources", async (req, res): Promise<void> => {
-  const { tenantId, name, description, kind, config, createdBy } = req.body as Record<string, unknown>;
+  const { tenantId, name, description, kind, config, createdBy } =
+    req.body as Record<string, unknown>;
 
   if (!tenantId || !name || !kind || !createdBy) {
-    res.status(400).json({ error: "tenantId, name, kind, and createdBy are required" });
+    res
+      .status(400)
+      .json({ error: "tenantId, name, kind, and createdBy are required" });
     return;
   }
 
@@ -83,7 +106,10 @@ router.post("/datasources", async (req, res): Promise<void> => {
 
 router.patch("/datasources/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
 
   try {
     const ds = await updateDs.execute(id, req.body);
@@ -95,7 +121,10 @@ router.patch("/datasources/:id", async (req, res): Promise<void> => {
 
 router.delete("/datasources/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
 
   try {
     await deleteDs.execute(id);
@@ -107,7 +136,10 @@ router.delete("/datasources/:id", async (req, res): Promise<void> => {
 
 router.post("/datasources/:id/test", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
 
   try {
     const result = await testDs.execute(id);
@@ -119,16 +151,28 @@ router.post("/datasources/:id/test", async (req, res): Promise<void> => {
 
 router.post("/datasources/:id/query", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
 
   const { query } = req.body as { query?: string };
-  if (!query) { res.status(400).json({ error: "query is required" }); return; }
+  if (!query) {
+    res.status(400).json({ error: "query is required" });
+    return;
+  }
 
   const ds = await dsRepo.findById(id);
-  if (!ds) { res.status(404).json({ error: "Data source not found" }); return; }
+  if (!ds) {
+    res.status(404).json({ error: "Data source not found" });
+    return;
+  }
 
   const adapter = adapterRegistry.get(ds.kind);
-  if (!adapter) { res.status(400).json({ error: `Unsupported data source kind: ${ds.kind}` }); return; }
+  if (!adapter) {
+    res.status(400).json({ error: `Unsupported data source kind: ${ds.kind}` });
+    return;
+  }
 
   try {
     const result = await adapter.executeQuery(ds.config, query);
@@ -140,13 +184,22 @@ router.post("/datasources/:id/query", async (req, res): Promise<void> => {
 
 router.get("/datasources/:id/tables", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
 
   const ds = await dsRepo.findById(id);
-  if (!ds) { res.status(404).json({ error: "Data source not found" }); return; }
+  if (!ds) {
+    res.status(404).json({ error: "Data source not found" });
+    return;
+  }
 
   const adapter = adapterRegistry.get(ds.kind);
-  if (!adapter) { res.status(400).json({ error: `Unsupported data source kind: ${ds.kind}` }); return; }
+  if (!adapter) {
+    res.status(400).json({ error: `Unsupported data source kind: ${ds.kind}` });
+    return;
+  }
 
   try {
     const tables = await adapter.listTables(ds.config);

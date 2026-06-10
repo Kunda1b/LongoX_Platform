@@ -14,7 +14,9 @@ export interface SearchListingsInput {
 export class SearchListingsQuery {
   constructor(private repository: ListingRepository) {}
 
-  async execute(input: SearchListingsInput): Promise<{ items: Listing[]; total: number }> {
+  async execute(
+    input: SearchListingsInput,
+  ): Promise<{ items: Listing[]; total: number }> {
     const items = await this.repository.findAll({
       type: input.type,
       category: input.category,
@@ -43,9 +45,12 @@ export class InstallListingCommand {
   async execute(input: InstallListingInput): Promise<void> {
     const listing = await this.repository.findById(input.listingId);
     if (!listing) throw new Error(`Listing ${input.listingId} not found`);
-    if (listing.status !== "published") throw new Error(`Listing ${input.listingId} is not published`);
+    if (listing.status !== "published")
+      throw new Error(`Listing ${input.listingId} is not published`);
 
     listing.recordInstall();
-    await this.repository.update(input.listingId, { installCount: listing.installCount });
+    await this.repository.update(input.listingId, {
+      installCount: listing.installCount,
+    });
   }
 }

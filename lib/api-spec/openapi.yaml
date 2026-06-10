@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Api
   version: 0.1.0
-  description: FlowCraft API — low-code automation and internal tools platform
+  description: LongoX API — low-code automation and internal tools platform
 servers:
   - url: /api
     description: Base API path
@@ -2436,7 +2436,17 @@ components:
 
     DashboardSummary:
       type: object
-      required: [totalWorkflows, activeWorkflows, totalExecutions, successRate, totalApps, totalConnectors, executionsToday, failedToday]
+      required:
+        [
+          totalWorkflows,
+          activeWorkflows,
+          totalExecutions,
+          successRate,
+          totalApps,
+          totalConnectors,
+          executionsToday,
+          failedToday,
+        ]
       properties:
         totalWorkflows:
           type: integer
@@ -2490,7 +2500,8 @@ components:
 
     WorkflowStat:
       type: object
-      required: [workflowId, workflowName, total, success, failed, avgDurationMs]
+      required:
+        [workflowId, workflowName, total, success, failed, avgDurationMs]
       properties:
         workflowId:
           type: integer
@@ -2507,7 +2518,19 @@ components:
 
     NodeType:
       type: object
-      required: [id, name, category, description, icon, color, isTrigger, isAi, inputs, outputs]
+      required:
+        [
+          id,
+          name,
+          category,
+          description,
+          icon,
+          color,
+          isTrigger,
+          isAi,
+          inputs,
+          outputs,
+        ]
       properties:
         id:
           type: string
@@ -2533,7 +2556,21 @@ components:
 
     Template:
       type: object
-      required: [id, name, description, category, triggerType, nodeCount, uses, complexity, tags, nodes, isCustom, createdAt]
+      required:
+        [
+          id,
+          name,
+          description,
+          category,
+          triggerType,
+          nodeCount,
+          uses,
+          complexity,
+          tags,
+          nodes,
+          isCustom,
+          createdAt,
+        ]
       properties:
         id:
           type: integer
@@ -2596,7 +2633,19 @@ components:
 
     DlqEntry:
       type: object
-      required: [id, executionId, workflowId, workflowName, nodeId, nodeName, nodeType, errorMessage, attempts, createdAt]
+      required:
+        [
+          id,
+          executionId,
+          workflowId,
+          workflowName,
+          nodeId,
+          nodeName,
+          nodeType,
+          errorMessage,
+          attempts,
+          createdAt,
+        ]
       properties:
         id:
           type: integer
@@ -2878,7 +2927,18 @@ components:
 
     Connector:
       type: object
-      required: [id, name, category, description, icon, isInstalled, isFeatured, actionCount, triggerCount]
+      required:
+        [
+          id,
+          name,
+          category,
+          description,
+          icon,
+          isInstalled,
+          isFeatured,
+          actionCount,
+          triggerCount,
+        ]
       properties:
         id:
           type: integer
@@ -3137,7 +3197,16 @@ components:
 
     UsageSummary:
       type: object
-      required: [totalExecutions, executionsThisMonth, totalWorkflows, activeWorkflows, totalConnectors, usedConnectors, currentPeriodCost]
+      required:
+        [
+          totalExecutions,
+          executionsThisMonth,
+          totalWorkflows,
+          activeWorkflows,
+          totalConnectors,
+          usedConnectors,
+          currentPeriodCost,
+        ]
       properties:
         totalExecutions:
           type: integer
@@ -3264,7 +3333,17 @@ components:
 
     WorkflowPromotion:
       type: object
-      required: [id, workflowId, workflowName, fromEnvironment, toEnvironment, status, promotedBy, createdAt]
+      required:
+        [
+          id,
+          workflowId,
+          workflowName,
+          fromEnvironment,
+          toEnvironment,
+          status,
+          promotedBy,
+          createdAt,
+        ]
       properties:
         id:
           type: integer
@@ -3433,7 +3512,18 @@ components:
 
     AiModel:
       type: object
-      required: [id, provider, name, modelId, contextWindow, inputCostPerToken, outputCostPerToken, isEnabled, createdAt]
+      required:
+        [
+          id,
+          provider,
+          name,
+          modelId,
+          contextWindow,
+          inputCostPerToken,
+          outputCostPerToken,
+          isEnabled,
+          createdAt,
+        ]
       properties:
         id:
           type: integer
@@ -3575,7 +3665,15 @@ components:
 
     AiUsageSummary:
       type: object
-      required: [totalInputTokens, totalOutputTokens, totalCost, totalRequests, byProvider, byModel]
+      required:
+        [
+          totalInputTokens,
+          totalOutputTokens,
+          totalCost,
+          totalRequests,
+          byProvider,
+          byModel,
+        ]
       properties:
         totalInputTokens:
           type: integer
@@ -3795,7 +3893,22 @@ components:
 
     Schedule:
       type: object
-      required: [id, tenantId, workflowId, name, interval, timezone, status, startAt, runCount, retryOnFailure, maxRetries, createdAt, updatedAt]
+      required:
+        [
+          id,
+          tenantId,
+          workflowId,
+          name,
+          interval,
+          timezone,
+          status,
+          startAt,
+          runCount,
+          retryOnFailure,
+          maxRetries,
+          createdAt,
+          updatedAt,
+        ]
       properties:
         id:
           type: integer
@@ -3881,7 +3994,8 @@ components:
 
     DataSource:
       type: object
-      required: [id, tenantId, name, kind, status, createdBy, createdAt, updatedAt]
+      required:
+        [id, tenantId, name, kind, status, createdBy, createdAt, updatedAt]
       properties:
         id:
           type: integer
@@ -3894,7 +4008,18 @@ components:
           nullable: true
         kind:
           type: string
-          enum: [postgresql, mysql, mongodb, rest_api, graphql, bigquery, snowflake, csv_upload, custom]
+          enum:
+            [
+              postgresql,
+              mysql,
+              mongodb,
+              rest_api,
+              graphql,
+              bigquery,
+              snowflake,
+              csv_upload,
+              custom,
+            ]
         config:
           type: object
         status:
@@ -3925,7 +4050,18 @@ components:
           type: string
         kind:
           type: string
-          enum: [postgresql, mysql, mongodb, rest_api, graphql, bigquery, snowflake, csv_upload, custom]
+          enum:
+            [
+              postgresql,
+              mysql,
+              mongodb,
+              rest_api,
+              graphql,
+              bigquery,
+              snowflake,
+              csv_upload,
+              custom,
+            ]
         config:
           type: object
         createdBy:

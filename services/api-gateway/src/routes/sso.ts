@@ -1,13 +1,22 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { db, ssoConnectionsTable, userSsoIdentitiesTable, usersTable, tenantsTable } from "@autoflow/db";
+import {
+  db,
+  ssoConnectionsTable,
+  userSsoIdentitiesTable,
+  usersTable,
+  tenantsTable,
+} from "@longox/db";
 import { signToken } from "../lib/auth";
 import bcrypt from "bcryptjs";
 
 const router: IRouter = Router();
 
-const SSO_STATE_STORE = new Map<string, { provider: string; redirectUrl: string; expiresAt: number }>();
+const SSO_STATE_STORE = new Map<
+  string,
+  { provider: string; redirectUrl: string; expiresAt: number }
+>();
 
 setInterval(() => {
   const now = Date.now();
@@ -16,195 +25,249 @@ setInterval(() => {
   }
 }, 60000);
 
-router.get("/auth/sso/:provider/start", async (req: Request, res: Response): Promise<void> => {
-  const { provider } = req.params;
-  const redirectUrl = (req.query.redirect as string) ?? "/dashboard";
+router.get(
+  "/auth/sso/:provider/start",
+  async (req: Request, res: Response): Promise<void> => {
+    const { provider } = req.params;
+    const redirectUrl = (req.query.redirect as string) ?? "/dashboard";
 
-  const [connection] = await db.select().from(ssoConnectionsTable)
-    .where(eq(ssoConnectionsTable.provider, provider))
-    .limit(1);
-
-  if (!connection || !connection.enabled) {
-    res.status(400).json({ error: `SSO provider "${provider}" is not configured` });
-    return;
-  }
-
-  const state = randomBytes(16).toString("hex");
-  SSO_STATE_STORE.set(state, {
-    provider,
-    redirectUrl,
-    expiresAt: Date.now() + 600000,
-  });
-
-  const authorizeUrl = buildAuthorizeUrl(provider, connection, state);
-  res.json({ url: authorizeUrl, state });
-});
-
-router.post("/auth/sso/:provider/callback", async (req: Request, res: Response): Promise<void> => {
-  const { provider } = req.params;
-  const { code, state } = req.body as { code?: string; state?: string };
-
-  if (!code || !state) {
-    res.status(400).json({ error: "code and state are required" });
-    return;
-  }
-
-  const stateData = SSO_STATE_STORE.get(state);
-  if (!stateData || stateData.provider !== provider) {
-    res.status(400).json({ error: "Invalid or expired state parameter" });
-    return;
-  }
-  SSO_STATE_STORE.delete(state);
-
-  const [connection] = await db.select().from(ssoConnectionsTable)
-    .where(eq(ssoConnectionsTable.provider, provider))
-    .limit(1);
-
-  if (!connection) {
-    res.status(400).json({ error: "SSO provider not configured" });
-    return;
-  }
-
-  const userInfo = await exchangeCodeForUserInfo(provider, connection, code);
-  if (!userInfo) {
-    res.status(401).json({ error: "Failed to authenticate with SSO provider" });
-    return;
-  }
-
-  const email = userInfo.email?.toLowerCase();
-  if (!email) {
-    res.status(400).json({ error: "SSO provider did not return an email address" });
-    return;
-  }
-
-  const [existingIdentity] = await db.select().from(userSsoIdentitiesTable)
-    .where(eq(userSsoIdentitiesTable.providerUserId, userInfo.id))
-    .limit(1);
-
-  let user: typeof usersTable.$inferSelect;
-
-  if (existingIdentity) {
-    const [existingUser] = await db.select().from(usersTable)
-      .where(eq(usersTable.id, existingIdentity.userId))
+    const [connection] = await db
+      .select()
+      .from(ssoConnectionsTable)
+      .where(eq(ssoConnectionsTable.provider, provider))
       .limit(1);
-    if (!existingUser) {
-      res.status(500).json({ error: "User account not found" });
+
+    if (!connection || !connection.enabled) {
+      res
+        .status(400)
+        .json({ error: `SSO provider "${provider}" is not configured` });
       return;
     }
-    user = existingUser;
-  } else {
-    const [existingUser] = await db.select().from(usersTable)
-      .where(eq(usersTable.email, email))
+
+    const state = randomBytes(16).toString("hex");
+    SSO_STATE_STORE.set(state, {
+      provider,
+      redirectUrl,
+      expiresAt: Date.now() + 600000,
+    });
+
+    const authorizeUrl = buildAuthorizeUrl(provider, connection, state);
+    res.json({ url: authorizeUrl, state });
+  },
+);
+
+router.post(
+  "/auth/sso/:provider/callback",
+  async (req: Request, res: Response): Promise<void> => {
+    const { provider } = req.params;
+    const { code, state } = req.body as { code?: string; state?: string };
+
+    if (!code || !state) {
+      res.status(400).json({ error: "code and state are required" });
+      return;
+    }
+
+    const stateData = SSO_STATE_STORE.get(state);
+    if (!stateData || stateData.provider !== provider) {
+      res.status(400).json({ error: "Invalid or expired state parameter" });
+      return;
+    }
+    SSO_STATE_STORE.delete(state);
+
+    const [connection] = await db
+      .select()
+      .from(ssoConnectionsTable)
+      .where(eq(ssoConnectionsTable.provider, provider))
       .limit(1);
 
-    if (existingUser) {
-      await db.insert(userSsoIdentitiesTable).values({
-        userId: existingUser.id,
-        provider,
-        providerUserId: userInfo.id,
-        providerEmail: email,
-      });
+    if (!connection) {
+      res.status(400).json({ error: "SSO provider not configured" });
+      return;
+    }
+
+    const userInfo = await exchangeCodeForUserInfo(provider, connection, code);
+    if (!userInfo) {
+      res
+        .status(401)
+        .json({ error: "Failed to authenticate with SSO provider" });
+      return;
+    }
+
+    const email = userInfo.email?.toLowerCase();
+    if (!email) {
+      res
+        .status(400)
+        .json({ error: "SSO provider did not return an email address" });
+      return;
+    }
+
+    const [existingIdentity] = await db
+      .select()
+      .from(userSsoIdentitiesTable)
+      .where(eq(userSsoIdentitiesTable.providerUserId, userInfo.id))
+      .limit(1);
+
+    let user: typeof usersTable.$inferSelect;
+
+    if (existingIdentity) {
+      const [existingUser] = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.id, existingIdentity.userId))
+        .limit(1);
+      if (!existingUser) {
+        res.status(500).json({ error: "User account not found" });
+        return;
+      }
       user = existingUser;
     } else {
-      const [tenant] = await db.select().from(tenantsTable).limit(1);
+      const [existingUser] = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.email, email))
+        .limit(1);
 
-      const hash = await bcrypt.hash(randomBytes(32).toString("hex"), 10);
-      const [newUser] = await db.insert(usersTable).values({
-        email,
-        passwordHash: hash,
-        name: userInfo.name ?? email.split("@")[0],
-        tenantId: tenant?.id ?? null,
-        role: "editor",
-        isActive: true,
-      }).returning();
+      if (existingUser) {
+        await db.insert(userSsoIdentitiesTable).values({
+          userId: existingUser.id,
+          provider,
+          providerUserId: userInfo.id,
+          providerEmail: email,
+        });
+        user = existingUser;
+      } else {
+        const [tenant] = await db.select().from(tenantsTable).limit(1);
 
-      await db.insert(userSsoIdentitiesTable).values({
-        userId: newUser.id,
-        provider,
-        providerUserId: userInfo.id,
-        providerEmail: email,
-      });
+        const hash = await bcrypt.hash(randomBytes(32).toString("hex"), 10);
+        const [newUser] = await db
+          .insert(usersTable)
+          .values({
+            email,
+            passwordHash: hash,
+            name: userInfo.name ?? email.split("@")[0],
+            tenantId: tenant?.id ?? null,
+            role: "editor",
+            isActive: true,
+          })
+          .returning();
 
-      user = newUser;
+        await db.insert(userSsoIdentitiesTable).values({
+          userId: newUser.id,
+          provider,
+          providerUserId: userInfo.id,
+          providerEmail: email,
+        });
+
+        user = newUser;
+      }
     }
-  }
 
-  if (!user.isActive) {
-    res.status(401).json({ error: "Account is disabled" });
-    return;
-  }
+    if (!user.isActive) {
+      res.status(401).json({ error: "Account is disabled" });
+      return;
+    }
 
-  await db.update(usersTable).set({ lastLoginAt: new Date() }).where(eq(usersTable.id, user.id));
+    await db
+      .update(usersTable)
+      .set({ lastLoginAt: new Date() })
+      .where(eq(usersTable.id, user.id));
 
-  const authUser = { id: user.id, email: user.email, name: user.name, tenantId: user.tenantId ?? null, role: user.role };
-  const token = signToken(authUser);
-
-  res.json({
-    token,
-    user: {
+    const authUser = {
       id: user.id,
       email: user.email,
       name: user.name,
-      tenantId: user.tenantId,
+      tenantId: user.tenantId ?? null,
       role: user.role,
-    },
-    redirect: stateData.redirectUrl,
-  });
-});
+    };
+    const token = signToken(authUser);
 
-router.get("/auth/sso/providers", async (_req: Request, res: Response): Promise<void> => {
-  const connections = await db.select().from(ssoConnectionsTable)
-    .where(eq(ssoConnectionsTable.enabled, true));
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        tenantId: user.tenantId,
+        role: user.role,
+      },
+      redirect: stateData.redirectUrl,
+    });
+  },
+);
 
-  res.json(connections.map((c) => ({
-    provider: c.provider,
-    domain: c.domain,
-  })));
-});
+router.get(
+  "/auth/sso/providers",
+  async (_req: Request, res: Response): Promise<void> => {
+    const connections = await db
+      .select()
+      .from(ssoConnectionsTable)
+      .where(eq(ssoConnectionsTable.enabled, true));
 
-router.post("/auth/sso/configure", async (req: Request, res: Response): Promise<void> => {
-  const { provider, clientId, clientSecret, issuerUrl, domain } = req.body as {
-    provider: string;
-    clientId: string;
-    clientSecret: string;
-    issuerUrl?: string;
-    domain?: string;
-  };
+    res.json(
+      connections.map((c) => ({
+        provider: c.provider,
+        domain: c.domain,
+      })),
+    );
+  },
+);
 
-  if (!provider || !clientId || !clientSecret) {
-    res.status(400).json({ error: "provider, clientId, and clientSecret are required" });
-    return;
-  }
+router.post(
+  "/auth/sso/configure",
+  async (req: Request, res: Response): Promise<void> => {
+    const { provider, clientId, clientSecret, issuerUrl, domain } =
+      req.body as {
+        provider: string;
+        clientId: string;
+        clientSecret: string;
+        issuerUrl?: string;
+        domain?: string;
+      };
 
-  const [existing] = await db.select().from(ssoConnectionsTable)
-    .where(eq(ssoConnectionsTable.provider, provider))
-    .limit(1);
+    if (!provider || !clientId || !clientSecret) {
+      res
+        .status(400)
+        .json({ error: "provider, clientId, and clientSecret are required" });
+      return;
+    }
 
-  if (existing) {
-    await db.update(ssoConnectionsTable)
-      .set({
+    const [existing] = await db
+      .select()
+      .from(ssoConnectionsTable)
+      .where(eq(ssoConnectionsTable.provider, provider))
+      .limit(1);
+
+    if (existing) {
+      await db
+        .update(ssoConnectionsTable)
+        .set({
+          providerClientId: clientId,
+          providerClientSecret: clientSecret,
+          providerIssuerUrl: issuerUrl,
+          domain: domain,
+        })
+        .where(eq(ssoConnectionsTable.id, existing.id));
+
+      res.json({ success: true, message: "SSO configuration updated" });
+    } else {
+      await db.insert(ssoConnectionsTable).values({
+        provider,
         providerClientId: clientId,
         providerClientSecret: clientSecret,
         providerIssuerUrl: issuerUrl,
-        domain: domain,
-      })
-      .where(eq(ssoConnectionsTable.id, existing.id));
+        domain,
+      });
 
-    res.json({ success: true, message: "SSO configuration updated" });
-  } else {
-    await db.insert(ssoConnectionsTable).values({
-      provider,
-      providerClientId: clientId,
-      providerClientSecret: clientSecret,
-      providerIssuerUrl: issuerUrl,
-      domain,
-    });
+      res.json({ success: true, message: "SSO provider configured" });
+    }
+  },
+);
 
-    res.json({ success: true, message: "SSO provider configured" });
-  }
-});
-
-function buildAuthorizeUrl(provider: string, connection: typeof ssoConnectionsTable.$inferSelect, state: string): string {
+function buildAuthorizeUrl(
+  provider: string,
+  connection: typeof ssoConnectionsTable.$inferSelect,
+  state: string,
+): string {
   const baseConfigs: Record<string, { authorizeUrl: string; scope: string }> = {
     google: {
       authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
@@ -276,7 +339,10 @@ async function exchangeCodeForUserInfo(
     });
 
     if (!tokenRes.ok) return null;
-    const tokenData = await tokenRes.json() as { access_token?: string; id_token?: string };
+    const tokenData = (await tokenRes.json()) as {
+      access_token?: string;
+      id_token?: string;
+    };
 
     const accessToken = tokenData.access_token;
     if (!accessToken) return null;
@@ -294,16 +360,24 @@ async function exchangeCodeForUserInfo(
     });
 
     if (!userRes.ok) return null;
-    const userData = await userRes.json() as Record<string, string>;
+    const userData = (await userRes.json()) as Record<string, string>;
 
     if (provider === "google") {
       return { id: userData.id, email: userData.email, name: userData.name };
     }
     if (provider === "github") {
-      return { id: String(userData.id), email: userData.email ?? userData.login, name: userData.name ?? userData.login };
+      return {
+        id: String(userData.id),
+        email: userData.email ?? userData.login,
+        name: userData.name ?? userData.login,
+      };
     }
 
-    return { id: String(userData.sub ?? userData.id), email: userData.email, name: userData.name };
+    return {
+      id: String(userData.sub ?? userData.id),
+      email: userData.email,
+      name: userData.name,
+    };
   } catch {
     return null;
   }

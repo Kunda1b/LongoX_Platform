@@ -8,9 +8,13 @@ export const credentialsTable = pgTable("credentials", {
   connectorId: integer("connector_id").notNull(),
   connectorName: text("connector_name").notNull(),
   fields: text("fields").array().notNull().default([]),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
-export const insertCredentialSchema = createInsertSchema(credentialsTable).omit({ id: true, createdAt: true });
+export const insertCredentialSchema = createInsertSchema(credentialsTable).omit(
+  { id: true, createdAt: true },
+);
 export type InsertCredential = z.infer<typeof insertCredentialSchema>;
 export type Credential = typeof credentialsTable.$inferSelect;

@@ -79,9 +79,7 @@ export function releaseLock(
   return false;
 }
 
-export function getLockedNodes(
-  state: PresenceState,
-): string[] {
+export function getLockedNodes(state: PresenceState): string[] {
   return Array.from(state.locks.keys());
 }
 

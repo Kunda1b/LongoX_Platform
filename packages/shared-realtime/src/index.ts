@@ -1,5 +1,5 @@
-import type { PlatformEvent, PlatformEventType } from "@autoflow/shared-events";
-import { logger } from "@autoflow/shared-logger";
+import type { PlatformEvent, PlatformEventType } from "@longox/shared-events";
+import { logger } from "@longox/shared-logger";
 
 export interface SseClient {
   id: string;
@@ -41,9 +41,18 @@ class RealtimeHub {
       const filter = this.clientFilters.get(id);
 
       if (filter) {
-        if (filter.tenantId && event.payload.tenantId !== filter.tenantId) continue;
-        if (filter.types && !filter.types.includes(event.type as PlatformEventType)) continue;
-        if (filter.aggregateIds && !filter.aggregateIds.includes(event.aggregateId)) continue;
+        if (filter.tenantId && event.payload.tenantId !== filter.tenantId)
+          continue;
+        if (
+          filter.types &&
+          !filter.types.includes(event.type as PlatformEventType)
+        )
+          continue;
+        if (
+          filter.aggregateIds &&
+          !filter.aggregateIds.includes(event.aggregateId)
+        )
+          continue;
       }
 
       if (client.interests.has(event.type) || client.interests.has("*")) {
@@ -51,7 +60,10 @@ class RealtimeHub {
           client.send("event", event);
           delivered++;
         } catch (err) {
-          logger.error({ clientId: id, err }, "[Realtime] Send error, removing client");
+          logger.error(
+            { clientId: id, err },
+            "[Realtime] Send error, removing client",
+          );
           this.clients.delete(id);
           this.clientFilters.delete(id);
         }
@@ -59,7 +71,10 @@ class RealtimeHub {
     }
 
     if (delivered > 0) {
-      logger.debug({ eventType: event.type, delivered }, "[Realtime] Event delivered");
+      logger.debug(
+        { eventType: event.type, delivered },
+        "[Realtime] Event delivered",
+      );
     }
   }
 
@@ -109,7 +124,9 @@ export function createSseWriter(res: any): SseClient {
     },
     close() {
       clearInterval(keepalive);
-      try { res.end(); } catch {}
+      try {
+        res.end();
+      } catch {}
     },
   };
 

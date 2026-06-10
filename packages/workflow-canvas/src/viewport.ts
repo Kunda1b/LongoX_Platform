@@ -64,9 +64,12 @@ export function getFitViewTransform(
   };
 }
 
-export function getContentBounds(
-  positions: { x: number; y: number }[],
-): { minX: number; minY: number; maxX: number; maxY: number } {
+export function getContentBounds(positions: { x: number; y: number }[]): {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+} {
   if (positions.length === 0) {
     return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
   }
@@ -103,6 +106,10 @@ export function isInViewport(
   );
 }
 
-export function clampZoom(zoom: number, min: number = 0.1, max: number = 4): number {
+export function clampZoom(
+  zoom: number,
+  min: number = 0.1,
+  max: number = 4,
+): number {
   return Math.min(Math.max(zoom, min), max);
 }

@@ -10,12 +10,12 @@ variable "backup_retention_period" { type = number, default = 7 }
 variable "deletion_protection" { type = bool, default = false }
 
 resource "aws_db_subnet_group" "main" {
-  name       = "autoflow-${var.environment}"
+  name       = "longox-${var.environment}"
   subnet_ids = var.private_subnet_ids
 }
 
 resource "aws_security_group" "rds" {
-  name        = "autoflow-rds-${var.environment}"
+  name        = "longox-rds-${var.environment}"
   description = "RDS security group"
   vpc_id      = var.vpc_id
 
@@ -35,7 +35,7 @@ resource "aws_security_group" "rds" {
 }
 
 resource "aws_db_instance" "main" {
-  identifier     = "autoflow-${var.environment}"
+  identifier     = "longox-${var.environment}"
   engine         = "postgres"
   engine_version = "16.3"
 
@@ -57,7 +57,7 @@ resource "aws_db_instance" "main" {
   maintenance_window            = "sun:04:00-sun:05:00"
   deletion_protection           = var.deletion_protection
   skip_final_snapshot           = var.environment != "prod"
-  final_snapshot_identifier     = var.environment == "prod" ? "autoflow-${var.environment}-final-${formatdate("YYYY-MM-DD-hhmm", timestamp())}" : null
+  final_snapshot_identifier     = var.environment == "prod" ? "longox-${var.environment}-final-${formatdate("YYYY-MM-DD-hhmm", timestamp())}" : null
 
   performance_insights_enabled = var.environment == "prod"
   monitoring_interval          = var.environment == "prod" ? 60 : 0
@@ -66,7 +66,7 @@ resource "aws_db_instance" "main" {
 }
 
 resource "aws_db_parameter_group" "main" {
-  name   = "autoflow-${var.environment}-pg"
+  name   = "longox-${var.environment}-pg"
   family = "postgres16"
 
   parameter {

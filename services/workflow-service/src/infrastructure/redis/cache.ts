@@ -1,4 +1,4 @@
-import type { CacheStore } from "@autoflow/shared-cache";
+import type { CacheStore } from "@longox/shared-cache";
 
 export class RedisWorkflowCache implements CacheStore {
   private prefix = "workflow:";
@@ -27,7 +27,10 @@ export class RedisWorkflowCache implements CacheStore {
   async set<T>(key: string, value: T, ttlMs?: number): Promise<void> {
     try {
       const expiresAt = Date.now() + (ttlMs ?? this.ttlMs);
-      sessionStorage.setItem(this.key(key), JSON.stringify({ value, expiresAt }));
+      sessionStorage.setItem(
+        this.key(key),
+        JSON.stringify({ value, expiresAt }),
+      );
     } catch {
       // Non-fatal
     }
@@ -58,7 +61,9 @@ export class RedisWorkflowCache implements CacheStore {
 
   async clear(): Promise<void> {
     try {
-      const keys = Object.keys(sessionStorage).filter((k) => k.startsWith(this.prefix));
+      const keys = Object.keys(sessionStorage).filter((k) =>
+        k.startsWith(this.prefix),
+      );
       for (const key of keys) sessionStorage.removeItem(key);
     } catch {
       // Non-fatal

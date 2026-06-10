@@ -1,0 +1,24 @@
+# Dependencies & build output
+node_modules
+dist
+out-tsc
+*.tsbuildinfo
+coverage
+
+# pnpm store (accidentally-committed stores)
+.pnpm-store
+**/.pnpm-store
+C:\\Users
+
+# Lockfiles & generated code (do not hand-format)
+pnpm-lock.yaml
+**/generated/**
+**/src/.generated/**
+
+# Infrastructure-as-code (Helm Go-templates / Terraform / k8s manifests)
+infrastructure
+**/*.tpl
+
+# Vendored / non-source assets
+attached_assets
+.replit_integration_files

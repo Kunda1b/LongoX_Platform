@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import OpenAI from "openai";
-import { db, tokenUsageTable, usageEventsTable } from "@autoflow/db";
+import { db, tokenUsageTable, usageEventsTable } from "@longox/db";
 
 const router: IRouter = Router();
 
@@ -50,7 +50,8 @@ router.post("/ai/runs", async (req, res): Promise<void> => {
       messages,
       temperature,
       max_tokens: maxTokens,
-      response_format: responseFormat === "json" ? { type: "json_object" } : undefined,
+      response_format:
+        responseFormat === "json" ? { type: "json_object" } : undefined,
     });
 
     const durationMs = Date.now() - startedAt;
@@ -72,7 +73,9 @@ router.post("/ai/runs", async (req, res): Promise<void> => {
         outputTokens,
         cost: String(cost.toFixed(8)),
       });
-    } catch { /* non-fatal */ }
+    } catch {
+      /* non-fatal */
+    }
 
     // Record usage metering event (non-fatal)
     try {
@@ -82,7 +85,9 @@ router.post("/ai/runs", async (req, res): Promise<void> => {
         quantity: inputTokens + outputTokens,
         metadata: { model, inputTokens, outputTokens, durationMs, cost },
       });
-    } catch { /* non-fatal */ }
+    } catch {
+      /* non-fatal */
+    }
 
     let parsedOutput: unknown = content;
     if (responseFormat === "json") {
@@ -97,7 +102,11 @@ router.post("/ai/runs", async (req, res): Promise<void> => {
       id: completion.id,
       model: completion.model,
       output: parsedOutput,
-      usage: { inputTokens, outputTokens, totalTokens: inputTokens + outputTokens },
+      usage: {
+        inputTokens,
+        outputTokens,
+        totalTokens: inputTokens + outputTokens,
+      },
       cost,
       durationMs,
       finishReason,
@@ -112,20 +121,24 @@ router.post("/ai/runs", async (req, res): Promise<void> => {
 // GET /api/ai/runs — list recent runs (from token_usage table as a proxy)
 router.get("/ai/runs", async (req, res): Promise<void> => {
   const limit = Math.min(Number(req.query.limit ?? 20), 100);
-  const rows = await db.select().from(tokenUsageTable)
+  const rows = await db
+    .select()
+    .from(tokenUsageTable)
     .orderBy(tokenUsageTable.createdAt)
     .limit(limit);
 
-  res.json(rows.map((r) => ({
-    id: r.id,
-    modelName: r.modelName,
-    provider: r.provider,
-    workflowId: r.workflowId,
-    inputTokens: r.inputTokens,
-    outputTokens: r.outputTokens,
-    cost: Number(r.cost),
-    createdAt: r.createdAt.toISOString(),
-  })));
+  res.json(
+    rows.map((r) => ({
+      id: r.id,
+      modelName: r.modelName,
+      provider: r.provider,
+      workflowId: r.workflowId,
+      inputTokens: r.inputTokens,
+      outputTokens: r.outputTokens,
+      cost: Number(r.cost),
+      createdAt: r.createdAt.toISOString(),
+    })),
+  );
 });
 
 export default router;

@@ -1,4 +1,8 @@
-import type { ChatMessage, ChatCompletionOptions, ChatCompletionResult } from "../openai";
+import type {
+  ChatMessage,
+  ChatCompletionOptions,
+  ChatCompletionResult,
+} from "../openai";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -25,10 +29,12 @@ export class AnthropicProvider {
     const model = options.model ?? this.defaultModel;
 
     const systemMessage = messages.find((m) => m.role === "system");
-    const conversationMessages = messages.filter((m) => m.role !== "system").map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    }));
+    const conversationMessages = messages
+      .filter((m) => m.role !== "system")
+      .map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
 
     const response = await fetch(ANTHROPIC_API_URL, {
       method: "POST",
@@ -45,7 +51,7 @@ export class AnthropicProvider {
       }),
     });
 
-    const data = await response.json() as {
+    const data = (await response.json()) as {
       content: Array<{ text: string }>;
       usage: { input_tokens: number; output_tokens: number };
     };
@@ -54,8 +60,11 @@ export class AnthropicProvider {
     const inputTokens = data.usage?.input_tokens ?? 0;
     const outputTokens = data.usage?.output_tokens ?? 0;
 
-    const pricing = MODEL_PRICING[model] ?? { input: 0.000003, output: 0.000015 };
-    const cost = (inputTokens * pricing.input) + (outputTokens * pricing.output);
+    const pricing = MODEL_PRICING[model] ?? {
+      input: 0.000003,
+      output: 0.000015,
+    };
+    const cost = inputTokens * pricing.input + outputTokens * pricing.output;
 
     return { content, model, inputTokens, outputTokens, cost };
   }

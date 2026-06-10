@@ -1,2 +1,4 @@
-import React from 'react';
-export default function table() { return <div>table component</div>; }
+import React from "react";
+export default function table() {
+  return <div>table component</div>;
+}

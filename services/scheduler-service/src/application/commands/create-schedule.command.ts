@@ -1,6 +1,9 @@
 import { Schedule } from "../../domain";
 import type { ScheduleRepository } from "../../domain";
-import type { ScheduleInterval, ScheduleStatus } from "../../domain/schedule.entity";
+import type {
+  ScheduleInterval,
+  ScheduleStatus,
+} from "../../domain/schedule.entity";
 
 export interface CreateScheduleInput {
   tenantId: number;
@@ -39,13 +42,21 @@ export class CreateScheduleCommand {
       maxRetries: input.maxRetries ?? 0,
       metadata: input.metadata ?? {},
       lastRunAt: undefined,
-      nextRunAt: this.computeNextRun(input.interval, input.cronExpression, input.startAt ?? now),
+      nextRunAt: this.computeNextRun(
+        input.interval,
+        input.cronExpression,
+        input.startAt ?? now,
+      ),
     });
 
     return schedule;
   }
 
-  private computeNextRun(interval: ScheduleInterval, cronExpression?: string, from?: Date): Date | undefined {
+  private computeNextRun(
+    interval: ScheduleInterval,
+    cronExpression?: string,
+    from?: Date,
+  ): Date | undefined {
     if (interval === "once") return undefined;
     if (interval === "recurring" && cronExpression) {
       return this.parseCronNext(cronExpression, from ?? new Date());

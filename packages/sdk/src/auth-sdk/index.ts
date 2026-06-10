@@ -47,7 +47,7 @@ export class AuthClient {
       throw new Error(body.message ?? `Login failed: ${res.status}`);
     }
 
-    const data = await res.json() as {
+    const data = (await res.json()) as {
       accessToken: string;
       refreshToken: string;
       expiresIn: number;

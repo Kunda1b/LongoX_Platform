@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { HealthCheckResponse } from "@autoflow/api-zod";
+import { HealthCheckResponse } from "@longox/api-zod";
 
 const router: IRouter = Router();
 

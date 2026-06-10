@@ -1,5 +1,5 @@
 apiVersion: v2
-name: autoflow
+name: longox
 description: Helm chart for Flow Builder Nexus platform
 type: application
 version: 0.1.0

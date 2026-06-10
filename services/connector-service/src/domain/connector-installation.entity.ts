@@ -18,13 +18,27 @@ export interface ConnectorInstallationProps {
 export class ConnectorInstallation {
   constructor(private props: ConnectorInstallationProps) {}
 
-  get id(): number { return this.props.id; }
-  get tenantId(): number { return this.props.tenantId; }
-  get connectorId(): number { return this.props.connectorId; }
-  get connectorName(): string { return this.props.connectorName; }
-  get status(): InstallationStatus { return this.props.status; }
-  get config(): Record<string, unknown> { return { ...this.props.config }; }
-  get installedBy(): number { return this.props.installedBy; }
+  get id(): number {
+    return this.props.id;
+  }
+  get tenantId(): number {
+    return this.props.tenantId;
+  }
+  get connectorId(): number {
+    return this.props.connectorId;
+  }
+  get connectorName(): string {
+    return this.props.connectorName;
+  }
+  get status(): InstallationStatus {
+    return this.props.status;
+  }
+  get config(): Record<string, unknown> {
+    return { ...this.props.config };
+  }
+  get installedBy(): number {
+    return this.props.installedBy;
+  }
 
   activate(): void {
     this.props.status = "active";

@@ -1,4 +1,11 @@
-import { pgTable, text, serial, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  timestamp,
+  integer,
+  jsonb,
+} from "drizzle-orm/pg-core";
 
 export const executionCheckpointsTable = pgTable("execution_checkpoints", {
   id: serial("id").primaryKey(),
@@ -11,7 +18,9 @@ export const executionCheckpointsTable = pgTable("execution_checkpoints", {
   inputData: jsonb("input_data"),
   outputData: jsonb("output_data"),
   errorMessage: text("error_message"),
-  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  startedAt: timestamp("started_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   durationMs: integer("duration_ms"),
 });

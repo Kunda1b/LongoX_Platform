@@ -13,12 +13,16 @@ export default function SettingsPage() {
         <Settings className="h-5 w-5" />
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-          <p className="text-sm text-muted-foreground">Manage your account settings</p>
+          <p className="text-sm text-muted-foreground">
+            Manage your account settings
+          </p>
         </div>
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Profile</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-lg">Profile</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -30,20 +34,31 @@ export default function SettingsPage() {
               <Input id="email" type="email" defaultValue="alice@acme.com" />
             </div>
           </div>
-          <Button><Save className="mr-1 h-4 w-4" /> Save Changes</Button>
+          <Button>
+            <Save className="mr-1 h-4 w-4" /> Save Changes
+          </Button>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">API Keys</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-lg">API Keys</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-3">
           {["Production", "Development"].map((env) => (
-            <div key={env} className="flex items-center justify-between rounded-lg border p-3">
+            <div
+              key={env}
+              className="flex items-center justify-between rounded-lg border p-3"
+            >
               <div>
                 <p className="text-sm font-medium">{env}</p>
-                <p className="text-xs text-muted-foreground font-mono">fc_{env.toLowerCase()}_****a1b2</p>
+                <p className="text-xs text-muted-foreground font-mono">
+                  fc_{env.toLowerCase()}_****a1b2
+                </p>
               </div>
-              <Button variant="outline" size="sm">Regenerate</Button>
+              <Button variant="outline" size="sm">
+                Regenerate
+              </Button>
             </div>
           ))}
         </CardContent>

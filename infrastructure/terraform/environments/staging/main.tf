@@ -1,10 +1,10 @@
 terraform {
   backend "s3" {
-    bucket         = "autoflow-terraform-state"
+    bucket         = "longox-terraform-state"
     key            = "environments/staging/terraform.tfstate"
     region         = "us-east-1"
     encrypt        = true
-    dynamodb_table = "autoflow-terraform-locks"
+    dynamodb_table = "longox-terraform-locks"
   }
 
   required_providers {
@@ -42,8 +42,8 @@ module "postgres" {
   private_subnet_ids = module.networking.private_subnet_ids
   instance_class   = "db.t3.large"
   allocated_storage = 50
-  database_name    = "autoflow"
-  master_username  = "autoflow_admin"
+  database_name    = "longox"
+  master_username  = "longox_admin"
   multi_az         = true
 }
 

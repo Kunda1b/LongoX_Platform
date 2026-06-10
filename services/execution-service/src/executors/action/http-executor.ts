@@ -1,4 +1,9 @@
-import type { NodeExecutor, WorkflowNode, ExecutionContext, NodeExecutionResult } from "@autoflow/workflow-engine";
+import type {
+  NodeExecutor,
+  WorkflowNode,
+  ExecutionContext,
+  NodeExecutionResult,
+} from "@longox/workflow-engine";
 
 export class HttpExecutor implements NodeExecutor {
   canHandle(nodeTypeId: string): boolean {
@@ -30,7 +35,7 @@ export class HttpExecutor implements NodeExecutor {
       const method = String(config.method ?? "GET").toUpperCase();
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
-        ...(config.headers as Record<string, string> ?? {}),
+        ...((config.headers as Record<string, string>) ?? {}),
       };
 
       const hasBody = ["POST", "PUT", "PATCH"].includes(method);

@@ -9,7 +9,7 @@ variable "min_size" { type = number }
 variable "max_size" { type = number }
 
 resource "aws_eks_cluster" "main" {
-  name     = "autoflow-${var.environment}"
+  name     = "longox-${var.environment}"
   role_arn = aws_iam_role.eks_cluster.arn
   version  = var.cluster_version
 
@@ -29,7 +29,7 @@ resource "aws_eks_cluster" "main" {
 }
 
 resource "aws_iam_role" "eks_cluster" {
-  name = "autoflow-eks-cluster-${var.environment}"
+  name = "longox-eks-cluster-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -53,7 +53,7 @@ resource "aws_iam_role_policy_attachment" "eks_service_policy" {
 
 resource "aws_eks_node_group" "main" {
   cluster_name    = aws_eks_cluster.main.name
-  node_group_name = "autoflow-${var.environment}-nodes"
+  node_group_name = "longox-${var.environment}-nodes"
   node_role_arn   = aws_iam_role.eks_nodes.arn
   subnet_ids      = var.private_subnet_ids
 
@@ -81,7 +81,7 @@ resource "aws_eks_node_group" "main" {
 }
 
 resource "aws_iam_role" "eks_nodes" {
-  name = "autoflow-eks-nodes-${var.environment}"
+  name = "longox-eks-nodes-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

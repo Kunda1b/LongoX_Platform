@@ -5,7 +5,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY services/dashboard-service/package.json ./services/dashboard-service/
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm --filter @autoflow/dashboard-service build
+RUN pnpm --filter @longox/dashboard-service build
 FROM node:20-alpine
 WORKDIR /app
 COPY --from=base /app .

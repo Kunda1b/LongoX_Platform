@@ -8,14 +8,38 @@
       "type": "messaging",
       "authType": "oauth2",
       "actions": [
-        { "id": "send_message", "name": "Send Message", "description": "Send a message to a Slack channel" },
-        { "id": "create_channel", "name": "Create Channel", "description": "Create a new Slack channel" },
-        { "id": "list_messages", "name": "List Messages", "description": "List recent messages from a channel" },
-        { "id": "upload_file", "name": "Upload File", "description": "Upload a file to a Slack channel" }
+        {
+          "id": "send_message",
+          "name": "Send Message",
+          "description": "Send a message to a Slack channel"
+        },
+        {
+          "id": "create_channel",
+          "name": "Create Channel",
+          "description": "Create a new Slack channel"
+        },
+        {
+          "id": "list_messages",
+          "name": "List Messages",
+          "description": "List recent messages from a channel"
+        },
+        {
+          "id": "upload_file",
+          "name": "Upload File",
+          "description": "Upload a file to a Slack channel"
+        }
       ],
       "triggers": [
-        { "id": "new_message", "name": "New Message", "description": "Triggered when a new message is posted" },
-        { "id": "new_reaction", "name": "New Reaction", "description": "Triggered when a reaction is added" }
+        {
+          "id": "new_message",
+          "name": "New Message",
+          "description": "Triggered when a new message is posted"
+        },
+        {
+          "id": "new_reaction",
+          "name": "New Reaction",
+          "description": "Triggered when a reaction is added"
+        }
       ]
     }
   ]

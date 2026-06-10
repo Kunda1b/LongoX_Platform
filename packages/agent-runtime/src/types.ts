@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
-export type AgentRole = "orchestrator" | "executor" | "observer" | "planner" | "reviewer";
+export type AgentRole =
+  | "orchestrator"
+  | "executor"
+  | "observer"
+  | "planner"
+  | "reviewer";
 export interface AgentConfig {
   id: string;
   name: string;

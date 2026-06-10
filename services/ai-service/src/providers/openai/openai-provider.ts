@@ -56,15 +56,19 @@ export class OpenAIProvider {
       messages,
       max_tokens: options.maxTokens ?? 2048,
       temperature: options.temperature ?? 0.7,
-      response_format: options.responseFormat === "json" ? { type: "json_object" } : undefined,
+      response_format:
+        options.responseFormat === "json" ? { type: "json_object" } : undefined,
     });
 
     const content = completion.choices[0]?.message?.content ?? "";
     const inputTokens = completion.usage?.prompt_tokens ?? 0;
     const outputTokens = completion.usage?.completion_tokens ?? 0;
 
-    const pricing = MODEL_PRICING[model] ?? { input: 0.000001, output: 0.000002 };
-    const cost = (inputTokens * pricing.input) + (outputTokens * pricing.output);
+    const pricing = MODEL_PRICING[model] ?? {
+      input: 0.000001,
+      output: 0.000002,
+    };
+    const cost = inputTokens * pricing.input + outputTokens * pricing.output;
 
     return { content, model, inputTokens, outputTokens, cost };
   }
@@ -72,8 +76,14 @@ export class OpenAIProvider {
   async generateJSON<T>(
     messages: ChatMessage[],
     options: ChatCompletionOptions = {},
-  ): Promise<{ data: T; usage: { inputTokens: number; outputTokens: number; cost: number } }> {
-    const result = await this.chatCompletion(messages, { ...options, responseFormat: "json" });
+  ): Promise<{
+    data: T;
+    usage: { inputTokens: number; outputTokens: number; cost: number };
+  }> {
+    const result = await this.chatCompletion(messages, {
+      ...options,
+      responseFormat: "json",
+    });
 
     let data: T;
     try {
@@ -82,10 +92,20 @@ export class OpenAIProvider {
       data = { raw: result.content } as unknown as T;
     }
 
-    return { data, usage: { inputTokens: result.inputTokens, outputTokens: result.outputTokens, cost: result.cost } };
+    return {
+      data,
+      usage: {
+        inputTokens: result.inputTokens,
+        outputTokens: result.outputTokens,
+        cost: result.cost,
+      },
+    };
   }
 
-  async generateEmbedding(text: string, model: string = "text-embedding-3-small"): Promise<number[]> {
+  async generateEmbedding(
+    text: string,
+    model: string = "text-embedding-3-small",
+  ): Promise<number[]> {
     const response = await this.client.embeddings.create({
       model,
       input: text,

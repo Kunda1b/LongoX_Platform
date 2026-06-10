@@ -1,5 +1,5 @@
 {
-  "name": "@autoflow/workflow-canvas",
+  "name": "@longox/workflow-canvas",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,8 +7,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@autoflow/shared-types": "workspace:*",
-    "@autoflow/shared-events": "workspace:*"
+    "@longox/shared-types": "workspace:*",
+    "@longox/shared-events": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.3.1",

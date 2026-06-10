@@ -1,4 +1,8 @@
-import type { ChatMessage, ChatCompletionOptions, ChatCompletionResult } from "../openai";
+import type {
+  ChatMessage,
+  ChatCompletionOptions,
+  ChatCompletionResult,
+} from "../openai";
 
 const DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions";
 
@@ -36,7 +40,7 @@ export class DeepSeekProvider {
       }),
     });
 
-    const data = await response.json() as {
+    const data = (await response.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
       usage?: { prompt_tokens: number; completion_tokens: number };
     };
@@ -45,8 +49,11 @@ export class DeepSeekProvider {
     const inputTokens = data.usage?.prompt_tokens ?? 0;
     const outputTokens = data.usage?.completion_tokens ?? 0;
 
-    const pricing = MODEL_PRICING[model] ?? { input: 0.00000014, output: 0.00000028 };
-    const cost = (inputTokens * pricing.input) + (outputTokens * pricing.output);
+    const pricing = MODEL_PRICING[model] ?? {
+      input: 0.00000014,
+      output: 0.00000028,
+    };
+    const cost = inputTokens * pricing.input + outputTokens * pricing.output;
 
     return { content, model, inputTokens, outputTokens, cost };
   }

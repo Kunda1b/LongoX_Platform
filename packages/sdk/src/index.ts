@@ -1,7 +1,23 @@
-export { AuthClient, type AuthConfig, type AuthSession } from "./auth-sdk/index.ts";
-export { WorkflowClient, type WorkflowConfig, type WorkflowDefinition } from "./workflow-sdk/index.ts";
-export { ConnectorClient, type ConnectorConfig, type ConnectorDefinition } from "./connector-sdk/index.ts";
-export { TriggerClient, type TriggerConfig, type TriggerDefinition } from "./trigger-sdk/index.ts";
+export {
+  AuthClient,
+  type AuthConfig,
+  type AuthSession,
+} from "./auth-sdk/index.ts";
+export {
+  WorkflowClient,
+  type WorkflowConfig,
+  type WorkflowDefinition,
+} from "./workflow-sdk/index.ts";
+export {
+  ConnectorClient,
+  type ConnectorConfig,
+  type ConnectorDefinition,
+} from "./connector-sdk/index.ts";
+export {
+  TriggerClient,
+  type TriggerConfig,
+  type TriggerDefinition,
+} from "./trigger-sdk/index.ts";
 export { TestingClient, type TestingConfig } from "./testing-sdk/index.ts";
 
 export type SdkConfig = {

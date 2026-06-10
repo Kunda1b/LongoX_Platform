@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { eq, and } from "drizzle-orm";
-import { db, usersTable, userMfaTable } from "@autoflow/db";
+import { db, usersTable, userMfaTable } from "@longox/db";
 import { signToken } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -13,7 +13,9 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
-  const [user] = await db.select().from(usersTable)
+  const [user] = await db
+    .select()
+    .from(usersTable)
     .where(eq(usersTable.email, email.trim().toLowerCase()))
     .limit(1);
 
@@ -33,15 +35,28 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
-  await db.update(usersTable).set({ lastLoginAt: new Date() }).where(eq(usersTable.id, user.id));
+  await db
+    .update(usersTable)
+    .set({ lastLoginAt: new Date() })
+    .where(eq(usersTable.id, user.id));
 
-  const [mfa] = await db.select().from(userMfaTable)
-    .where(and(eq(userMfaTable.userId, user.id), eq(userMfaTable.enabled, true)))
+  const [mfa] = await db
+    .select()
+    .from(userMfaTable)
+    .where(
+      and(eq(userMfaTable.userId, user.id), eq(userMfaTable.enabled, true)),
+    )
     .limit(1);
 
   const requiresMfa = !!mfa;
 
-  const authUser = { id: user.id, email: user.email, name: user.name, tenantId: user.tenantId ?? null, role: user.role };
+  const authUser = {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    tenantId: user.tenantId ?? null,
+    role: user.role,
+  };
   const token = signToken(authUser);
 
   res.json({

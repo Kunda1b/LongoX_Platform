@@ -1,1 +1,3 @@
-export interface TemplateQuery { execute(params?: Record<string, unknown>): Promise<unknown[]>; }
+export interface TemplateQuery {
+  execute(params?: Record<string, unknown>): Promise<unknown[]>;
+}

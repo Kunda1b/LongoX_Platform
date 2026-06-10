@@ -17,12 +17,12 @@ Phased execution plan aligned with `architecture.md` Engineering Roadmap (v1.0).
 ### 1.1 Monorepo & API contracts
 
 - [~] Consolidate `api-spec` / `api-zod` under `packages/` (canonical per architecture)
-- [ ] Resolve `@autoflow/web` package name collision (`apps/web` vs `artifacts/flowcraft`)
+- [ ] Resolve `@longox/web` package name collision (`apps/web` vs `artifacts/flowcraft`)
 - [ ] Document Drizzle as ORM (architecture references Prisma — implementation uses Drizzle)
 
 ### 1.2 Frontend (`apps/web`)
 
-- [~] Configure `@autoflow/api-client-react` with auth token + API base URL
+- [~] Configure `@longox/api-client-react` with auth token + API base URL
 - [~] Auth guard on dashboard routes
 - [~] Replace mock pages with API-backed feature modules:
   - Dashboard overview

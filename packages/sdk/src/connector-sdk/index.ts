@@ -60,30 +60,46 @@ export class ConnectorClient {
     return res.json() as Promise<ConnectorDefinition>;
   }
 
-  async install(connectorId: string, config: Record<string, unknown>): Promise<{ id: string; status: string }> {
-    const res = await fetch(`${this.config.baseUrl}/api/connectors/${connectorId}/install`, {
-      method: "POST",
-      headers: this.headers(),
-      body: JSON.stringify({ config }),
-    });
+  async install(
+    connectorId: string,
+    config: Record<string, unknown>,
+  ): Promise<{ id: string; status: string }> {
+    const res = await fetch(
+      `${this.config.baseUrl}/api/connectors/${connectorId}/install`,
+      {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify({ config }),
+      },
+    );
     if (!res.ok) throw new Error("Failed to install connector");
     return res.json() as Promise<{ id: string; status: string }>;
   }
 
   async uninstall(installationId: string): Promise<void> {
-    const res = await fetch(`${this.config.baseUrl}/api/connectors/installations/${installationId}`, {
-      method: "DELETE",
-      headers: this.headers(),
-    });
+    const res = await fetch(
+      `${this.config.baseUrl}/api/connectors/installations/${installationId}`,
+      {
+        method: "DELETE",
+        headers: this.headers(),
+      },
+    );
     if (!res.ok) throw new Error("Failed to uninstall connector");
   }
 
-  async execute(installationId: string, action: string, input: Record<string, unknown>): Promise<unknown> {
-    const res = await fetch(`${this.config.baseUrl}/api/connectors/installations/${installationId}/execute`, {
-      method: "POST",
-      headers: this.headers(),
-      body: JSON.stringify({ action, input }),
-    });
+  async execute(
+    installationId: string,
+    action: string,
+    input: Record<string, unknown>,
+  ): Promise<unknown> {
+    const res = await fetch(
+      `${this.config.baseUrl}/api/connectors/installations/${installationId}/execute`,
+      {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify({ action, input }),
+      },
+    );
     if (!res.ok) throw new Error("Connector execution failed");
     return res.json();
   }

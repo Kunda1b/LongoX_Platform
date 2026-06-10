@@ -76,7 +76,10 @@ export class RedisCache implements CacheStore {
         });
         await this.client.connect();
       } catch (err) {
-        console.warn("[RedisCache] Failed to connect, falling back to in-memory:", err);
+        console.warn(
+          "[RedisCache] Failed to connect, falling back to in-memory:",
+          err,
+        );
         this.client = null;
       }
     })();
@@ -92,8 +95,10 @@ export class RedisCache implements CacheStore {
     if (!this.client) return null;
     try {
       const val = await this.client.get(key);
-      return val ? JSON.parse(val) as T : null;
-    } catch { return null; }
+      return val ? (JSON.parse(val) as T) : null;
+    } catch {
+      return null;
+    }
   }
 
   async set<T>(key: string, value: T, ttlMs?: number): Promise<void> {
@@ -102,13 +107,19 @@ export class RedisCache implements CacheStore {
     try {
       const ttlSeconds = Math.ceil((ttlMs ?? this.defaultTtlMs) / 1000);
       await this.client.setex(key, ttlSeconds, JSON.stringify(value));
-    } catch { /* silent */ }
+    } catch {
+      /* silent */
+    }
   }
 
   async del(key: string): Promise<void> {
     await this.ensureConnected();
     if (!this.client) return;
-    try { await this.client.del(key); } catch { /* silent */ }
+    try {
+      await this.client.del(key);
+    } catch {
+      /* silent */
+    }
   }
 
   async exists(key: string): Promise<boolean> {
@@ -117,29 +128,43 @@ export class RedisCache implements CacheStore {
     try {
       const result = await this.client.exists(key);
       return result === 1;
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   }
 
   async clear(): Promise<void> {
     await this.ensureConnected();
     if (!this.client) return;
-    try { await this.client.flushdb(); } catch { /* silent */ }
+    try {
+      await this.client.flushdb();
+    } catch {
+      /* silent */
+    }
   }
 
   async disconnect(): Promise<void> {
     if (this.client) {
-      try { await this.client.quit(); } catch { /* silent */ }
+      try {
+        await this.client.quit();
+      } catch {
+        /* silent */
+      }
       this.client = null;
     }
   }
 }
 
 export class NoOpCache implements CacheStore {
-  async get<T>(): Promise<T | null> { return null; }
-  async set(): Promise<void> { }
-  async del(): Promise<void> { }
-  async exists(): Promise<boolean> { return false; }
-  async clear(): Promise<void> { }
+  async get<T>(): Promise<T | null> {
+    return null;
+  }
+  async set(): Promise<void> {}
+  async del(): Promise<void> {}
+  async exists(): Promise<boolean> {
+    return false;
+  }
+  async clear(): Promise<void> {}
 }
 
 let defaultCache: CacheStore = new NoOpCache();

@@ -12,7 +12,10 @@ class WebhookManager {
   private webhooks = new Map<string, WebhookRegistration>();
 
   register(registration: WebhookRegistration): void {
-    this.webhooks.set(`${registration.connectorName}.${registration.triggerId}`, registration);
+    this.webhooks.set(
+      `${registration.connectorName}.${registration.triggerId}`,
+      registration,
+    );
   }
 
   get(path: string): WebhookRegistration | undefined {
@@ -26,7 +29,10 @@ class WebhookManager {
     return this.webhooks.get(fullId);
   }
 
-  async handleWebhook(path: string, payload: Record<string, unknown>): Promise<TriggerEvent[]> {
+  async handleWebhook(
+    path: string,
+    payload: Record<string, unknown>,
+  ): Promise<TriggerEvent[]> {
     const registration = this.get(path);
     if (!registration) return [];
     return registration.handler(payload);

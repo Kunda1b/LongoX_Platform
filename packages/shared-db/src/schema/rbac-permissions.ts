@@ -5,8 +5,3 @@ export const rbacPermissionsTable = pgTable("rbac_permissions", {
   description: text("description"),
   group: text("group").notNull(),
 });
-export const rolePermissionsTable = pgTable("role_permissions", {
-  id: serial("id").primaryKey(),
-  roleId: serial("role_id").notNull(),
-  permissionId: serial("permission_id").notNull(),
-});

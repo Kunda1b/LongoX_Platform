@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: execution-worker
-          image: autoflow/execution-service:latest
+          image: longox/execution-service:latest
           ports:
             - containerPort: 3002
           env:

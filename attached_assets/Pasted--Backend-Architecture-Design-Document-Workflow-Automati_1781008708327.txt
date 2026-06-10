@@ -392,10 +392,10 @@ Secret is held in memory only for the duration of the node execution
 
 > **Audience: External / SDK**
 
-Every connector is a TypeScript package that implements the `ConnectorDefinition` interface. The SDK is published to npm as `@autoflow/connector-sdk`.
+Every connector is a TypeScript package that implements the `ConnectorDefinition` interface. The SDK is published to npm as `@longox/connector-sdk`.
 
 ```typescript
-// @autoflow/connector-sdk — core types
+// @longox/connector-sdk — core types
 
 export interface ConnectorDefinition {
   metadata: ConnectorMetadata;
@@ -533,7 +533,7 @@ CREATE TABLE connectors (
   is_verified     BOOLEAN NOT NULL DEFAULT false,    -- platform-verified connectors
   status          TEXT NOT NULL DEFAULT 'draft',     -- draft | review | published | deprecated
   latest_version  TEXT NOT NULL,
-  npm_package     TEXT NOT NULL,                     -- "@autoflow/connector-slack"
+  npm_package     TEXT NOT NULL,                     -- "@longox/connector-slack"
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -563,7 +563,7 @@ Lifecycle states:
 ```
 
 **Submission process:**
-1. Developer publishes connector package to npm (`@autoflow/connector-{slug}@x.y.z`).
+1. Developer publishes connector package to npm (`@longox/connector-{slug}@x.y.z`).
 2. Developer calls `POST /api/v1/marketplace/connectors/{id}/submit` with the npm tag.
 3. Platform runs automated checks: TypeScript compilation, schema validation, sandbox smoke test.
 4. Platform reviewer approves → status moves to `published`.
@@ -848,7 +848,7 @@ POST /api/v1/marketplace/connectors/{connectorId}/versions
 Request:
 {
   "version": "2.5.0",
-  "npmTag": "@autoflow/connector-hubspot@2.5.0",
+  "npmTag": "@longox/connector-hubspot@2.5.0",
   "changelog": "Added contact enrichment operation",
   "isBreaking": false
 }

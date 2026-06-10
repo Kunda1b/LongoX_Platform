@@ -1,5 +1,5 @@
 {
-  "name": "@autoflow/ui",
+  "name": "@longox/ui",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@autoflow/design-system": "workspace:*",
+    "@longox/design-system": "workspace:*",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1"
   },

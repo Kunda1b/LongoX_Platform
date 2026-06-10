@@ -1,9 +1,9 @@
-import { db, executionsTable, workflowsTable } from "@autoflow/db";
+import { db, executionsTable, workflowsTable } from "@longox/db";
 import { eq, sql } from "drizzle-orm";
 import { PostgresScheduleRepository } from "./infrastructure";
 import { CronParser } from "./infrastructure/cron-parser";
-import { logger } from "@autoflow/shared-logger";
-import { publishEvent } from "@autoflow/shared-realtime";
+import { logger } from "@longox/shared-logger";
+import { publishEvent } from "@longox/shared-realtime";
 
 export class ScheduleWorker {
   private repo: PostgresScheduleRepository;
@@ -43,7 +43,10 @@ export class ScheduleWorker {
         try {
           await this.executeSchedule(schedule);
         } catch (err) {
-          logger.error({ scheduleId: schedule.id, err }, "[ScheduleWorker] Schedule execution failed");
+          logger.error(
+            { scheduleId: schedule.id, err },
+            "[ScheduleWorker] Schedule execution failed",
+          );
         }
       }
     } catch (err) {
@@ -53,47 +56,81 @@ export class ScheduleWorker {
     }
   }
 
-  private async executeSchedule(schedule: import("./domain/schedule.entity").Schedule): Promise<void> {
-    const { id: scheduleId, workflowId, name: scheduleName, tenantId, timezone, cronExpression, interval, retryOnFailure, maxRetries } = schedule;
+  private async executeSchedule(
+    schedule: import("./domain/schedule.entity").Schedule,
+  ): Promise<void> {
+    const {
+      id: scheduleId,
+      workflowId,
+      name: scheduleName,
+      tenantId,
+      timezone,
+      cronExpression,
+      interval,
+      retryOnFailure,
+      maxRetries,
+    } = schedule;
 
-    logger.info({ scheduleId, workflowId }, "[ScheduleWorker] Executing scheduled workflow");
+    logger.info(
+      { scheduleId, workflowId },
+      "[ScheduleWorker] Executing scheduled workflow",
+    );
 
-    const [workflow] = await db.select().from(workflowsTable).where(eq(workflowsTable.id, workflowId)).limit(1);
+    const [workflow] = await db
+      .select()
+      .from(workflowsTable)
+      .where(eq(workflowsTable.id, workflowId))
+      .limit(1);
     if (!workflow) {
-      logger.warn({ scheduleId, workflowId }, "[ScheduleWorker] Workflow not found, marking schedule failed");
+      logger.warn(
+        { scheduleId, workflowId },
+        "[ScheduleWorker] Workflow not found, marking schedule failed",
+      );
       schedule.markFailed();
       await this.repo.update(scheduleId, schedule.toJSON() as any);
       return;
     }
 
-    const nodes = Array.isArray(workflow.nodes) ? (workflow.nodes as any[]) : [];
+    const nodes = Array.isArray(workflow.nodes)
+      ? (workflow.nodes as any[])
+      : [];
 
     // Create execution record
-    const [execution] = await db.insert(executionsTable).values({
-      workflowId,
-      workflowName: workflow.name,
-      status: "pending",
-      startedAt: new Date(),
-      steps: [],
-    }).returning();
+    const [execution] = await db
+      .insert(executionsTable)
+      .values({
+        workflowId,
+        workflowName: workflow.name,
+        status: "pending",
+        startedAt: new Date(),
+        steps: [],
+      })
+      .returning();
 
     // Update workflow execution count
-    await db.update(workflowsTable).set({
-      executionCount: sql`${workflowsTable.executionCount} + 1`,
-      lastRunAt: new Date(),
-      lastRunStatus: "running",
-    }).where(eq(workflowsTable.id, workflowId));
+    await db
+      .update(workflowsTable)
+      .set({
+        executionCount: sql`${workflowsTable.executionCount} + 1`,
+        lastRunAt: new Date(),
+        lastRunStatus: "running",
+      })
+      .where(eq(workflowsTable.id, workflowId));
 
     // Enqueue the workflow execution via the shared job queue
-    const { startWorkflowExecution } = await import("@autoflow/workflow-engine");
-    await startWorkflowExecution(workflowId, workflow.name, nodes, "schedule", { _scheduleId: scheduleId });
+    const { startWorkflowExecution } = await import("@longox/workflow-engine");
+    await startWorkflowExecution(workflowId, workflow.name, nodes, "schedule", {
+      _scheduleId: scheduleId,
+    });
 
     // Calculate next run
     let nextRun: Date | undefined;
     if (interval === "cron" && cronExpression) {
       try {
         nextRun = this.cronParser.getNextRun(cronExpression);
-      } catch { /* use default */ }
+      } catch {
+        /* use default */
+      }
     } else if (interval === "recurring") {
       // Simple recurring: use some sensible default like every 24hrs
       const periodMs = Number(schedule.metadata?.periodMs ?? 86_400_000);
@@ -107,12 +144,21 @@ export class ScheduleWorker {
       type: "execution.started",
       aggregateId: String(execution.id),
       aggregateType: "execution",
-      payload: { workflowId, workflowName: workflow.name, triggerType: "schedule", scheduleId, scheduleName },
+      payload: {
+        workflowId,
+        workflowName: workflow.name,
+        triggerType: "schedule",
+        scheduleId,
+        scheduleName,
+      },
       actorId: String(tenantId),
       actorType: "schedule",
     });
 
-    logger.info({ scheduleId, workflowId, executionId: execution.id, nextRun }, "[ScheduleWorker] Workflow execution queued");
+    logger.info(
+      { scheduleId, workflowId, executionId: execution.id, nextRun },
+      "[ScheduleWorker] Workflow execution queued",
+    );
   }
 }
 

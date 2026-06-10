@@ -1,15 +1,15 @@
-# FlowCraft
+# LongoX
 
 A low-code automation + internal tools platform for SMBs — workflow automation (n8n-style) with a connector marketplace, plus a drag-drop internal tools builder.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
-- `pnpm --filter @workspace/flowcraft run dev` — run the frontend (port 25075)
+- `pnpm --filter @longox/api-server run dev` — run the API server (port 8080)
+- `pnpm --filter @longox/flowcraft run dev` — run the frontend (port 25075)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+- `pnpm --filter @longox/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
+- `pnpm --filter @longox/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
 
 ## Stack
@@ -53,7 +53,7 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 - Route order matters: `/connectors/categories` must be registered before `/connectors/:id`
 - Route order matters: `/apps/stats` must be registered before `/apps/:id`
-- After any OpenAPI spec change, run `pnpm --filter @workspace/api-spec run codegen` before touching routes or frontend
+- After any OpenAPI spec change, run `pnpm --filter @longox/api-spec run codegen` before touching routes or frontend
 
 ## Pointers
 

@@ -1,1 +1,3 @@
-export interface TemplateEventPublisher { publish(event: { type: string; payload: unknown }): Promise<void>; }
+export interface TemplateEventPublisher {
+  publish(event: { type: string; payload: unknown }): Promise<void>;
+}

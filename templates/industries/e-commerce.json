@@ -2,7 +2,11 @@
   "name": "E-Commerce",
   "description": "Workflow and dashboard templates for e-commerce platforms",
   "version": "1.0.0",
-  "workflows": ["order-fulfillment", "inventory-sync", "customer-communication"],
+  "workflows": [
+    "order-fulfillment",
+    "inventory-sync",
+    "customer-communication"
+  ],
   "dashboards": ["order-metrics", "inventory-overview"],
   "connectors": ["shopify", "stripe", "sendgrid", "slack"]
 }

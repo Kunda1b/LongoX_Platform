@@ -1,4 +1,4 @@
-import type { WidgetInstance, RenderContext } from "@autoflow/dashboard-renderer";
+import type { WidgetInstance, RenderContext } from "@longox/dashboard-renderer";
 export interface WidgetComponentProps {
   widget: WidgetInstance;
   context: RenderContext;
@@ -6,7 +6,7 @@ export interface WidgetComponentProps {
 }
 export type WidgetComponent = (props: WidgetComponentProps) => string;
 export const KpiCardWidget: WidgetComponent = ({ widget, data }) => {
-  return `<div class="kpi-card"><h3>${widget.title}</h3><div class="kpi-value">${String(data ?? "—")}</div></div>`;
+  return `<div class="kpi-card"><h3>${widget.title}</h3><div class="kpi-value">${String(data ?? "ï¿½")}</div></div>`;
 };
 export const TimeSeriesChartWidget: WidgetComponent = ({ widget }) => {
   return `<div class="chart-widget"><h3>${widget.title}</h3><div class="chart-container">[Chart placeholder]</div></div>`;

@@ -75,7 +75,7 @@ export function AppSidebar() {
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
           FC
         </div>
-        <span className="text-sm font-semibold">FlowCraft</span>
+        <span className="text-sm font-semibold">LongoX</span>
       </div>
 
       <nav className="flex-1 overflow-y-auto p-2">
@@ -84,7 +84,8 @@ export function AppSidebar() {
             return <div key={i} className="my-2 border-t" />;
           }
           const Icon = item.icon!;
-          const active = pathname === item.href || pathname?.startsWith(item.href + "/");
+          const active =
+            pathname === item.href || pathname?.startsWith(item.href + "/");
           return (
             <Link
               key={item.href}
@@ -93,7 +94,7 @@ export function AppSidebar() {
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 active
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/50",
               )}
             >
               <Icon className="h-4 w-4" />
@@ -107,7 +108,12 @@ export function AppSidebar() {
         <div className="mb-2 truncate text-xs text-muted-foreground">
           {user?.name ?? user?.email ?? "Guest"}
         </div>
-        <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs" onClick={logout}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start gap-2 text-xs"
+          onClick={logout}
+        >
           <LogOut className="h-3.5 w-3.5" />
           Sign out
         </Button>

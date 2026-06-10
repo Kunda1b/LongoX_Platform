@@ -15,7 +15,10 @@ export class EmbeddingService {
     });
   }
 
-  async generateEmbedding(text: string, model: string = "text-embedding-3-small"): Promise<EmbeddingResult> {
+  async generateEmbedding(
+    text: string,
+    model: string = "text-embedding-3-small",
+  ): Promise<EmbeddingResult> {
     const vector = await this.openai.generateEmbedding(text, model);
 
     return {
@@ -25,7 +28,10 @@ export class EmbeddingService {
     };
   }
 
-  async generateEmbeddings(texts: string[], model: string = "text-embedding-3-small"): Promise<EmbeddingResult[]> {
+  async generateEmbeddings(
+    texts: string[],
+    model: string = "text-embedding-3-small",
+  ): Promise<EmbeddingResult[]> {
     const results: EmbeddingResult[] = [];
 
     for (const text of texts) {

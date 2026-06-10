@@ -1,1 +1,3 @@
-export interface PlatformQuery { execute(params?: Record<string, unknown>): Promise<unknown[]>; }
+export interface PlatformQuery {
+  execute(params?: Record<string, unknown>): Promise<unknown[]>;
+}

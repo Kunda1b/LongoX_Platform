@@ -1,11 +1,13 @@
 {
-  "name": "@autoflow/shared-region",
+  "name": "@longox/shared-region",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "dependencies": {
-    "@autoflow/shared-logger": "workspace:*"
+    "@longox/shared-logger": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

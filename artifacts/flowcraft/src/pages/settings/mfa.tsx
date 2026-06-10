@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +14,14 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { ShieldCheck, ShieldOff, Key, Copy, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  ShieldCheck,
+  ShieldOff,
+  Key,
+  Copy,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 
 const API = import.meta.env["VITE_API_URL"] ?? "/api";
 
@@ -17,7 +30,10 @@ function getAuthHeaders(): Record<string, string> {
   if (!raw) return {};
   try {
     const { token } = JSON.parse(raw);
-    return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+    return {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    };
   } catch {
     return {};
   }
@@ -27,25 +43,43 @@ export default function MfaSettingsPage() {
   const { toast } = useToast();
   const [setupCode, setSetupCode] = useState("");
   const [verifyCode, setVerifyCode] = useState("");
-  const [setupData, setSetupData] = useState<{ secret: string; uri: string } | null>(null);
+  const [setupData, setSetupData] = useState<{
+    secret: string;
+    uri: string;
+  } | null>(null);
 
-  const { data: mfaStatus, refetch: refetchStatus } = useQuery<{ enabled: boolean; method: string | null; verifiedAt: string | null }>({
+  const { data: mfaStatus, refetch: refetchStatus } = useQuery<{
+    enabled: boolean;
+    method: string | null;
+    verifiedAt: string | null;
+  }>({
     queryKey: ["mfa-status"],
-    queryFn: () => fetch(`${API}/auth/mfa/status`, { headers: getAuthHeaders() }).then((r) => r.json()),
+    queryFn: () =>
+      fetch(`${API}/auth/mfa/status`, { headers: getAuthHeaders() }).then((r) =>
+        r.json(),
+      ),
   });
 
   const setupMutation = useMutation({
     mutationFn: () =>
-      fetch(`${API}/auth/mfa/setup`, { method: "POST", headers: getAuthHeaders() }).then((r) => r.json()),
+      fetch(`${API}/auth/mfa/setup`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+      }).then((r) => r.json()),
     onSuccess: (data) => {
       if (data.error) {
         toast({ title: data.error, variant: "destructive" });
         return;
       }
       setSetupData(data);
-      toast({ title: "MFA setup initiated", description: "Scan the QR code or enter the secret in your authenticator app." });
+      toast({
+        title: "MFA setup initiated",
+        description:
+          "Scan the QR code or enter the secret in your authenticator app.",
+      });
     },
-    onError: () => toast({ title: "Failed to start MFA setup", variant: "destructive" }),
+    onError: () =>
+      toast({ title: "Failed to start MFA setup", variant: "destructive" }),
   });
 
   const verifyMutation = useMutation({
@@ -65,17 +99,22 @@ export default function MfaSettingsPage() {
       setVerifyCode("");
       refetchStatus();
     },
-    onError: () => toast({ title: "Verification failed", variant: "destructive" }),
+    onError: () =>
+      toast({ title: "Verification failed", variant: "destructive" }),
   });
 
   const disableMutation = useMutation({
     mutationFn: () =>
-      fetch(`${API}/auth/mfa`, { method: "DELETE", headers: getAuthHeaders() }).then((r) => r.json()),
+      fetch(`${API}/auth/mfa`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      }).then((r) => r.json()),
     onSuccess: () => {
       toast({ title: "MFA disabled" });
       refetchStatus();
     },
-    onError: () => toast({ title: "Failed to disable MFA", variant: "destructive" }),
+    onError: () =>
+      toast({ title: "Failed to disable MFA", variant: "destructive" }),
   });
 
   const copyToClipboard = async (text: string) => {
@@ -88,7 +127,8 @@ export default function MfaSettingsPage() {
       <div>
         <h1 className="text-2xl font-bold">Multi-Factor Authentication</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Add an extra layer of security to your account using TOTP authenticator apps.
+          Add an extra layer of security to your account using TOTP
+          authenticator apps.
         </p>
       </div>
 
@@ -132,8 +172,9 @@ export default function MfaSettingsPage() {
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Scan the QR code or enter the secret manually in your authenticator app
-                  (Google Authenticator, Authy, 1Password, etc.)
+                  Scan the QR code or enter the secret manually in your
+                  authenticator app (Google Authenticator, Authy, 1Password,
+                  etc.)
                 </AlertDescription>
               </Alert>
 
@@ -169,20 +210,27 @@ export default function MfaSettingsPage() {
               <div className="space-y-2">
                 <Label htmlFor="verify-code">Verify code</Label>
                 <p className="text-xs text-muted-foreground">
-                  Enter the 6-digit code from your authenticator app to confirm setup.
+                  Enter the 6-digit code from your authenticator app to confirm
+                  setup.
                 </p>
                 <div className="flex gap-2">
                   <Input
                     id="verify-code"
                     placeholder="000000"
                     value={verifyCode}
-                    onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    onChange={(e) =>
+                      setVerifyCode(
+                        e.target.value.replace(/\D/g, "").slice(0, 6),
+                      )
+                    }
                     className="font-mono text-lg tracking-widest w-40"
                     maxLength={6}
                   />
                   <Button
                     onClick={() => verifyMutation.mutate(verifyCode)}
-                    disabled={verifyCode.length !== 6 || verifyMutation.isPending}
+                    disabled={
+                      verifyCode.length !== 6 || verifyMutation.isPending
+                    }
                     className="gap-2"
                   >
                     <CheckCircle2 className="h-4 w-4" />
@@ -221,8 +269,8 @@ export default function MfaSettingsPage() {
           <CardHeader>
             <CardTitle className="text-base">Recovery Codes</CardTitle>
             <CardDescription>
-              Save these backup codes in a secure location. Each code can be used once
-              if you lose access to your authenticator app.
+              Save these backup codes in a secure location. Each code can be
+              used once if you lose access to your authenticator app.
             </CardDescription>
           </CardHeader>
           <CardContent>

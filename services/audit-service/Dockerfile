@@ -5,7 +5,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY services/audit-service/package.json ./services/audit-service/
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm --filter @autoflow/audit-service build
+RUN pnpm --filter @longox/audit-service build
 FROM node:20-alpine
 WORKDIR /app
 COPY --from=base /app .

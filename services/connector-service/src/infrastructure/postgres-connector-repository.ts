@@ -1,8 +1,11 @@
 import { eq, like, or, desc, sql } from "drizzle-orm";
-import { db, connectorsTable } from "@autoflow/db";
+import { db, connectorsTable } from "@longox/db";
 import { Connector } from "../domain/connector.entity";
 import type { ConnectorRepository } from "../domain/connector-repository";
-import type { ConnectorCategory, ConnectorProps } from "../domain/connector.entity";
+import type {
+  ConnectorCategory,
+  ConnectorProps,
+} from "../domain/connector.entity";
 
 export class PostgresConnectorRepository implements ConnectorRepository {
   private toDomain(row: typeof connectorsTable.$inferSelect): Connector {
@@ -22,8 +25,12 @@ export class PostgresConnectorRepository implements ConnectorRepository {
       capabilities: (row.capabilities ?? {}) as ConnectorProps["capabilities"],
       authType: row.authType as ConnectorProps["authType"],
       authConfig: (row.authConfig ?? {}) as ConnectorProps["authConfig"],
-      certificationLevel: row.certificationLevel as ConnectorProps["certificationLevel"],
-      rateLimit: (row.rateLimit ?? { requestsPerMinute: 60, burst: 10 }) as ConnectorProps["rateLimit"],
+      certificationLevel:
+        row.certificationLevel as ConnectorProps["certificationLevel"],
+      rateLimit: (row.rateLimit ?? {
+        requestsPerMinute: 60,
+        burst: 10,
+      }) as ConnectorProps["rateLimit"],
       isFeatured: row.isFeatured ?? false,
       status: (row.status as ConnectorProps["status"]) ?? "active",
       metadata: (row.metadata ?? {}) as Record<string, unknown>,
@@ -33,26 +40,40 @@ export class PostgresConnectorRepository implements ConnectorRepository {
   }
 
   async findById(id: number): Promise<Connector | null> {
-    const [row] = await db.select().from(connectorsTable).where(eq(connectorsTable.id, id)).limit(1);
+    const [row] = await db
+      .select()
+      .from(connectorsTable)
+      .where(eq(connectorsTable.id, id))
+      .limit(1);
     return row ? this.toDomain(row) : null;
   }
 
   async findByName(name: string): Promise<Connector | null> {
-    const [row] = await db.select().from(connectorsTable).where(eq(connectorsTable.name, name)).limit(1);
+    const [row] = await db
+      .select()
+      .from(connectorsTable)
+      .where(eq(connectorsTable.name, name))
+      .limit(1);
     return row ? this.toDomain(row) : null;
   }
 
-  async findAll(category?: ConnectorCategory, search?: string): Promise<Connector[]> {
+  async findAll(
+    category?: ConnectorCategory,
+    search?: string,
+  ): Promise<Connector[]> {
     const conditions = [];
     if (category) conditions.push(eq(connectorsTable.category, category));
-    if (search) conditions.push(
-      or(
-        like(connectorsTable.name, `%${search}%`),
-        like(connectorsTable.description, `%${search}%`),
-      ),
-    );
+    if (search)
+      conditions.push(
+        or(
+          like(connectorsTable.name, `%${search}%`),
+          like(connectorsTable.description, `%${search}%`),
+        ),
+      );
 
-    const rows = await db.select().from(connectorsTable)
+    const rows = await db
+      .select()
+      .from(connectorsTable)
       .where(conditions.length ? and(...conditions) : undefined)
       .orderBy(desc(connectorsTable.isFeatured), connectorsTable.name);
 
@@ -60,39 +81,47 @@ export class PostgresConnectorRepository implements ConnectorRepository {
   }
 
   async findFeatured(): Promise<Connector[]> {
-    const rows = await db.select().from(connectorsTable)
+    const rows = await db
+      .select()
+      .from(connectorsTable)
       .where(eq(connectorsTable.isFeatured, true))
       .orderBy(connectorsTable.name);
     return rows.map(this.toDomain);
   }
 
-  async create(props: Omit<ConnectorProps, "id" | "createdAt" | "updatedAt">): Promise<Connector> {
-    const [row] = await db.insert(connectorsTable).values({
-      name: props.name,
-      displayName: props.displayName,
-      version: props.version,
-      sdkVersion: props.sdkVersion,
-      category: props.category,
-      description: props.description,
-      icon: props.icon,
-      color: props.color,
-      author: props.author,
-      documentationUrl: props.documentationUrl,
-      permissions: props.permissions,
-      capabilities: props.capabilities,
-      authType: props.authType,
-      authConfig: props.authConfig,
-      certificationLevel: props.certificationLevel,
-      rateLimit: props.rateLimit,
-      isFeatured: props.isFeatured,
-      status: props.status,
-      metadata: props.metadata,
-    }).returning();
+  async create(
+    props: Omit<ConnectorProps, "id" | "createdAt" | "updatedAt">,
+  ): Promise<Connector> {
+    const [row] = await db
+      .insert(connectorsTable)
+      .values({
+        name: props.name,
+        displayName: props.displayName,
+        version: props.version,
+        sdkVersion: props.sdkVersion,
+        category: props.category,
+        description: props.description,
+        icon: props.icon,
+        color: props.color,
+        author: props.author,
+        documentationUrl: props.documentationUrl,
+        permissions: props.permissions,
+        capabilities: props.capabilities,
+        authType: props.authType,
+        authConfig: props.authConfig,
+        certificationLevel: props.certificationLevel,
+        rateLimit: props.rateLimit,
+        isFeatured: props.isFeatured,
+        status: props.status,
+        metadata: props.metadata,
+      })
+      .returning();
     return this.toDomain(row);
   }
 
   async update(id: number, data: Partial<ConnectorProps>): Promise<Connector> {
-    const [row] = await db.update(connectorsTable)
+    const [row] = await db
+      .update(connectorsTable)
       .set({ ...data, updatedAt: new Date() })
       .where(eq(connectorsTable.id, id))
       .returning();

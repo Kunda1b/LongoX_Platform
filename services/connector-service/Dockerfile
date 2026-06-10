@@ -5,7 +5,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY services/connector-service/package.json ./services/connector-service/
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm --filter @autoflow/connector-service build
+RUN pnpm --filter @longox/connector-service build
 FROM node:20-alpine
 WORKDIR /app
 COPY --from=base /app .

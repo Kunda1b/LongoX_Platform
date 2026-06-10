@@ -1,5 +1,5 @@
 {
-  "name": "@autoflow/platform-service",
+  "name": "@longox/platform-service",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,12 +8,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@autoflow/db": "workspace:*",
-    "@autoflow/shared-types": "workspace:*",
-    "@autoflow/shared-events": "workspace:*",
-    "@autoflow/shared-logger": "workspace:*",
-    "@autoflow/shared-auth": "workspace:*",
-    "@autoflow/shared-rbac": "workspace:*",
+    "@longox/db": "workspace:*",
+    "@longox/shared-types": "workspace:*",
+    "@longox/shared-events": "workspace:*",
+    "@longox/shared-logger": "workspace:*",
+    "@longox/shared-auth": "workspace:*",
+    "@longox/shared-rbac": "workspace:*",
     "express": "^5.0.0",
     "zod": "catalog:"
   },

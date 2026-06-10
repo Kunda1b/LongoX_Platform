@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, executionsTable, workflowsTable } from "@autoflow/db";
-import { GetExecutionAnalyticsQueryParams } from "@autoflow/api-zod";
+import { db, executionsTable, workflowsTable } from "@longox/db";
+import { GetExecutionAnalyticsQueryParams } from "@longox/api-zod";
 
 const router: IRouter = Router();
 
@@ -15,7 +15,12 @@ router.get("/analytics/executions", async (req, res): Promise<void> => {
   const allExecs = await db.select().from(executionsTable);
 
   const now = new Date();
-  const stats: { date: string; total: number; success: number; failed: number }[] = [];
+  const stats: {
+    date: string;
+    total: number;
+    success: number;
+    failed: number;
+  }[] = [];
 
   for (let i = days - 1; i >= 0; i--) {
     const day = new Date(now);
@@ -57,10 +62,29 @@ router.get("/analytics/workflows", async (_req, res): Promise<void> => {
     db.select().from(executionsTable),
   ]);
 
-  const statsMap: Record<number, { workflowId: number; workflowName: string; total: number; success: number; failed: number; durationSum: number; durationCount: number }> = {};
+  const statsMap: Record<
+    number,
+    {
+      workflowId: number;
+      workflowName: string;
+      total: number;
+      success: number;
+      failed: number;
+      durationSum: number;
+      durationCount: number;
+    }
+  > = {};
 
   for (const w of workflows) {
-    statsMap[w.id] = { workflowId: w.id, workflowName: w.name, total: 0, success: 0, failed: 0, durationSum: 0, durationCount: 0 };
+    statsMap[w.id] = {
+      workflowId: w.id,
+      workflowName: w.name,
+      total: 0,
+      success: 0,
+      failed: 0,
+      durationSum: 0,
+      durationCount: 0,
+    };
   }
 
   for (const e of executions) {
@@ -82,8 +106,11 @@ router.get("/analytics/workflows", async (_req, res): Promise<void> => {
       total: s.total,
       success: s.success,
       failed: s.failed,
-      avgDurationMs: s.durationCount > 0 ? Math.round(s.durationSum / s.durationCount) : null,
-    }))
+      avgDurationMs:
+        s.durationCount > 0
+          ? Math.round(s.durationSum / s.durationCount)
+          : null,
+    })),
   );
 });
 

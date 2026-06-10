@@ -7,10 +7,34 @@ import { Search, RotateCcw } from "lucide-react";
 import Link from "next/link";
 
 const executions = [
-  { id: "exec-001", workflow: "Order Processing", status: "completed", started: "2 min ago", duration: "12s" },
-  { id: "exec-002", workflow: "Data Sync Pipeline", status: "running", started: "30s ago", duration: "..." },
-  { id: "exec-003", workflow: "Email Notification", status: "failed", started: "1h ago", duration: "8s" },
-  { id: "exec-004", workflow: "Slack Alerting", status: "queued", started: "just now", duration: "-" },
+  {
+    id: "exec-001",
+    workflow: "Order Processing",
+    status: "completed",
+    started: "2 min ago",
+    duration: "12s",
+  },
+  {
+    id: "exec-002",
+    workflow: "Data Sync Pipeline",
+    status: "running",
+    started: "30s ago",
+    duration: "...",
+  },
+  {
+    id: "exec-003",
+    workflow: "Email Notification",
+    status: "failed",
+    started: "1h ago",
+    duration: "8s",
+  },
+  {
+    id: "exec-004",
+    workflow: "Slack Alerting",
+    status: "queued",
+    started: "just now",
+    duration: "-",
+  },
 ];
 
 export default function ExecutionsPage() {
@@ -19,9 +43,13 @@ export default function ExecutionsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Executions</h1>
-          <p className="text-sm text-muted-foreground">View and manage workflow executions</p>
+          <p className="text-sm text-muted-foreground">
+            View and manage workflow executions
+          </p>
         </div>
-        <Button variant="outline" size="sm"><RotateCcw className="mr-1 h-4 w-4" /> Refresh</Button>
+        <Button variant="outline" size="sm">
+          <RotateCcw className="mr-1 h-4 w-4" /> Refresh
+        </Button>
       </div>
 
       <div className="relative w-full max-w-sm">
@@ -44,13 +72,25 @@ export default function ExecutionsPage() {
               <div className="col-span-3">{ex.workflow}</div>
               <div className="col-span-2">
                 <Badge
-                  variant={ex.status === "completed" ? "success" : ex.status === "running" ? "info" : ex.status === "failed" ? "destructive" : "secondary"}
+                  variant={
+                    ex.status === "completed"
+                      ? "success"
+                      : ex.status === "running"
+                        ? "info"
+                        : ex.status === "failed"
+                          ? "destructive"
+                          : "secondary"
+                  }
                 >
                   {ex.status}
                 </Badge>
               </div>
-              <div className="col-span-2 text-muted-foreground">{ex.started}</div>
-              <div className="col-span-2 text-muted-foreground">{ex.duration}</div>
+              <div className="col-span-2 text-muted-foreground">
+                {ex.started}
+              </div>
+              <div className="col-span-2 text-muted-foreground">
+                {ex.duration}
+              </div>
             </div>
           </Link>
         ))}

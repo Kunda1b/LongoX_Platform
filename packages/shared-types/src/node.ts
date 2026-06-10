@@ -1,4 +1,12 @@
-export type NodeFamily = "trigger" | "action" | "logic" | "ai" | "data" | "human" | "utility" | "boundary";
+export type NodeFamily =
+  | "trigger"
+  | "action"
+  | "logic"
+  | "ai"
+  | "data"
+  | "human"
+  | "utility"
+  | "boundary";
 
 export interface NodeTypeDefinition {
   id: string;
@@ -57,7 +65,12 @@ export const NODE_TYPE_REGISTRY: Record<string, NodeTypeDefinition> = {
     description: "Make an HTTP request",
     icon: "globe",
     category: "action",
-    configSchema: { url: "string", method: "string", headers: "object", body: "object" },
+    configSchema: {
+      url: "string",
+      method: "string",
+      headers: "object",
+      body: "object",
+    },
     inputSchema: {},
     outputSchema: { statusCode: "number", body: "object", headers: "object" },
     defaultConfig: { method: "GET" },
@@ -141,7 +154,11 @@ export const NODE_TYPE_REGISTRY: Record<string, NodeTypeDefinition> = {
     description: "Send a prompt to an LLM",
     icon: "sparkles",
     category: "ai",
-    configSchema: { model: "string", systemPrompt: "string", maxTokens: "number" },
+    configSchema: {
+      model: "string",
+      systemPrompt: "string",
+      maxTokens: "number",
+    },
     inputSchema: {},
     outputSchema: { result: "string", modelUsed: "string" },
     defaultConfig: { model: "gpt-4o-mini", maxTokens: 1024 },

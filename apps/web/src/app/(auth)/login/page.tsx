@@ -5,7 +5,13 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function LoginPage() {
   const { login, isLoading: authLoading } = useAuth();
@@ -34,7 +40,7 @@ export default function LoginPage() {
           <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-lg font-bold text-primary-foreground">
             FC
           </div>
-          <CardTitle>FlowCraft</CardTitle>
+          <CardTitle>LongoX</CardTitle>
           <CardDescription>Sign in to your account</CardDescription>
         </CardHeader>
         <CardContent>
@@ -61,7 +67,11 @@ export default function LoginPage() {
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading || authLoading}>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading || authLoading}
+            >
               {loading ? "Signing in..." : "Sign in"}
             </Button>
           </form>

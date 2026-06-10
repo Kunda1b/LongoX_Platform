@@ -25,7 +25,10 @@ type Environment = {
   isDefault?: boolean;
 };
 
-const ENV_CONFIG: Record<string, { label: string; color: string; icon: typeof Globe }> = {
+const ENV_CONFIG: Record<
+  string,
+  { label: string; color: string; icon: typeof Globe }
+> = {
   dev: { label: "Development", color: "text-blue-500", icon: Code2 },
   staging: { label: "Staging", color: "text-amber-500", icon: Server },
   prod: { label: "Production", color: "text-emerald-500", icon: Globe },
@@ -41,7 +44,7 @@ export function EnvironmentSwitcher() {
   });
 
   const activeCfg = currentEnvironment
-    ? ENV_CONFIG[currentEnvironment.type] ?? ENV_CONFIG.dev
+    ? (ENV_CONFIG[currentEnvironment.type] ?? ENV_CONFIG.dev)
     : null;
   const ActiveIcon = activeCfg?.icon ?? Globe;
 
@@ -54,7 +57,7 @@ export function EnvironmentSwitcher() {
           aria-expanded={open}
           className={cn(
             "justify-between gap-2 h-8 text-xs font-medium",
-            activeCfg?.color
+            activeCfg?.color,
           )}
         >
           <ActiveIcon className="h-3.5 w-3.5 shrink-0" />
@@ -96,7 +99,7 @@ export function EnvironmentSwitcher() {
                         "ml-auto h-4 w-4",
                         currentEnvironment?.id === env.id
                           ? "opacity-100"
-                          : "opacity-0"
+                          : "opacity-0",
                       )}
                     />
                   </CommandItem>

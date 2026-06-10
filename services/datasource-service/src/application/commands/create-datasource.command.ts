@@ -1,6 +1,9 @@
 import { DataSource } from "../../domain";
 import type { DataSourceRepository } from "../../domain";
-import type { DataSourceKind, DataSourceConfig } from "../../domain/datasource.entity";
+import type {
+  DataSourceKind,
+  DataSourceConfig,
+} from "../../domain/datasource.entity";
 
 export interface CreateDataSourceInput {
   tenantId: number;
@@ -58,7 +61,10 @@ export class DeleteDataSourceCommand {
 export class TestDataSourceConnectionCommand {
   constructor(
     private repository: DataSourceRepository,
-    private adapterRegistry: Map<string, import("../../domain").DataSourceAdapter>,
+    private adapterRegistry: Map<
+      string,
+      import("../../domain").DataSourceAdapter
+    >,
   ) {}
 
   async execute(id: number): Promise<{ success: boolean; error?: string }> {
@@ -69,7 +75,10 @@ export class TestDataSourceConnectionCommand {
     if (!adapter) {
       ds.markTested(false, `No adapter available for kind: ${ds.kind}`);
       await this.repository.update(id, { status: ds.status });
-      return { success: false, error: `Unsupported data source kind: ${ds.kind}` };
+      return {
+        success: false,
+        error: `Unsupported data source kind: ${ds.kind}`,
+      };
     }
 
     const result = await adapter.testConnection(ds.config);

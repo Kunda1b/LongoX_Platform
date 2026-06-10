@@ -1,5 +1,10 @@
-import type { Collaborator, PresenceState } from "@autoflow/workflow-canvas";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import type { Collaborator, PresenceState } from "@longox/workflow-canvas";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface CollaborationOverlayProps {
@@ -7,9 +12,12 @@ interface CollaborationOverlayProps {
   currentUserId?: string;
 }
 
-export function CollaborationCursors({ presence, currentUserId }: CollaborationOverlayProps) {
+export function CollaborationCursors({
+  presence,
+  currentUserId,
+}: CollaborationOverlayProps) {
   const collaborators = Array.from(presence.collaborators.values()).filter(
-    (c) => c.userId !== currentUserId && c.cursor
+    (c) => c.userId !== currentUserId && c.cursor,
   );
 
   if (collaborators.length === 0) return null;
@@ -39,7 +47,10 @@ export function CollaborationCursors({ presence, currentUserId }: CollaborationO
                   </svg>
                   <span
                     className="text-[10px] font-medium px-1.5 py-0.5 rounded-sm whitespace-nowrap"
-                    style={{ backgroundColor: collaborator.color, color: "white" }}
+                    style={{
+                      backgroundColor: collaborator.color,
+                      color: "white",
+                    }}
                   >
                     {collaborator.name}
                   </span>
@@ -61,7 +72,7 @@ export function CollaboratorAvatars({
   currentUserId,
 }: CollaborationOverlayProps) {
   const collaborators = Array.from(presence.collaborators.values()).filter(
-    (c) => c.userId !== currentUserId
+    (c) => c.userId !== currentUserId,
   );
 
   if (collaborators.length === 0) return null;
@@ -92,7 +103,9 @@ export function CollaboratorAvatars({
       ))}
       {collaborators.length > 5 && (
         <Avatar className="h-6 w-6 border-2 border-background bg-muted">
-          <AvatarFallback className="text-[9px]">+{collaborators.length - 5}</AvatarFallback>
+          <AvatarFallback className="text-[9px]">
+            +{collaborators.length - 5}
+          </AvatarFallback>
         </Avatar>
       )}
     </div>

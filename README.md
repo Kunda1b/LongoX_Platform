@@ -23,8 +23,8 @@ scripts/            — Workspace scripts
 
 ## Run & Operate
 
-- `pnpm --filter @autoflow/api-gateway run dev` — run the API server
-- `pnpm --filter @autoflow/web run dev` — run the frontend
+- `pnpm --filter @longox/api-gateway run dev` — run the API server
+- `pnpm --filter @longox/web run dev` — run the frontend
 - `pnpm run typecheck` — full typecheck
 - `pnpm run build` — typecheck + build all packages
 

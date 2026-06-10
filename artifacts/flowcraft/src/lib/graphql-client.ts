@@ -3,7 +3,11 @@ const API = import.meta.env["VITE_API_URL"] ?? "/api";
 export class GraphqlError extends Error {
   constructor(
     message: string,
-    public errors: Array<{ message: string; locations?: unknown[]; path?: string[] }>,
+    public errors: Array<{
+      message: string;
+      locations?: unknown[];
+      path?: string[];
+    }>,
   ) {
     super(message);
     this.name = "GraphqlError";
@@ -26,7 +30,9 @@ interface GraphqlOptions {
   operationName?: string;
 }
 
-export async function graphqlRequest<T = unknown>(options: GraphqlOptions): Promise<T> {
+export async function graphqlRequest<T = unknown>(
+  options: GraphqlOptions,
+): Promise<T> {
   const token = getAuthToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -49,10 +55,7 @@ export async function graphqlRequest<T = unknown>(options: GraphqlOptions): Prom
   const data = await res.json();
 
   if (data.errors && data.errors.length > 0) {
-    throw new GraphqlError(
-      data.errors[0].message,
-      data.errors,
-    );
+    throw new GraphqlError(data.errors[0].message, data.errors);
   }
 
   return data.data as T;

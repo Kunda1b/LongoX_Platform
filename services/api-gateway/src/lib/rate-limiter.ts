@@ -29,11 +29,17 @@ export class RateLimiter {
       entry.count++;
 
       res.setHeader("X-RateLimit-Limit", this.maxRequests);
-      res.setHeader("X-RateLimit-Remaining", Math.max(0, this.maxRequests - entry.count));
+      res.setHeader(
+        "X-RateLimit-Remaining",
+        Math.max(0, this.maxRequests - entry.count),
+      );
       res.setHeader("X-RateLimit-Reset", Math.ceil(entry.resetAt / 1000));
 
       if (entry.count > this.maxRequests) {
-        res.status(429).json({ error: "Too many requests", retryAfter: Math.ceil((entry.resetAt - now) / 1000) });
+        res.status(429).json({
+          error: "Too many requests",
+          retryAfter: Math.ceil((entry.resetAt - now) / 1000),
+        });
         return;
       }
 
@@ -59,7 +65,10 @@ export class RateLimiter {
       entry.count++;
 
       if (entry.count > maxPerTenant) {
-        res.status(429).json({ error: "Tenant rate limit exceeded", retryAfter: Math.ceil((entry.resetAt - now) / 1000) });
+        res.status(429).json({
+          error: "Tenant rate limit exceeded",
+          retryAfter: Math.ceil((entry.resetAt - now) / 1000),
+        });
         return;
       }
 

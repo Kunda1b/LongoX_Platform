@@ -1,4 +1,15 @@
-export type ConnectorCategory = "crm" | "communication" | "payments" | "ai" | "database" | "development" | "data" | "marketing" | "analytics" | "storage" | "other";
+export type ConnectorCategory =
+  | "crm"
+  | "communication"
+  | "payments"
+  | "ai"
+  | "database"
+  | "development"
+  | "data"
+  | "marketing"
+  | "analytics"
+  | "storage"
+  | "other";
 export type AuthType = "oauth2" | "apikey" | "basic" | "none";
 export type CertificationLevel = "official" | "verified" | "community";
 export type ConnectorStatus = "active" | "deprecated" | "disabled";
@@ -65,18 +76,44 @@ export interface ConnectorProps {
 export class Connector {
   constructor(private props: ConnectorProps) {}
 
-  get id(): number { return this.props.id; }
-  get name(): string { return this.props.name; }
-  get displayName(): string | undefined { return this.props.displayName; }
-  get version(): string { return this.props.version; }
-  get category(): ConnectorCategory { return this.props.category; }
-  get authType(): AuthType { return this.props.authType; }
-  get certificationLevel(): CertificationLevel { return this.props.certificationLevel; }
-  get status(): ConnectorStatus { return this.props.status; }
-  get isFeatured(): boolean { return this.props.isFeatured; }
-  get capabilities(): ConnectorCapabilities { return { ...this.props.capabilities }; }
-  get rateLimit(): ConnectorRateLimit { return { ...this.props.rateLimit }; }
-  get healthStatus(): ConnectorHealthStatus | undefined { return this.props.metadata?.healthStatus as ConnectorHealthStatus | undefined; }
+  get id(): number {
+    return this.props.id;
+  }
+  get name(): string {
+    return this.props.name;
+  }
+  get displayName(): string | undefined {
+    return this.props.displayName;
+  }
+  get version(): string {
+    return this.props.version;
+  }
+  get category(): ConnectorCategory {
+    return this.props.category;
+  }
+  get authType(): AuthType {
+    return this.props.authType;
+  }
+  get certificationLevel(): CertificationLevel {
+    return this.props.certificationLevel;
+  }
+  get status(): ConnectorStatus {
+    return this.props.status;
+  }
+  get isFeatured(): boolean {
+    return this.props.isFeatured;
+  }
+  get capabilities(): ConnectorCapabilities {
+    return { ...this.props.capabilities };
+  }
+  get rateLimit(): ConnectorRateLimit {
+    return { ...this.props.rateLimit };
+  }
+  get healthStatus(): ConnectorHealthStatus | undefined {
+    return this.props.metadata?.healthStatus as
+      | ConnectorHealthStatus
+      | undefined;
+  }
 
   deprecate(): void {
     this.props.status = "deprecated";

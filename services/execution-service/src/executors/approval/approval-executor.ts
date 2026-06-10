@@ -1,4 +1,9 @@
-import type { NodeExecutor, WorkflowNode, ExecutionContext, NodeExecutionResult } from "@autoflow/workflow-engine";
+import type {
+  NodeExecutor,
+  WorkflowNode,
+  ExecutionContext,
+  NodeExecutionResult,
+} from "@longox/workflow-engine";
 
 export class ApprovalExecutor implements NodeExecutor {
   canHandle(nodeTypeId: string): boolean {
@@ -20,7 +25,12 @@ export class ApprovalExecutor implements NodeExecutor {
         nodeName: node.name,
         nodeType: "human.approval",
         status: "success",
-        output: { approved: true, approvedBy: "system", comment: "No approvers configured, auto-approved", autoApproved: true },
+        output: {
+          approved: true,
+          approvedBy: "system",
+          comment: "No approvers configured, auto-approved",
+          autoApproved: true,
+        },
         error: null,
         durationMs: Date.now() - startTime,
         attemptNumber: 1,
@@ -32,7 +42,14 @@ export class ApprovalExecutor implements NodeExecutor {
       nodeName: node.name,
       nodeType: "human.approval",
       status: "success",
-      output: { approved: false, approvedBy: null, comment: null, pending: true, approvers, inputData: input },
+      output: {
+        approved: false,
+        approvedBy: null,
+        comment: null,
+        pending: true,
+        approvers,
+        inputData: input,
+      },
       error: null,
       durationMs: Date.now() - startTime,
       attemptNumber: 1,

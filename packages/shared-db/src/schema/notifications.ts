@@ -9,7 +9,9 @@ export const notificationsTable = pgTable("notifications", {
   status: text("status").notNull().default("unread"),
   recipientId: text("recipient_id"),
   metadata: jsonb("metadata").default({}),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export const notificationTemplatesTable = pgTable("notification_templates", {
@@ -19,9 +21,15 @@ export const notificationTemplatesTable = pgTable("notification_templates", {
   subject: text("subject"),
   body: text("body").notNull(),
   variables: jsonb("variables").default([]),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
 export type NotificationRecord = typeof notificationsTable.$inferSelect;
-export type NotificationTemplateRecord = typeof notificationTemplatesTable.$inferSelect;
+export type NotificationTemplateRecord =
+  typeof notificationTemplatesTable.$inferSelect;

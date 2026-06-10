@@ -1,2 +1,4 @@
-import React from 'react';
-export default function card() { return <div>card component</div>; }
+import React from "react";
+export default function card() {
+  return <div>card component</div>;
+}

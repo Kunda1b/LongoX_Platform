@@ -33,10 +33,18 @@ export interface InvoiceProps {
 export class Invoice {
   constructor(private props: InvoiceProps) {}
 
-  get id(): number { return this.props.id; }
-  get tenantId(): number { return this.props.tenantId; }
-  get total(): number { return this.props.total; }
-  get status(): string { return this.props.status; }
+  get id(): number {
+    return this.props.id;
+  }
+  get tenantId(): number {
+    return this.props.tenantId;
+  }
+  get total(): number {
+    return this.props.total;
+  }
+  get status(): string {
+    return this.props.status;
+  }
 
   markPaid(): void {
     this.props.status = "paid";

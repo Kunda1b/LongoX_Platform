@@ -8,12 +8,17 @@ import { Bot, Send } from "lucide-react";
 
 export default function AIPlaygroundPage() {
   const [prompt, setPrompt] = useState("");
-  const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
+  const [messages, setMessages] = useState<{ role: string; content: string }[]>(
+    [],
+  );
 
   const handleSend = () => {
     if (!prompt.trim()) return;
     setMessages((prev) => [...prev, { role: "user", content: prompt }]);
-    setMessages((prev) => [...prev, { role: "assistant", content: `Simulated response to: "${prompt}"` }]);
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: `Simulated response to: "${prompt}"` },
+    ]);
     setPrompt("");
   };
 
@@ -21,7 +26,9 @@ export default function AIPlaygroundPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">AI Playground</h1>
-        <p className="text-sm text-muted-foreground">Test AI models and prompts</p>
+        <p className="text-sm text-muted-foreground">
+          Test AI models and prompts
+        </p>
       </div>
 
       <Card className="flex flex-col h-[600px]">
@@ -37,12 +44,17 @@ export default function AIPlaygroundPage() {
             </p>
           )}
           {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`rounded-lg px-4 py-2 max-w-[80%] text-sm ${
-                m.role === "user"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted"
-              }`}>
+            <div
+              key={i}
+              className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`rounded-lg px-4 py-2 max-w-[80%] text-sm ${
+                  m.role === "user"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted"
+                }`}
+              >
                 {m.content}
               </div>
             </div>
@@ -50,7 +62,10 @@ export default function AIPlaygroundPage() {
         </CardContent>
         <div className="border-t p-4">
           <form
-            onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSend();
+            }}
             className="flex gap-2"
           >
             <Input
@@ -59,7 +74,9 @@ export default function AIPlaygroundPage() {
               placeholder="Type your prompt..."
               className="flex-1"
             />
-            <Button type="submit" size="icon"><Send className="h-4 w-4" /></Button>
+            <Button type="submit" size="icon">
+              <Send className="h-4 w-4" />
+            </Button>
           </form>
         </div>
       </Card>

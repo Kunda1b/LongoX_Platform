@@ -5,7 +5,11 @@ type Breadcrumb = { label: string; href?: string };
 
 type AppState = {
   tenant: { id: string; name: string; slug: string } | null;
-  currentEnvironment: { id: string; name: string; type: "dev" | "staging" | "prod" } | null;
+  currentEnvironment: {
+    id: string;
+    name: string;
+    type: "dev" | "staging" | "prod";
+  } | null;
   sidebarCollapsed: boolean;
   breadcrumbs: Breadcrumb[];
   setTenant: (tenant: AppState["tenant"]) => void;

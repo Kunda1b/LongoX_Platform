@@ -1,8 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Webhook, Plus, Copy, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -39,7 +52,9 @@ export default function WebhookEndpointsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`${API}/webhook-endpoints/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API}/webhook-endpoints/${id}`, {
+        method: "DELETE",
+      });
       if (!res.ok) throw new Error("Failed to delete");
     },
     onSuccess: () => {
@@ -47,7 +62,11 @@ export default function WebhookEndpointsPage() {
       toast({ title: "Endpoint deleted" });
     },
     onError: (err: Error) => {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -61,8 +80,12 @@ export default function WebhookEndpointsPage() {
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Webhook Endpoints</h1>
-          <p className="text-muted-foreground mt-1">Manage incoming webhook URLs for your workflows.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Webhook Endpoints
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Manage incoming webhook URLs for your workflows.
+          </p>
         </div>
         <Button onClick={() => navigate("/workflows")} className="gap-2">
           <Plus className="h-4 w-4" /> New Endpoint
@@ -76,19 +99,24 @@ export default function WebhookEndpointsPage() {
             All Endpoints
           </CardTitle>
           <CardDescription>
-            Each endpoint provides a unique URL that triggers a workflow when called.
+            Each endpoint provides a unique URL that triggers a workflow when
+            called.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="space-y-3">
-              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
             </div>
           ) : !endpoints?.length ? (
             <div className="text-center py-12 text-muted-foreground">
               <Webhook className="h-12 w-12 mx-auto mb-3 opacity-30" />
               <p className="font-medium">No webhook endpoints yet</p>
-              <p className="text-sm mt-1">Create a workflow with a webhook trigger to get started.</p>
+              <p className="text-sm mt-1">
+                Create a workflow with a webhook trigger to get started.
+              </p>
             </div>
           ) : (
             <div className="rounded-md border">
@@ -106,7 +134,11 @@ export default function WebhookEndpointsPage() {
                     <TableRow key={ep.id}>
                       <TableCell>
                         <div className="font-medium">{ep.name}</div>
-                        {ep.description && <div className="text-xs text-muted-foreground">{ep.description}</div>}
+                        {ep.description && (
+                          <div className="text-xs text-muted-foreground">
+                            {ep.description}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={ep.isActive ? "success" : "secondary"}>
@@ -116,15 +148,29 @@ export default function WebhookEndpointsPage() {
                       <TableCell>
                         <div className="text-sm">{ep.triggerCount} calls</div>
                         {ep.lastTriggeredAt && (
-                          <div className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(ep.lastTriggeredAt), { addSuffix: true })}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(ep.lastTriggeredAt), {
+                              addSuffix: true,
+                            })}
+                          </div>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => copyToClipboard(ep.id)} title="Copy webhook URL">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => copyToClipboard(ep.id)}
+                            title="Copy webhook URL"
+                          >
                             <Copy className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(ep.id)} title="Delete">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteMutation.mutate(ep.id)}
+                            title="Delete"
+                          >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>

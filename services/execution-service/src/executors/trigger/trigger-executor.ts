@@ -1,4 +1,9 @@
-import type { NodeExecutor, WorkflowNode, ExecutionContext, NodeExecutionResult } from "@autoflow/workflow-engine";
+import type {
+  NodeExecutor,
+  WorkflowNode,
+  ExecutionContext,
+  NodeExecutionResult,
+} from "@longox/workflow-engine";
 
 export class TriggerExecutor implements NodeExecutor {
   canHandle(nodeTypeId: string): boolean {

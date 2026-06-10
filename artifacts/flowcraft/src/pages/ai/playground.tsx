@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useListAiModels } from "@autoflow/api-client-react";
+import { useListAiModels } from "@longox/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
@@ -59,7 +65,10 @@ function fmtMs(ms: number) {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-function prettyOutput(output: unknown, responseFormat: "text" | "json"): string {
+function prettyOutput(
+  output: unknown,
+  responseFormat: "text" | "json",
+): string {
   if (responseFormat === "json") {
     try {
       return JSON.stringify(output, null, 2);
@@ -85,7 +94,11 @@ function CopyButton({ text }: { text: string }) {
           onClick={handleCopy}
           className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
         >
-          {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? (
+            <Check className="h-3.5 w-3.5 text-green-500" />
+          ) : (
+            <Copy className="h-3.5 w-3.5" />
+          )}
         </button>
       </TooltipTrigger>
       <TooltipContent>{copied ? "Copied!" : "Copy"}</TooltipContent>
@@ -97,41 +110,75 @@ function RunCard({ run, index }: { run: RunResult; index: number }) {
   const [expanded, setExpanded] = useState(index === 0);
   const outputText = run.error
     ? run.error
-    : prettyOutput(run.output, typeof run.output === "string" ? "text" : "json");
+    : prettyOutput(
+        run.output,
+        typeof run.output === "string" ? "text" : "json",
+      );
   const isError = !!run.error;
 
   return (
-    <Card className={`border ${isError ? "border-destructive/40" : "border-border"}`}>
+    <Card
+      className={`border ${isError ? "border-destructive/40" : "border-border"}`}
+    >
       <div
         className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none"
         onClick={() => setExpanded((v) => !v)}
       >
-        <div className={`h-2 w-2 rounded-full shrink-0 ${isError ? "bg-destructive" : "bg-green-500"}`} />
-        <span className="font-mono text-xs text-muted-foreground shrink-0">#{index + 1}</span>
-        <Badge variant="outline" className="text-xs font-mono shrink-0">{run.model}</Badge>
+        <div
+          className={`h-2 w-2 rounded-full shrink-0 ${isError ? "bg-destructive" : "bg-green-500"}`}
+        />
+        <span className="font-mono text-xs text-muted-foreground shrink-0">
+          #{index + 1}
+        </span>
+        <Badge variant="outline" className="text-xs font-mono shrink-0">
+          {run.model}
+        </Badge>
         <span className="text-sm truncate flex-1 text-muted-foreground">
-          {run.userMessage.length > 80 ? run.userMessage.slice(0, 80) + "…" : run.userMessage}
+          {run.userMessage.length > 80
+            ? run.userMessage.slice(0, 80) + "…"
+            : run.userMessage}
         </span>
         <div className="flex items-center gap-3 shrink-0 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{fmtMs(run.durationMs)}</span>
-          <span className="flex items-center gap-1"><Hash className="h-3 w-3" />{run.usage?.totalTokens ?? "—"}</span>
-          <span className="flex items-center gap-1"><Coins className="h-3 w-3" />{fmtCost(run.cost ?? 0)}</span>
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {fmtMs(run.durationMs)}
+          </span>
+          <span className="flex items-center gap-1">
+            <Hash className="h-3 w-3" />
+            {run.usage?.totalTokens ?? "—"}
+          </span>
+          <span className="flex items-center gap-1">
+            <Coins className="h-3 w-3" />
+            {fmtCost(run.cost ?? 0)}
+          </span>
         </div>
-        {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+        {expanded ? (
+          <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+        ) : (
+          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+        )}
       </div>
 
       {expanded && (
         <div className="border-t">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border">
             {[
-              { label: "Input tokens", value: String(run.usage?.inputTokens ?? "—") },
-              { label: "Output tokens", value: String(run.usage?.outputTokens ?? "—") },
+              {
+                label: "Input tokens",
+                value: String(run.usage?.inputTokens ?? "—"),
+              },
+              {
+                label: "Output tokens",
+                value: String(run.usage?.outputTokens ?? "—"),
+              },
               { label: "Duration", value: fmtMs(run.durationMs) },
               { label: "Cost", value: fmtCost(run.cost ?? 0) },
             ].map(({ label, value }) => (
               <div key={label} className="bg-card px-4 py-3">
                 <div className="text-xs text-muted-foreground">{label}</div>
-                <div className="font-mono text-sm font-semibold mt-0.5">{value}</div>
+                <div className="font-mono text-sm font-semibold mt-0.5">
+                  {value}
+                </div>
               </div>
             ))}
           </div>
@@ -144,11 +191,13 @@ function RunCard({ run, index }: { run: RunResult; index: number }) {
                 </span>
                 {!isError && <CopyButton text={outputText} />}
               </div>
-              <pre className={`text-sm rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-words font-mono leading-relaxed max-h-96 overflow-y-auto ${
-                isError
-                  ? "bg-destructive/10 text-destructive border border-destructive/20"
-                  : "bg-muted/50 border border-border"
-              }`}>
+              <pre
+                className={`text-sm rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-words font-mono leading-relaxed max-h-96 overflow-y-auto ${
+                  isError
+                    ? "bg-destructive/10 text-destructive border border-destructive/20"
+                    : "bg-muted/50 border border-border"
+                }`}
+              >
                 {outputText || "(empty response)"}
               </pre>
             </div>
@@ -156,8 +205,12 @@ function RunCard({ run, index }: { run: RunResult; index: number }) {
             {run.finishReason && !isError && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>Finish reason:</span>
-                <Badge variant="outline" className="text-xs">{run.finishReason}</Badge>
-                <span className="ml-auto">{new Date(run.createdAt).toLocaleTimeString()}</span>
+                <Badge variant="outline" className="text-xs">
+                  {run.finishReason}
+                </Badge>
+                <span className="ml-auto">
+                  {new Date(run.createdAt).toLocaleTimeString()}
+                </span>
               </div>
             )}
           </div>
@@ -172,7 +225,9 @@ export default function AiPlaygroundPage() {
   const enabledModels = models.filter((m) => m.isEnabled);
 
   const [selectedModel, setSelectedModel] = useState("gpt-4o-mini");
-  const [systemPrompt, setSystemPrompt] = useState("You are a helpful assistant.");
+  const [systemPrompt, setSystemPrompt] = useState(
+    "You are a helpful assistant.",
+  );
   const [userMessage, setUserMessage] = useState("");
   const [responseFormat, setResponseFormat] = useState<"text" | "json">("text");
   const [temperature, setTemperature] = useState(0.7);
@@ -207,7 +262,11 @@ export default function AiPlaygroundPage() {
         id: data.id ?? `local-${Date.now()}`,
         model: data.model ?? selectedModel,
         output: data.output ?? data.error ?? null,
-        usage: data.usage ?? { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        usage: data.usage ?? {
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+        },
         cost: data.cost ?? 0,
         durationMs: data.durationMs ?? 0,
         finishReason: data.finishReason ?? "stop",
@@ -220,7 +279,10 @@ export default function AiPlaygroundPage() {
       setRuns((prev) => [run, ...prev]);
 
       setTimeout(() => {
-        outputRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        outputRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
       }, 100);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error");
@@ -245,13 +307,20 @@ export default function AiPlaygroundPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">AI Playground</h1>
           <p className="text-muted-foreground mt-2">
-            Test prompts against any configured model. All runs are recorded and tracked for billing.
+            Test prompts against any configured model. All runs are recorded and
+            tracked for billing.
           </p>
         </div>
         {runs.length > 0 && (
           <div className="flex items-center gap-4 text-sm text-muted-foreground shrink-0">
-            <span className="flex items-center gap-1.5"><Hash className="h-3.5 w-3.5" />{totalTokens.toLocaleString()} tokens</span>
-            <span className="flex items-center gap-1.5"><Coins className="h-3.5 w-3.5" />{fmtCost(totalCost)} session</span>
+            <span className="flex items-center gap-1.5">
+              <Hash className="h-3.5 w-3.5" />
+              {totalTokens.toLocaleString()} tokens
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Coins className="h-3.5 w-3.5" />
+              {fmtCost(totalCost)} session
+            </span>
           </div>
         )}
       </div>
@@ -273,12 +342,16 @@ export default function AiPlaygroundPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {enabledModels.length === 0 ? (
-                    <SelectItem value="gpt-4o-mini">GPT-4o Mini (default)</SelectItem>
+                    <SelectItem value="gpt-4o-mini">
+                      GPT-4o Mini (default)
+                    </SelectItem>
                   ) : (
                     enabledModels.map((m) => (
                       <SelectItem key={m.id} value={m.modelId}>
                         <span className="font-medium">{m.name}</span>
-                        <span className="text-muted-foreground ml-1.5 text-xs">{m.provider}</span>
+                        <span className="text-muted-foreground ml-1.5 text-xs">
+                          {m.provider}
+                        </span>
                       </SelectItem>
                     ))
                   )}
@@ -298,7 +371,8 @@ export default function AiPlaygroundPage() {
                         : "border-border hover:bg-muted"
                     }`}
                   >
-                    <AlignLeft className="h-3.5 w-3.5" />Text
+                    <AlignLeft className="h-3.5 w-3.5" />
+                    Text
                   </button>
                   <button
                     onClick={() => setResponseFormat("json")}
@@ -308,7 +382,8 @@ export default function AiPlaygroundPage() {
                         : "border-border hover:bg-muted"
                     }`}
                   >
-                    <Braces className="h-3.5 w-3.5" />JSON
+                    <Braces className="h-3.5 w-3.5" />
+                    JSON
                   </button>
                 </div>
               </div>
@@ -319,25 +394,35 @@ export default function AiPlaygroundPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs">Temperature</Label>
-                    <span className="text-xs font-mono text-muted-foreground">{temperature.toFixed(1)}</span>
+                    <span className="text-xs font-mono text-muted-foreground">
+                      {temperature.toFixed(1)}
+                    </span>
                   </div>
                   <Slider
-                    min={0} max={2} step={0.1}
+                    min={0}
+                    max={2}
+                    step={0.1}
                     value={[temperature]}
                     onValueChange={([v]) => setTemperature(v)}
                   />
                   <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span>Precise</span><span>Balanced</span><span>Creative</span>
+                    <span>Precise</span>
+                    <span>Balanced</span>
+                    <span>Creative</span>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs">Max tokens</Label>
-                    <span className="text-xs font-mono text-muted-foreground">{maxTokens.toLocaleString()}</span>
+                    <span className="text-xs font-mono text-muted-foreground">
+                      {maxTokens.toLocaleString()}
+                    </span>
                   </div>
                   <Slider
-                    min={64} max={4096} step={64}
+                    min={64}
+                    max={4096}
+                    step={64}
                     value={[maxTokens]}
                     onValueChange={([v]) => setMaxTokens(v)}
                   />
@@ -349,16 +434,27 @@ export default function AiPlaygroundPage() {
           {runs.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold">Session Stats</CardTitle>
+                <CardTitle className="text-sm font-semibold">
+                  Session Stats
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {[
                   { label: "Runs", value: String(runs.length) },
-                  { label: "Total tokens", value: totalTokens.toLocaleString() },
+                  {
+                    label: "Total tokens",
+                    value: totalTokens.toLocaleString(),
+                  },
                   { label: "Session cost", value: fmtCost(totalCost) },
-                  { label: "Errors", value: String(runs.filter((r) => r.error).length) },
+                  {
+                    label: "Errors",
+                    value: String(runs.filter((r) => r.error).length),
+                  },
                 ].map(({ label, value }) => (
-                  <div key={label} className="flex justify-between items-center text-sm">
+                  <div
+                    key={label}
+                    className="flex justify-between items-center text-sm"
+                  >
                     <span className="text-muted-foreground">{label}</span>
                     <span className="font-mono font-medium">{value}</span>
                   </div>
@@ -370,7 +466,8 @@ export default function AiPlaygroundPage() {
                   className="w-full gap-2 text-muted-foreground"
                   onClick={() => setRuns([])}
                 >
-                  <RotateCcw className="h-3.5 w-3.5" />Clear history
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Clear history
                 </Button>
               </CardContent>
             </Card>
@@ -382,7 +479,10 @@ export default function AiPlaygroundPage() {
           <Card>
             <CardContent className="pt-5 space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="system-prompt" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <Label
+                  htmlFor="system-prompt"
+                  className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+                >
                   System prompt
                 </Label>
                 <Textarea
@@ -396,7 +496,10 @@ export default function AiPlaygroundPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="user-message" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <Label
+                  htmlFor="user-message"
+                  className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+                >
                   User message
                 </Label>
                 <Textarea
@@ -419,7 +522,9 @@ export default function AiPlaygroundPage() {
 
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">
-                  {responseFormat === "json" ? "Response will be parsed as JSON" : "Free-text response"}
+                  {responseFormat === "json"
+                    ? "Response will be parsed as JSON"
+                    : "Free-text response"}
                 </span>
                 <Button
                   onClick={handleRun}
@@ -427,9 +532,15 @@ export default function AiPlaygroundPage() {
                   className="gap-2"
                 >
                   {isRunning ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" />Running…</>
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Running…
+                    </>
                   ) : (
-                    <><Play className="h-4 w-4" />Run</>
+                    <>
+                      <Play className="h-4 w-4" />
+                      Run
+                    </>
                   )}
                 </Button>
               </div>
@@ -441,7 +552,9 @@ export default function AiPlaygroundPage() {
             <div className="space-y-3" ref={outputRef}>
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-semibold">Results</h2>
-                <Badge variant="secondary" className="text-xs">{runs.length}</Badge>
+                <Badge variant="secondary" className="text-xs">
+                  {runs.length}
+                </Badge>
               </div>
               {runs.map((run, i) => (
                 <RunCard key={run.id + i} run={run} index={i} />
@@ -453,8 +566,12 @@ export default function AiPlaygroundPage() {
             <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground border-2 border-dashed rounded-xl">
               <BrainCircuit className="h-10 w-10 mb-3 opacity-30" />
               <p className="font-medium">No runs yet</p>
-              <p className="text-sm mt-1">Write a prompt above and click Run to get started.</p>
-              <p className="text-xs mt-3 opacity-60">⌘Enter / Ctrl+Enter to run from keyboard</p>
+              <p className="text-sm mt-1">
+                Write a prompt above and click Run to get started.
+              </p>
+              <p className="text-xs mt-3 opacity-60">
+                ⌘Enter / Ctrl+Enter to run from keyboard
+              </p>
             </div>
           )}
         </div>

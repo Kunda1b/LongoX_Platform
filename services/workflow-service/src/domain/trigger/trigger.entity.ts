@@ -23,7 +23,11 @@ export class Trigger {
     );
   }
 
-  static createSchedule(workflowId: number, cron: string, timezone: string = "UTC"): Trigger {
+  static createSchedule(
+    workflowId: number,
+    cron: string,
+    timezone: string = "UTC",
+  ): Trigger {
     return new Trigger(
       `trigger-${workflowId}-schedule-${Date.now()}`,
       workflowId,

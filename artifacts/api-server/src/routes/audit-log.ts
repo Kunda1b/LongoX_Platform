@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, desc } from "drizzle-orm";
-import { db, auditLogTable } from "@autoflow/db";
+import { db, auditLogTable } from "@longox/db";
 
 const router: IRouter = Router();
 
@@ -19,15 +19,21 @@ function serializeAudit(e: typeof auditLogTable.$inferSelect) {
 
 router.get("/audit-log", async (req, res): Promise<void> => {
   const limit = Math.min(parseInt(String(req.query.limit ?? "100"), 10), 500);
-  const { resourceType, resourceId, action } = req.query as Record<string, string | undefined>;
+  const { resourceType, resourceId, action } = req.query as Record<
+    string,
+    string | undefined
+  >;
 
   let query = db.select().from(auditLogTable).$dynamic();
 
-  if (resourceType) query = query.where(eq(auditLogTable.resourceType, resourceType));
+  if (resourceType)
+    query = query.where(eq(auditLogTable.resourceType, resourceType));
   if (resourceId) query = query.where(eq(auditLogTable.resourceId, resourceId));
   if (action) query = query.where(eq(auditLogTable.action, action));
 
-  const entries = await query.orderBy(desc(auditLogTable.createdAt)).limit(limit);
+  const entries = await query
+    .orderBy(desc(auditLogTable.createdAt))
+    .limit(limit);
   res.json(entries.map(serializeAudit));
 });
 
