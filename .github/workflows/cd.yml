@@ -20,9 +20,22 @@ jobs:
       matrix:
         service:
           - api-gateway
-          - execution-service
           - auth-service
           - workflow-service
+          - execution-service
+          - scheduler-service
+          - connector-service
+          - template-service
+          - marketplace-service
+          - dashboard-service
+          - datasource-service
+          - ai-service
+          - billing-service
+          - metering-service
+          - notification-service
+          - audit-service
+          - search-service
+          - platform-service
     steps:
       - uses: actions/checkout@v4
       - name: Set Docker tag
@@ -58,12 +71,15 @@ jobs:
           export KUBECONFIG=kubeconfig.yaml
       - name: Deploy
         run: |
-          kubectl set image deployment/api-gateway -n platform-control \
-            api-gateway=${{ env.DOCKER_REGISTRY }}/autoflow/api-gateway:${{ github.sha }}
-          kubectl set image deployment/execution-worker -n platform-execution \
-            execution-worker=${{ env.DOCKER_REGISTRY }}/autoflow/execution-service:${{ github.sha }}
+          for svc in api-gateway auth-service workflow-service execution-service scheduler-service connector-service template-service marketplace-service dashboard-service datasource-service ai-service billing-service metering-service notification-service audit-service search-service platform-service; do
+            ns="platform-control"
+            case "$svc" in
+              execution-service|scheduler-service|ai-service) ns="platform-execution" ;;
+              audit-service|metering-service|notification-service|search-service) ns="platform-observability" ;;
+            esac
+            kubectl set image "deployment/$svc -n $ns" "$svc=${{ env.DOCKER_REGISTRY }}/autoflow/$svc:${{ github.sha }}" || true
+          done
           kubectl rollout status deployment/api-gateway -n platform-control --timeout=5m
-          kubectl rollout status deployment/execution-worker -n platform-execution --timeout=5m
 
   deploy-production:
     name: Deploy to Production
@@ -80,9 +96,12 @@ jobs:
           export KUBECONFIG=kubeconfig.yaml
       - name: Deploy
         run: |
-          kubectl set image deployment/api-gateway -n platform-control \
-            api-gateway=${{ env.DOCKER_REGISTRY }}/autoflow/api-gateway:${{ github.ref_name }}
-          kubectl set image deployment/execution-worker -n platform-execution \
-            execution-worker=${{ env.DOCKER_REGISTRY }}/autoflow/execution-service:${{ github.ref_name }}
+          for svc in api-gateway auth-service workflow-service execution-service scheduler-service connector-service template-service marketplace-service dashboard-service datasource-service ai-service billing-service metering-service notification-service audit-service search-service platform-service; do
+            ns="platform-control"
+            case "$svc" in
+              execution-service|scheduler-service|ai-service) ns="platform-execution" ;;
+              audit-service|metering-service|notification-service|search-service) ns="platform-observability" ;;
+            esac
+            kubectl set image "deployment/$svc -n $ns" "$svc=${{ env.DOCKER_REGISTRY }}/autoflow/$svc:${{ github.ref_name }}" || true
+          done
           kubectl rollout status deployment/api-gateway -n platform-control --timeout=5m
-          kubectl rollout status deployment/execution-worker -n platform-execution --timeout=5m

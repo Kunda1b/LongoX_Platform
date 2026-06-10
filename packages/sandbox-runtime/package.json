@@ -1,0 +1,16 @@
+{
+  "name": "@autoflow/sandbox-runtime",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@autoflow/shared-types": "workspace:*",
+    "@autoflow/shared-logger": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:"
+  }
+}

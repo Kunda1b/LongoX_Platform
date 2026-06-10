@@ -1,0 +1,25 @@
+{
+  "name": "@autoflow/platform-service",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/api/rest/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@autoflow/db": "workspace:*",
+    "@autoflow/shared-types": "workspace:*",
+    "@autoflow/shared-events": "workspace:*",
+    "@autoflow/shared-logger": "workspace:*",
+    "@autoflow/shared-auth": "workspace:*",
+    "@autoflow/shared-rbac": "workspace:*",
+    "express": "^5.0.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/express": "^5.0.0",
+    "tsx": "catalog:"
+  }
+}

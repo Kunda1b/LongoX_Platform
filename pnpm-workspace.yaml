@@ -1,9 +1,9 @@
-
 packages:
   - apps/*
   - services/*
   - packages/*
   - connectors/*
+  - lib/*
   - scripts
   - tools/*
 
@@ -128,4 +128,4 @@ overrides:
   "rollup>@rollup/rollup-win32-ia32": "-"
   "rollup>@rollup/rollup-win32-x64-gnu": "-"
   "rollup>@rollup/rollup-win32-x64-msvc": "-"
-storeDir: /tmp/pnpm-store
+storeDir: C:\Users\Buba Danso\.pnpm-store
