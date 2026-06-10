@@ -5,7 +5,7 @@ import {
   useDeleteCredential,
   useListConnectors,
   getListCredentialsQueryKey
-} from "@workspace/api-client-react";
+} from "@autoflow/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

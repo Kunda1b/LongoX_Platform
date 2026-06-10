@@ -1,7 +1,7 @@
 import { 
   useGetExecutionAnalytics, 
   useGetWorkflowAnalytics 
-} from "@workspace/api-client-react";
+} from "@autoflow/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { format } from "date-fns";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";

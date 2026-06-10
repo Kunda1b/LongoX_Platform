@@ -7,8 +7,8 @@ import {
   useDeleteTemplate,
   useForkTemplate,
   getListTemplatesQueryKey,
-} from "@workspace/api-client-react";
-import type { Template } from "@workspace/api-client-react";
+} from "@autoflow/api-client-react";
+import type { Template } from "@autoflow/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";

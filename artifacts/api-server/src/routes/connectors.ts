@@ -1,11 +1,11 @@
 import { Router, type IRouter } from "express";
 import { eq, like, and, sql, desc } from "drizzle-orm";
-import { db, connectorsTable, connectorActionsTable, connectorTriggersTable, connectorExecutionsTable } from "@workspace/db";
+import { db, connectorsTable, connectorActionsTable, connectorTriggersTable, connectorExecutionsTable } from "@autoflow/db";
 import {
   ListConnectorsQueryParams,
   GetConnectorParams,
   InstallConnectorParams,
-} from "@workspace/api-zod";
+} from "@autoflow/api-zod";
 
 const router: IRouter = Router();
 

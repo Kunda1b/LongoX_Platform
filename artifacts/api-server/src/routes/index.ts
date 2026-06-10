@@ -1,4 +1,6 @@
 import { Router, type IRouter } from "express";
+import { authMiddleware } from "../lib/auth";
+import authRouter from "./auth";
 import healthRouter from "./health";
 import workflowsRouter from "./workflows";
 import executionsRouter from "./executions";
@@ -13,6 +15,7 @@ import nodeTypesRouter from "./node-types";
 import dlqRouter from "./dlq";
 import auditLogRouter from "./audit-log";
 import webhooksRouter from "./webhooks";
+import webhookEndpointsRouter from "./webhook-endpoints";
 import billingRouter from "./billing";
 import environmentsRouter from "./environments";
 import tenantsRouter from "./tenants";
@@ -20,10 +23,19 @@ import rbacRouter from "./rbac";
 import aiModelsRouter from "./ai-models";
 import aiUsageRouter from "./ai-usage";
 import aiRunsRouter from "./ai-runs";
+import featureFlagsRouter from "./feature-flags";
+import notificationsRouter from "./notifications";
+import regionPoliciesRouter from "./region-policies";
+import searchRouter from "./search";
 
 const router: IRouter = Router();
 
+router.use(authRouter);
 router.use(healthRouter);
+router.use(webhooksRouter);
+
+router.use(authMiddleware);
+
 router.use(dashboardRouter);
 router.use(analyticsRouter);
 router.use(nodeTypesRouter);
@@ -36,7 +48,7 @@ router.use(appsRouter);
 router.use(dashboardsRouter);
 router.use(dlqRouter);
 router.use(auditLogRouter);
-router.use(webhooksRouter);
+router.use(webhookEndpointsRouter);
 router.use(billingRouter);
 router.use(environmentsRouter);
 router.use(tenantsRouter);
@@ -44,5 +56,9 @@ router.use(rbacRouter);
 router.use(aiModelsRouter);
 router.use(aiUsageRouter);
 router.use(aiRunsRouter);
+router.use(featureFlagsRouter);
+router.use(notificationsRouter);
+router.use(regionPoliciesRouter);
+router.use(searchRouter);
 
 export default router;

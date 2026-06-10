@@ -31,6 +31,10 @@ tags:
     description: Execution analytics and process insights
   - name: audit
     description: Audit log
+  - name: schedules
+    description: Workflow schedule management
+  - name: datasources
+    description: Data source connections for dashboards
 
 paths:
   /healthz:
@@ -2042,6 +2046,385 @@ paths:
         "204":
           description: Deleted
 
+  /schedules:
+    get:
+      operationId: listSchedules
+      tags: [schedules]
+      summary: List schedules
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+        - name: workflowId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Schedule list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Schedule"
+    post:
+      operationId: createSchedule
+      tags: [schedules]
+      summary: Create a schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+
+  /schedules/due:
+    get:
+      operationId: getDueSchedules
+      tags: [schedules]
+      summary: Get schedules that are due to run
+      responses:
+        "200":
+          description: Due schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Schedule"
+
+  /schedules/stats:
+    get:
+      operationId: getScheduleStats
+      tags: [schedules]
+      summary: Get schedule statistics
+      responses:
+        "200":
+          description: Schedule stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  active:
+                    type: integer
+                  paused:
+                    type: integer
+                  completed:
+                    type: integer
+
+  /schedules/{id}:
+    get:
+      operationId: getSchedule
+      tags: [schedules]
+      summary: Get a schedule by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Schedule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+    patch:
+      operationId: updateSchedule
+      tags: [schedules]
+      summary: Update a schedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+    delete:
+      operationId: deleteSchedule
+      tags: [schedules]
+      summary: Delete a schedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /schedules/{id}/pause:
+    post:
+      operationId: pauseSchedule
+      tags: [schedules]
+      summary: Pause a schedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paused
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+
+  /schedules/{id}/activate:
+    post:
+      operationId: activateSchedule
+      tags: [schedules]
+      summary: Activate a schedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+
+  /datasources:
+    get:
+      operationId: listDataSources
+      tags: [datasources]
+      summary: List data sources
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+        - name: kind
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Data source list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataSource"
+    post:
+      operationId: createDataSource
+      tags: [datasources]
+      summary: Create a data source
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataSourceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataSource"
+
+  /datasources/adapters:
+    get:
+      operationId: listDataSourceAdapters
+      tags: [datasources]
+      summary: List available data source adapters
+      responses:
+        "200":
+          description: Adapter kinds
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /datasources/{id}:
+    get:
+      operationId: getDataSource
+      tags: [datasources]
+      summary: Get a data source by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Data source
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataSource"
+    patch:
+      operationId: updateDataSource
+      tags: [datasources]
+      summary: Update a data source
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataSourceInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataSource"
+    delete:
+      operationId: deleteDataSource
+      tags: [datasources]
+      summary: Delete a data source
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /datasources/{id}/test:
+    post:
+      operationId: testDataSourceConnection
+      tags: [datasources]
+      summary: Test a data source connection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Connection test result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  error:
+                    type: string
+
+  /datasources/{id}/query:
+    post:
+      operationId: executeDataSourceQuery
+      tags: [datasources]
+      summary: Execute a query against a data source
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+      responses:
+        "200":
+          description: Query result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  columns:
+                    type: array
+                    items:
+                      type: string
+                  rows:
+                    type: array
+                    items:
+                      type: object
+                  rowCount:
+                    type: integer
+                  executionTimeMs:
+                    type: integer
+
+  /datasources/{id}/tables:
+    get:
+      operationId: listDataSourceTables
+      tags: [datasources]
+      summary: List tables in a data source
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Table list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
 components:
   schemas:
     HealthStatus:
@@ -3409,3 +3792,141 @@ components:
           type: integer
         notes:
           type: string
+
+    Schedule:
+      type: object
+      required: [id, tenantId, workflowId, name, interval, timezone, status, startAt, runCount, retryOnFailure, maxRetries, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        workflowId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        interval:
+          type: string
+          enum: [once, recurring, cron]
+        cronExpression:
+          type: string
+          nullable: true
+        timezone:
+          type: string
+        status:
+          type: string
+          enum: [active, paused, completed, failed]
+        startAt:
+          type: string
+        endAt:
+          type: string
+          nullable: true
+        lastRunAt:
+          type: string
+          nullable: true
+        nextRunAt:
+          type: string
+          nullable: true
+        maxRuns:
+          type: integer
+          nullable: true
+        runCount:
+          type: integer
+        retryOnFailure:
+          type: boolean
+        maxRetries:
+          type: integer
+        metadata:
+          type: object
+          nullable: true
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ScheduleInput:
+      type: object
+      required: [tenantId, workflowId, name, interval]
+      properties:
+        tenantId:
+          type: integer
+        workflowId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        interval:
+          type: string
+          enum: [once, recurring, cron]
+        cronExpression:
+          type: string
+        timezone:
+          type: string
+        startAt:
+          type: string
+        endAt:
+          type: string
+        maxRuns:
+          type: integer
+        retryOnFailure:
+          type: boolean
+        maxRetries:
+          type: integer
+        metadata:
+          type: object
+
+    DataSource:
+      type: object
+      required: [id, tenantId, name, kind, status, createdBy, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        kind:
+          type: string
+          enum: [postgresql, mysql, mongodb, rest_api, graphql, bigquery, snowflake, csv_upload, custom]
+        config:
+          type: object
+        status:
+          type: string
+          enum: [active, inactive, error, testing]
+        lastTestedAt:
+          type: string
+          nullable: true
+        lastTestError:
+          type: string
+          nullable: true
+        createdBy:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    DataSourceInput:
+      type: object
+      required: [tenantId, name, kind, createdBy]
+      properties:
+        tenantId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        kind:
+          type: string
+          enum: [postgresql, mysql, mongodb, rest_api, graphql, bigquery, snowflake, csv_upload, custom]
+        config:
+          type: object
+        createdBy:
+          type: integer

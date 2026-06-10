@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListAuditLog } from "@workspace/api-client-react";
+import { useListAuditLog } from "@autoflow/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

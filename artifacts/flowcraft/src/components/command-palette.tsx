@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
-import { useGlobalSearch } from "@workspace/api-client-react";
+import { useGlobalSearch } from "@autoflow/api-client-react";
 import { Workflow, LayoutDashboard, Package, Layers, Zap, FileText, Settings, BarChart3, Flag, Bell, Globe, Shield, Building2, CreditCard, MapPin } from "lucide-react";
 
 const TYPE_ICONS: Record<string, typeof Workflow> = {

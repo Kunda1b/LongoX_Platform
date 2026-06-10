@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: execution-worker
+  namespace: platform-execution
+  labels:
+    app: execution-worker
+    tier: execution
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: execution-worker
+  template:
+    metadata:
+      labels:
+        app: execution-worker
+    spec:
+      containers:
+        - name: execution-worker
+          image: autoflow/execution-service:latest
+          ports:
+            - containerPort: 3002
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: database_url
+            - name: REDIS_URL
+              value: "redis://redis.platform-control.svc.cluster.local:6379"
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ai-keys
+                  key: openai
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: execution-worker
+  namespace: platform-execution
+spec:
+  selector:
+    app: execution-worker
+  ports:
+    - port: 80
+      targetPort: 3002
+  type: ClusterIP

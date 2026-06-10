@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import Dashboard from "@/pages/dashboard";
 import Workflows from "@/pages/workflows/index";
 import WorkflowDetail from "@/pages/workflows/detail";
@@ -20,9 +20,18 @@ import EnvironmentsPage from "@/pages/environments/index";
 import TenantsPage from "@/pages/tenants/index";
 import RbacPage from "@/pages/rbac/index";
 import AiPlayground from "@/pages/ai/playground";
+import AiModels from "@/pages/ai/models";
+import AiAnalytics from "@/pages/ai/analytics";
+import AiPrompts from "@/pages/ai/prompts";
+import FeatureFlagsPage from "@/pages/feature-flags/index";
+import NotificationsPage from "@/pages/notifications/index";
+import RegionsPage from "@/pages/settings/regions";
+import WebhookEndpointsPage from "@/pages/webhook-endpoints/index";
+import LoginPage from "@/pages/login";
 import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout";
+import { AuthProvider } from "@/lib/auth-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -69,7 +78,16 @@ function AppRoutes() {
         <Route path="/dlq" component={DlqPage} />
         <Route path="/audit-log" component={AuditLogPage} />
 
+        <Route path="/webhook-endpoints" component={WebhookEndpointsPage} />
+
         <Route path="/ai/playground" component={AiPlayground} />
+        <Route path="/ai/models" component={AiModels} />
+        <Route path="/ai/analytics" component={AiAnalytics} />
+        <Route path="/ai/prompts" component={AiPrompts} />
+
+        <Route path="/feature-flags" component={FeatureFlagsPage} />
+        <Route path="/notifications" component={NotificationsPage} />
+        <Route path="/settings/regions" component={RegionsPage} />
 
         <Route component={NotFound} />
       </Switch>
@@ -81,7 +99,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
-      {/* Catch-all: no path = matches every other route */}
+      <Route path="/login" component={LoginPage} />
       <Route>{() => <AppRoutes />}</Route>
     </Switch>
   );
@@ -90,10 +108,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Router />
-        <Toaster />
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Router />
+          <Toaster />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

@@ -7,7 +7,7 @@ import {
   useListNodeTypes,
   getGetExecutionQueryKey,
   getListExecutionsQueryKey,
-} from "@workspace/api-client-react";
+} from "@autoflow/api-client-react";
 import { StatusBadge } from "@/components/badges";
 import {
   ArrowLeft,

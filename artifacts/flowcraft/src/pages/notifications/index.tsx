@@ -3,8 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useListNotifications, useListNotificationTemplates, useCreateNotification, useMarkNotificationRead,
   getListNotificationsQueryKey,
-} from "@workspace/api-client-react";
-import type { Notification } from "@workspace/api-client-react";
+} from "@autoflow/api-client-react";
+import type { Notification } from "@autoflow/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

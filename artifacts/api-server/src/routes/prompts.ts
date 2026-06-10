@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, sql } from "drizzle-orm";
-import { db, promptsTable, promptVersionsTable } from "@workspace/db";
+import { db, promptsTable, promptVersionsTable } from "@autoflow/db";
 
 const router: IRouter = Router();
 

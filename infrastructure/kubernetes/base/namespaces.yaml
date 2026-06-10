@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-control
+  labels:
+    name: platform-control
+    tier: control
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-execution
+  labels:
+    name: platform-execution
+    tier: execution
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-observability
+  labels:
+    name: platform-observability
+    tier: observability

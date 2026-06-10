@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { ActivityItemStatus, AppStatus, AppType, ExecutionDetailStatus, ExecutionStatus, ExecutionStepStatus, WorkflowStatus, WorkflowUpdateStatus } from "@workspace/api-client-react";
+import { ActivityItemStatus, AppStatus, AppType, ExecutionDetailStatus, ExecutionStatus, ExecutionStepStatus, WorkflowStatus, WorkflowUpdateStatus } from "@autoflow/api-client-react";
 
 export function StatusBadge({ status }: { status: string }) {
   switch (status) {

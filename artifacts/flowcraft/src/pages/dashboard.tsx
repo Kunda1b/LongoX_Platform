@@ -1,4 +1,4 @@
-import { useGetDashboardSummary, useGetRecentActivity } from "@workspace/api-client-react";
+import { useGetDashboardSummary, useGetRecentActivity } from "@autoflow/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, AppWindow, Cable, CheckCircle2, ListTree, PlayCircle, Settings2, XCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";

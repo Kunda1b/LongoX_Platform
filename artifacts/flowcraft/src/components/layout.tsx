@@ -1,10 +1,10 @@
 import { Link, useLocation } from "wouter";
-import { 
-  Activity, 
-  AppWindow, 
-  BarChart, 
-  Cable, 
-  LayoutDashboard, 
+import {
+  Activity,
+  AppWindow,
+  BarChart,
+  Cable,
+  LayoutDashboard,
   Workflow as WorkflowIcon,
   Layers,
   KeyRound,
@@ -17,6 +17,12 @@ import {
   Receipt,
   BrainCircuit,
   Building2,
+  Bell,
+  Flag,
+  MapPin,
+  Bot,
+  MessageSquareText,
+  ChartLine,
 } from "lucide-react";
 import {
   Sidebar,
@@ -109,6 +115,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/webhook-endpoints")}>
+                      <Link href="/webhook-endpoints">
+                        <Webhook />
+                        <span>Webhook Triggers</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -118,10 +132,34 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/ai/playground")}>
+                    <SidebarMenuButton asChild isActive={location === "/ai/playground"}>
                       <Link href="/ai/playground">
                         <BrainCircuit />
                         <span>Playground</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === "/ai/models"}>
+                      <Link href="/ai/models">
+                        <Bot />
+                        <span>Models</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === "/ai/prompts"}>
+                      <Link href="/ai/prompts">
+                        <MessageSquareText />
+                        <span>Prompts</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === "/ai/analytics"}>
+                      <Link href="/ai/analytics">
+                        <ChartLine />
+                        <span>AI Analytics</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -146,14 +184,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <Link href="/audit-log">
                         <Shield />
                         <span>Audit Log</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={false}>
-                      <Link href="/executions">
-                        <Webhook />
-                        <span>Webhook Triggers</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -242,6 +272,30 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <Link href="/tenants">
                         <Building2 />
                         <span>Tenants</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/feature-flags")}>
+                      <Link href="/feature-flags">
+                        <Flag />
+                        <span>Feature Flags</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/notifications")}>
+                      <Link href="/notifications">
+                        <Bell />
+                        <span>Notifications</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/settings/regions")}>
+                      <Link href="/settings/regions">
+                        <MapPin />
+                        <span>Regions</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

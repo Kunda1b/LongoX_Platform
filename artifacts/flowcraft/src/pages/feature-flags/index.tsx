@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListFeatureFlags, useCreateFeatureFlag, useUpdateFeatureFlag, useDeleteFeatureFlag, getListFeatureFlagsQueryKey,
-} from "@workspace/api-client-react";
-import type { FeatureFlag } from "@workspace/api-client-react";
+} from "@autoflow/api-client-react";
+import type { FeatureFlag } from "@autoflow/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

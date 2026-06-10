@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, like, sql } from "drizzle-orm";
-import { db, appsTable } from "@workspace/db";
+import { db, appsTable } from "@autoflow/db";
 import {
   ListAppsQueryParams,
   CreateAppBody,
@@ -8,7 +8,7 @@ import {
   UpdateAppParams,
   UpdateAppBody,
   DeleteAppParams,
-} from "@workspace/api-zod";
+} from "@autoflow/api-zod";
 
 const router: IRouter = Router();
 

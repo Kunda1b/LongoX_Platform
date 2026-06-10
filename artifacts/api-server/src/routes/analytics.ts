@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, executionsTable, workflowsTable } from "@workspace/db";
-import { GetExecutionAnalyticsQueryParams } from "@workspace/api-zod";
+import { db, executionsTable, workflowsTable } from "@autoflow/db";
+import { GetExecutionAnalyticsQueryParams } from "@autoflow/api-zod";
 
 const router: IRouter = Router();
 

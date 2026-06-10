@@ -34,7 +34,7 @@ import {
   BarChart2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Template } from "@workspace/api-client-react";
+import type { Template } from "@autoflow/api-client-react";
 
 // ─── Category meta (mirrors workflow-builder) ─────────────────────────────────
 

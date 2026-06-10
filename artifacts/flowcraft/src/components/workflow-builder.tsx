@@ -47,10 +47,10 @@ import {
   PanelLeftOpen,
   Menu,
 } from "lucide-react";
-import { useUpdateWorkflow } from "@workspace/api-client-react";
+import { useUpdateWorkflow } from "@autoflow/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import type { NodeType } from "@workspace/api-client-react";
-import type { WorkflowNode } from "@workspace/api-client-react";
+import type { NodeType } from "@autoflow/api-client-react";
+import type { WorkflowNode } from "@autoflow/api-client-react";
 import { cn } from "@/lib/utils";
 
 // ─── Mobile detection ─────────────────────────────────────────────────────────

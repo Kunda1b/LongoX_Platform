@@ -1,0 +1,19 @@
+{
+  "name": "@autoflow/workflow-engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@autoflow/shared-types": "workspace:*",
+    "@autoflow/shared-logger": "workspace:*",
+    "@autoflow/shared-events": "workspace:*",
+    "@autoflow/db": "workspace:*",
+    "drizzle-orm": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:"
+  }
+}

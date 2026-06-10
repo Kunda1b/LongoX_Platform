@@ -1,4 +1,4 @@
-import { useGetAppStats } from "@workspace/api-client-react";
+import { useGetAppStats } from "@autoflow/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, AppWindow, FileText, LayoutDashboard, FormInput } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";

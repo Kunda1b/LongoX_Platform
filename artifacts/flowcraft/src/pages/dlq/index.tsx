@@ -5,7 +5,7 @@ import {
   useRetryDlqEntry,
   useDismissDlqEntry,
   getListDlqEntriesQueryKey,
-} from "@workspace/api-client-react";
+} from "@autoflow/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

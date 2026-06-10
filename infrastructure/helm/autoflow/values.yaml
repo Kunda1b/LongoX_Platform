@@ -1,0 +1,119 @@
+global:
+  environment: production
+  imageRegistry: ""
+  imageTag: latest
+
+apiGateway:
+  name: api-gateway
+  replicaCount: 2
+  image:
+    repository: autoflow/api-gateway
+    tag: latest
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3001
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+  env:
+    NODE_ENV: production
+    LOG_LEVEL: info
+    API_PREFIX: /api/v1
+
+executionWorker:
+  name: execution-worker
+  replicaCount: 3
+  image:
+    repository: autoflow/execution-service
+    tag: latest
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1
+      memory: 2Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 80
+
+webApp:
+  name: web-app
+  replicaCount: 2
+  image:
+    repository: autoflow/web-app
+    tag: latest
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 5173
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 250m
+      memory: 512Mi
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: app.flowbuilder.io
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: api.flowbuilder.io
+      paths:
+        - path: /api
+          pathType: Prefix
+
+postgresql:
+  enabled: true
+  auth:
+    database: autoflow
+    username: autoflow_admin
+  primary:
+    persistence:
+      size: 50Gi
+    resources:
+      requests:
+        memory: 2Gi
+        cpu: 500m
+
+redis:
+  enabled: true
+  architecture: replication
+  auth:
+    enabled: true
+  master:
+    persistence:
+      size: 10Gi
+  replica:
+    replicaCount: 2
+    persistence:
+      size: 10Gi
+
+monitoring:
+  enabled: true
+  grafana:
+    adminPassword: ""
+  prometheus:
+    retentionDays: 30

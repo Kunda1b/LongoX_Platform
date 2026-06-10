@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, like, and, sql, desc } from "drizzle-orm";
-import { db, templatesTable, workflowsTable, templateVersionsTable } from "@workspace/db";
-import { ListTemplatesQueryParams, GetTemplateParams } from "@workspace/api-zod";
+import { db, templatesTable, workflowsTable, templateVersionsTable } from "@autoflow/db";
+import { ListTemplatesQueryParams, GetTemplateParams } from "@autoflow/api-zod";
 import { z } from "zod";
 
 const router: IRouter = Router();

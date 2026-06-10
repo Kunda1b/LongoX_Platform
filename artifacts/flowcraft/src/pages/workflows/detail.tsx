@@ -16,8 +16,8 @@ import {
   getListTemplatesQueryKey,
   getListWorkflowVersionsQueryKey,
   getListWorkflowPromotionsQueryKey,
-} from "@workspace/api-client-react";
-import type { Environment, WorkflowPromotion } from "@workspace/api-client-react";
+} from "@autoflow/api-client-react";
+import type { Environment, WorkflowPromotion } from "@autoflow/api-client-react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

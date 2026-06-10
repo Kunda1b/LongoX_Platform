@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { sql } from "drizzle-orm";
-import { db, tokenUsageTable, aiModelsTable } from "@workspace/db";
+import { db, tokenUsageTable, aiModelsTable } from "@autoflow/db";
 
 const router: IRouter = Router();
 

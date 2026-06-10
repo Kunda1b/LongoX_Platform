@@ -1,0 +1,15 @@
+{
+  "name": "@autoflow/shared-events",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "pino": "^9.14.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:"
+  }
+}

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { ListNodeTypesQueryParams } from "@workspace/api-zod";
+import { ListNodeTypesQueryParams } from "@autoflow/api-zod";
 
 const router: IRouter = Router();
 

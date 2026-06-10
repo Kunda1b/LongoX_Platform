@@ -11,8 +11,8 @@ import {
   useRevokeRole,
   getListRolesQueryKey,
   getListUserRolesQueryKey,
-} from "@workspace/api-client-react";
-import type { Role, Permission } from "@workspace/api-client-react";
+} from "@autoflow/api-client-react";
+import type { Role, Permission } from "@autoflow/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

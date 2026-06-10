@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { UsageSummary, UsageEvent, BillingPeriod, BillingInvoice } from "@workspace/api-client-react";
+import type { UsageSummary, UsageEvent, BillingPeriod, BillingInvoice } from "@autoflow/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";

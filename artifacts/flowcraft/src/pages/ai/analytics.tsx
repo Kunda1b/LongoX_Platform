@@ -1,4 +1,4 @@
-import { useListTokenUsage, useGetAiUsageSummary } from "@workspace/api-client-react";
+import { useListTokenUsage, useGetAiUsageSummary } from "@autoflow/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Brain, Zap, DollarSign, Activity } from "lucide-react";

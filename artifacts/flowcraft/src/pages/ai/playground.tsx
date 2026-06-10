@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useListAiModels } from "@workspace/api-client-react";
+import { useListAiModels } from "@autoflow/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";

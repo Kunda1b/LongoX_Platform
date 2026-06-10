@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Environment } from "@workspace/api-client-react";
+import type { Environment } from "@autoflow/api-client-react";
 import {
   useCreateEnvironment,
   useDeleteEnvironment,
   useUpdateEnvironment,
   getListEnvironmentsQueryKey,
   EnvironmentInputType,
-} from "@workspace/api-client-react";
+} from "@autoflow/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

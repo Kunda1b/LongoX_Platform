@@ -5,8 +5,8 @@ import {
   useListConnectorCategories,
   useInstallConnector,
   getListConnectorsQueryKey,
-} from "@workspace/api-client-react";
-import type { Connector } from "@workspace/api-client-react";
+} from "@autoflow/api-client-react";
+import type { Connector } from "@autoflow/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
