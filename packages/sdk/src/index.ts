@@ -26,7 +26,7 @@ export type SdkConfig = {
   token?: string;
 };
 
-export class FlowBuilder {
+export class LongoX {
   private config: SdkConfig;
   auth: AuthClient;
   workflow: WorkflowClient;

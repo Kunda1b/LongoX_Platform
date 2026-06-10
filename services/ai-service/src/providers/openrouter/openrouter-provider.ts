@@ -26,7 +26,7 @@ export class OpenRouterProvider {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.apiKey}`,
-        "HTTP-Referer": process.env.APP_URL ?? "https://flowbuilder.io",
+        "HTTP-Referer": process.env.APP_URL ?? "https://longox.io",
         "X-Title": "Flow Builder Nexus",
       },
       body: JSON.stringify({

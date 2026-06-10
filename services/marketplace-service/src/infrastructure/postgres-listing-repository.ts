@@ -17,7 +17,7 @@ export class PostgresListingRepository implements ListingRepository {
       listingType: (row.templateType as ListingType) ?? "template",
       category: row.category,
       tags: (row.tags ?? []) as string[],
-      author: "FlowBuilder",
+      author: "LongoX",
       authorId: 0,
       version: "1.0.0",
       status: (row.isCustom ? "draft" : "published") as ListingStatus,

@@ -38,7 +38,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-lg font-bold text-primary-foreground">
-            FC
+            LX
           </div>
           <CardTitle>LongoX</CardTitle>
           <CardDescription>Sign in to your account</CardDescription>

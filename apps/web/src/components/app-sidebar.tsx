@@ -73,7 +73,7 @@ export function AppSidebar() {
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-56 flex-col border-r bg-sidebar">
       <div className="flex h-14 items-center gap-2 border-b px-4">
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
-          FC
+          LX
         </div>
         <span className="text-sm font-semibold">LongoX</span>
       </div>

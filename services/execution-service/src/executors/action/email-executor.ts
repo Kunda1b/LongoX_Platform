@@ -51,7 +51,7 @@ export class EmailExecutor implements NodeExecutor {
         };
       }
 
-      const from = String(config.from ?? "noreply@flowbuilder.io");
+      const from = String(config.from ?? "noreply@longox.io");
 
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",

@@ -21,21 +21,21 @@ async function ensureSeedUser() {
   const hash = await bcrypt.hash("admin123", 10);
   await db.insert(usersTable).values([
     {
-      email: "admin@flowbuilder.io",
+      email: "admin@longox.io",
       passwordHash: hash,
       name: "Admin User",
       tenantId: tenantId ?? undefined,
       role: "admin",
     },
     {
-      email: "editor@flowbuilder.io",
+      email: "editor@longox.io",
       passwordHash: hash,
       name: "Editor User",
       tenantId: tenantId ?? undefined,
       role: "editor",
     },
     {
-      email: "viewer@flowbuilder.io",
+      email: "viewer@longox.io",
       passwordHash: hash,
       name: "Viewer User",
       tenantId: tenantId ?? undefined,
