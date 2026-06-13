@@ -883,6 +883,7 @@ export type AiUsageSummaryByProviderItem = { [key: string]: unknown };
 export type AiUsageSummaryByModelItem = { [key: string]: unknown };
 
 export interface AiUsageSummary {
+  totalTokens?: number;
   totalInputTokens: number;
   totalOutputTokens: number;
   totalCost: number;
