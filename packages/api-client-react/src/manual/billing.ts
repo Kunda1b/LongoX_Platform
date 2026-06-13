@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
   UseQueryOptions,
   UseMutationOptions,
+  UseQueryResult,
+  QueryKey,
 } from "@tanstack/react-query";
 import { customFetch } from "../custom-fetch";
 import type { ErrorType } from "../custom-fetch";
@@ -118,8 +120,7 @@ export function useListPlans<
   const queryKey = queryOptions?.queryKey ?? getPlansQueryKey();
   const queryFn = ({ signal }: { signal?: AbortSignal }) =>
     listPlans({ signal, ...requestOptions });
-  const query = useQuery({ queryKey, queryFn, ...queryOptions }) as any;
-  return { ...query, queryKey };
+  return useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 }
 
 export function useGetSubscriptionStatus<
@@ -135,8 +136,7 @@ export function useGetSubscriptionStatus<
   const queryKey = queryOptions?.queryKey ?? getSubscriptionQueryKey();
   const queryFn = ({ signal }: { signal?: AbortSignal }) =>
     getSubscriptionStatus({ signal, ...requestOptions });
-  const query = useQuery({ queryKey, queryFn, ...queryOptions }) as any;
-  return { ...query, queryKey };
+  return useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 }
 
 export function useCreateCheckoutSession<TError = ErrorType<unknown>>(
