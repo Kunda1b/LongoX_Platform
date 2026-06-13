@@ -35,10 +35,17 @@ export function EnvironmentSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="flex items-center gap-2 px-2 h-9">
-          <div className={cn("h-2 w-2 rounded-full", getEnvColor(currentEnv?.type ?? "dev"))} />
-          <span className="text-sm font-medium">{currentEnv?.name ?? "Environment"}</span>
-          <ChevronDown className="h-3 w-3 text-muted-foreground" />
+        <Button variant="ghost" className="flex h-9 items-center gap-2 px-2">
+          <div
+            className={cn(
+              "h-2 w-2 shrink-0 rounded-full",
+              getEnvColor(currentEnv?.type ?? "dev"),
+            )}
+          />
+          <span className="max-w-[100px] truncate text-sm font-medium">
+            {currentEnv?.name ?? "Environment"}
+          </span>
+          <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">

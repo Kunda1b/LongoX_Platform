@@ -98,16 +98,16 @@ export default function OnboardingPage() {
           </p>
         </div>
 
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
+        <div className="mb-6 overflow-x-auto pb-2 sm:mb-8">
+          <div className="flex min-w-[320px] items-center justify-between px-1 sm:min-w-0">
             {steps.map((s, i) => {
               const Icon = s.icon;
               const isActive = i === step;
               const isDone = i < step;
               return (
-                <div key={s.id} className="flex flex-col items-center">
+                <div key={s.id} className="flex flex-col items-center px-0.5 sm:px-0">
                   <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors ${
+                    className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors sm:h-10 sm:w-10 ${
                       isDone
                         ? "border-primary bg-primary text-primary-foreground"
                         : isActive
@@ -116,13 +116,13 @@ export default function OnboardingPage() {
                     }`}
                   >
                     {isDone ? (
-                      <Check className="h-5 w-5" />
+                      <Check className="h-4 w-4 sm:h-5 sm:w-5" />
                     ) : (
-                      <Icon className="h-5 w-5" />
+                      <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                     )}
                   </div>
                   <span
-                    className={`mt-1 text-xs font-medium ${
+                    className={`mt-1 hidden max-w-[4.5rem] truncate text-center text-[10px] font-medium sm:block sm:max-w-none sm:text-xs ${
                       isActive ? "text-foreground" : "text-muted-foreground"
                     }`}
                   >
@@ -132,13 +132,16 @@ export default function OnboardingPage() {
               );
             })}
           </div>
-          <div className="relative mt-2">
+          <div className="relative mt-2 hidden sm:block">
             <div className="absolute left-0 right-0 top-1/2 h-px bg-border" />
             <div
               className="absolute left-0 top-1/2 h-px bg-primary transition-all"
               style={{ width: `${(step / (steps.length - 1)) * 100}%` }}
             />
           </div>
+          <p className="mt-3 text-center text-sm text-muted-foreground sm:hidden">
+            Step {step + 1} of {steps.length}: {steps[step].label}
+          </p>
         </div>
 
         <Card>
@@ -288,21 +291,26 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            <div className="flex justify-between pt-4">
+            <div className="flex flex-col-reverse gap-3 pt-4 sm:flex-row sm:justify-between">
               <Button
                 variant="outline"
                 onClick={handleBack}
                 disabled={step === 0}
+                className="w-full sm:w-auto"
               >
                 Back
               </Button>
               {step < steps.length - 1 ? (
-                <Button onClick={handleNext} disabled={!canProceed()}>
+                <Button
+                  onClick={handleNext}
+                  disabled={!canProceed()}
+                  className="w-full sm:w-auto"
+                >
                   Continue
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               ) : (
-                <Button onClick={handleFinish}>
+                <Button onClick={handleFinish} className="w-full sm:w-auto">
                   Launch Workspace
                   <Globe className="ml-1 h-4 w-4" />
                 </Button>

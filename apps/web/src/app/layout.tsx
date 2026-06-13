@@ -1,9 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/lib/providers";
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
-  title: "LongoX",
+  title: {
+    default: "LongoX",
+    template: "%s | LongoX",
+  },
   description: "Intelligent workflow automation platform",
 };
 

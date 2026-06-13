@@ -36,7 +36,7 @@ export function NotificationCenter() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
+      <DropdownMenuContent align="end" className="w-[min(calc(100vw-2rem),20rem)]">
         <DropdownMenuLabel className="flex items-center justify-between">
           <span>Notifications</span>
           <div className="flex items-center gap-1">

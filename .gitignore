@@ -61,3 +61,4 @@ session-*.md
 # Replit
 .cache/
 .local/
+.vercel

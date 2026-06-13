@@ -6,6 +6,12 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
   LayoutDashboard,
   Workflow,
   PlayCircle,
@@ -38,9 +44,14 @@ import {
   Clock,
   Route,
   Brain,
+  type LucideIcon,
 } from "lucide-react";
 
-const sidebarNav = [
+type NavItem =
+  | { separator: true }
+  | { label: string; href: string; icon: LucideIcon };
+
+export const sidebarNav: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Workflows", href: "/workflows", icon: Workflow },
   { label: "Executions", href: "/executions", icon: PlayCircle },
@@ -89,59 +100,104 @@ const sidebarNav = [
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
-export function AppSidebar() {
-  const pathname = usePathname();
+function SidebarBrand() {
+  return (
+    <div className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
+        LX
+      </div>
+      <span className="text-sm font-semibold">LongoX</span>
+    </div>
+  );
+}
+
+function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
   const { user, logout } = useAuth();
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-56 flex-col border-r bg-sidebar">
-      <div className="flex h-14 items-center gap-2 border-b px-4">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
-          LX
-        </div>
-        <span className="text-sm font-semibold">LongoX</span>
+    <div className="shrink-0 border-t p-3">
+      <div className="mb-2 truncate text-xs text-muted-foreground">
+        {user?.name ?? user?.email ?? "Guest"}
       </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="w-full justify-start gap-2 text-xs"
+        onClick={() => {
+          onNavigate?.();
+          logout();
+        }}
+      >
+        <LogOut className="h-3.5 w-3.5" />
+        Sign out
+      </Button>
+    </div>
+  );
+}
 
-      <nav className="flex-1 overflow-y-auto p-2">
-        {sidebarNav.map((item, i) => {
-          if ("separator" in item) {
-            return <div key={i} className="my-2 border-t" />;
-          }
-          const Icon = item.icon!;
-          const active =
-            pathname === item.href || pathname?.startsWith(item.href + "/");
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/50",
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
+export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+  const pathname = usePathname();
 
-      <div className="border-t p-3">
-        <div className="mb-2 truncate text-xs text-muted-foreground">
-          {user?.name ?? user?.email ?? "Guest"}
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start gap-2 text-xs"
-          onClick={logout}
-        >
-          <LogOut className="h-3.5 w-3.5" />
-          Sign out
-        </Button>
-      </div>
+  return (
+    <nav className="flex-1 overflow-y-auto p-2">
+      {sidebarNav.map((item, i) => {
+        if ("separator" in item) {
+          return <div key={i} className="my-2 border-t" />;
+        }
+        const Icon = item.icon;
+        const active =
+          pathname === item.href || pathname?.startsWith(item.href + "/");
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              active
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "text-sidebar-foreground hover:bg-sidebar-accent/50",
+            )}
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="truncate">{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+export function AppSidebar() {
+  return (
+    <aside className="fixed left-0 top-0 z-40 hidden h-screen w-56 flex-col border-r bg-sidebar lg:flex">
+      <SidebarBrand />
+      <SidebarNav />
+      <SidebarFooter />
     </aside>
+  );
+}
+
+type MobileSidebarProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
+  const close = () => onOpenChange(false);
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="left" className="w-[min(100vw-2rem,18rem)] p-0">
+        <SheetHeader className="sr-only">
+          <SheetTitle>Navigation menu</SheetTitle>
+        </SheetHeader>
+        <div className="flex h-full flex-col bg-sidebar">
+          <SidebarBrand />
+          <SidebarNav onNavigate={close} />
+          <SidebarFooter onNavigate={close} />
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
