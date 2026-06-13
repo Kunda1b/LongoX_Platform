@@ -13,7 +13,7 @@ export default function DashboardDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { data: dashboard, isLoading } = useGetDashboard({ id: parseInt(id) });
+  const { data: dashboard, isLoading } = useGetDashboard(parseInt(id));
 
   return (
     <div className="space-y-6">
@@ -46,7 +46,7 @@ export default function DashboardDetailPage({
           {dashboard.widgets.map((widget) => (
             <Card key={widget.id}>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">{widget.title}</CardTitle>
+                <CardTitle className="text-sm">{(widget.config as any)?.title || widget.type}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex h-32 items-center justify-center text-muted-foreground text-sm">
