@@ -171,7 +171,7 @@ export default function RegionsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => healthCheckMutation.mutate()} disabled={healthCheckMutation.isPending}>
+          <Button variant="outline" onClick={() => healthCheckMutation.mutate(undefined)} disabled={healthCheckMutation.isPending}>
             {healthCheckMutation.isPending ? (
               <Loader2 className="mr-1 h-4 w-4 animate-spin" />
             ) : (
