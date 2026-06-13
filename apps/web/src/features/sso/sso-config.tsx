@@ -23,8 +23,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Chrome,
-  Github,
   ShieldCheck,
   Building2,
   Key,
@@ -34,6 +32,8 @@ import {
   Power,
   Eye,
   EyeOff,
+  Search,
+  GitBranch,
 } from "lucide-react";
 
 interface SSOConnection {
@@ -48,8 +48,8 @@ interface SSOConnection {
 }
 
 const providerMeta: Record<string, { name: string; icon: typeof Key; color: string }> = {
-  google: { name: "Google", icon: Chrome, color: "text-blue-500" },
-  github: { name: "GitHub", icon: Github, color: "text-foreground" },
+  google: { name: "Google", icon: Search, color: "text-blue-500" },
+  github: { name: "GitHub", icon: GitBranch, color: "text-foreground" },
   microsoft: { name: "Microsoft", icon: Building2, color: "text-blue-600" },
   azure_ad: { name: "Azure AD", icon: ShieldCheck, color: "text-blue-600" },
   okta: { name: "Okta", icon: ShieldCheck, color: "text-green-600" },
