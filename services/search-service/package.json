@@ -12,9 +12,11 @@
   },
   "dependencies": {
     "@longox/db": "workspace:*",
+    "@longox/shared-observability": "workspace:*",
     "@longox/shared-rbac": "workspace:*",
     "drizzle-orm": "catalog:",
-    "express": "^5.0.0"
+    "express": "^5.0.0",
+    "typesense": "^2.7.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
