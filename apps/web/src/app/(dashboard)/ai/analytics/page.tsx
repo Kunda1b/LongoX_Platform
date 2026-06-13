@@ -98,7 +98,7 @@ export default function AIAnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {usage.byProvider.map((p) => (
+              {(usage.byProvider as Array<{ provider: string; requests: number; cost: number }>).map((p) => (
                 <div
                   key={p.provider}
                   className="flex items-center justify-between rounded-lg border p-3"

@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
     "@longox/workflow-canvas",
   ],
   experimental: {
-    optimizePackageImports: ["lucide-react", "@radix-ui/react-icons"],
+    optimizePackageImports: ["@radix-ui/react-icons"],
   },
 };
 
