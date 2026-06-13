@@ -1,87 +1,80 @@
 import type { ConnectorDefinition } from "@longox/connector-runtime";
 import { connectorRegistry } from "@longox/connector-runtime";
-import { sendMessage, createChannel, inviteUser } from "./actions";
-import { newMessage, mention } from "./triggers";
+import { readRange, writeRange, appendRow } from "./actions";
+import { rowAdded } from "./triggers";
 
 export const googleSheetsConnector: ConnectorDefinition = {
   name: "google-sheets",
   version: "1.0.0",
-  auth: ["oauth2", "api_key"],
+  auth: ["oauth2"],
   actions: [
     {
-      id: "sendMessage",
-      name: "Send Message",
-      description: "Post a message to a Slack channel",
-      inputSchema: { channel: "string", text: "string", threadTs: "string?" },
-      outputSchema: { ts: "string", channel: "string", ok: "boolean" },
-      idempotent: false,
-    },
-    {
-      id: "createChannel",
-      name: "Create Channel",
-      description: "Create a new Slack channel",
-      inputSchema: { name: "string", isPrivate: "boolean?" },
-      outputSchema: { id: "string", name: "string", isPrivate: "boolean" },
+      id: "readRange",
+      name: "Read Range",
+      description: "Read values from a spreadsheet range",
+      inputSchema: {
+        spreadsheetId: "string",
+        range: "string",
+        majorDimension: "string?",
+      },
+      outputSchema: { values: "array", range: "string" },
       idempotent: true,
     },
     {
-      id: "inviteUser",
-      name: "Invite User",
-      description: "Invite a user to a channel",
-      inputSchema: { channel: "string", userId: "string" },
-      outputSchema: { ok: "boolean" },
+      id: "writeRange",
+      name: "Write Range",
+      description: "Write values to a spreadsheet range",
+      inputSchema: {
+        spreadsheetId: "string",
+        range: "string",
+        values: "array",
+        valueInputOption: "string?",
+      },
+      outputSchema: { updatedCells: "number", updatedRange: "string" },
+      idempotent: false,
+    },
+    {
+      id: "appendRow",
+      name: "Append Row",
+      description: "Append a row to a spreadsheet",
+      inputSchema: {
+        spreadsheetId: "string",
+        range: "string",
+        values: "array",
+        valueInputOption: "string?",
+      },
+      outputSchema: { appendedRange: "string", updatedCells: "number" },
       idempotent: false,
     },
   ],
   triggers: [
     {
-      id: "newMessage",
-      name: "New Message",
-      description: "Trigger when a new message is posted",
-      type: "webhook",
-      outputSchema: {
-        text: "string",
-        user: "string",
-        channel: "string",
-        ts: "string",
-      },
-    },
-    {
-      id: "mention",
-      name: "Mention",
-      description: "Trigger when the bot is mentioned",
-      type: "webhook",
-      outputSchema: {
-        text: "string",
-        user: "string",
-        channel: "string",
-        ts: "string",
-      },
+      id: "rowAdded",
+      name: "Row Added",
+      description: "Poll for new rows in a sheet",
+      type: "polling",
+      outputSchema: { spreadsheetId: "string", range: "string", values: "array" },
     },
   ],
-  permissions: ["channels:read", "channels:write", "chat:write", "users:read"],
+  permissions: ["sheets:read", "sheets:write"],
 };
 
 connectorRegistry.register(googleSheetsConnector);
 connectorRegistry.registerAction("google-sheets", {
   definition: googleSheetsConnector.actions[0],
-  handler: sendMessage,
+  handler: readRange,
 });
 connectorRegistry.registerAction("google-sheets", {
   definition: googleSheetsConnector.actions[1],
-  handler: createChannel,
+  handler: writeRange,
 });
 connectorRegistry.registerAction("google-sheets", {
   definition: googleSheetsConnector.actions[2],
-  handler: inviteUser,
+  handler: appendRow,
 });
 connectorRegistry.registerTrigger("google-sheets", {
   definition: googleSheetsConnector.triggers[0],
-  handler: newMessage,
-});
-connectorRegistry.registerTrigger("google-sheets", {
-  definition: googleSheetsConnector.triggers[1],
-  handler: mention,
+  handler: rowAdded,
 });
 
 export default googleSheetsConnector;

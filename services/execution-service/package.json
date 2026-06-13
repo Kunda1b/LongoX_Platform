@@ -21,14 +21,14 @@
     "@longox/shared-realtime": "workspace:*",
     "@longox/shared-rbac": "workspace:*",
     "@longox/workflow-engine": "workspace:*",
-    "bullmq": "^5.34.0",
+    "bullmq": "^5.78.0",
     "drizzle-orm": "catalog:",
-    "express": "^5.0.0",
-    "ioredis": "^5.4.1",
+    "express": "^5.2.1",
+    "ioredis": "^5.11.1",
     "openai": "^6.42.0"
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
+    "@types/express": "^5.0.6",
     "@types/node": "catalog:",
     "tsx": "catalog:"
   }

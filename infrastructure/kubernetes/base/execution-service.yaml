@@ -1,0 +1,167 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: execution-service
+  namespace: platform-execution
+  labels:
+    app: execution-service
+    app.kubernetes.io/name: execution-service
+    app.kubernetes.io/part-of: longox
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: execution-service
+  template:
+    metadata:
+      labels:
+        app: execution-service
+    spec:
+      containers:
+        - name: execution-service
+          image: longox/execution-service:latest
+          ports:
+            - containerPort: 3002
+          env:
+            - name: PORT
+              value: "3002"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: longox-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: longox-secrets
+                  key: redis-url
+            - name: NATS_URL
+              value: "nats://nats-platform:4222"
+            - name: EVENT_BUS_TYPE
+              value: "nats"
+            - name: EVENT_BUS_URL
+              value: "nats://nats-platform:4222"
+            - name: WORKER_CONCURRENCY
+              value: "5"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/ready
+              port: 3002
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: execution-worker
+  namespace: platform-execution
+  labels:
+    app: execution-worker
+    app.kubernetes.io/name: execution-worker
+    app.kubernetes.io/part-of: longox
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: execution-worker
+  template:
+    metadata:
+      labels:
+        app: execution-worker
+    spec:
+      containers:
+        - name: execution-worker
+          image: longox/execution-service:latest
+          command: ["node", "--import", "tsx", "services/execution-service/src/workers/worker-entry.ts"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: longox-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: longox-secrets
+                  key: redis-url
+            - name: NATS_URL
+              value: "nats://nats-platform:4222"
+            - name: EVENT_BUS_TYPE
+              value: "nats"
+            - name: EVENT_BUS_URL
+              value: "nats://nats-platform:4222"
+            - name: WORKER_CONCURRENCY
+              value: "10"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: execution-service
+  namespace: platform-execution
+spec:
+  selector:
+    app: execution-service
+  ports:
+    - port: 3002
+      targetPort: 3002
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: execution-service-hpa
+  namespace: platform-execution
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: execution-service
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: execution-worker-hpa
+  namespace: platform-execution
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: execution-worker
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

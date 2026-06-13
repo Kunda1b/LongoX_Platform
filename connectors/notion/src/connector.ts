@@ -1,7 +1,7 @@
 import type { ConnectorDefinition } from "@longox/connector-runtime";
 import { connectorRegistry } from "@longox/connector-runtime";
-import { sendMessage, createChannel, inviteUser } from "./actions";
-import { newMessage, mention } from "./triggers";
+import { createPage, updatePage, queryDatabase } from "./actions";
+import { pageUpdated } from "./triggers";
 
 export const notionConnector: ConnectorDefinition = {
   name: "notion",
@@ -9,79 +9,73 @@ export const notionConnector: ConnectorDefinition = {
   auth: ["oauth2", "api_key"],
   actions: [
     {
-      id: "sendMessage",
-      name: "Send Message",
-      description: "Post a message to a Slack channel",
-      inputSchema: { channel: "string", text: "string", threadTs: "string?" },
-      outputSchema: { ts: "string", channel: "string", ok: "boolean" },
+      id: "createPage",
+      name: "Create Page",
+      description: "Create a new Notion page in a database or as a child page",
+      inputSchema: {
+        parentType: "string",
+        parentId: "string",
+        title: "string",
+        properties: "object?",
+        children: "array?",
+      },
+      outputSchema: { id: "string", url: "string", createdTime: "string" },
       idempotent: false,
     },
     {
-      id: "createChannel",
-      name: "Create Channel",
-      description: "Create a new Slack channel",
-      inputSchema: { name: "string", isPrivate: "boolean?" },
-      outputSchema: { id: "string", name: "string", isPrivate: "boolean" },
+      id: "updatePage",
+      name: "Update Page",
+      description: "Update an existing Notion page's properties",
+      inputSchema: {
+        pageId: "string",
+        properties: "object",
+        archived: "boolean?",
+      },
+      outputSchema: { id: "string", url: "string", updatedTime: "string" },
+      idempotent: false,
+    },
+    {
+      id: "queryDatabase",
+      name: "Query Database",
+      description: "Query a Notion database for matching pages",
+      inputSchema: {
+        databaseId: "string",
+        filter: "object?",
+        sorts: "array?",
+        pageSize: "number?",
+      },
+      outputSchema: { results: "array", hasMore: "boolean", nextCursor: "string?" },
       idempotent: true,
-    },
-    {
-      id: "inviteUser",
-      name: "Invite User",
-      description: "Invite a user to a channel",
-      inputSchema: { channel: "string", userId: "string" },
-      outputSchema: { ok: "boolean" },
-      idempotent: false,
     },
   ],
   triggers: [
     {
-      id: "newMessage",
-      name: "New Message",
-      description: "Trigger when a new message is posted",
-      type: "webhook",
-      outputSchema: {
-        text: "string",
-        user: "string",
-        channel: "string",
-        ts: "string",
-      },
-    },
-    {
-      id: "mention",
-      name: "Mention",
-      description: "Trigger when the bot is mentioned",
-      type: "webhook",
-      outputSchema: {
-        text: "string",
-        user: "string",
-        channel: "string",
-        ts: "string",
-      },
+      id: "pageUpdated",
+      name: "Page Updated",
+      description: "Poll for page updates in a database",
+      type: "polling",
+      outputSchema: { pageId: "string", properties: "object", url: "string" },
     },
   ],
-  permissions: ["channels:read", "channels:write", "chat:write", "users:read"],
+  permissions: ["notion:read", "notion:write"],
 };
 
 connectorRegistry.register(notionConnector);
 connectorRegistry.registerAction("notion", {
   definition: notionConnector.actions[0],
-  handler: sendMessage,
+  handler: createPage,
 });
 connectorRegistry.registerAction("notion", {
   definition: notionConnector.actions[1],
-  handler: createChannel,
+  handler: updatePage,
 });
 connectorRegistry.registerAction("notion", {
   definition: notionConnector.actions[2],
-  handler: inviteUser,
+  handler: queryDatabase,
 });
 connectorRegistry.registerTrigger("notion", {
   definition: notionConnector.triggers[0],
-  handler: newMessage,
-});
-connectorRegistry.registerTrigger("notion", {
-  definition: notionConnector.triggers[1],
-  handler: mention,
+  handler: pageUpdated,
 });
 
 export default notionConnector;

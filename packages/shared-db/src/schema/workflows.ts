@@ -24,6 +24,10 @@ export const workflowsTable = pgTable("workflows", {
   lastRunAt: timestamp("last_run_at", { withTimezone: true }),
   lastRunStatus: text("last_run_status"),
   nodes: jsonb("nodes"),
+  region: text("region"),
+  deploymentZone: text("deployment_zone"),
+  isReplicated: integer("is_replicated").notNull().default(0),
+  sourceRegion: text("source_region"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

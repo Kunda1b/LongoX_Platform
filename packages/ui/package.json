@@ -10,11 +10,11 @@
   },
   "dependencies": {
     "@longox/design-system": "workspace:*",
-    "lucide-react": "^0.468.0",
-    "react": "^18.3.1"
+    "lucide-react": "catalog:",
+    "react": "catalog:"
   },
   "peerDependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react": "catalog:",
+    "react-dom": "catalog:"
   }
 }

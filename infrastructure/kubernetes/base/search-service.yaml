@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search-service
+  namespace: platform-services
+  labels:
+    app: search-service
+    app.kubernetes.io/name: search-service
+    app.kubernetes.io/part-of: longox
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: search-service
+  template:
+    metadata:
+      labels:
+        app: search-service
+    spec:
+      containers:
+        - name: search-service
+          image: longox/search-service:latest
+          ports:
+            - containerPort: 3005
+          env:
+            - name: PORT
+              value: "3005"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: longox-secrets
+                  key: database-url
+            - name: NATS_URL
+              value: "nats://nats-platform:4222"
+            - name: EVENT_BUS_TYPE
+              value: "nats"
+            - name: EVENT_BUS_URL
+              value: "nats://nats-platform:4222"
+            - name: TYPESENSE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: longox-secrets
+                  key: typesense-api-key
+                  optional: true
+            - name: TYPESENSE_HOST
+              value: "typesense.platform-services.svc.cluster.local"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3005
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/ready
+              port: 3005
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search-service
+  namespace: platform-services
+spec:
+  selector:
+    app: search-service
+  ports:
+    - port: 3005
+      targetPort: 3005
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: search-service-hpa
+  namespace: platform-services
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: search-service
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

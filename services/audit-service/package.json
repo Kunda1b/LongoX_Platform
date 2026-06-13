@@ -14,10 +14,10 @@
     "@longox/db": "workspace:*",
     "@longox/shared-rbac": "workspace:*",
     "drizzle-orm": "catalog:",
-    "express": "^5.0.0"
+    "express": "^5.2.1"
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
+    "@types/express": "^5.0.6",
     "@types/node": "catalog:",
     "tsx": "catalog:"
   }

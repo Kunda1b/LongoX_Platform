@@ -17,12 +17,12 @@
     "@longox/shared-logger": "workspace:*",
     "@longox/shared-auth": "workspace:*",
     "@longox/shared-rbac": "workspace:*",
-    "express": "^5.0.0",
+    "express": "^5.2.1",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@types/express": "^5.0.0",
+    "@types/express": "^5.0.6",
     "tsx": "catalog:"
   }
 }

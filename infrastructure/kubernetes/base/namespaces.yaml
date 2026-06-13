@@ -3,21 +3,28 @@ kind: Namespace
 metadata:
   name: platform-control
   labels:
-    name: platform-control
-    tier: control
+    app.kubernetes.io/part-of: longox
 ---
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-services
+  labels:
+    app.kubernetes.io/part-of: longox
+---
+
 apiVersion: v1
 kind: Namespace
 metadata:
   name: platform-execution
   labels:
-    name: platform-execution
-    tier: execution
+    app.kubernetes.io/part-of: longox
 ---
+
 apiVersion: v1
 kind: Namespace
 metadata:
   name: platform-observability
   labels:
-    name: platform-observability
-    tier: observability
+    app.kubernetes.io/part-of: longox

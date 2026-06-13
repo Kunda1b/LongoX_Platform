@@ -15,11 +15,11 @@
     "@longox/shared-observability": "workspace:*",
     "@longox/shared-rbac": "workspace:*",
     "drizzle-orm": "catalog:",
-    "express": "^5.0.0",
-    "typesense": "^2.7.0"
+    "express": "^5.2.1",
+    "typesense": "^3.0.6"
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
+    "@types/express": "^5.0.6",
     "@types/node": "catalog:",
     "tsx": "catalog:"
   }

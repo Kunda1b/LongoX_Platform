@@ -1,0 +1,19 @@
+{
+  "name": "@longox/shared-gateway",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@longox/db": "workspace:*",
+    "@longox/shared-events": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "catalog:"
+  }
+}

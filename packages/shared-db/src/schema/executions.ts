@@ -25,6 +25,9 @@ export const executionsTable = pgTable("executions", {
   durationMs: integer("duration_ms"),
   errorMessage: text("error_message"),
   steps: jsonb("steps"),
+  region: text("region"),
+  executedInRegion: text("executed_in_region"),
+  isReplicated: integer("is_replicated").notNull().default(0),
 });
 
 export const insertExecutionSchema = createInsertSchema(executionsTable).omit({

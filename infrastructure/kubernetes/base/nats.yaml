@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nats
+  namespace: platform-services
+  labels:
+    app: nats
+    app.kubernetes.io/name: nats
+    app.kubernetes.io/part-of: longox
+spec:
+  replicas: 3
+  serviceName: nats
+  selector:
+    matchLabels:
+      app: nats
+  template:
+    metadata:
+      labels:
+        app: nats
+    spec:
+      containers:
+        - name: nats
+          image: nats:2.10-alpine
+          command: ["nats-server"]
+          args:
+            - "--jetstream"
+            - "--store_dir=/data"
+            - "--cluster_name=longox-nats"
+            - "--routes=nats://nats-0.nats.platform-services.svc.cluster.local:6222,nats://nats-1.nats.platform-services.svc.cluster.local:6222,nats://nats-2.nats.platform-services.svc.cluster.local:6222"
+          ports:
+            - containerPort: 4222
+              name: client
+            - containerPort: 6222
+              name: cluster
+            - containerPort: 8222
+              name: monitoring
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8222
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8222
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: nats-data
+              mountPath: /data
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+  volumeClaimTemplates:
+    - metadata:
+        name: nats-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats
+  namespace: platform-services
+spec:
+  selector:
+    app: nats
+  ports:
+    - port: 4222
+      targetPort: 4222
+      name: client
+    - port: 6222
+      targetPort: 6222
+      name: cluster
+    - port: 8222
+      targetPort: 8222
+      name: monitoring
+  clusterIP: None

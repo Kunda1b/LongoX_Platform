@@ -1,5 +1,5 @@
 import { eq, like, and as andOp, or, desc, sql } from "drizzle-orm";
-import { db, templatesTable } from "@longox/db";
+import { db, marketplaceListingsTable, marketplaceInstallsTable } from "@longox/db";
 import { Listing } from "../domain/listing.entity";
 import type { ListingRepository } from "../domain/listing-repository";
 import type {
@@ -9,24 +9,24 @@ import type {
 } from "../domain/listing.entity";
 
 export class PostgresListingRepository implements ListingRepository {
-  private toDomain(row: typeof templatesTable.$inferSelect): Listing {
+  private toDomain(row: typeof marketplaceListingsTable.$inferSelect): Listing {
     return new Listing({
       id: row.id,
-      title: row.name,
+      title: row.title,
       description: row.description ?? "",
-      listingType: (row.templateType as ListingType) ?? "template",
+      listingType: row.listingType as ListingType,
       category: row.category,
-      tags: (row.tags ?? []) as string[],
-      author: "LongoX",
-      authorId: 0,
-      version: "1.0.0",
-      status: (row.isCustom ? "draft" : "published") as ListingStatus,
-      installCount: row.uses,
-      rating: 4.5,
-      reviewCount: 0,
-      featured: false,
-      verified: !row.isCustom,
-      pricing: { free: true },
+      tags: row.tags as string[],
+      author: row.author ?? "LongoX",
+      authorId: row.authorId ?? 0,
+      version: row.version ?? "1.0.0",
+      status: row.status as ListingStatus,
+      installCount: row.installCount ?? 0,
+      rating: row.rating ?? 0,
+      reviewCount: row.reviewCount ?? 0,
+      featured: row.featured ?? false,
+      verified: row.verified ?? false,
+      pricing: row.pricing ?? { free: true },
       metadata: (row.metadata ?? {}) as Record<string, unknown>,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -36,8 +36,8 @@ export class PostgresListingRepository implements ListingRepository {
   async findById(id: number): Promise<Listing | null> {
     const [row] = await db
       .select()
-      .from(templatesTable)
-      .where(eq(templatesTable.id, id))
+      .from(marketplaceListingsTable)
+      .where(eq(marketplaceListingsTable.id, id))
       .limit(1);
     return row ? this.toDomain(row) : null;
   }
@@ -51,40 +51,40 @@ export class PostgresListingRepository implements ListingRepository {
   }): Promise<Listing[]> {
     const conditions = [];
     if (filters?.type)
-      conditions.push(eq(templatesTable.templateType, filters.type));
+      conditions.push(eq(marketplaceListingsTable.listingType, filters.type));
     if (filters?.category)
-      conditions.push(eq(templatesTable.category, filters.category));
+      conditions.push(eq(marketplaceListingsTable.category, filters.category));
     if (filters?.search)
       conditions.push(
         or(
-          like(templatesTable.name, `%${filters.search}%`),
-          like(templatesTable.description, `%${filters.search}%`),
+          like(marketplaceListingsTable.title, `%${filters.search}%`),
+          like(marketplaceListingsTable.description, `%${filters.search}%`),
         ),
       );
-    if (filters?.status === "published")
-      conditions.push(eq(templatesTable.isCustom, false));
-    if (filters?.status === "draft")
-      conditions.push(eq(templatesTable.isCustom, true));
+    if (filters?.status)
+      conditions.push(eq(marketplaceListingsTable.status, filters.status));
+    if (filters?.featured !== undefined)
+      conditions.push(eq(marketplaceListingsTable.featured, filters.featured));
 
     const rows = await db
       .select()
-      .from(templatesTable)
+      .from(marketplaceListingsTable)
       .where(conditions.length ? andOp(...conditions) : undefined)
-      .orderBy(desc(templatesTable.uses));
+      .orderBy(desc(marketplaceListingsTable.installCount));
     return rows.map(this.toDomain);
   }
 
   async findFeatured(): Promise<Listing[]> {
     const rows = await db
       .select()
-      .from(templatesTable)
+      .from(marketplaceListingsTable)
       .where(
         andOp(
-          eq(templatesTable.isCustom, false),
-          sql`${templatesTable.uses} > 5000`,
+          eq(marketplaceListingsTable.featured, true),
+          eq(marketplaceListingsTable.status, "published"),
         ),
       )
-      .orderBy(desc(templatesTable.uses))
+      .orderBy(desc(marketplaceListingsTable.installCount))
       .limit(20);
     return rows.map(this.toDomain);
   }
@@ -92,14 +92,9 @@ export class PostgresListingRepository implements ListingRepository {
   async findByAuthor(authorId: number): Promise<Listing[]> {
     const rows = await db
       .select()
-      .from(templatesTable)
-      .where(
-        andOp(
-          eq(templatesTable.isCustom, true),
-          eq(templatesTable.id, authorId),
-        ),
-      )
-      .orderBy(desc(templatesTable.createdAt));
+      .from(marketplaceListingsTable)
+      .where(eq(marketplaceListingsTable.authorId, authorId))
+      .orderBy(desc(marketplaceListingsTable.createdAt));
     return rows.map(this.toDomain);
   }
 
@@ -107,21 +102,25 @@ export class PostgresListingRepository implements ListingRepository {
     props: Omit<ListingProps, "id" | "createdAt" | "updatedAt">,
   ): Promise<Listing> {
     const [row] = await db
-      .insert(templatesTable)
+      .insert(marketplaceListingsTable)
       .values({
-        name: props.title,
+        title: props.title,
         description: props.description,
+        listingType: props.listingType,
         category: props.category,
         tags: props.tags,
-        templateType:
-          props.listingType === "connector" ? "developer" : props.listingType,
-        isCustom: true,
-        uses: 0,
+        author: props.author,
+        authorId: props.authorId,
+        version: props.version,
+        status: props.status,
+        installCount: 0,
+        rating: 0,
+        reviewCount: 0,
+        featured: props.featured ?? false,
+        verified: props.verified ?? false,
+        pricing: props.pricing ?? { free: true },
         metadata: props.metadata,
         nodes: [],
-        nodeCount: 0,
-        triggerType: "manual",
-        complexity: "beginner",
       })
       .returning();
     return this.toDomain(row);
@@ -129,20 +128,22 @@ export class PostgresListingRepository implements ListingRepository {
 
   async update(id: number, data: Partial<ListingProps>): Promise<Listing> {
     const [row] = await db
-      .update(templatesTable)
+      .update(marketplaceListingsTable)
       .set({
-        name: data.title,
+        title: data.title,
         description: data.description,
         category: data.category,
         tags: data.tags,
+        status: data.status,
+        pricing: data.pricing,
         metadata: data.metadata,
       })
-      .where(eq(templatesTable.id, id))
+      .where(eq(marketplaceListingsTable.id, id))
       .returning();
     return this.toDomain(row);
   }
 
   async delete(id: number): Promise<void> {
-    await db.delete(templatesTable).where(eq(templatesTable.id, id));
+    await db.delete(marketplaceListingsTable).where(eq(marketplaceListingsTable.id, id));
   }
 }

@@ -30,12 +30,17 @@ export const marketplaceListingsTable = pgTable("marketplace_listings", {
   featured: boolean("featured").notNull().default(false),
   verified: boolean("verified").notNull().default(false),
   pricing: jsonb("pricing")
-    .$type<{ free: boolean; price?: number; currency?: string }>()
+    .$type<{ free: boolean; price?: number; currency?: string; subscription?: boolean }>()
     .notNull()
     .default({ free: true }),
   resourceId: integer("resource_id"),
   nodes: jsonb("nodes").notNull().default([]),
   metadata: jsonb("metadata").notNull().default({}),
+  platformSharePercent: integer("platform_share_percent").notNull().default(20),
+  sellerPayoutAccount: text("seller_payout_account"),
+  totalRevenue: real("total_revenue").notNull().default(0),
+  isPublic: boolean("is_public").notNull().default(false),
+  communityTemplate: boolean("community_template").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

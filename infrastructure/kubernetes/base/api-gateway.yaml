@@ -5,7 +5,8 @@ metadata:
   namespace: platform-control
   labels:
     app: api-gateway
-    tier: control
+    app.kubernetes.io/name: api-gateway
+    app.kubernetes.io/part-of: longox
 spec:
   replicas: 2
   selector:
@@ -20,42 +21,58 @@ spec:
         - name: api-gateway
           image: longox/api-gateway:latest
           ports:
-            - containerPort: 3001
-              protocol: TCP
+            - containerPort: 3000
           env:
-            - name: NODE_ENV
-              value: "production"
+            - name: PORT
+              value: "3000"
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: db-credentials
-                  key: database_url
+                  name: longox-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: longox-secrets
+                  key: redis-url
+            - name: NATS_URL
+              value: "nats://nats-platform:4222"
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: jwt-secret
-                  key: secret
-            - name: REDIS_URL
-              value: "redis://redis.platform-control.svc.cluster.local:6379"
-          resources:
-            requests:
-              cpu: "250m"
-              memory: "512Mi"
-            limits:
-              cpu: "500m"
-              memory: "1Gi"
+                  name: longox-secrets
+                  key: jwt-secret
+            - name: EXECUTION_SERVICE_URL
+              value: "http://execution-service.platform-services.svc.cluster.local:3002"
+            - name: AI_SERVICE_URL
+              value: "http://ai-service.platform-services.svc.cluster.local:3003"
+            - name: BILLING_SERVICE_URL
+              value: "http://billing-service.platform-services.svc.cluster.local:3004"
+            - name: SEARCH_SERVICE_URL
+              value: "http://search-service.platform-services.svc.cluster.local:3005"
+            - name: EVENT_BUS_TYPE
+              value: "nats"
+            - name: EVENT_BUS_URL
+              value: "nats://nats-platform:4222"
           livenessProbe:
             httpGet:
-              path: /api/health
-              port: 3001
+              path: /healthz
+              port: 3000
             initialDelaySeconds: 10
-            periodSeconds: 15
+            periodSeconds: 30
           readinessProbe:
             httpGet:
-              path: /api/health
-              port: 3001
+              path: /api/ready
+              port: 3000
             initialDelaySeconds: 5
             periodSeconds: 10
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
 ---
 apiVersion: v1
 kind: Service
@@ -66,8 +83,32 @@ spec:
   selector:
     app: api-gateway
   ports:
-    - port: 80
-      targetPort: 3001
-      protocol: TCP
-      name: http
+    - port: 3000
+      targetPort: 3000
   type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-gateway-hpa
+  namespace: platform-control
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api-gateway
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

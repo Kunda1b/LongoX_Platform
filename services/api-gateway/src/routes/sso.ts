@@ -201,33 +201,76 @@ router.get(
     const connections = await db
       .select()
       .from(ssoConnectionsTable)
-      .where(eq(ssoConnectionsTable.enabled, true));
+      .orderBy(ssoConnectionsTable.provider);
 
     res.json(
       connections.map((c) => ({
+        id: c.id,
         provider: c.provider,
         domain: c.domain,
+        enabled: c.enabled,
+        hasClientId: !!c.providerClientId,
+        hasIssuerUrl: !!c.providerIssuerUrl,
+        metadata: c.metadata,
+        createdAt: c.createdAt.toISOString(),
       })),
     );
+  },
+);
+
+router.get(
+  "/auth/sso/providers/:provider",
+  async (req: Request, res: Response): Promise<void> => {
+    const [connection] = await db
+      .select()
+      .from(ssoConnectionsTable)
+      .where(eq(ssoConnectionsTable.provider, String(req.params.provider)))
+      .limit(1);
+
+    if (!connection) {
+      res.status(404).json({ error: "SSO provider not configured" });
+      return;
+    }
+
+    res.json({
+      id: connection.id,
+      provider: connection.provider,
+      providerClientId: connection.providerClientId,
+      providerIssuerUrl: connection.providerIssuerUrl,
+      enabled: connection.enabled,
+      domain: connection.domain,
+      metadata: connection.metadata,
+      createdAt: connection.createdAt.toISOString(),
+      updatedAt: connection.updatedAt.toISOString(),
+    });
   },
 );
 
 router.post(
   "/auth/sso/configure",
   async (req: Request, res: Response): Promise<void> => {
-    const { provider, clientId, clientSecret, issuerUrl, domain } =
+    const { provider, clientId, clientSecret, issuerUrl, domain, metadata } =
       req.body as {
         provider: string;
         clientId: string;
         clientSecret: string;
         issuerUrl?: string;
         domain?: string;
+        metadata?: string;
       };
 
     if (!provider || !clientId || !clientSecret) {
       res
         .status(400)
         .json({ error: "provider, clientId, and clientSecret are required" });
+      return;
+    }
+
+    const validProviders = [
+      "google", "github", "microsoft", "azure_ad", "okta", "saml", "oidc", "custom",
+    ];
+    if (!validProviders.includes(provider)) {
+      res.status(400).json({ error: `Invalid provider. Must be one of: ${validProviders.join(", ")}` });
       return;
     }
 
@@ -244,7 +287,8 @@ router.post(
           providerClientId: clientId,
           providerClientSecret: clientSecret,
           providerIssuerUrl: issuerUrl,
-          domain: domain,
+          domain,
+          metadata: metadata ?? existing.metadata,
         })
         .where(eq(ssoConnectionsTable.id, existing.id));
 
@@ -256,10 +300,48 @@ router.post(
         providerClientSecret: clientSecret,
         providerIssuerUrl: issuerUrl,
         domain,
+        metadata: metadata ?? null,
       });
 
       res.json({ success: true, message: "SSO provider configured" });
     }
+  },
+);
+
+router.patch(
+  "/auth/sso/:provider/toggle",
+  async (req: Request, res: Response): Promise<void> => {
+    const provider = String(req.params.provider);
+    const { enabled } = req.body as { enabled: boolean };
+
+    const [existing] = await db
+      .select()
+      .from(ssoConnectionsTable)
+      .where(eq(ssoConnectionsTable.provider, provider))
+      .limit(1);
+
+    if (!existing) {
+      res.status(404).json({ error: "SSO provider not found" });
+      return;
+    }
+
+    await db
+      .update(ssoConnectionsTable)
+      .set({ enabled })
+      .where(eq(ssoConnectionsTable.id, existing.id));
+
+    res.json({ success: true, enabled });
+  },
+);
+
+router.delete(
+  "/auth/sso/:provider",
+  async (req: Request, res: Response): Promise<void> => {
+    const provider = String(req.params.provider);
+    await db
+      .delete(ssoConnectionsTable)
+      .where(eq(ssoConnectionsTable.provider, provider));
+    res.status(204).end();
   },
 );
 
@@ -281,8 +363,20 @@ function buildAuthorizeUrl(
       authorizeUrl: `${connection.providerIssuerUrl ?? "https://login.microsoftonline.com/common"}/oauth2/v2.0/authorize`,
       scope: "openid email profile",
     },
+    azure_ad: {
+      authorizeUrl: `${connection.providerIssuerUrl ?? "https://login.microsoftonline.com/{tenant-id}"}/oauth2/v2.0/authorize`,
+      scope: "openid email profile",
+    },
     okta: {
       authorizeUrl: `${connection.providerIssuerUrl ?? "https://{your-okta-domain}/oauth2/default"}/v1/authorize`,
+      scope: "openid email profile",
+    },
+    saml: {
+      authorizeUrl: connection.providerIssuerUrl ?? "",
+      scope: "openid email profile",
+    },
+    oidc: {
+      authorizeUrl: `${connection.providerIssuerUrl ?? ""}/authorize`,
       scope: "openid email profile",
     },
     custom: {
@@ -302,6 +396,12 @@ function buildAuthorizeUrl(
     state,
   });
 
+  if (provider === "saml") {
+    return `${config.authorizeUrl}${config.authorizeUrl.includes("?") ? "&" : "?"}SAMLRequest=${Buffer.from(
+      `<?xml version="1.0"?><samlp:AuthnRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" ID="${state}" Version="2.0" IssueInstant="${new Date().toISOString()}" Destination="${config.authorizeUrl}"><saml:Issuer xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">${connection.providerClientId}</saml:Issuer></samlp:AuthnRequest>`,
+    ).toString("base64")}&RelayState=${state}`;
+  }
+
   return `${config.authorizeUrl}?${params.toString()}`;
 }
 
@@ -316,13 +416,30 @@ async function exchangeCodeForUserInfo(
     google: "https://oauth2.googleapis.com/token",
     github: "https://github.com/login/oauth/access_token",
     microsoft: `${connection.providerIssuerUrl ?? "https://login.microsoftonline.com/common"}/oauth2/v2.0/token`,
+    azure_ad: `${connection.providerIssuerUrl ?? "https://login.microsoftonline.com/{tenant-id}"}/oauth2/v2.0/token`,
     okta: `${connection.providerIssuerUrl ?? ""}/v1/token`,
+    oidc: `${connection.providerIssuerUrl ?? ""}/token`,
+    saml: `${connection.providerIssuerUrl ?? ""}`,
   };
 
   const tokenUrl = tokenEndpointMap[provider];
   if (!tokenUrl) return null;
 
   try {
+    if (provider === "saml") {
+      const samlResponse = code;
+      const decoded = Buffer.from(samlResponse, "base64").toString("utf-8");
+      const emailMatch = decoded.match(/<saml:Attribute Name="email"[^>]*>\s*<saml:AttributeValue[^>]*>([^<]+)/);
+      const nameMatch = decoded.match(/<saml:Attribute Name="name"[^>]*>\s*<saml:AttributeValue[^>]*>([^<]+)/);
+      const nameIdMatch = decoded.match(/<saml:NameID[^>]*>([^<]+)/);
+
+      return {
+        id: nameIdMatch?.[1] ?? "saml-user",
+        email: emailMatch?.[1] ?? "saml-user@unknown",
+        name: nameMatch?.[1] ?? emailMatch?.[1]?.split("@")[0] ?? "SAML User",
+      };
+    }
+
     const tokenRes = await fetch(tokenUrl, {
       method: "POST",
       headers: {
@@ -347,12 +464,18 @@ async function exchangeCodeForUserInfo(
     const accessToken = tokenData.access_token;
     if (!accessToken) return null;
 
-    const userInfoMap: Record<string, string> = {
-      google: "https://www.googleapis.com/oauth2/v2/userinfo",
-      github: "https://api.github.com/user",
-    };
+    let userInfoUrl: string | undefined;
 
-    const userInfoUrl = userInfoMap[provider];
+    if (provider === "google") {
+      userInfoUrl = "https://www.googleapis.com/oauth2/v2/userinfo";
+    } else if (provider === "github") {
+      userInfoUrl = "https://api.github.com/user";
+    } else if (provider === "azure_ad" || provider === "microsoft") {
+      userInfoUrl = `${connection.providerIssuerUrl ?? "https://login.microsoftonline.com/common"}/openid/userinfo`;
+    } else if (provider === "okta" || provider === "oidc") {
+      userInfoUrl = `${connection.providerIssuerUrl ?? ""}/userinfo`;
+    }
+
     if (!userInfoUrl) return null;
 
     const userRes = await fetch(userInfoUrl, {

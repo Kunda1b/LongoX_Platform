@@ -10,6 +10,8 @@ import catalogRouter from "./routes/catalog";
 import dlqRouter from "./routes/dlq";
 import rbacRouter from "./routes/rbac";
 import tenantsRouter from "./routes/tenants";
+import environmentsRouter from "./routes/environments";
+import complianceRouter from "./routes/compliance";
 import { authMiddleware } from "./lib/auth";
 import { apiRateLimiter } from "./lib/rate-limiter";
 import { auditLogRouter } from "@longox/audit-service";
@@ -32,7 +34,15 @@ import {
   aiRunsRouter,
   promptsRouter,
   aiUsageRouter,
+  aiRoutingPoliciesRouter,
+  aiPlaygroundRouter,
+  promptsGovernanceRouter,
+  agentsRouter,
 } from "@longox/ai-service";
+import { connectorsRouter } from "@longox/connector-service";
+import { marketplaceRouter } from "@longox/marketplace-service";
+import { meteringRouter } from "@longox/metering-service";
+import { replicationRouter } from "@longox/replication-service";
 
 const app = express();
 
@@ -82,6 +92,12 @@ app.use(rbacRouter);
 // Tenant management: admin only
 app.use(tenantsRouter);
 
+// Environment management
+app.use(environmentsRouter);
+
+// Compliance & GDPR
+app.use(complianceRouter);
+
 // Audit log: admin only
 app.use(auditLogRouter);
 
@@ -116,16 +132,32 @@ app.use(searchRouter);
 // Templates: read-only browse, write for admin
 app.use(templatesRouter);
 
+// Marketplace catalog
+app.use(marketplaceRouter);
+
+// Connectors: install/configure/upgrade/remove
+app.use(connectorsRouter);
+
+// Metering: usage events tracking
+app.use(meteringRouter);
+
 // Usage: billing.read
 app.use(usageRouter);
 
 // Workflows: main CRUD
 app.use(workflowsRouter);
 
+// Replication & Region Management
+app.use(replicationRouter);
+
 // AI services
 app.use(aiModelsRouter);
 app.use(aiRunsRouter);
 app.use(promptsRouter);
 app.use(aiUsageRouter);
+app.use(aiRoutingPoliciesRouter);
+app.use(aiPlaygroundRouter);
+app.use(promptsGovernanceRouter);
+app.use(agentsRouter);
 
 export default app;

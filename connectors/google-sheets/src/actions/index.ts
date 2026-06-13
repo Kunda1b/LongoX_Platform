@@ -1,147 +1,113 @@
 import type { ActionContext, ActionResult } from "@longox/connector-runtime";
 
-const SLACK_API = "https://slack.com/api";
+const SHEETS_API = "https://sheets.googleapis.com/v4/spreadsheets";
 
-async function slackRequest(
-  token: string,
+async function sheetsRequest(
+  accessToken: string,
+  path: string,
   method: string,
-  body: Record<string, unknown>,
+  body?: unknown,
 ): Promise<Record<string, unknown>> {
-  const response = await fetch(`${SLACK_API}/${method}`, {
-    method: "POST",
+  const response = await fetch(`${SHEETS_API}${path}`, {
+    method,
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify(body),
+    body: body ? JSON.stringify(body) : undefined,
   });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Google Sheets API error: ${response.status} ${text}`);
+  }
   return response.json() as Promise<Record<string, unknown>>;
 }
 
-export async function sendMessage(
-  context: ActionContext,
-): Promise<ActionResult> {
+export async function readRange(context: ActionContext): Promise<ActionResult> {
   const start = Date.now();
-  const token =
-    (context.auth.credentials.accessToken as string) ??
-    process.env.SLACK_BOT_TOKEN ??
-    "";
-  const channel = String(context.config.channel ?? "#general");
-  const text = String(context.config.text ?? "");
-  const threadTs = context.config.threadTs as string | undefined;
+  const token = context.auth.credentials.accessToken as string;
+  const spreadsheetId = String(context.config.spreadsheetId ?? "");
+  const range = String(context.config.range ?? "");
+  const majorDimension = String(context.config.majorDimension ?? "ROWS");
 
-  if (!token)
+  if (!token) return { success: false, data: {}, error: "Access token required", durationMs: Date.now() - start };
+  if (!spreadsheetId) return { success: false, data: {}, error: "spreadsheetId required", durationMs: Date.now() - start };
+  if (!range) return { success: false, data: {}, error: "range required", durationMs: Date.now() - start };
+
+  try {
+    const data = await sheetsRequest(
+      token,
+      `/${spreadsheetId}/values/${encodeURIComponent(range)}?majorDimension=${majorDimension}`,
+      "GET",
+    );
     return {
-      success: false,
-      data: {},
-      error: "SLACK_BOT_TOKEN not configured",
+      success: true,
+      data: { values: data.values ?? [], range: data.range ?? range },
+      error: null,
       durationMs: Date.now() - start,
     };
-
-  const data = await slackRequest(token, "chat.postMessage", {
-    channel,
-    text,
-    thread_ts: threadTs,
-  });
-  if (!data.ok)
-    return {
-      success: false,
-      data: {},
-      error: String(data.error ?? "Slack API error"),
-      durationMs: Date.now() - start,
-    };
-
-  return {
-    success: true,
-    data: { ts: data.ts, channel, ok: true },
-    error: null,
-    durationMs: Date.now() - start,
-  };
+  } catch (err) {
+    return { success: false, data: {}, error: err instanceof Error ? err.message : String(err), durationMs: Date.now() - start };
+  }
 }
 
-export async function createChannel(
-  context: ActionContext,
-): Promise<ActionResult> {
+export async function writeRange(context: ActionContext): Promise<ActionResult> {
   const start = Date.now();
-  const token =
-    (context.auth.credentials.accessToken as string) ??
-    process.env.SLACK_BOT_TOKEN ??
-    "";
-  const name = String(context.config.name ?? "");
-  const isPrivate = Boolean(context.config.isPrivate ?? false);
+  const token = context.auth.credentials.accessToken as string;
+  const spreadsheetId = String(context.config.spreadsheetId ?? "");
+  const range = String(context.config.range ?? "");
+  const values = context.config.values as unknown[];
+  const valueInputOption = String(context.config.valueInputOption ?? "USER_ENTERED");
 
-  if (!token)
+  if (!token) return { success: false, data: {}, error: "Access token required", durationMs: Date.now() - start };
+  if (!spreadsheetId) return { success: false, data: {}, error: "spreadsheetId required", durationMs: Date.now() - start };
+  if (!range) return { success: false, data: {}, error: "range required", durationMs: Date.now() - start };
+  if (!Array.isArray(values)) return { success: false, data: {}, error: "values must be an array", durationMs: Date.now() - start };
+
+  try {
+    const data = await sheetsRequest(
+      token,
+      `/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=${valueInputOption}`,
+      "PUT",
+      { values: values.map(v => Array.isArray(v) ? v : [v]) },
+    );
     return {
-      success: false,
-      data: {},
-      error: "SLACK_BOT_TOKEN not configured",
+      success: true,
+      data: { updatedCells: data.updatedCells as number, updatedRange: data.updatedRange as string },
+      error: null,
       durationMs: Date.now() - start,
     };
-  if (!name)
-    return {
-      success: false,
-      data: {},
-      error: "Channel name is required",
-      durationMs: Date.now() - start,
-    };
-
-  const data = await slackRequest(
-    token,
-    isPrivate ? "groups.create" : "conversations.create",
-    { name },
-  );
-  if (!data.ok)
-    return {
-      success: false,
-      data: {},
-      error: String(data.error ?? "Slack API error"),
-      durationMs: Date.now() - start,
-    };
-
-  const channel = (data.channel as Record<string, unknown>) ?? {};
-  return {
-    success: true,
-    data: { id: channel.id, name: channel.name, isPrivate },
-    error: null,
-    durationMs: Date.now() - start,
-  };
+  } catch (err) {
+    return { success: false, data: {}, error: err instanceof Error ? err.message : String(err), durationMs: Date.now() - start };
+  }
 }
 
-export async function inviteUser(
-  context: ActionContext,
-): Promise<ActionResult> {
+export async function appendRow(context: ActionContext): Promise<ActionResult> {
   const start = Date.now();
-  const token =
-    (context.auth.credentials.accessToken as string) ??
-    process.env.SLACK_BOT_TOKEN ??
-    "";
-  const channel = String(context.config.channel ?? "");
-  const userId = String(context.config.userId ?? "");
+  const token = context.auth.credentials.accessToken as string;
+  const spreadsheetId = String(context.config.spreadsheetId ?? "");
+  const range = String(context.config.range ?? "");
+  const values = context.config.values as unknown[];
+  const valueInputOption = String(context.config.valueInputOption ?? "USER_ENTERED");
 
-  if (!token)
+  if (!token) return { success: false, data: {}, error: "Access token required", durationMs: Date.now() - start };
+  if (!spreadsheetId) return { success: false, data: {}, error: "spreadsheetId required", durationMs: Date.now() - start };
+  if (!Array.isArray(values)) return { success: false, data: {}, error: "values must be an array", durationMs: Date.now() - start };
+
+  try {
+    const data = await sheetsRequest(
+      token,
+      `/${spreadsheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=${valueInputOption}&insertDataOption=INSERT_ROWS`,
+      "POST",
+      { values: values.map(v => Array.isArray(v) ? v : [v]) },
+    );
     return {
-      success: false,
-      data: {},
-      error: "SLACK_BOT_TOKEN not configured",
+      success: true,
+      data: { appendedRange: data.tableRange ?? data.updates?.updatedRange, updatedCells: (data as any).updates?.updatedCells ?? 0 },
+      error: null,
       durationMs: Date.now() - start,
     };
-
-  const data = await slackRequest(token, "conversations.invite", {
-    channel,
-    users: userId,
-  });
-  if (!data.ok)
-    return {
-      success: false,
-      data: {},
-      error: String(data.error ?? "Slack API error"),
-      durationMs: Date.now() - start,
-    };
-
-  return {
-    success: true,
-    data: { ok: true },
-    error: null,
-    durationMs: Date.now() - start,
-  };
+  } catch (err) {
+    return { success: false, data: {}, error: err instanceof Error ? err.message : String(err), durationMs: Date.now() - start };
+  }
 }

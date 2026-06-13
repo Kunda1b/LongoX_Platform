@@ -1,14 +1,11 @@
-export const slackAuthConfig = {
+export const googleSheetsAuthConfig = {
   type: "oauth2" as const,
-  authorizeUrl: "https://slack.com/oauth/v2/authorize",
-  tokenUrl: "https://slack.com/api/oauth.v2.access",
+  authorizeUrl: "https://accounts.google.com/o/oauth2/auth",
+  tokenUrl: "https://oauth2.googleapis.com/token",
   scopes: [
-    "channels:read",
-    "channels:write",
-    "chat:write",
-    "users:read",
-    "incoming-webhook",
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive.file",
   ],
-  clientIdEnv: "SLACK_CLIENT_ID",
-  clientSecretEnv: "SLACK_CLIENT_SECRET",
+  clientIdEnv: "GOOGLE_CLIENT_ID",
+  clientSecretEnv: "GOOGLE_CLIENT_SECRET",
 };

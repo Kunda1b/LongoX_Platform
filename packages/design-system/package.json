@@ -11,14 +11,14 @@
     "./styles.css": "./src/styles/globals.css"
   },
   "dependencies": {
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.6.0",
-    "lucide-react": "^0.468.0",
-    "@radix-ui/react-slot": "^1.1.1"
+    "clsx": "catalog:",
+    "tailwind-merge": "catalog:",
+    "lucide-react": "catalog:",
+    "@radix-ui/react-slot": "^1.2.0"
   },
   "peerDependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "tailwindcss": "^4.0.0"
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tailwindcss": "catalog:"
   }
 }
