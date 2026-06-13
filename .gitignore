@@ -62,3 +62,6 @@ session-*.md
 .cache/
 .local/
 .vercel
+
+# Binaries
+Docker Desktop Installer.exe
