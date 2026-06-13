@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const apiOrigin = process.env.API_URL ?? "http://localhost:8080";
+const apiOrigin = (process.env.API_URL ?? "http://localhost:8080").trim().replace(/\/+$/, "");
 
 const nextConfig: NextConfig = {
   async rewrites() {
