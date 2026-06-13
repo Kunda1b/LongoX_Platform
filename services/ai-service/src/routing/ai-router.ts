@@ -10,6 +10,8 @@ import type {
   ChatCompletionOptions,
   ChatCompletionResult,
 } from "../providers";
+import { withSpan, addSpanAttributes } from "@longox/shared-observability";
+import { recordAiRequest, recordAiRequestFailed } from "../telemetry/metrics";
 
 export type AIProviderType =
   | "openai"

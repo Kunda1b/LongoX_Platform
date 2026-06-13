@@ -20,6 +20,7 @@ import {
   startWorkflowExecution,
   writeAudit,
 } from "@longox/execution-service/workflow-runner";
+import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
@@ -35,7 +36,7 @@ function serializeWorkflow(w: typeof workflowsTable.$inferSelect) {
   };
 }
 
-router.get("/workflows", async (req, res): Promise<void> => {
+router.get("/workflows", authorize({ resource: "workflows", action: "read" }), async (req, res): Promise<void> => {
   const params = ListWorkflowsQueryParams.safeParse(req.query);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -57,7 +58,7 @@ router.get("/workflows", async (req, res): Promise<void> => {
   res.json(workflows.map(serializeWorkflow));
 });
 
-router.post("/workflows", async (req, res): Promise<void> => {
+router.post("/workflows", authorize({ resource: "workflows", action: "write" }), async (req, res): Promise<void> => {
   const parsed = CreateWorkflowBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -82,7 +83,7 @@ router.post("/workflows", async (req, res): Promise<void> => {
   res.status(201).json(serializeWorkflow(workflow));
 });
 
-router.get("/workflows/:id", async (req, res): Promise<void> => {
+router.get("/workflows/:id", authorize({ resource: "workflows", action: "read" }), async (req, res): Promise<void> => {
   const params = GetWorkflowParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -100,7 +101,7 @@ router.get("/workflows/:id", async (req, res): Promise<void> => {
   res.json(serializeWorkflow(workflow));
 });
 
-router.patch("/workflows/:id", async (req, res): Promise<void> => {
+router.patch("/workflows/:id", authorize({ resource: "workflows", action: "write" }), async (req, res): Promise<void> => {
   const params = UpdateWorkflowParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -158,7 +159,7 @@ router.patch("/workflows/:id", async (req, res): Promise<void> => {
   res.json(serializeWorkflow(workflow));
 });
 
-router.delete("/workflows/:id", async (req, res): Promise<void> => {
+router.delete("/workflows/:id", authorize({ resource: "workflows", action: "delete" }), async (req, res): Promise<void> => {
   const params = DeleteWorkflowParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -184,7 +185,7 @@ router.delete("/workflows/:id", async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
-router.post("/workflows/:id/toggle", async (req, res): Promise<void> => {
+router.post("/workflows/:id/toggle", authorize({ resource: "workflows", action: "write" }), async (req, res): Promise<void> => {
   const params = ToggleWorkflowParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -217,7 +218,7 @@ router.post("/workflows/:id/toggle", async (req, res): Promise<void> => {
   res.json(serializeWorkflow(workflow));
 });
 
-router.post("/workflows/:id/run", async (req, res): Promise<void> => {
+router.post("/workflows/:id/run", authorize({ resource: "workflows", action: "run" }), async (req, res): Promise<void> => {
   const params = RunWorkflowParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -278,7 +279,7 @@ router.post("/workflows/:id/run", async (req, res): Promise<void> => {
   });
 });
 
-router.post("/workflows/:id/publish", async (req, res): Promise<void> => {
+router.post("/workflows/:id/publish", authorize({ resource: "workflows", action: "write" }), async (req, res): Promise<void> => {
   const params = GetWorkflowParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -342,7 +343,7 @@ router.post("/workflows/:id/publish", async (req, res): Promise<void> => {
   });
 });
 
-router.post("/workflows/:id/duplicate", async (req, res): Promise<void> => {
+router.post("/workflows/:id/duplicate", authorize({ resource: "workflows", action: "write" }), async (req, res): Promise<void> => {
   const params = GetWorkflowParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -385,7 +386,7 @@ router.post("/workflows/:id/duplicate", async (req, res): Promise<void> => {
   });
 });
 
-router.get("/workflows/:id/versions", async (req, res): Promise<void> => {
+router.get("/workflows/:id/versions", authorize({ resource: "workflows", action: "read" }), async (req, res): Promise<void> => {
   const params = GetWorkflowParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -414,7 +415,7 @@ router.get("/workflows/:id/versions", async (req, res): Promise<void> => {
 
 // ─── Workflow Promotions ──────────────────────────────────────────────────────
 
-router.get("/workflows/:id/promotions", async (req, res): Promise<void> => {
+router.get("/workflows/:id/promotions", authorize({ resource: "workflows", action: "read" }), async (req, res): Promise<void> => {
   const params = GetWorkflowParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -453,7 +454,7 @@ router.get("/workflows/:id/promotions", async (req, res): Promise<void> => {
   );
 });
 
-router.post("/workflows/:id/promotions", async (req, res): Promise<void> => {
+router.post("/workflows/:id/promotions", authorize({ resource: "workflows", action: "write" }), async (req, res): Promise<void> => {
   const params = GetWorkflowParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

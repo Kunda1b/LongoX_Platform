@@ -11,6 +11,7 @@
     "@longox/db": "workspace:*",
     "@longox/execution-service": "workspace:*",
     "@longox/shared-logger": "workspace:*",
+    "@longox/shared-rbac": "workspace:*",
     "@longox/shared-realtime": "workspace:*",
     "drizzle-orm": "catalog:",
     "express": "^5.0.0"

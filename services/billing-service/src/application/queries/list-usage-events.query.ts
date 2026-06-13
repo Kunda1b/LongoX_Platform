@@ -7,7 +7,10 @@ import type {
 export class ListUsageEventsQuery {
   constructor(private readonly repository: UsageRepository) {}
 
-  async execute(filter: ListUsageEventsFilter): Promise<UsageEvent[]> {
-    return this.repository.listEvents(filter);
+  async execute(
+    tenantId: number,
+    filter: ListUsageEventsFilter,
+  ): Promise<UsageEvent[]> {
+    return this.repository.listEvents(tenantId, filter);
   }
 }

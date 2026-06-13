@@ -1,7 +1,48 @@
-import type { Request, Response, NextFunction } from "express";
+import { NodeSDK } from "@opentelemetry/sdk-node";
+import { Resource } from "@opentelemetry/resources";
+import {
+  ATTR_SERVICE_NAME,
+  ATTR_SERVICE_VERSION,
+  ATTR_DEPLOYMENT_ENVIRONMENT,
+} from "@opentelemetry/semantic-conventions";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
+import { PrometheusExporter } from "@opentelemetry/exporter-prometheus";
+import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
+import {
+  PeriodicExportingMetricReader,
+  type MetricReader,
+} from "@opentelemetry/sdk-metrics";
+import { BatchLogRecordProcessor } from "@opentelemetry/sdk-logs";
+import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
+import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
+import { PgInstrumentation } from "@opentelemetry/instrumentation-pg";
+import { RedisInstrumentation } from "@opentelemetry/instrumentation-redis";
+import { IORedisInstrumentation } from "@opentelemetry/instrumentation-ioredis";
+import http from "node:http";
+import {
+  trace,
+  metrics,
+  context,
+  SpanStatusCode,
+  type Span,
+  type SpanOptions,
+  type Attributes,
+} from "@opentelemetry/api";
 
-let traceEnabled = false;
-let traceExporter: unknown = null;
+// ─── Types ─────────────────────────────────────────────────────────────────────
+
+export interface TelemetryConfig {
+  serviceName: string;
+  serviceVersion?: string;
+  environment?: string;
+  otlpEndpoint?: string;
+  enabled?: boolean;
+  metricsInterval?: number;
+  tracesBatchSize?: number;
+  /** Port for the Prometheus /metrics endpoint. 0 = disabled. Default: 9090 */
+  metricsPort?: number;
+}
 
 export interface TraceContext {
   traceId: string;
@@ -9,100 +50,288 @@ export interface TraceContext {
   serviceName: string;
 }
 
-const traceContextStorage = new Map<string, TraceContext>();
+// ─── Global State ──────────────────────────────────────────────────────────────
 
-export function generateTraceId(): string {
-  return `trace_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-}
+let sdk: NodeSDK | null = null;
+let isInitialized = false;
+let serviceName = "unknown";
+let metricsServer: http.Server | null = null;
+let prometheusExporter: PrometheusExporter | null = null;
 
-export function generateSpanId(): string {
-  return `span_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-}
+// ─── Initialization ────────────────────────────────────────────────────────────
 
-export function initObservability(
-  serviceName: string,
-  opts?: { tracing?: boolean; metrics?: boolean },
-): void {
-  traceEnabled = opts?.tracing ?? false;
-  console.log(
-    `[Observability] Initialized for ${serviceName} (tracing=${traceEnabled})`,
-  );
-}
+export function initTelemetry(config: TelemetryConfig): void {
+  if (isInitialized) {
+    console.log("[Telemetry] Already initialized, skipping");
+    return;
+  }
 
-export function tracingMiddleware(serviceName: string) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    if (!traceEnabled) {
-      next();
-      return;
-    }
+  const {
+    serviceName: name,
+    serviceVersion = "0.0.0",
+    environment = process.env.NODE_ENV ?? "development",
+    otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://localhost:4318",
+    enabled = process.env.OTEL_ENABLED !== "false",
+    metricsInterval = 15000,
+    tracesBatchSize = 512,
+    metricsPort = parseInt(process.env.METRICS_PORT ?? "9090", 10),
+  } = config;
 
-    const traceId = (req.headers["x-trace-id"] as string) ?? generateTraceId();
-    const spanId = generateSpanId();
-    const parentSpanId = req.headers["x-span-id"] as string | undefined;
+  serviceName = name;
 
-    const ctx: TraceContext = { traceId, spanId, serviceName };
-    traceContextStorage.set(traceId, ctx);
+  if (!enabled) {
+    console.log(`[Telemetry] Disabled for ${name}`);
+    return;
+  }
 
-    res.setHeader("x-trace-id", traceId);
-    res.setHeader("x-span-id", spanId);
+  // Create resource with service attributes
+  const resource = new Resource({
+    [ATTR_SERVICE_NAME]: name,
+    [ATTR_SERVICE_VERSION]: serviceVersion,
+    [ATTR_DEPLOYMENT_ENVIRONMENT]: environment,
+  });
 
-    const startMs = Date.now();
+  // Configure trace exporter (OTLP → Collector)
+  const traceExporter = new OTLPTraceExporter({
+    url: `${otlpEndpoint}/v1/traces`,
+  });
 
-    res.on("finish", () => {
-      const durationMs = Date.now() - startMs;
-      traceContextStorage.delete(traceId);
+  // Configure log exporter (OTLP → Collector)
+  const logExporter = new OTLPLogExporter({
+    url: `${otlpEndpoint}/v1/logs`,
+  });
 
-      const logData = {
-        traceId,
-        spanId,
-        parentSpanId: parentSpanId ?? null,
-        service: serviceName,
-        method: req.method,
-        path: req.path,
-        statusCode: res.statusCode,
-        durationMs,
-        timestamp: new Date().toISOString(),
-      };
+  // Build metric readers: Prometheus scrape endpoint + OTLP push to collector
+  const metricReaders: MetricReader[] = [];
 
-      if (process.env.NODE_ENV === "development") {
-        console.log(
-          `[Trace] ${serviceName} ${req.method} ${req.path} ${res.statusCode} ${durationMs}ms`,
-        );
-      } else {
-        console.log(JSON.stringify({ type: "span", ...logData }));
-      }
+  // Prometheus scrape endpoint (for direct Prometheus scraping)
+  if (metricsPort > 0) {
+    prometheusExporter = new PrometheusExporter({
+      port: metricsPort,
+      endpoint: "/metrics",
     });
+    metricReaders.push(prometheusExporter);
+    console.log(`[Telemetry] Prometheus metrics on :${metricsPort}/metrics`);
+  }
 
-    next();
+  // OTLP push to collector (for production with OTel Collector)
+  const useOtlpMetrics = process.env.OTEL_METRICS_EXPORTER !== "prometheus-only";
+  if (useOtlpMetrics) {
+    const metricExporter = new OTLPMetricExporter({
+      url: `${otlpEndpoint}/v1/metrics`,
+    });
+    metricReaders.push(
+      new PeriodicExportingMetricReader({
+        exporter: metricExporter,
+        exportIntervalMillis: metricsInterval,
+      })
+    );
+  }
+
+  // Create SDK instance
+  sdk = new NodeSDK({
+    resource,
+    traceExporter,
+    metricReader: metricReaders.length === 1 ? metricReaders[0] : metricReaders,
+    logRecordProcessor: new BatchLogRecordProcessor(logExporter, {
+      maxQueueSize: tracesBatchSize,
+      maxExportBatchSize: tracesBatchSize / 2,
+    }),
+    instrumentations: [
+      new HttpInstrumentation(),
+      new ExpressInstrumentation(),
+      new PgInstrumentation(),
+      new RedisInstrumentation(),
+      new IORedisInstrumentation(),
+    ],
+  });
+
+  // Start the SDK
+  sdk.start();
+  isInitialized = true;
+
+  console.log(
+    `[Telemetry] Initialized for ${name} (env=${environment}, endpoint=${otlpEndpoint})`
+  );
+
+  // Graceful shutdown
+  const shutdown = async () => {
+    if (metricsServer) {
+      await new Promise<void>((resolve) => metricsServer!.close(() => resolve()));
+      metricsServer = null;
+    }
+    if (sdk) {
+      await sdk.shutdown();
+      console.log("[Telemetry] Shutdown complete");
+    }
+  };
+
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+}
+
+export async function shutdownTelemetry(): Promise<void> {
+  if (metricsServer) {
+    await new Promise<void>((resolve) => metricsServer!.close(() => resolve()));
+    metricsServer = null;
+  }
+  if (sdk) {
+    await sdk.shutdown();
+    isInitialized = false;
+    sdk = null;
+  }
+}
+
+// ─── Tracing Helpers ───────────────────────────────────────────────────────────
+
+export function getTracer() {
+  return trace.getTracer(serviceName);
+}
+
+export function getMeter() {
+  return metrics.getMeter(serviceName);
+}
+
+export function getCurrentSpan(): Span | undefined {
+  return trace.getActiveSpan();
+}
+
+export function withSpan<T>(
+  name: string,
+  fn: (span: Span) => T | Promise<T>,
+  options?: SpanOptions
+): Promise<T> {
+  return getTracer().startActiveSpan(name, options ?? {}, async (span) => {
+    try {
+      const result = await fn(span);
+      span.setStatus({ code: SpanStatusCode.OK });
+      return result;
+    } catch (error) {
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+      span.recordException(error as Error);
+      throw error;
+    } finally {
+      span.end();
+    }
+  });
+}
+
+export function addSpanAttributes(attributes: Attributes): void {
+  const span = getCurrentSpan();
+  if (span) {
+    span.setAttributes(attributes);
+  }
+}
+
+export function addSpanEvent(
+  name: string,
+  attributes?: Attributes
+): void {
+  const span = getCurrentSpan();
+  if (span) {
+    span.addEvent(name, attributes);
+  }
+}
+
+// ─── Metrics Helpers ───────────────────────────────────────────────────────────
+
+export function recordCounter(
+  name: string,
+  value: number = 1,
+  attributes?: Attributes
+): void {
+  const meter = getMeter();
+  const counter = meter.createCounter(name);
+  counter.add(value, attributes);
+}
+
+export function recordHistogram(
+  name: string,
+  value: number,
+  attributes?: Attributes
+): void {
+  const meter = getMeter();
+  const histogram = meter.createHistogram(name);
+  histogram.record(value, attributes);
+}
+
+export function recordGauge(
+  name: string,
+  value: number,
+  attributes?: Attributes
+): void {
+  const meter = getMeter();
+  const gauge = meter.createGauge(name);
+  gauge.record(value, attributes);
+}
+
+// ─── Context Propagation ───────────────────────────────────────────────────────
+
+export function getTraceContext(): TraceContext | undefined {
+  const span = getCurrentSpan();
+  if (!span) return undefined;
+
+  const spanContext = span.spanContext();
+  return {
+    traceId: spanContext.traceId,
+    spanId: spanContext.spanId,
+    serviceName,
   };
 }
 
-export function getTraceContext(traceId: string): TraceContext | undefined {
-  return traceContextStorage.get(traceId);
+export function injectTraceContext(
+  headers: Record<string, string> = {}
+): Record<string, string> {
+  const { propagation } = context.active();
+  const carrier = { ...headers };
+  propagation.inject(context.active(), carrier);
+  return carrier;
+}
+
+// ─── Legacy Compatibility ──────────────────────────────────────────────────────
+
+export function initObservability(
+  name: string,
+  opts?: { tracing?: boolean; metrics?: boolean }
+): void {
+  initTelemetry({
+    serviceName: name,
+    enabled: opts?.tracing ?? opts?.metrics ?? true,
+  });
+}
+
+export function tracingMiddleware(serviceName: string) {
+  // Return a no-op middleware - OTel handles this automatically
+  return (_req: any, _res: any, next: any) => next();
 }
 
 export function recordMetric(
   name: string,
   value: number,
-  tags?: Record<string, string>,
+  tags?: Record<string, string>
 ): void {
-  const entry = {
-    metric: name,
-    value,
-    tags: tags ?? {},
-    timestamp: new Date().toISOString(),
-  };
-  if (process.env.NODE_ENV === "production") {
-    console.log(JSON.stringify({ type: "metric", ...entry }));
+  const attributes: Attributes = {};
+  if (tags) {
+    for (const [key, val] of Object.entries(tags)) {
+      attributes[key] = val;
+    }
   }
+  recordHistogram(name, value, attributes);
 }
 
 export function recordEvent(
   eventType: string,
-  data: Record<string, unknown>,
+  data: Record<string, unknown>
 ): void {
-  const entry = { event: eventType, data, timestamp: new Date().toISOString() };
-  console.log(JSON.stringify({ type: "event", ...entry }));
+  addSpanEvent(eventType, data as Attributes);
 }
 
-export { InMemoryCache as MetricsStore } from "@longox/shared-cache";
+// Re-export types for backward compatibility
+export type { TraceContext as LegacyTraceContext };
+
+// Error tracking
+export { trackError, withErrorTracking } from "./error-tracking";
+export type { ErrorContext } from "./error-tracking";

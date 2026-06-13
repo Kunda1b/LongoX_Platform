@@ -1,59 +1,66 @@
-import { logger } from "@longox/shared-logger";
+import { metrics } from "@opentelemetry/api";
 
-interface MetricPoint {
-  name: string;
-  value: number;
-  tags: Record<string, string>;
-  timestamp: Date;
+const meter = metrics.getMeter("execution-service");
+
+// Counters
+export const jobsCompletedCounter = meter.createCounter("jobs.completed", {
+  description: "Number of jobs completed successfully",
+});
+
+export const jobsFailedCounter = meter.createCounter("jobs.failed", {
+  description: "Number of jobs that failed",
+});
+
+export const jobsRetriedCounter = meter.createCounter("jobs.retried", {
+  description: "Number of jobs retried",
+});
+
+// Histograms
+export const jobDurationHistogram = meter.createHistogram("jobs.duration", {
+  description: "Job execution duration in milliseconds",
+  unit: "ms",
+});
+
+export const nodeDurationHistogram = meter.createHistogram("nodes.duration", {
+  description: "Node execution duration in milliseconds",
+  unit: "ms",
+});
+
+// Gauges
+export const queueDepthGauge = meter.createGauge("queue.depth", {
+  description: "Current queue depth (waiting jobs)",
+});
+
+export const activeJobsGauge = meter.createGauge("jobs.active", {
+  description: "Number of currently active jobs",
+});
+
+// Helper functions
+export function recordJobCompleted(jobType: string, durationMs: number): void {
+  jobsCompletedCounter.add(1, { "job.type": jobType });
+  jobDurationHistogram.record(durationMs, { "job.type": jobType });
 }
 
-class MetricsCollector {
-  private metrics: MetricPoint[] = [];
-  private flushIntervalMs: number;
-  private timer: ReturnType<typeof setInterval> | null = null;
-
-  constructor(flushIntervalMs: number = 60_000) {
-    this.flushIntervalMs = flushIntervalMs;
-  }
-
-  start(): void {
-    this.timer = setInterval(() => this.flush(), this.flushIntervalMs);
-  }
-
-  stop(): void {
-    if (this.timer) clearInterval(this.timer);
-  }
-
-  record(name: string, value: number, tags: Record<string, string> = {}): void {
-    this.metrics.push({
-      name,
-      value,
-      tags,
-      timestamp: new Date(),
-    });
-  }
-
-  increment(name: string, tags: Record<string, string> = {}): void {
-    this.record(name, 1, tags);
-  }
-
-  gauge(name: string, value: number, tags: Record<string, string> = {}): void {
-    this.record(name, value, tags);
-  }
-
-  private flush(): void {
-    if (this.metrics.length === 0) return;
-
-    const points = this.metrics.splice(0);
-    logger.info({ metrics: points.length }, "[Metrics] Flushing metrics");
-
-    for (const point of points) {
-      logger.debug(
-        { metric: point.name, value: point.value, tags: point.tags },
-        "[Metrics] Point",
-      );
-    }
-  }
+export function recordJobFailed(jobType: string, error: string): void {
+  jobsFailedCounter.add(1, { "job.type": jobType, "error.type": error });
 }
 
-export const metrics = new MetricsCollector();
+export function recordJobRetried(jobType: string, attempt: number): void {
+  jobsRetriedCounter.add(1, { "job.type": jobType, "attempt": attempt.toString() });
+}
+
+export function recordNodeExecution(
+  nodeType: string,
+  durationMs: number,
+  success: boolean
+): void {
+  nodeDurationHistogram.record(durationMs, {
+    "node.type": nodeType,
+    "node.success": success.toString(),
+  });
+}
+
+export function updateQueueDepth(waiting: number, active: number): void {
+  queueDepthGauge.record(waiting);
+  activeJobsGauge.record(active);
+}

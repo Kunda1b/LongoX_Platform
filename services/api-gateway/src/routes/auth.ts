@@ -1,10 +1,167 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
-import { eq, and, sql } from "drizzle-orm";
-import { db, usersTable, userMfaTable, tenantsTable } from "@longox/db";
-import { signToken, authMiddleware } from "../lib/auth";
+import { eq, and } from "drizzle-orm";
+import {
+  db,
+  usersTable,
+  userMfaTable,
+  tenantsTable,
+  membershipsTable,
+  userRegistrationsTable,
+  auditLogTable,
+} from "@longox/db";
+import {
+  authMiddleware,
+  getBearerToken,
+  revokeToken,
+  signToken,
+} from "../lib/auth";
 
 const router: IRouter = Router();
+
+function slugify(value: string): string {
+  const slug = value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+  return slug || "workspace";
+}
+
+async function uniqueTenantSlug(base: string): Promise<string> {
+  let slug = slugify(base);
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const candidate = attempt === 0 ? slug : `${slug}-${attempt}`;
+    const [existing] = await db
+      .select({ id: tenantsTable.id })
+      .from(tenantsTable)
+      .where(eq(tenantsTable.slug, candidate))
+      .limit(1);
+    if (!existing) return candidate;
+  }
+  return `${slug}-${Date.now()}`;
+}
+
+router.post("/auth/register", async (req, res): Promise<void> => {
+  const { name, email, password, organizationName } = req.body as {
+    name?: string;
+    email?: string;
+    password?: string;
+    organizationName?: string;
+  };
+
+  const trimmedName = name?.trim();
+  const trimmedEmail = email?.trim().toLowerCase();
+  const trimmedPassword = password?.trim();
+  const trimmedOrg = organizationName?.trim();
+
+  if (!trimmedName || !trimmedEmail || !trimmedPassword) {
+    res.status(400).json({ error: "Name, email, and password are required" });
+    return;
+  }
+
+  if (trimmedPassword.length < 8) {
+    res.status(400).json({ error: "Password must be at least 8 characters" });
+    return;
+  }
+
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(trimmedEmail)) {
+    res.status(400).json({ error: "Invalid email address" });
+    return;
+  }
+
+  const [existingUser] = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.email, trimmedEmail))
+    .limit(1);
+
+  if (existingUser) {
+    res.status(409).json({ error: "An account with this email already exists" });
+    return;
+  }
+
+  const orgName = trimmedOrg || `${trimmedName}'s Workspace`;
+  const slug = await uniqueTenantSlug(trimmedOrg || trimmedEmail.split("@")[0]);
+  const passwordHash = await bcrypt.hash(trimmedPassword, 10);
+
+  try {
+    const result = await db.transaction(async (tx) => {
+      const [tenant] = await tx
+        .insert(tenantsTable)
+        .values({
+          name: orgName,
+          slug,
+          plan: "free",
+          isActive: true,
+        })
+        .returning();
+
+      const [user] = await tx
+        .insert(usersTable)
+        .values({
+          email: trimmedEmail,
+          passwordHash,
+          name: trimmedName,
+          tenantId: tenant.id,
+          role: "admin",
+          isActive: true,
+        })
+        .returning();
+
+      await tx.insert(membershipsTable).values({
+        tenantId: tenant.id,
+        userId: user.id,
+        status: "active",
+      });
+
+      await tx.insert(userRegistrationsTable).values({
+        userId: user.id,
+        tenantId: tenant.id,
+        email: trimmedEmail,
+        organizationName: orgName,
+        status: "completed",
+        ipAddress: req.ip ?? null,
+        userAgent: req.get("user-agent") ?? null,
+      });
+
+      await tx.insert(auditLogTable).values({
+        tenantId: tenant.id,
+        action: "user.registered",
+        resourceType: "user",
+        resourceId: String(user.id),
+        actorType: "user",
+        actorId: String(user.id),
+        metadata: { tenantId: tenant.id, email: trimmedEmail },
+      });
+
+      return { tenant, user };
+    });
+
+    const authUser = {
+      id: result.user.id,
+      email: result.user.email,
+      name: result.user.name,
+      tenantId: result.user.tenantId ?? null,
+      role: result.user.role,
+    };
+    const token = signToken(authUser);
+
+    res.status(201).json({
+      token,
+      user: authUser,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("unique") || message.includes("duplicate")) {
+      res.status(409).json({ error: "An account with this email already exists" });
+      return;
+    }
+    res.status(500).json({ error: "Registration failed" });
+  }
+});
 
 router.post("/auth/login", async (req, res): Promise<void> => {
   const { email, password } = req.body as { email?: string; password?: string };
@@ -71,7 +228,9 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   });
 });
 
-router.post("/auth/logout", (_req, res): void => {
+router.post("/auth/logout", authMiddleware, (req, res): void => {
+  const token = getBearerToken(req);
+  if (token) revokeToken(token);
   res.json({ message: "Logged out successfully" });
 });
 

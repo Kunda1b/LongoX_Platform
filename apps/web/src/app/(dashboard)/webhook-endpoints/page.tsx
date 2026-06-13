@@ -46,6 +46,12 @@ export default function WebhookEndpointsPage() {
         </Button>
       </div>
 
+      <div className="rounded-lg border border-dashed p-4">
+        <p className="text-sm text-muted-foreground text-center">
+          Webhook endpoints are managed through workflows. Create a workflow with a webhook trigger to add new endpoints.
+        </p>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {endpoints.map((ep) => (
           <Card key={ep.name}>

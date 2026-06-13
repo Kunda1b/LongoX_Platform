@@ -1,0 +1,37 @@
+{
+  "name": "Support Automation",
+  "description": "Route high-priority support tickets to Slack",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "trigger_zendesk",
+      "type": "trigger:zendesk:newTicket",
+      "label": "New Ticket",
+      "position": { "x": 100, "y": 100 },
+      "config": {}
+    },
+    {
+      "id": "check_priority",
+      "type": "action:conditional",
+      "label": "Is High Priority?",
+      "position": { "x": 300, "y": 100 },
+      "config": {
+        "condition": "{{ input.ticket.priority }} == 'urgent'"
+      }
+    },
+    {
+      "id": "notify_slack",
+      "type": "action:slack:sendMessage",
+      "label": "Notify Slack Channel",
+      "position": { "x": 500, "y": 100 },
+      "config": {
+        "channel": "urgent-support",
+        "text": "URGENT TICKET: {{ input.ticket.subject }}"
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "trigger_zendesk", "target": "check_priority" },
+    { "id": "e2", "source": "check_priority", "sourceHandle": "true", "target": "notify_slack" }
+  ]
+}

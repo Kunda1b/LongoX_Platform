@@ -8,7 +8,17 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@longox/ai-service": "workspace:*",
+    "@longox/audit-service": "workspace:*",
+    "@longox/billing-service": "workspace:*",
+    "@longox/dashboard-service": "workspace:*",
     "@longox/db": "workspace:*",
+    "@longox/execution-service": "workspace:*",
+    "@longox/search-service": "workspace:*",
+    "@longox/shared-logger": "workspace:*",
+    "@longox/shared-observability": "workspace:*",
+    "@longox/template-service": "workspace:*",
+    "@longox/workflow-service": "workspace:*",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.6",
     "drizzle-orm": "catalog:",

@@ -3,8 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
-    "dev": "tsx watch src/api/rest/index.ts",
+    "dev": "tsx watch src/dev-server.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -13,6 +16,8 @@
     "@longox/execution-service": "workspace:*",
     "@longox/shared-cache": "workspace:*",
     "@longox/shared-events": "workspace:*",
+    "@longox/shared-logger": "workspace:*",
+    "@longox/shared-observability": "workspace:*",
     "drizzle-orm": "catalog:",
     "express": "^5.0.0"
   },

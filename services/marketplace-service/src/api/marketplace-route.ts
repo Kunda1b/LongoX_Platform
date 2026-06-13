@@ -58,6 +58,8 @@ router.post("/marketplace/listings", async (req, res): Promise<void> => {
     return;
   }
 
+  const pricing = req.body.pricing as { free: boolean; price?: number } | undefined;
+
   const listing = await repository.create({
     title: String(title),
     description: String(description ?? ""),
@@ -73,7 +75,7 @@ router.post("/marketplace/listings", async (req, res): Promise<void> => {
     reviewCount: 0,
     featured: false,
     verified: false,
-    pricing: { free: true },
+    pricing: pricing ? { free: pricing.free, price: pricing.price } : { free: true },
     metadata: (metadata ?? {}) as Record<string, unknown>,
   });
 

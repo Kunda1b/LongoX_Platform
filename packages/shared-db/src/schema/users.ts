@@ -5,14 +5,18 @@ import {
   timestamp,
   boolean,
   jsonb,
+  integer,
 } from "drizzle-orm/pg-core";
+import { tenantsTable } from "./tenants";
 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   name: text("name").notNull(),
-  tenantId: serial("tenant_id"),
+  tenantId: integer("tenant_id").references(() => tenantsTable.id, {
+    onDelete: "set null",
+  }),
   role: text("role").notNull().default("editor"),
   isActive: boolean("is_active").notNull().default(true),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),

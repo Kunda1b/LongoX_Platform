@@ -7,6 +7,7 @@ const JWT_SECRET =
   process.env["JWT_SECRET"] ??
   "flow-builder-nexus-dev-secret-change-in-production";
 const JWT_EXPIRY = "24h";
+const revokedTokens = new Map<string, number>();
 
 export interface AuthUser {
   id: number;
@@ -36,16 +37,44 @@ export function verifyToken(token: string): AuthUser | null {
   }
 }
 
+function cleanupRevokedTokens(): void {
+  const now = Date.now();
+  for (const [token, expiresAt] of revokedTokens.entries()) {
+    if (expiresAt <= now) revokedTokens.delete(token);
+  }
+}
+
+export function getBearerToken(req: Request): string | null {
+  const header = req.headers["authorization"];
+  return header?.startsWith("Bearer ") ? header.slice(7) : null;
+}
+
+export function revokeToken(token: string): void {
+  const decoded = jwt.decode(token) as { exp?: number } | null;
+  const expiresAt = decoded?.exp ? decoded.exp * 1000 : Date.now() + 24 * 60 * 60 * 1000;
+  cleanupRevokedTokens();
+  revokedTokens.set(token, expiresAt);
+}
+
+export function isTokenRevoked(token: string): boolean {
+  cleanupRevokedTokens();
+  return revokedTokens.has(token);
+}
+
 export async function authMiddleware(
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> {
-  const header = req.headers["authorization"];
-  const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
+  const token = getBearerToken(req);
 
   if (!token) {
     res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+
+  if (isTokenRevoked(token)) {
+    res.status(401).json({ error: "Token has been revoked" });
     return;
   }
 

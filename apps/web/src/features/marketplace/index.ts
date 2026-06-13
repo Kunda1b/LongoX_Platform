@@ -1,2 +1,1 @@
-export const marketplace = { name: "Marketplace" };
-export default marketplace;
+export { MarketplaceList } from "./marketplace-list";

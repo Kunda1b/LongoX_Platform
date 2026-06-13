@@ -6,6 +6,7 @@ import {
   integer,
   real,
   jsonb,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { tenantsTable } from "./tenants";
 export const billingAccountsTable = pgTable("billing_accounts", {
@@ -14,9 +15,19 @@ export const billingAccountsTable = pgTable("billing_accounts", {
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
   providerRef: text("provider_ref"),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  stripeSubscriptionStatus: text("stripe_subscription_status"),
+  stripePriceId: text("stripe_price_id"),
+  planId: integer("plan_id"),
+  billingCycle: text("billing_cycle").notNull().default("monthly"),
+  currentPeriodStart: timestamp("current_period_start", { withTimezone: true }),
+  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
   status: text("status").notNull().default("active"),
   currency: text("currency").notNull().default("USD"),
   paymentMethod: jsonb("payment_method").default({}),
+  trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

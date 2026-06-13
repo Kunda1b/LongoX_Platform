@@ -1,45 +1,23 @@
 import { logger } from "@longox/shared-logger";
-import { jobQueue } from "../queue/job-queue";
+import { jobQueue } from "../queue/bullmq-queue";
 
 export class WorkflowWorker {
   private running = false;
-  private pollIntervalMs: number;
 
-  constructor(pollIntervalMs: number = 1000) {
-    this.pollIntervalMs = pollIntervalMs;
+  constructor(_pollIntervalMs: number = 1000) {
+    // BullMQ handles polling internally via its worker
   }
 
   async start(): Promise<void> {
     this.running = true;
-    logger.info("[Worker] Workflow worker started");
-
+    logger.info("[Worker] Starting BullMQ worker...");
     await jobQueue.start();
-
-    while (this.running) {
-      await this.processNext();
-      await this.sleep(this.pollIntervalMs);
-    }
+    logger.info("[Worker] BullMQ worker ready");
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     this.running = false;
-    logger.info("[Worker] Workflow worker stopped");
-  }
-
-  private async processNext(): Promise<void> {
-    if (jobQueue.getQueueLength() === 0 || jobQueue.getActiveWorkers() >= 5) {
-      return;
-    }
-    logger.debug(
-      {
-        queueLength: jobQueue.getQueueLength(),
-        activeWorkers: jobQueue.getActiveWorkers(),
-      },
-      "[Worker] Queue status",
-    );
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    await jobQueue.stop();
+    logger.info("[Worker] BullMQ worker stopped");
   }
 }

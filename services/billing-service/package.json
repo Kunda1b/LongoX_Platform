@@ -3,14 +3,20 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "dev": "tsx watch src/api/rest/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@longox/db": "workspace:*",
+    "@longox/shared-auth": "workspace:*",
+    "@longox/shared-rbac": "workspace:*",
     "drizzle-orm": "catalog:",
-    "express": "^5.0.0"
+    "express": "^5.0.0",
+    "stripe": "^17.7.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",

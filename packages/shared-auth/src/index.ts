@@ -18,6 +18,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: AuthUser;
+      tenantId?: number;
     }
   }
 }
@@ -52,5 +53,51 @@ export function decodeToken(token: string): TokenPayload | null {
     return jwt.decode(token) as TokenPayload;
   } catch {
     return null;
+  }
+}
+
+export class TenantContext {
+  constructor(public readonly tenantId: number) {}
+
+  static fromRequest(req: express.Request): TenantContext {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) {
+      throw new Error("Tenant context not available - authentication required");
+    }
+    return new TenantContext(tenantId);
+  }
+
+  static optional(req: express.Request): TenantContext | null {
+    const tenantId = req.user?.tenantId;
+    return tenantId ? new TenantContext(tenantId) : null;
+  }
+}
+
+import type { Request, Response, NextFunction } from "express";
+
+export function tenantContextMiddleware(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): void {
+  const tenantId = req.user?.tenantId;
+  if (tenantId) {
+    req.tenantId = tenantId;
+  }
+  next();
+}
+
+export class ForbiddenError extends Error {
+  constructor(message = "Access denied: insufficient permissions for this tenant") {
+    super(message);
+    this.name = "ForbiddenError";
+  }
+}
+
+export function requireTenant<T extends Request>(
+  req: T,
+): asserts req is T & { tenantId: number } {
+  if (!req.tenantId) {
+    throw new ForbiddenError();
   }
 }

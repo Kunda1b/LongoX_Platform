@@ -4,20 +4,27 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./workflow-runner": "./src/orchestrator/workflow-runner.ts"
+    ".": "./src/index.ts",
+    "./workflow-runner": "./src/queue/bullmq-queue.ts"
   },
   "scripts": {
     "dev": "tsx watch src/orchestrator/executions-route.ts",
+    "worker": "tsx src/workers/worker-entry.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@longox/api-zod": "workspace:*",
     "@longox/db": "workspace:*",
+    "@longox/shared-queue": "workspace:*",
     "@longox/shared-logger": "workspace:*",
+    "@longox/shared-observability": "workspace:*",
     "@longox/shared-realtime": "workspace:*",
+    "@longox/shared-rbac": "workspace:*",
     "@longox/workflow-engine": "workspace:*",
+    "bullmq": "^5.34.0",
     "drizzle-orm": "catalog:",
     "express": "^5.0.0",
+    "ioredis": "^5.4.1",
     "openai": "^6.42.0"
   },
   "devDependencies": {

@@ -1,0 +1,37 @@
+{
+  "name": "Customer Onboarding",
+  "description": "Send welcome emails and create project folders for new customers",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "trigger_stripe",
+      "type": "trigger:stripe:subscriptionCreated",
+      "label": "New Subscription",
+      "position": { "x": 100, "y": 100 },
+      "config": {}
+    },
+    {
+      "id": "send_email",
+      "type": "action:hubspot:sendEmail",
+      "label": "Send Welcome Email",
+      "position": { "x": 300, "y": 100 },
+      "config": {
+        "to": "{{ input.customer_email }}",
+        "templateId": "welcome_template"
+      }
+    },
+    {
+      "id": "create_folder",
+      "type": "action:google:createDriveFolder",
+      "label": "Create Project Folder",
+      "position": { "x": 500, "y": 100 },
+      "config": {
+        "folderName": "{{ input.customer_name }} - Project"
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "trigger_stripe", "target": "send_email" },
+    { "id": "e2", "source": "send_email", "target": "create_folder" }
+  ]
+}

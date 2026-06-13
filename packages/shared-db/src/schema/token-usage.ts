@@ -6,9 +6,13 @@ import {
   numeric,
   timestamp,
 } from "drizzle-orm/pg-core";
+import { tenantsTable } from "./tenants";
 
 export const tokenUsageTable = pgTable("token_usage", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id")
+    .notNull()
+    .references(() => tenantsTable.id, { onDelete: "cascade" }),
   modelId: integer("model_id"),
   modelName: text("model_name"),
   provider: text("provider"),

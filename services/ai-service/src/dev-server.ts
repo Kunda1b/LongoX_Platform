@@ -1,0 +1,30 @@
+import { initTelemetry } from "@longox/shared-observability";
+
+initTelemetry({
+  serviceName: "ai-service",
+  serviceVersion: process.env.npm_package_version ?? "0.0.0",
+  environment: process.env.NODE_ENV ?? "development",
+  otlpEndpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://localhost:4318",
+});
+
+import express from "express";
+import pino from "pino-http";
+import {
+  aiModelsRouter,
+  aiRunsRouter,
+  promptsRouter,
+  aiUsageRouter,
+} from "./index";
+
+const app = express();
+app.use(pino());
+app.use(express.json());
+app.use(aiModelsRouter);
+app.use(aiRunsRouter);
+app.use(promptsRouter);
+app.use(aiUsageRouter);
+
+const PORT = parseInt(process.env.PORT ?? "3002", 10);
+app.listen(PORT, () => {
+  console.log(`[AI Service] Dev server on port ${PORT}`);
+});

@@ -1,0 +1,151 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Job Throughput",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(longox_jobs_completed_total[5m])",
+          "legendFormat": "completed - {{job_type}}"
+        },
+        {
+          "expr": "rate(longox_jobs_failed_total[5m])",
+          "legendFormat": "failed - {{job_type}}"
+        },
+        {
+          "expr": "rate(longox_jobs_retried_total[5m])",
+          "legendFormat": "retried - {{job_type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "Queue Depth",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "longox_queue_depth",
+          "legendFormat": "waiting"
+        },
+        {
+          "expr": "longox_jobs_active",
+          "legendFormat": "active"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "Job Duration Distribution",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(longox_jobs_duration_seconds_bucket[5m])) by (le, job_type))",
+          "legendFormat": "p50 {{job_type}}"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(longox_jobs_duration_seconds_bucket[5m])) by (le, job_type))",
+          "legendFormat": "p95 {{job_type}}"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(longox_jobs_duration_seconds_bucket[5m])) by (le, job_type))",
+          "legendFormat": "p99 {{job_type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "Node Execution Duration",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(longox_nodes_duration_seconds_bucket[5m])) by (le, node_type, node_success))",
+          "legendFormat": "p95 {{node_type}} success={{node_success}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "Error Rate by Job Type",
+      "type": "piechart",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum(increase(longox_jobs_failed_total[1h])) by (job_type, error_type)",
+          "legendFormat": "{{job_type}} - {{error_type}}"
+        }
+      ]
+    },
+    {
+      "title": "Retry Rate",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum(rate(longox_jobs_retried_total[5m])) / (sum(rate(longox_jobs_completed_total[5m])) + sum(rate(longox_jobs_failed_total[5m]))) * 100",
+          "legendFormat": "retry %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percent", "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 10, "color": "yellow" }, { "value": 25, "color": "red" }] } }
+      }
+    },
+    {
+      "title": "Active Workers",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
+      "targets": [
+        {
+          "expr": "longox_jobs_active",
+          "legendFormat": "active"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 4, "color": "yellow" }, { "value": 5, "color": "red" }] } }
+      }
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["longox", "execution"],
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "LongoX Execution Service",
+  "uid": "longox-execution",
+  "version": 1,
+  "refresh": "30s"
+}

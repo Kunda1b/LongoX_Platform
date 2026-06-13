@@ -1,0 +1,47 @@
+{
+  "name": "Lead Qualification",
+  "description": "Automatically qualify incoming leads from website forms",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "trigger_webhook",
+      "type": "trigger:webhook",
+      "label": "Form Submission",
+      "position": { "x": 100, "y": 100 },
+      "config": {}
+    },
+    {
+      "id": "check_score",
+      "type": "action:conditional",
+      "label": "Score Lead",
+      "position": { "x": 300, "y": 100 },
+      "config": {
+        "condition": "{{ input.body.score }} > 50"
+      }
+    },
+    {
+      "id": "add_to_crm",
+      "type": "action:salesforce:createLead",
+      "label": "Add to Salesforce",
+      "position": { "x": 500, "y": 50 },
+      "config": {
+        "email": "{{ input.body.email }}",
+        "company": "{{ input.body.company }}"
+      }
+    },
+    {
+      "id": "discard",
+      "type": "action:log",
+      "label": "Discard Lead",
+      "position": { "x": 500, "y": 150 },
+      "config": {
+        "message": "Lead score too low: {{ input.body.email }}"
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "trigger_webhook", "target": "check_score" },
+    { "id": "e2", "source": "check_score", "sourceHandle": "true", "target": "add_to_crm" },
+    { "id": "e3", "source": "check_score", "sourceHandle": "false", "target": "discard" }
+  ]
+}

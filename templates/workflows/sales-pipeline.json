@@ -1,0 +1,38 @@
+{
+  "name": "Sales Pipeline",
+  "description": "Update pipeline stages based on contract signed",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "trigger_docusign",
+      "type": "trigger:docusign:envelopeCompleted",
+      "label": "Contract Signed",
+      "position": { "x": 100, "y": 100 },
+      "config": {}
+    },
+    {
+      "id": "update_crm",
+      "type": "action:hubspot:updateDeal",
+      "label": "Update Deal Stage",
+      "position": { "x": 300, "y": 100 },
+      "config": {
+        "dealId": "{{ input.envelope.customFields.dealId }}",
+        "stage": "closed_won"
+      }
+    },
+    {
+      "id": "notify_sales",
+      "type": "action:slack:sendMessage",
+      "label": "Celebrate Win",
+      "position": { "x": 500, "y": 100 },
+      "config": {
+        "channel": "sales-wins",
+        "text": "Deal Won! :tada: {{ input.envelope.customFields.dealName }}"
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "trigger_docusign", "target": "update_crm" },
+    { "id": "e2", "source": "update_crm", "target": "notify_sales" }
+  ]
+}

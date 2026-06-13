@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, sql } from "drizzle-orm";
 import crypto from "node:crypto";
 import { db, webhookEndpointsTable, workflowsTable } from "@longox/db";
+import { authorize, requireTenantContext } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
@@ -26,7 +27,7 @@ function fmt(row: typeof webhookEndpointsTable.$inferSelect) {
   };
 }
 
-router.get("/webhook-endpoints", async (req, res): Promise<void> => {
+router.get("/webhook-endpoints", authorize("workflows.read"), requireTenantContext, async (req, res): Promise<void> => {
   const workflowId = req.query.workflowId
     ? parseInt(req.query.workflowId as string, 10)
     : undefined;
@@ -43,7 +44,7 @@ router.get("/webhook-endpoints", async (req, res): Promise<void> => {
   res.json(rows.map(fmt));
 });
 
-router.post("/webhook-endpoints", async (req, res): Promise<void> => {
+router.post("/webhook-endpoints", authorize("workflows.write"), requireTenantContext, async (req, res): Promise<void> => {
   const { workflowId, name, description, allowedIps, headers } = req.body as {
     workflowId?: number;
     name?: string;
@@ -80,7 +81,7 @@ router.post("/webhook-endpoints", async (req, res): Promise<void> => {
   res.status(201).json(fmt(row));
 });
 
-router.get("/webhook-endpoints/:id", async (req, res): Promise<void> => {
+router.get("/webhook-endpoints/:id", authorize("workflows.read"), requireTenantContext, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -97,7 +98,7 @@ router.get("/webhook-endpoints/:id", async (req, res): Promise<void> => {
   res.json(fmt(row));
 });
 
-router.patch("/webhook-endpoints/:id", async (req, res): Promise<void> => {
+router.patch("/webhook-endpoints/:id", authorize("workflows.write"), requireTenantContext, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -130,6 +131,8 @@ router.patch("/webhook-endpoints/:id", async (req, res): Promise<void> => {
 
 router.post(
   "/webhook-endpoints/:id/regenerate-secret",
+  authorize("workflows.write"),
+  requireTenantContext,
   async (req, res): Promise<void> => {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
@@ -149,7 +152,7 @@ router.post(
   },
 );
 
-router.delete("/webhook-endpoints/:id", async (req, res): Promise<void> => {
+router.delete("/webhook-endpoints/:id", authorize("workflows.write"), requireTenantContext, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });

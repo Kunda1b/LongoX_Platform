@@ -28,6 +28,7 @@ async function ensureUsageEvents(): Promise<void> {
   const executions = await db
     .select({
       id: executionsTable.id,
+      tenantId: executionsTable.tenantId,
       workflowId: executionsTable.workflowId,
       workflowName: executionsTable.workflowName,
       startedAt: executionsTable.startedAt,
@@ -39,6 +40,7 @@ async function ensureUsageEvents(): Promise<void> {
   if (executions.length === 0) return;
 
   const events = executions.map((e) => ({
+    tenantId: e.tenantId,
     workflowId: e.workflowId,
     workflowName: e.workflowName,
     eventType: "workflow.run",
@@ -53,6 +55,7 @@ async function ensureUsageEvents(): Promise<void> {
   const connectorEvents = executions
     .slice(0, Math.floor(executions.length * 0.7))
     .map((e) => ({
+      tenantId: e.tenantId,
       workflowId: e.workflowId,
       workflowName: e.workflowName,
       eventType: "connector.call",
@@ -65,11 +68,14 @@ async function ensureUsageEvents(): Promise<void> {
 }
 
 export class PostgresUsageRepository implements UsageRepository {
-  async listEvents(filter: ListUsageEventsFilter): Promise<UsageEvent[]> {
+  async listEvents(
+    tenantId: number,
+    filter: ListUsageEventsFilter,
+  ): Promise<UsageEvent[]> {
     await ensureUsageEvents();
     const limit = Math.min(filter.limit ?? 50, 200);
 
-    const conditions = [];
+    const conditions = [eq(usageEventsTable.tenantId, tenantId)];
     if (filter.workflowId)
       conditions.push(eq(usageEventsTable.workflowId, filter.workflowId));
     if (filter.eventType)
@@ -78,7 +84,7 @@ export class PostgresUsageRepository implements UsageRepository {
     const rows = await db
       .select()
       .from(usageEventsTable)
-      .where(conditions.length ? and(...conditions) : undefined)
+      .where(and(...conditions))
       .orderBy(sql`${usageEventsTable.createdAt} desc`)
       .limit(limit);
 
@@ -93,23 +99,35 @@ export class PostgresUsageRepository implements UsageRepository {
     }));
   }
 
-  async getMetrics(monthStart: Date): Promise<UsageMetrics> {
+  async getMetrics(tenantId: number, monthStart: Date): Promise<UsageMetrics> {
     await ensureUsageEvents();
 
     const [allExecs] = await db
       .select({ count: sql<number>`count(*)::int` })
-      .from(executionsTable);
+      .from(executionsTable)
+      .where(eq(executionsTable.tenantId, tenantId));
     const [monthExecs] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(executionsTable)
-      .where(gte(executionsTable.startedAt, monthStart));
+      .where(
+        and(
+          eq(executionsTable.tenantId, tenantId),
+          gte(executionsTable.startedAt, monthStart),
+        ),
+      );
     const [allWorkflows] = await db
       .select({ count: sql<number>`count(*)::int` })
-      .from(workflowsTable);
+      .from(workflowsTable)
+      .where(eq(workflowsTable.tenantId, tenantId));
     const [activeWorkflows] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(workflowsTable)
-      .where(eq(workflowsTable.status, "active"));
+      .where(
+        and(
+          eq(workflowsTable.tenantId, tenantId),
+          eq(workflowsTable.status, "active"),
+        ),
+      );
     const [allConnectors] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(connectorsTable);
@@ -129,12 +147,16 @@ export class PostgresUsageRepository implements UsageRepository {
   }
 
   async getEventQuantities(
+    tenantId: number,
     periodStart: Date,
     periodEnd?: Date,
   ): Promise<UsageEventQuantity[]> {
     await ensureUsageEvents();
 
-    const conditions = [gte(usageEventsTable.createdAt, periodStart)];
+    const conditions = [
+      eq(usageEventsTable.tenantId, tenantId),
+      gte(usageEventsTable.createdAt, periodStart),
+    ];
     if (periodEnd)
       conditions.push(sql`${usageEventsTable.createdAt} <= ${periodEnd}`);
 

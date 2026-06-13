@@ -8,3 +8,8 @@ export { TransformExecutor } from "./transform/transform-executor";
 export { AiExecutor } from "./ai/ai-executor";
 export { ApprovalExecutor } from "./approval/approval-executor";
 export { CodeExecutor } from "./code/code-executor";
+export {
+  createExecutors,
+  createWorkflowRunner,
+  findExecutor,
+} from "./registry";

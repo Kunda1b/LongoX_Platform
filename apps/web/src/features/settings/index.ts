@@ -1,2 +1,1 @@
-export const settings = { name: "Settings" };
-export default settings;
+export { SettingsForm } from "./settings-form";

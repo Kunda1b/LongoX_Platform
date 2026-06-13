@@ -37,7 +37,7 @@ Phased execution plan aligned with `architecture.md` Engineering Roadmap (v1.0).
 
 - [ ] Extract production routes from `artifacts/api-server` into `services/*`
 - [ ] Wire `services/api-gateway` as reverse proxy to bounded contexts
-- [ ] Replace in-memory `JobQueue` with Redis + BullMQ
+- [x] Replace in-memory `JobQueue` with Redis + BullMQ
 - [ ] Shared request lifecycle: auth → tenant → RBAC → validate → execute → events → telemetry
 - [ ] GraphQL entry on workflow-service (architecture) or document gateway-only GraphQL
 

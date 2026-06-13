@@ -23,6 +23,12 @@ type AuthContextType = {
   token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    organizationName?: string,
+  ) => Promise<void>;
   logout: () => void;
 };
 
@@ -84,6 +90,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [router],
   );
 
+  const register = useCallback(
+    async (
+      name: string,
+      email: string,
+      password: string,
+      organizationName?: string,
+    ) => {
+      const res = await fetch(`${API}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password, organizationName }),
+      });
+      if (!res.ok) {
+        const err = await res
+          .json()
+          .catch(() => ({ error: "Registration failed" }));
+        throw new Error(err.error ?? "Registration failed");
+      }
+      const data = (await res.json()) as { token: string; user: User };
+      setToken(data.token);
+      setUser(data.user);
+      setStoredAuth(data.token, data.user);
+      router.push("/dashboard");
+    },
+    [router],
+  );
+
   const logout = useCallback(() => {
     setToken(null);
     setUser(null);
@@ -93,7 +126,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [router]);
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, token, isLoading, login, register, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

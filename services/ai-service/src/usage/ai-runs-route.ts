@@ -1,6 +1,8 @@
 import { Router, type IRouter } from "express";
 import OpenAI from "openai";
 import { db, tokenUsageTable, usageEventsTable } from "@longox/db";
+import { withSpan, addSpanAttributes } from "@longox/shared-observability";
+import { recordAiRequest, recordAiRequestFailed } from "../telemetry/metrics";
 
 const router: IRouter = Router();
 
@@ -40,18 +42,35 @@ router.post("/ai/runs", async (req, res): Promise<void> => {
   const startedAt = Date.now();
 
   try {
-    const messages: OpenAI.ChatCompletionMessageParam[] = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userMessage },
-    ];
+    const completion = await withSpan("ai.openai.chat", async (span) => {
+      span.setAttributes({
+        "ai.provider": "openai",
+        "ai.model": model,
+        "ai.max_tokens": maxTokens,
+        "ai.temperature": temperature,
+      });
 
-    const completion = await openai.chat.completions.create({
-      model,
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-      response_format:
-        responseFormat === "json" ? { type: "json_object" } : undefined,
+      const messages: OpenAI.ChatCompletionMessageParam[] = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage },
+      ];
+
+      const result = await openai.chat.completions.create({
+        model,
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+        response_format:
+          responseFormat === "json" ? { type: "json_object" } : undefined,
+      });
+
+      span.setAttributes({
+        "ai.input_tokens": result.usage?.prompt_tokens ?? 0,
+        "ai.output_tokens": result.usage?.completion_tokens ?? 0,
+        "ai.finish_reason": result.choices[0]?.finish_reason ?? "unknown",
+      });
+
+      return result;
     });
 
     const durationMs = Date.now() - startedAt;
@@ -59,6 +78,9 @@ router.post("/ai/runs", async (req, res): Promise<void> => {
     const outputTokens = completion.usage?.completion_tokens ?? 0;
     const content = completion.choices[0]?.message?.content ?? "";
     const finishReason = completion.choices[0]?.finish_reason ?? "stop";
+
+    // Record metrics
+    recordAiRequest("openai", model, durationMs, inputTokens, outputTokens);
 
     // Rough cost estimate (gpt-4o-mini pricing as default)
     const cost = inputTokens * 0.00000015 + outputTokens * 0.0000006;
@@ -114,6 +136,11 @@ router.post("/ai/runs", async (req, res): Promise<void> => {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    recordAiRequestFailed("openai", err instanceof Error ? err.constructor.name : "unknown");
+    addSpanAttributes({
+      "error.type": err instanceof Error ? err.constructor.name : "unknown",
+      "error.message": message,
+    });
     res.status(500).json({ error: `AI run failed: ${message}` });
   }
 });

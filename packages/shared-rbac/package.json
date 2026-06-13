@@ -6,7 +6,12 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "dependencies": {
+    "@longox/db": "workspace:*",
+    "drizzle-orm": "catalog:"
+  },
   "devDependencies": {
+    "@types/express": "^5.0.0",
     "@types/node": "catalog:"
   }
 }

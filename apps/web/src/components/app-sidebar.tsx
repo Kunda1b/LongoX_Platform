@@ -35,7 +35,6 @@ import {
 const sidebarNav = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Workflows", href: "/workflows", icon: Workflow },
-  { label: "Builder", href: "/builder", icon: Workflow },
   { label: "Executions", href: "/executions", icon: PlayCircle },
   { label: "Connectors", href: "/connectors", icon: Cable },
   { label: "Credentials", href: "/credentials", icon: KeyRound },

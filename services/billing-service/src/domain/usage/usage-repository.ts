@@ -6,9 +6,13 @@ import type {
 } from "./usage-event.entity";
 
 export interface UsageRepository {
-  listEvents(filter: ListUsageEventsFilter): Promise<UsageEvent[]>;
-  getMetrics(monthStart: Date): Promise<UsageMetrics>;
+  listEvents(
+    tenantId: number,
+    filter: ListUsageEventsFilter,
+  ): Promise<UsageEvent[]>;
+  getMetrics(tenantId: number, monthStart: Date): Promise<UsageMetrics>;
   getEventQuantities(
+    tenantId: number,
     periodStart: Date,
     periodEnd?: Date,
   ): Promise<UsageEventQuantity[]>;

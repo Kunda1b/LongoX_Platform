@@ -7,7 +7,8 @@ import {
   workflowsTable,
 } from "@longox/db";
 import { ListExecutionsQueryParams, GetExecutionParams } from "@longox/api-zod";
-import { startWorkflowExecution, writeAudit } from "./workflow-runner";
+import { startWorkflowExecution, writeAudit } from "../queue/bullmq-queue";
+import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
@@ -24,7 +25,7 @@ function serializeExecution(e: typeof executionsTable.$inferSelect) {
   };
 }
 
-router.get("/executions", async (req, res): Promise<void> => {
+router.get("/executions", authorize({ resource: "workflows", action: "read" }), async (req, res): Promise<void> => {
   const params = ListExecutionsQueryParams.safeParse(req.query);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -49,7 +50,7 @@ router.get("/executions", async (req, res): Promise<void> => {
   res.json(executions.map(serializeExecution));
 });
 
-router.get("/executions/:id", async (req, res): Promise<void> => {
+router.get("/executions/:id", authorize({ resource: "workflows", action: "read" }), async (req, res): Promise<void> => {
   const params = GetExecutionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -104,7 +105,7 @@ router.get("/executions/:id", async (req, res): Promise<void> => {
   res.json({ ...serializeExecution(execution), steps });
 });
 
-router.post("/executions/:id/retry", async (req, res): Promise<void> => {
+router.post("/executions/:id/retry", authorize({ resource: "workflows", action: "run" }), async (req, res): Promise<void> => {
   const params = GetExecutionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
