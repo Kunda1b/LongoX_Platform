@@ -888,6 +888,7 @@ export interface AiUsageSummary {
   totalOutputTokens: number;
   totalCost: number;
   totalRequests: number;
+  avgLatencyMs?: number;
   byProvider: AiUsageSummaryByProviderItem[];
   byModel: AiUsageSummaryByModelItem[];
 }

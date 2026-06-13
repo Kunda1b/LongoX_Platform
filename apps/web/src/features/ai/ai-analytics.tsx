@@ -58,7 +58,7 @@ export function AIAnalytics() {
               {isLoading ? (
                 <Skeleton className="h-8 w-20" />
               ) : (
-                <div className="text-2xl font-bold">${summary?.totalCostUSD?.toFixed(4) || "0.00"}</div>
+                <div className="text-2xl font-bold">${summary?.totalCost?.toFixed(4) || "0.00"}</div>
               )}
             </div>
           </CardContent>
