@@ -585,6 +585,7 @@ export interface TemplateVersion {
 export interface UsageSummary {
   totalExecutions: number;
   executionsThisMonth: number;
+  includedExecutions: number;
   totalWorkflows: number;
   activeWorkflows: number;
   totalConnectors: number;
