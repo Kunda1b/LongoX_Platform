@@ -20,7 +20,7 @@ export class TokenTracker {
         inputTokens: record.inputTokens,
         outputTokens: record.outputTokens,
         cost: String(record.cost),
-      });
+      } as any);
 
       await db.insert(usageEventsTable).values({
         workflowId: record.workflowId,

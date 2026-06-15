@@ -154,8 +154,8 @@ export class AIRouter {
       case "fastest":
         return available
           .sort(([, a], [, b]) => {
-            const speedA = PROVIDER_SPEED_RANK[a.type] * a.health.successRate;
-            const speedB = PROVIDER_SPEED_RANK[b.type] * b.health.successRate;
+            const speedA = PROVIDER_SPEED_RANK[a.config.type] * a.health.successRate;
+            const speedB = PROVIDER_SPEED_RANK[b.config.type] * b.health.successRate;
             return speedB - speedA;
           })
           .map(([type]) => type);
@@ -163,8 +163,8 @@ export class AIRouter {
       case "highest_quality":
         return available
           .sort(([, a], [, b]) => {
-            const qualA = PROVIDER_QUALITY_RANK[a.type] * a.health.successRate;
-            const qualB = PROVIDER_QUALITY_RANK[b.type] * b.health.successRate;
+            const qualA = PROVIDER_QUALITY_RANK[a.config.type] * a.health.successRate;
+            const qualB = PROVIDER_QUALITY_RANK[b.config.type] * b.health.successRate;
             return qualB - qualA;
           })
           .map(([type]) => type);

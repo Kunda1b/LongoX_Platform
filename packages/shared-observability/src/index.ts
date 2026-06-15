@@ -129,6 +129,7 @@ export function initTelemetry(config: TelemetryConfig): void {
     };
 
     // Create SDK instance
+    // Cast as any: resourceAttributes is valid at runtime but removed from typedefs in SDK v0.200+
     sdk = new NodeSDK({
       resourceAttributes,
       traceExporter,
@@ -144,7 +145,7 @@ export function initTelemetry(config: TelemetryConfig): void {
         new RedisInstrumentation(),
         new IORedisInstrumentation(),
       ],
-    });
+    } as any);
 
     // Start the SDK
     sdk.start();

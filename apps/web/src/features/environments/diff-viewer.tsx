@@ -102,11 +102,11 @@ export function DiffViewer() {
               <div className="flex items-center gap-2 mb-3">
                 <Badge variant="outline">{fromEnv}</Badge>
                 <span className="text-xs text-muted-foreground">
-                  v{(diff.from as Record<string, unknown>)?.version ?? "-"}
+                  v{String((diff.from as Record<string, unknown>)?.version ?? "-")}
                 </span>
               </div>
               <pre className="text-xs bg-muted rounded p-3 overflow-auto max-h-96 font-mono">
-                {JSON.stringify((diff.from as Record<string, unknown>)?.nodes ?? {}, null, 2)}
+                {String(JSON.stringify((diff.from as Record<string, unknown>)?.nodes ?? null, null, 2) ?? "")}
               </pre>
             </CardContent>
           </Card>
@@ -115,11 +115,11 @@ export function DiffViewer() {
               <div className="flex items-center gap-2 mb-3">
                 <Badge variant="outline">{toEnv}</Badge>
                 <span className="text-xs text-muted-foreground">
-                  v{(diff.to as Record<string, unknown>)?.version ?? "-"}
+                  v{String((diff.to as Record<string, unknown>)?.version ?? "-")}
                 </span>
               </div>
               <pre className="text-xs bg-muted rounded p-3 overflow-auto max-h-96 font-mono">
-                {JSON.stringify((diff.to as Record<string, unknown>)?.nodes ?? {}, null, 2)}
+                {String(JSON.stringify((diff.to as Record<string, unknown>)?.nodes ?? null, null, 2) ?? "")}
               </pre>
             </CardContent>
           </Card>

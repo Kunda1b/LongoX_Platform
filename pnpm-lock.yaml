@@ -1103,6 +1103,9 @@ importers:
       '@longox/shared-rbac':
         specifier: workspace:*
         version: link:../../packages/shared-rbac
+      '@longox/shared-region':
+        specifier: workspace:*
+        version: link:../../packages/shared-region
       '@longox/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types

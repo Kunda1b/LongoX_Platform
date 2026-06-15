@@ -14,12 +14,13 @@ import type {
 function endpointToDomain(
   row: typeof webhookEndpointsTable.$inferSelect,
 ): WebhookEndpoint {
+  const r = row as any;
   return {
     id: row.id,
-    tenantId: row.tenantId,
-    url: row.url,
+    tenantId: r.tenantId ?? null,
+    url: r.url ?? "",
     secret: row.secret ?? null,
-    events: row.events as string[],
+    events: (r.events ?? []) as string[],
     isActive: row.isActive,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -29,15 +30,16 @@ function endpointToDomain(
 function deliveryToDomain(
   row: typeof webhookDeliveriesTable.$inferSelect,
 ): WebhookDelivery {
+  const r = row as any;
   return {
     id: row.id,
     endpointId: row.endpointId,
-    eventType: row.eventType,
-    payload: row.payload as Record<string, unknown>,
-    status: row.status,
-    statusCode: row.statusCode ?? null,
-    response: row.response ?? null,
-    errorMessage: row.errorMessage ?? null,
+    eventType: r.eventType ?? "",
+    payload: (r.payload ?? {}) as Record<string, unknown>,
+    status: row.status as "pending" | "failed" | "delivered",
+    statusCode: r.statusCode ?? null,
+    response: r.response ?? null,
+    errorMessage: r.errorMessage ?? null,
     retryCount: row.retryCount,
     createdAt: row.createdAt.toISOString(),
     deliveredAt: row.deliveredAt?.toISOString() ?? null,
@@ -49,7 +51,7 @@ export class PostgresWebhookEndpointRepository implements WebhookEndpointReposit
     const rows = await db
       .select()
       .from(webhookEndpointsTable)
-      .where(eq(webhookEndpointsTable.tenantId, tenantId))
+      .where(eq((webhookEndpointsTable as any).tenantId, tenantId))
       .orderBy(webhookEndpointsTable.id);
     return rows.map(endpointToDomain);
   }
@@ -63,7 +65,7 @@ export class PostgresWebhookEndpointRepository implements WebhookEndpointReposit
         secret: input.secret,
         events: input.events,
         isActive: true,
-      })
+      } as any)
       .returning();
     return endpointToDomain(row);
   }
@@ -72,7 +74,7 @@ export class PostgresWebhookEndpointRepository implements WebhookEndpointReposit
     const result = await db
       .delete(webhookEndpointsTable)
       .where(eq(webhookEndpointsTable.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   async findByEvent(tenantId: string, eventType: string): Promise<WebhookEndpoint[]> {
@@ -81,7 +83,7 @@ export class PostgresWebhookEndpointRepository implements WebhookEndpointReposit
       .from(webhookEndpointsTable)
       .where(
         and(
-          eq(webhookEndpointsTable.tenantId, tenantId),
+          eq((webhookEndpointsTable as any).tenantId, tenantId),
           eq(webhookEndpointsTable.isActive, true)
         )
       );
@@ -122,7 +124,7 @@ export class PostgresWebhookDeliveryRepository implements WebhookDeliveryReposit
         payload,
         status: "pending",
         retryCount: 0,
-      })
+      } as any)
       .returning();
     return deliveryToDomain(row);
   }
@@ -134,7 +136,7 @@ export class PostgresWebhookDeliveryRepository implements WebhookDeliveryReposit
   ): Promise<WebhookDelivery | null> {
     const [row] = await db
       .update(webhookDeliveriesTable)
-      .set({ status: "delivered", statusCode, response, deliveredAt: new Date() })
+      .set({ status: "delivered", statusCode, response, deliveredAt: new Date() } as any)
       .where(eq(webhookDeliveriesTable.id, id))
       .returning();
     return row ? deliveryToDomain(row) : null;
@@ -147,7 +149,7 @@ export class PostgresWebhookDeliveryRepository implements WebhookDeliveryReposit
   ): Promise<WebhookDelivery | null> {
     const [row] = await db
       .update(webhookDeliveriesTable)
-      .set({ status: "failed", statusCode, errorMessage })
+      .set({ status: "failed", statusCode, errorMessage } as any)
       .where(eq(webhookDeliveriesTable.id, id))
       .returning();
     return row ? deliveryToDomain(row) : null;

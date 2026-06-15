@@ -30,7 +30,7 @@ export class TypesenseSearchRepository implements SearchRepository {
         }
       );
 
-      return searchResult.hits.map((hit) => ({
+      return searchResult.hits.map((hit: any) => ({
         id: parseInt(hit.document.id?.toString() ?? "0", 10),
         type: type.slice(0, -1), // Remove 's' from plural
         title: hit.document.name?.toString() ?? hit.document.title?.toString() ?? "",
@@ -276,7 +276,7 @@ export class TypesenseSearchRepository implements SearchRepository {
       sort_by: ["startedAt:desc"],
     });
 
-    return searchResult.hits.map((hit) => ({
+    return searchResult.hits.map((hit: any) => ({
       id: parseInt(hit.document.id?.toString() ?? "0", 10),
       type: "execution",
       title: hit.document.workflowName?.toString() ?? "",
@@ -329,7 +329,7 @@ export class TypesenseSearchRepository implements SearchRepository {
       sort_by: ["timestamp:desc"],
     });
 
-    return searchResult.hits.map((hit) => ({
+    return searchResult.hits.map((hit: any) => ({
       id: parseInt(hit.document.id?.toString() ?? "0", 10),
       type: "audit_log",
       title: `${hit.document.action} ${hit.document.resource}`,
@@ -367,7 +367,7 @@ export class TypesenseSearchRepository implements SearchRepository {
       sort_by: ["createdAt:desc"],
     });
 
-    return searchResult.hits.map((hit) => ({
+    return searchResult.hits.map((hit: any) => ({
       id: parseInt(hit.document.id?.toString() ?? "0", 10),
       type: "prompt",
       title: hit.document.name?.toString() ?? "",

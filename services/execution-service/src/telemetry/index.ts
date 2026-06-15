@@ -1,1 +1,1 @@
-export { metrics } from "./metrics";
+export { metrics } from "@opentelemetry/api";

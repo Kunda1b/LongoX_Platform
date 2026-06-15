@@ -37,7 +37,7 @@ export async function writeAuditEntry(params: WriteAuditParams): Promise<void> {
     resourceId,
     metadata: metadata ?? null,
     correlationId: context.correlationId ?? null,
-  });
+  } as any);
 }
 
 /** @deprecated Use writeAuditEntry with AuditContext instead */

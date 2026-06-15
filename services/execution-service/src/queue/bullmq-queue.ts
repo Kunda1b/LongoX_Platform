@@ -68,7 +68,7 @@ let worker: Worker | null = null;
 function getQueue(): Queue {
   if (!queue) {
     queue = new Queue(QUEUE_NAME, {
-      connection: createRedisConnection(),
+      connection: createRedisConnection() as any,
       defaultJobOptions,
     });
   }
@@ -94,7 +94,7 @@ export async function writeAudit(
     actorType,
     actorId: actorId ?? null,
     metadata: metadata ?? null,
-  });
+  } as any);
 }
 
 function maxAttemptsForNode(nodeTypeId: string): number {
@@ -395,7 +395,7 @@ async function processWorkflowExecution(data: WorkflowJobData): Promise<void> {
     executionId,
     workflowId,
     workflowName,
-    nodes,
+    nodes as WorkflowNode[],
     triggerPayload,
     triggerType,
   );
@@ -546,7 +546,7 @@ class BullMQJobQueue implements JobQueue {
         );
       },
       {
-        connection,
+        connection: connection as any,
         concurrency: parseInt(process.env["WORKER_CONCURRENCY"] ?? "5", 10),
         limiter: {
           max: 100,
@@ -678,7 +678,7 @@ export async function startWorkflowExecution(
       status: "pending",
       startedAt: new Date(),
       steps: [],
-    })
+    } as any)
     .returning();
 
   await db

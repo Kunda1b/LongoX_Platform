@@ -12,9 +12,11 @@ export interface TypesenseConfig {
   timeoutSeconds?: number;
 }
 
-let client: Typesense.SearchClient | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let client: any | null = null;
 
-export function getTypesenseClient(config?: TypesenseConfig): Typesense.SearchClient {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function getTypesenseClient(config?: TypesenseConfig): any {
   if (client) return client;
 
   const nodes = config?.nodes ?? [
@@ -174,7 +176,8 @@ export async function searchDocuments(
     facetBy?: string[];
     maxFacetValues?: number;
   } = {}
-): Promise<Typesense.SearchResult> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any> {
   return withSpan(`typesense.search.${collection}`, async (span) => {
     span.setAttributes({
       "typesense.collection": collection,
@@ -183,7 +186,7 @@ export async function searchDocuments(
     });
 
     const client = getTypesenseClient();
-    const searchParams: Typesense.SearchParams = {
+    const searchParams: Record<string, unknown> = {
       q: query,
       query_by: options.queryBy?.join(",") ?? "*",
       limit: options.limit ?? 10,

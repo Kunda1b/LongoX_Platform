@@ -40,7 +40,7 @@ export function MarketplaceList() {
         desc: t.description || "No description provided",
         type: "template",
         price: "Free",
-        downloads: t.useCount || 0,
+        downloads: (t as any).useCount || 0,
         installed: false,
       })));
     }

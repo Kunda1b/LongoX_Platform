@@ -82,7 +82,7 @@ router.post("/webhook-endpoints", authorize("workflows.write"), requireTenantCon
 });
 
 router.get("/webhook-endpoints/:id", authorize("workflows.read"), requireTenantContext, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
     return;
@@ -99,7 +99,7 @@ router.get("/webhook-endpoints/:id", authorize("workflows.read"), requireTenantC
 });
 
 router.patch("/webhook-endpoints/:id", authorize("workflows.write"), requireTenantContext, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
     return;
@@ -134,7 +134,7 @@ router.post(
   authorize("workflows.write"),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
       res.status(400).json({ error: "Invalid id" });
       return;
@@ -153,7 +153,7 @@ router.post(
 );
 
 router.delete("/webhook-endpoints/:id", authorize("workflows.write"), requireTenantContext, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
     return;

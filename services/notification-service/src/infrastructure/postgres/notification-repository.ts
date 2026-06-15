@@ -56,7 +56,7 @@ export class PostgresNotificationRepository
         status: "unread",
         recipientId: input.recipientId,
         metadata: input.metadata,
-      })
+      } as any)
       .returning();
     return toDomain(row);
   }

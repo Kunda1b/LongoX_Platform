@@ -18,7 +18,7 @@ function toDomain(
     body: row.body,
     htmlBody: row.htmlBody ?? null,
     templateName: row.templateName ?? null,
-    status: row.status,
+    status: row.status as "pending" | "sent" | "failed",
     errorMessage: row.errorMessage ?? null,
     metadata: (row.metadata ?? null) as Record<string, unknown> | null,
     createdAt: row.createdAt.toISOString(),
@@ -54,7 +54,7 @@ export class PostgresEmailRepository implements EmailRepository {
         templateName: input.templateName,
         status: "pending",
         metadata: input.metadata,
-      })
+      } as any)
       .returning();
     return toDomain(row);
   }

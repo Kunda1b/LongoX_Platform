@@ -372,7 +372,7 @@ export class RedisEventBus implements EventBus {
 
   async health(): Promise<{ connected: boolean; latencyMs: number }> {
     const start = Date.now();
-    const connected = !!this.publisher?.isReady;
+    const connected = this.publisher?.status === "ready";
     return { connected, latencyMs: Date.now() - start };
   }
 }
@@ -395,6 +395,7 @@ export class NatsEventBus implements EventBus {
 
   async connect(): Promise<void> {
     try {
+      // @ts-ignore – nats is an optional peer dep
       const { connect, StringCodec } = await import("nats");
       this.nc = await connect({ servers: this.natsUrl });
       this.js = this.nc.jetstream();
@@ -456,6 +457,7 @@ export class NatsEventBus implements EventBus {
     // NATS JetStream publish
     if (this.js && this.connected) {
       try {
+        // @ts-ignore – nats is an optional peer dep
         const { StringCodec } = await import("nats");
         const sc = StringCodec();
         const subject = `longox.events.${event.type}`;
@@ -494,6 +496,7 @@ export class NatsEventBus implements EventBus {
         callback: async (err: any, msg: any) => {
           if (err) return;
           try {
+            // @ts-ignore – nats is an optional peer dep
             const { StringCodec } = await import("nats");
             const sc = StringCodec();
             const event = JSON.parse(sc.decode(msg.data)) as PlatformEvent;

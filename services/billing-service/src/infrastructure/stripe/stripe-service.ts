@@ -1,3 +1,4 @@
+import type Stripe from "stripe";
 import { getStripe, getFrontendUrl } from "./client";
 import {
   db,

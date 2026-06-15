@@ -6,15 +6,12 @@ import {
   InstallListingCommand,
 } from "../application/search-listings.query";
 import type { Request } from "express";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { db as dbPool } from "@longox/db";
-import { revenueSharesTable, marketplaceInstallsTable, agentDeploymentsTable } from "@longox/db";
+import { db, revenueSharesTable, marketplaceInstallsTable, agentDeploymentsTable } from "@longox/db";
 
 const router: IRouter = Router();
 const repository = new PostgresListingRepository();
 const searchQuery = new SearchListingsQuery(repository);
 const installCommand = new InstallListingCommand(repository);
-const db = drizzle({ client: dbPool });
 
 router.get(
   "/marketplace/listings",
@@ -40,7 +37,7 @@ router.get(
       offset: offsetStr ? parseInt(offsetStr) : 0,
     });
 
-    let listings = Array.isArray(result) ? result : result.listings ?? result.data ?? result;
+    let listings = Array.isArray(result) ? result : (result as any).listings ?? result;
 
     if (isPublic === "true") {
       listings = listings.filter((l: any) => l.isPublic === true);
@@ -57,7 +54,7 @@ router.get(
   "/marketplace/listings/:id",
   authorize({ resource: "templates", action: "read" }),
   async (req, res): Promise<void> => {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
       res.status(400).json({ error: "Invalid id" });
       return;
@@ -112,13 +109,13 @@ router.post(
       reviewCount: 0,
       featured: false,
       verified: false,
-      pricing: pricing ? { free: pricing.free, price: pricing.price, subscription: pricing.subscription } : { free: true },
+      pricing: pricing ? { free: pricing.free, price: pricing.price, tier: undefined } : { free: true },
       metadata: (metadata ?? {}) as Record<string, unknown>,
       isPublic: Boolean(isPublic ?? false),
       communityTemplate: Boolean(communityTemplate ?? false),
       platformSharePercent: Number(platformSharePercent ?? 20),
       totalRevenue: 0,
-    });
+    } as any);
 
     const listingData = listing.toJSON();
 
@@ -144,7 +141,7 @@ router.post(
   authorize({ resource: "templates", action: "write" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
       res.status(400).json({ error: "Invalid id" });
       return;
@@ -168,7 +165,7 @@ router.post(
   authorize({ resource: "templates", action: "write" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
       res.status(400).json({ error: "Invalid id" });
       return;
@@ -191,7 +188,7 @@ router.post(
   authorize({ resource: "templates", action: "write" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
       res.status(400).json({ error: "Invalid id" });
       return;
@@ -214,7 +211,7 @@ router.put(
   authorize({ resource: "templates", action: "write" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
       res.status(400).json({ error: "Invalid id" });
       return;
@@ -242,7 +239,7 @@ router.delete(
   authorize({ resource: "templates", action: "write" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
       res.status(400).json({ error: "Invalid id" });
       return;
@@ -258,7 +255,7 @@ router.post(
   authorize({ resource: "templates", action: "write" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
       res.status(400).json({ error: "Invalid id" });
       return;
@@ -271,7 +268,7 @@ router.post(
     }
 
     const listingData = listing.toJSON();
-    if (listingData.listingType !== "agent") {
+    if ((listingData.listingType as string) !== "agent") {
       res.status(400).json({ error: "Only agent listings can be deployed" });
       return;
     }
@@ -314,7 +311,7 @@ router.get(
   authorize({ resource: "templates", action: "read" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
       res.status(400).json({ error: "Invalid id" });
       return;
@@ -352,7 +349,7 @@ router.put(
   "/marketplace/revenue/:id/payout",
   authorize({ resource: "templates", action: "write" }),
   async (req, res): Promise<void> => {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
       res.status(400).json({ error: "Invalid id" });
       return;
@@ -362,7 +359,7 @@ router.put(
       .update(revenueSharesTable)
       .set({
         payoutStatus: "completed",
-        lastPayoutAt: new Date().toISOString(),
+        lastPayoutAt: new Date(),
       })
       .where(
         (() => {

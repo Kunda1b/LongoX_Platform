@@ -1,12 +1,3 @@
-import { initTelemetry } from "@longox/shared-observability";
-
-initTelemetry({
-  serviceName: "notification-service",
-  serviceVersion: process.env.npm_package_version ?? "0.0.0",
-  environment: process.env.NODE_ENV ?? "development",
-  otlpEndpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://localhost:4318",
-});
-
 import express from "express";
 import pino from "pino-http";
 import { notificationsRouter, notificationTemplatesRouter } from "./index";

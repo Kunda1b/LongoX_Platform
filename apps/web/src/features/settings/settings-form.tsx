@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, KeyRound, Bell, Loader2, Save } from "lucide-react";
+import { User, KeyRound, Bell, Loader2, Save, Camera, Trash2 } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
@@ -37,6 +37,176 @@ function authHeaders(token: string | null): Record<string, string> {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
+}
+
+// ─── Avatar Upload ─────────────────────────────────────────────────────────────
+
+function AvatarUpload({
+  avatarUrl,
+  name,
+  token,
+  onUpdate,
+}: {
+  avatarUrl: string | null;
+  name: string;
+  token: string | null;
+  onUpdate: (url: string | null) => void;
+}) {
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(avatarUrl);
+  const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  useEffect(() => {
+    setPreview(avatarUrl);
+  }, [avatarUrl]);
+
+  const initials = name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please select an image file.", variant: "destructive" });
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Please choose an image under 2 MB.", variant: "destructive" });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const dataUrl = ev.target?.result as string;
+
+      // Resize to max 256×256 via canvas before uploading
+      const img = new Image();
+      img.onload = async () => {
+        const canvas = document.createElement("canvas");
+        const size = Math.min(img.width, img.height, 256);
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d")!;
+        const sx = (img.width - size) / 2;
+        const sy = (img.height - size) / 2;
+        ctx.drawImage(img, sx, sy, size, size, 0, 0, size, size);
+        const resized = canvas.toDataURL("image/jpeg", 0.85);
+
+        setPreview(resized);
+        setUploading(true);
+        try {
+          const res = await fetch(`${API}/auth/avatar`, {
+            method: "POST",
+            headers: authHeaders(token),
+            body: JSON.stringify({ avatar: resized }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error ?? "Upload failed");
+          onUpdate(data.avatarUrl);
+          toast({ title: "Avatar updated", description: "Your profile photo has been saved." });
+        } catch (err) {
+          setPreview(avatarUrl);
+          toast({
+            title: "Upload failed",
+            description: err instanceof Error ? err.message : "Something went wrong",
+            variant: "destructive",
+          });
+        } finally {
+          setUploading(false);
+        }
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+    // Reset so the same file can be re-selected
+    e.target.value = "";
+  };
+
+  const handleRemove = async () => {
+    setRemoving(true);
+    try {
+      const res = await fetch(`${API}/auth/avatar`, {
+        method: "DELETE",
+        headers: authHeaders(token),
+      });
+      if (!res.ok) throw new Error("Failed to remove avatar");
+      setPreview(null);
+      onUpdate(null);
+      toast({ title: "Avatar removed", description: "Your profile photo has been removed." });
+    } catch (err) {
+      toast({
+        title: "Remove failed",
+        description: err instanceof Error ? err.message : "Something went wrong",
+        variant: "destructive",
+      });
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-4">
+      <div className="relative">
+        <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-border bg-muted flex items-center justify-center text-xl font-semibold text-muted-foreground select-none">
+          {preview ? (
+            <img src={preview} alt="Avatar" className="h-full w-full object-cover" />
+          ) : (
+            <span>{initials || <User className="h-8 w-8" />}</span>
+          )}
+        </div>
+        {(uploading || removing) && (
+          <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-white" />
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium">Profile photo</p>
+        <p className="text-xs text-muted-foreground">JPG, PNG, GIF up to 2 MB. Cropped to square.</p>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || removing}
+          >
+            <Camera className="mr-1.5 h-3.5 w-3.5" />
+            {preview ? "Change photo" : "Upload photo"}
+          </Button>
+          {preview && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleRemove}
+              disabled={uploading || removing}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              Remove
+            </Button>
+          )}
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+      </div>
+    </div>
+  );
 }
 
 // ─── Profile Tab ──────────────────────────────────────────────────────────────
@@ -84,10 +254,17 @@ function ProfileTab() {
           Profile Information
         </CardTitle>
         <CardDescription>
-          Update your display name. Your email address and role cannot be changed here.
+          Update your display name and profile photo. Your email address and role cannot be changed here.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-6">
+        <AvatarUpload
+          avatarUrl={user?.avatarUrl ?? null}
+          name={user?.name ?? ""}
+          token={token}
+          onUpdate={(url) => updateUser({ avatarUrl: url })}
+        />
+        <Separator />
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="profile-name">Full name</Label>

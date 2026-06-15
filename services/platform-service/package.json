@@ -14,6 +14,7 @@
     "@longox/shared-logger": "workspace:*",
     "@longox/shared-auth": "workspace:*",
     "@longox/shared-rbac": "workspace:*",
+    "@longox/shared-region": "workspace:*",
     "express": "^5.2.1",
     "zod": "catalog:"
   },

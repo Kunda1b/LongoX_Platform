@@ -8,6 +8,22 @@ import {
 } from "@longox/db";
 import type { Request, Response, NextFunction } from "express";
 
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: number;
+        email: string;
+        name: string;
+        tenantId: number | null;
+        role: string;
+      };
+      tenantId?: number;
+      correlationId?: string;
+    }
+  }
+}
+
 export interface Permission {
   id: number;
   resource: string;
@@ -118,7 +134,7 @@ export function canAccess(
   rolePermissions: Record<string, Action[]>,
 ): boolean {
   if (userRole === "admin" || userRole === "super_admin") return true;
-  const allowed = rolePermissions[userRole]?.[requiredResource];
+  const allowed = (rolePermissions[userRole] as unknown as Record<string, Action[]>)?.[requiredResource];
   if (!allowed) return false;
   return (
     allowed.includes(requiredAction) || allowed.includes("admin" as Action)

@@ -70,7 +70,7 @@ router.post("/workflows", authorize({ resource: "workflows", action: "write" }),
 
   const [workflow] = await db
     .insert(workflowsTable)
-    .values({ ...rest, nodes: nodes ?? null, nodeCount })
+    .values({ ...rest, nodes: nodes ?? null, nodeCount } as any)
     .returning();
 
   await writeAudit(
@@ -369,7 +369,7 @@ router.post("/workflows/:id/duplicate", authorize({ resource: "workflows", actio
       nodeCount: existing.nodeCount,
       executionCount: 0,
       nodes: existing.nodes,
-    })
+    } as any)
     .returning();
 
   await writeAudit(

@@ -98,7 +98,7 @@ router.post("/ai/runs", async (req, res): Promise<void> => {
         inputTokens,
         outputTokens,
         cost: String(cost.toFixed(8)),
-      });
+      } as any);
     } catch {
       /* non-fatal */
     }

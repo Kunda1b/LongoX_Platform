@@ -65,7 +65,7 @@ router.post("/dashboards", async (req, res): Promise<void> => {
       name: name.trim(),
       description: description ?? null,
       widgets: widgets ?? [],
-    })
+    } as any)
     .returning();
 
   res.status(201).json(serializeDashboard(dashboard));

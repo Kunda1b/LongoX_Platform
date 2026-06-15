@@ -52,7 +52,8 @@ const SLOW_QUERY_THRESHOLD = parseInt(process.env.DB_SLOW_QUERY_THRESHOLD ?? "10
 
 // Original query method wrapper for slow query logging
 const originalQuery = pool.query.bind(pool);
-pool.query = async function wrappedQuery(text: string | pg.QueryConfig, values?: any[]) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(pool as any).query = async function wrappedQuery(text: string | pg.QueryConfig, values?: any[]) {
   const start = Date.now();
   const tracer = trace.getTracer("shared-db");
   

@@ -1,11 +1,9 @@
 import { Router, type IRouter } from "express";
 import { authorize } from "@longox/shared-rbac";
 import { getRegionManager } from "@longox/shared-region";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { db as dbPool, replicationConfigsTable, replicationLogTable, regionsTable } from "@longox/db";
+import { db, replicationConfigsTable, replicationLogTable, regionsTable } from "@longox/db";
 
 const router: IRouter = Router();
-const db = drizzle({ client: dbPool });
 
 router.get(
   "/replication/regions",
@@ -141,7 +139,7 @@ router.put(
   "/replication/configs/:id",
   authorize({ resource: "admin", action: "write" }),
   async (req, res): Promise<void> => {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
       res.status(400).json({ error: "Invalid id" });
       return;
@@ -190,7 +188,7 @@ router.get(
     const { status, entityType, limit: limitStr, offset: offsetStr } =
       req.query as Record<string, string | undefined>;
 
-    let query = db.select().from(replicationLogTable);
+    let query: any = db.select().from(replicationLogTable);
 
     if (status) {
       const { eq } = require("drizzle-orm");
@@ -274,7 +272,7 @@ router.post(
     }
 
     const { drPoliciesTable } = require("@longox/db");
-    const [policy] = await db
+    const policyResults = await (db as any)
       .insert(drPoliciesTable)
       .values({
         name: String(name),
@@ -288,6 +286,7 @@ router.post(
         healthThreshold: Number(healthThreshold ?? 0.3),
       })
       .returning();
+    const [policy] = policyResults;
 
     res.status(201).json(policy);
   },

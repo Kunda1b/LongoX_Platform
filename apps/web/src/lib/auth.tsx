@@ -17,6 +17,7 @@ export type User = {
   tenantId: number | null;
   role: string;
   emailVerifiedAt: string | null;
+  avatarUrl: string | null;
 };
 
 type AuthContextType = {

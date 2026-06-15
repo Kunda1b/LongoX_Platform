@@ -13,7 +13,7 @@ function getStripeSecretKey(): string {
 export function getStripe(): Stripe {
   if (!stripeClient) {
     stripeClient = new Stripe(getStripeSecretKey(), {
-      apiVersion: "2025-05-28.basil",
+      apiVersion: "2025-05-28.basil" as any,
       typescript: true,
     });
   }

@@ -35,7 +35,7 @@ async function ensureUsage() {
       createdAt: new Date(now - i * 3600000),
     });
   }
-  await db.insert(tokenUsageTable).values(records);
+  await db.insert(tokenUsageTable).values(records as any);
 }
 
 router.get("/ai/usage", async (req, res): Promise<void> => {

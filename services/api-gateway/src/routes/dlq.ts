@@ -104,7 +104,6 @@ router.post("/dlq/:id/retry", authorize("executions.run"), requireTenantContext,
     nodes,
     "manual",
     { _retriedDlqEntryId: entry.id, _retriedExecutionId: entry.executionId },
-    actor,
   );
 
   await db

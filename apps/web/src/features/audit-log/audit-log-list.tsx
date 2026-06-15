@@ -17,7 +17,7 @@ function auditSeverity(action: string): "error" | "warning" | "info" {
 
 export function AuditLogList() {
   const [search, setSearch] = useState("");
-  const { data: entries, isLoading } = useListAuditLog({ search });
+  const { data: entries, isLoading } = useListAuditLog({});
 
   const filteredEntries = entries?.filter(
     (e) =>

@@ -24,7 +24,7 @@ function fmt(row: typeof aiRoutingPoliciesTable.$inferSelect) {
 }
 
 router.get("/ai-routing-policies", async (req, res): Promise<void> => {
-  const tenantId = req.tenantId;
+  const tenantId = req.tenantId ?? 0;
   if (!tenantId) {
     res.status(400).json({ error: "Tenant context required" });
     return;
@@ -38,7 +38,7 @@ router.get("/ai-routing-policies", async (req, res): Promise<void> => {
 });
 
 router.get("/ai-routing-policies/:id", async (req, res): Promise<void> => {
-  const tenantId = req.tenantId;
+  const tenantId = req.tenantId ?? 0;
   const [row] = await db
     .select()
     .from(aiRoutingPoliciesTable)
@@ -56,7 +56,7 @@ router.get("/ai-routing-policies/:id", async (req, res): Promise<void> => {
 });
 
 router.post("/ai-routing-policies", async (req, res): Promise<void> => {
-  const tenantId = req.tenantId;
+  const tenantId = req.tenantId ?? 0;
   if (!tenantId) {
     res.status(400).json({ error: "Tenant context required" });
     return;
@@ -99,13 +99,13 @@ router.post("/ai-routing-policies", async (req, res): Promise<void> => {
       fallbackEnabled,
       maxRetries,
       config,
-    })
+    } as any)
     .returning();
   res.status(201).json(fmt(row));
 });
 
 router.patch("/ai-routing-policies/:id", async (req, res): Promise<void> => {
-  const tenantId = req.tenantId;
+  const tenantId = req.tenantId ?? 0;
   const id = Number(req.params.id);
   const updates: Record<string, unknown> = {};
   const b = req.body as Partial<{
@@ -133,7 +133,7 @@ router.patch("/ai-routing-policies/:id", async (req, res): Promise<void> => {
 
   const [row] = await db
     .update(aiRoutingPoliciesTable)
-    .set(updates)
+    .set(updates as any)
     .where(
       and(
         eq(aiRoutingPoliciesTable.id, id),
@@ -149,7 +149,7 @@ router.patch("/ai-routing-policies/:id", async (req, res): Promise<void> => {
 });
 
 router.delete("/ai-routing-policies/:id", async (req, res): Promise<void> => {
-  const tenantId = req.tenantId;
+  const tenantId = req.tenantId ?? 0;
   await db
     .delete(aiRoutingPoliciesTable)
     .where(

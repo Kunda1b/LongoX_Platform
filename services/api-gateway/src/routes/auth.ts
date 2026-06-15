@@ -253,6 +253,7 @@ router.get(["/auth/me", "/api/auth/me"], authMiddleware, async (req, res): Promi
       role: usersTable.role,
       tenantId: usersTable.tenantId,
       isActive: usersTable.isActive,
+      avatarUrl: usersTable.avatarUrl,
       lastLoginAt: usersTable.lastLoginAt,
       createdAt: usersTable.createdAt,
     })
@@ -457,6 +458,7 @@ router.patch(
         name: usersTable.name,
         role: usersTable.role,
         tenantId: usersTable.tenantId,
+        avatarUrl: usersTable.avatarUrl,
       });
 
     if (!updated) {
@@ -465,6 +467,61 @@ router.patch(
     }
 
     res.json({ user: updated });
+  },
+);
+
+// POST /api/auth/avatar  (authenticated) — stores base64 data-URL avatar
+router.post(
+  ["/auth/avatar", "/api/auth/avatar"],
+  authMiddleware,
+  async (req, res): Promise<void> => {
+    const { avatar } = req.body as { avatar?: string };
+
+    if (!avatar) {
+      res.status(400).json({ error: "avatar field is required" });
+      return;
+    }
+
+    if (!avatar.startsWith("data:image/")) {
+      res.status(400).json({ error: "avatar must be a base64 image data URL" });
+      return;
+    }
+
+    // Limit to ~2 MB of base64 (≈ 1.5 MB image)
+    if (avatar.length > 2_800_000) {
+      res.status(413).json({ error: "Image too large — please use an image under 1.5 MB" });
+      return;
+    }
+
+    const [updated] = await db
+      .update(usersTable)
+      .set({ avatarUrl: avatar, updatedAt: new Date() })
+      .where(eq(usersTable.id, req.user!.id))
+      .returning({
+        id: usersTable.id,
+        avatarUrl: usersTable.avatarUrl,
+      });
+
+    if (!updated) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    res.json({ avatarUrl: updated.avatarUrl });
+  },
+);
+
+// DELETE /api/auth/avatar  (authenticated) — removes avatar
+router.delete(
+  ["/auth/avatar", "/api/auth/avatar"],
+  authMiddleware,
+  async (req, res): Promise<void> => {
+    await db
+      .update(usersTable)
+      .set({ avatarUrl: null, updatedAt: new Date() })
+      .where(eq(usersTable.id, req.user!.id));
+
+    res.json({ avatarUrl: null });
   },
 );
 

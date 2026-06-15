@@ -109,7 +109,7 @@ export class PostgresWorkflowRepository implements WorkflowRepository {
         executionCount: 0,
         nodes: (data.nodes ??
           []) as unknown as typeof workflowsTable.$inferInsert.nodes,
-      })
+      } as any)
       .returning();
 
     return mapRowToWorkflow(row);
