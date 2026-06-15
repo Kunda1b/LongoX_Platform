@@ -343,12 +343,6 @@ importers:
         specifier: ^8.17.0
         version: 8.17.0(prettier@3.8.3)(typescript@5.9.3)
 
-  packages/api-zod:
-    dependencies:
-      zod:
-        specifier: 'catalog:'
-        version: 3.25.76
-
   packages/connector-runtime:
     dependencies:
       '@longox/shared-types':
@@ -985,7 +979,7 @@ importers:
     dependencies:
       '@longox/api-zod':
         specifier: workspace:*
-        version: link:../../packages/api-zod
+        version: link:../../lib/api-zod
       '@longox/db':
         specifier: workspace:*
         version: link:../../packages/shared-db
@@ -1038,7 +1032,7 @@ importers:
     dependencies:
       '@longox/api-zod':
         specifier: workspace:*
-        version: link:../../packages/api-zod
+        version: link:../../lib/api-zod
       '@longox/db':
         specifier: workspace:*
         version: link:../../packages/shared-db
@@ -1344,7 +1338,7 @@ importers:
     dependencies:
       '@longox/api-zod':
         specifier: workspace:*
-        version: link:../../packages/api-zod
+        version: link:../../lib/api-zod
       '@longox/db':
         specifier: workspace:*
         version: link:../../packages/shared-db
