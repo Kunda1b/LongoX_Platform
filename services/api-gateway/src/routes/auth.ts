@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gt } from "drizzle-orm";
 import crypto from "node:crypto";
 import {
   db,
@@ -17,7 +17,7 @@ import {
   revokeToken,
   signToken,
 } from "../lib/auth";
-import { sendVerificationEmail } from "../lib/email";
+import { sendVerificationEmail, sendPasswordResetEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -340,6 +340,92 @@ router.post(
     );
 
     res.json({ message: "Verification email sent" });
+  },
+);
+
+// POST /api/auth/forgot-password  (public)
+router.post(
+  ["/auth/forgot-password", "/api/auth/forgot-password"],
+  async (req, res): Promise<void> => {
+    const { email } = req.body as { email?: string };
+    if (!email?.trim()) {
+      res.status(400).json({ error: "Email is required" });
+      return;
+    }
+
+    const [user] = await db
+      .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name, isActive: usersTable.isActive })
+      .from(usersTable)
+      .where(eq(usersTable.email, email.trim().toLowerCase()))
+      .limit(1);
+
+    // Always respond with success to avoid email enumeration
+    if (!user || !user.isActive) {
+      res.json({ message: "If that email exists, a reset link has been sent" });
+      return;
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await db
+      .update(usersTable)
+      .set({ passwordResetToken: resetToken, passwordResetTokenExpiresAt: expiresAt })
+      .where(eq(usersTable.id, user.id));
+
+    sendPasswordResetEmail(user.email, user.name, resetToken).catch((err) =>
+      console.error("[Email] Failed to send password reset email:", err),
+    );
+
+    res.json({ message: "If that email exists, a reset link has been sent" });
+  },
+);
+
+// POST /api/auth/reset-password  (public)
+router.post(
+  ["/auth/reset-password", "/api/auth/reset-password"],
+  async (req, res): Promise<void> => {
+    const { token, password } = req.body as { token?: string; password?: string };
+
+    if (!token || !password?.trim()) {
+      res.status(400).json({ error: "Token and new password are required" });
+      return;
+    }
+
+    if (password.trim().length < 8) {
+      res.status(400).json({ error: "Password must be at least 8 characters" });
+      return;
+    }
+
+    const now = new Date();
+    const [user] = await db
+      .select({ id: usersTable.id, passwordResetTokenExpiresAt: usersTable.passwordResetTokenExpiresAt })
+      .from(usersTable)
+      .where(
+        and(
+          eq(usersTable.passwordResetToken, token),
+          gt(usersTable.passwordResetTokenExpiresAt, now),
+        ),
+      )
+      .limit(1);
+
+    if (!user) {
+      res.status(400).json({ error: "Invalid or expired reset link" });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(password.trim(), 10);
+
+    await db
+      .update(usersTable)
+      .set({
+        passwordHash,
+        passwordResetToken: null,
+        passwordResetTokenExpiresAt: null,
+      })
+      .where(eq(usersTable.id, user.id));
+
+    res.json({ message: "Password reset successfully" });
   },
 );
 

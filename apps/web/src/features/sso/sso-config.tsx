@@ -355,11 +355,9 @@ export function SSOConfig() {
                   Add SAML, OIDC, Azure AD, or Okta to enable single sign-on for your organization
                 </p>
               </div>
-              <DialogTrigger asChild>
-                <Button className="mt-2">
-                  <Plus className="mr-1 h-4 w-4" /> Add your first provider
-                </Button>
-              </DialogTrigger>
+              <Button className="mt-2" onClick={() => setDialogOpen(true)}>
+                <Plus className="mr-1 h-4 w-4" /> Add your first provider
+              </Button>
             </div>
           )}
         </div>
