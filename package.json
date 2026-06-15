@@ -10,6 +10,7 @@
     "lint": "prettier --check .",
     "format": "prettier --write ."
   },
+  "packageManager": "pnpm@11.7.0",
   "private": true,
   "pnpm": {
     "overrides": {
