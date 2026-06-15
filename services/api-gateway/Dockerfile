@@ -4,5 +4,6 @@ WORKDIR /app
 COPY . .
 RUN pnpm install --frozen-lockfile --ignore-scripts
 RUN pnpm rebuild esbuild sharp msgpackr-extract protobufjs
+RUN npm install -g tsx
 EXPOSE 3000
-CMD ["pnpm", "--filter", "@longox/api-gateway", "exec", "tsx", "src/index.ts"]
+CMD ["tsx", "services/api-gateway/src/index.ts"]
