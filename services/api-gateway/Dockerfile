@@ -5,4 +5,4 @@ COPY . .
 RUN pnpm install --frozen-lockfile --ignore-scripts
 RUN pnpm rebuild esbuild sharp msgpackr-extract protobufjs
 EXPOSE 3000
-CMD ["pnpm", "exec", "tsx", "services/api-gateway/src/index.ts"]
+CMD ["pnpm", "--filter", "@longox/api-gateway", "exec", "tsx", "src/index.ts"]
