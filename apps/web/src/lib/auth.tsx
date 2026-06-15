@@ -31,6 +31,7 @@ type AuthContextType = {
     organizationName?: string,
   ) => Promise<void>;
   logout: () => void;
+  updateUser: (patch: Partial<User>) => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -126,9 +127,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push("/");
   }, [router]);
 
+  const updateUser = useCallback(
+    (patch: Partial<User>) => {
+      setUser((prev) => {
+        if (!prev) return prev;
+        const updated = { ...prev, ...patch };
+        const storedToken = token;
+        if (storedToken) setStoredAuth(storedToken, updated);
+        return updated;
+      });
+    },
+    [token],
+  );
+
   return (
     <AuthContext.Provider
-      value={{ user, token, isLoading, login, register, logout }}
+      value={{ user, token, isLoading, login, register, logout, updateUser }}
     >
       {children}
     </AuthContext.Provider>

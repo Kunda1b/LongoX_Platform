@@ -429,5 +429,170 @@ router.post(
   },
 );
 
+// PATCH /api/auth/profile  (authenticated)
+router.patch(
+  ["/auth/profile", "/api/auth/profile"],
+  authMiddleware,
+  async (req, res): Promise<void> => {
+    const { name } = req.body as { name?: string };
+    const trimmedName = name?.trim();
+
+    if (!trimmedName) {
+      res.status(400).json({ error: "Name is required" });
+      return;
+    }
+
+    if (trimmedName.length < 2) {
+      res.status(400).json({ error: "Name must be at least 2 characters" });
+      return;
+    }
+
+    const [updated] = await db
+      .update(usersTable)
+      .set({ name: trimmedName, updatedAt: new Date() })
+      .where(eq(usersTable.id, req.user!.id))
+      .returning({
+        id: usersTable.id,
+        email: usersTable.email,
+        name: usersTable.name,
+        role: usersTable.role,
+        tenantId: usersTable.tenantId,
+      });
+
+    if (!updated) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    res.json({ user: updated });
+  },
+);
+
+// PATCH /api/auth/password  (authenticated)
+router.patch(
+  ["/auth/password", "/api/auth/password"],
+  authMiddleware,
+  async (req, res): Promise<void> => {
+    const { currentPassword, newPassword } = req.body as {
+      currentPassword?: string;
+      newPassword?: string;
+    };
+
+    if (!currentPassword?.trim() || !newPassword?.trim()) {
+      res.status(400).json({ error: "Current password and new password are required" });
+      return;
+    }
+
+    if (newPassword.trim().length < 8) {
+      res.status(400).json({ error: "New password must be at least 8 characters" });
+      return;
+    }
+
+    const [user] = await db
+      .select({ id: usersTable.id, passwordHash: usersTable.passwordHash })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.user!.id))
+      .limit(1);
+
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    const valid = await bcrypt.compare(currentPassword.trim(), user.passwordHash);
+    if (!valid) {
+      res.status(400).json({ error: "Current password is incorrect" });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword.trim(), 10);
+    await db
+      .update(usersTable)
+      .set({ passwordHash, updatedAt: new Date() })
+      .where(eq(usersTable.id, user.id));
+
+    res.json({ message: "Password updated successfully" });
+  },
+);
+
+// GET /api/auth/notification-preferences  (authenticated)
+router.get(
+  ["/auth/notification-preferences", "/api/auth/notification-preferences"],
+  authMiddleware,
+  async (req, res): Promise<void> => {
+    const [user] = await db
+      .select({ settings: usersTable.settings })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.user!.id))
+      .limit(1);
+
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    const settings = (user.settings as Record<string, unknown>) ?? {};
+    const prefs = (settings.notifications as Record<string, boolean>) ?? {};
+
+    res.json({
+      emailWorkflowStatus: prefs.emailWorkflowStatus ?? true,
+      emailExecutionFailures: prefs.emailExecutionFailures ?? true,
+      emailWeeklyDigest: prefs.emailWeeklyDigest ?? false,
+      inAppWorkflowStatus: prefs.inAppWorkflowStatus ?? true,
+      inAppExecutionFailures: prefs.inAppExecutionFailures ?? true,
+      inAppConnectorAlerts: prefs.inAppConnectorAlerts ?? true,
+    });
+  },
+);
+
+// PATCH /api/auth/notification-preferences  (authenticated)
+router.patch(
+  ["/auth/notification-preferences", "/api/auth/notification-preferences"],
+  authMiddleware,
+  async (req, res): Promise<void> => {
+    const incoming = req.body as Record<string, boolean>;
+
+    const allowed = new Set([
+      "emailWorkflowStatus",
+      "emailExecutionFailures",
+      "emailWeeklyDigest",
+      "inAppWorkflowStatus",
+      "inAppExecutionFailures",
+      "inAppConnectorAlerts",
+    ]);
+
+    const sanitized: Record<string, boolean> = {};
+    for (const key of allowed) {
+      if (key in incoming) sanitized[key] = Boolean(incoming[key]);
+    }
+
+    const [user] = await db
+      .select({ settings: usersTable.settings })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.user!.id))
+      .limit(1);
+
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    const existingSettings = (user.settings as Record<string, unknown>) ?? {};
+    const existingPrefs = (existingSettings.notifications as Record<string, boolean>) ?? {};
+
+    const merged = { ...existingPrefs, ...sanitized };
+
+    await db
+      .update(usersTable)
+      .set({
+        settings: { ...existingSettings, notifications: merged },
+        updatedAt: new Date(),
+      })
+      .where(eq(usersTable.id, req.user!.id));
+
+    res.json(merged);
+  },
+);
+
 export default router;
 
