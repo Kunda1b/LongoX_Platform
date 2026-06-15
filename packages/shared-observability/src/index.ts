@@ -1,9 +1,7 @@
 import { NodeSDK } from "@opentelemetry/sdk-node";
-import { Resource } from "@opentelemetry/resources";
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
-  ATTR_DEPLOYMENT_ENVIRONMENT,
 } from "@opentelemetry/semantic-conventions";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
@@ -81,93 +79,99 @@ export function initTelemetry(config: TelemetryConfig): void {
 
   if (!enabled) {
     console.log(`[Telemetry] Disabled for ${name}`);
+    isInitialized = true;
     return;
   }
 
-  // Create resource with service attributes
-  const resource = new Resource({
-    [ATTR_SERVICE_NAME]: name,
-    [ATTR_SERVICE_VERSION]: serviceVersion,
-    [ATTR_DEPLOYMENT_ENVIRONMENT]: environment,
-  });
-
-  // Configure trace exporter (OTLP → Collector)
-  const traceExporter = new OTLPTraceExporter({
-    url: `${otlpEndpoint}/v1/traces`,
-  });
-
-  // Configure log exporter (OTLP → Collector)
-  const logExporter = new OTLPLogExporter({
-    url: `${otlpEndpoint}/v1/logs`,
-  });
-
-  // Build metric readers: Prometheus scrape endpoint + OTLP push to collector
-  const metricReaders: MetricReader[] = [];
-
-  // Prometheus scrape endpoint (for direct Prometheus scraping)
-  if (metricsPort > 0) {
-    prometheusExporter = new PrometheusExporter({
-      port: metricsPort,
-      endpoint: "/metrics",
+  try {
+    // Configure trace exporter (OTLP → Collector)
+    const traceExporter = new OTLPTraceExporter({
+      url: `${otlpEndpoint}/v1/traces`,
     });
-    metricReaders.push(prometheusExporter);
-    console.log(`[Telemetry] Prometheus metrics on :${metricsPort}/metrics`);
-  }
 
-  // OTLP push to collector (for production with OTel Collector)
-  const useOtlpMetrics = process.env.OTEL_METRICS_EXPORTER !== "prometheus-only";
-  if (useOtlpMetrics) {
-    const metricExporter = new OTLPMetricExporter({
-      url: `${otlpEndpoint}/v1/metrics`,
+    // Configure log exporter (OTLP → Collector)
+    const logExporter = new OTLPLogExporter({
+      url: `${otlpEndpoint}/v1/logs`,
     });
-    metricReaders.push(
-      new PeriodicExportingMetricReader({
-        exporter: metricExporter,
-        exportIntervalMillis: metricsInterval,
-      })
+
+    // Build metric readers
+    const metricReaders: MetricReader[] = [];
+
+    // Prometheus scrape endpoint
+    if (metricsPort > 0) {
+      prometheusExporter = new PrometheusExporter({
+        port: metricsPort,
+        endpoint: "/metrics",
+      });
+      metricReaders.push(prometheusExporter);
+      console.log(`[Telemetry] Prometheus metrics on :${metricsPort}/metrics`);
+    }
+
+    // OTLP push to collector
+    const useOtlpMetrics = process.env.OTEL_METRICS_EXPORTER !== "prometheus-only";
+    if (useOtlpMetrics) {
+      const metricExporter = new OTLPMetricExporter({
+        url: `${otlpEndpoint}/v1/metrics`,
+      });
+      metricReaders.push(
+        new PeriodicExportingMetricReader({
+          exporter: metricExporter,
+          exportIntervalMillis: metricsInterval,
+        })
+      );
+    }
+
+    // Resource attributes using the v2 API
+    const resourceAttributes: Record<string, string> = {
+      [ATTR_SERVICE_NAME]: name,
+      [ATTR_SERVICE_VERSION]: serviceVersion,
+      "deployment.environment": environment,
+    };
+
+    // Create SDK instance
+    sdk = new NodeSDK({
+      resourceAttributes,
+      traceExporter,
+      metricReader: metricReaders.length === 1 ? metricReaders[0] : (metricReaders[0] as MetricReader),
+      logRecordProcessor: new BatchLogRecordProcessor(logExporter, {
+        maxQueueSize: tracesBatchSize,
+        maxExportBatchSize: tracesBatchSize / 2,
+      }),
+      instrumentations: [
+        new HttpInstrumentation(),
+        new ExpressInstrumentation(),
+        new PgInstrumentation(),
+        new RedisInstrumentation(),
+        new IORedisInstrumentation(),
+      ],
+    });
+
+    // Start the SDK
+    sdk.start();
+    isInitialized = true;
+
+    console.log(
+      `[Telemetry] Initialized for ${name} (env=${environment}, endpoint=${otlpEndpoint})`
     );
+
+    // Graceful shutdown
+    const shutdown = async () => {
+      if (metricsServer) {
+        await new Promise<void>((resolve) => metricsServer!.close(() => resolve()));
+        metricsServer = null;
+      }
+      if (sdk) {
+        await sdk.shutdown();
+        console.log("[Telemetry] Shutdown complete");
+      }
+    };
+
+    process.on("SIGTERM", shutdown);
+    process.on("SIGINT", shutdown);
+  } catch (err) {
+    console.warn(`[Telemetry] Failed to initialize for ${name}:`, err);
+    isInitialized = true;
   }
-
-  // Create SDK instance
-  sdk = new NodeSDK({
-    resource,
-    traceExporter,
-    metricReader: metricReaders.length === 1 ? metricReaders[0] : metricReaders,
-    logRecordProcessor: new BatchLogRecordProcessor(logExporter, {
-      maxQueueSize: tracesBatchSize,
-      maxExportBatchSize: tracesBatchSize / 2,
-    }),
-    instrumentations: [
-      new HttpInstrumentation(),
-      new ExpressInstrumentation(),
-      new PgInstrumentation(),
-      new RedisInstrumentation(),
-      new IORedisInstrumentation(),
-    ],
-  });
-
-  // Start the SDK
-  sdk.start();
-  isInitialized = true;
-
-  console.log(
-    `[Telemetry] Initialized for ${name} (env=${environment}, endpoint=${otlpEndpoint})`
-  );
-
-  // Graceful shutdown
-  const shutdown = async () => {
-    if (metricsServer) {
-      await new Promise<void>((resolve) => metricsServer!.close(() => resolve()));
-      metricsServer = null;
-    }
-    if (sdk) {
-      await sdk.shutdown();
-      console.log("[Telemetry] Shutdown complete");
-    }
-  };
-
-  process.on("SIGTERM", shutdown);
-  process.on("SIGINT", shutdown);
 }
 
 export async function shutdownTelemetry(): Promise<void> {
@@ -285,9 +289,11 @@ export function getTraceContext(): TraceContext | undefined {
 export function injectTraceContext(
   headers: Record<string, string> = {}
 ): Record<string, string> {
-  const { propagation } = context.active();
+  const { propagation } = context.active() as any;
   const carrier = { ...headers };
-  propagation.inject(context.active(), carrier);
+  if (propagation?.inject) {
+    propagation.inject(context.active(), carrier);
+  }
   return carrier;
 }
 
@@ -303,8 +309,7 @@ export function initObservability(
   });
 }
 
-export function tracingMiddleware(serviceName: string) {
-  // Return a no-op middleware - OTel handles this automatically
+export function tracingMiddleware(_serviceName: string) {
   return (_req: any, _res: any, next: any) => next();
 }
 

@@ -45,3 +45,4 @@ export * from "./analytics-read-models";
 export * from "./search-index";
 export * from "./reporting-read-models";
 export * from "./regions";
+export * from "./marketplace-listings";

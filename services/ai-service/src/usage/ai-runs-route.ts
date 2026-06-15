@@ -6,7 +6,11 @@ import { recordAiRequest, recordAiRequestFailed } from "../telemetry/metrics";
 
 const router: IRouter = Router();
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let _openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? "" });
+  return _openai;
+}
 
 interface AiRunRequest {
   model?: string;
@@ -55,7 +59,7 @@ router.post("/ai/runs", async (req, res): Promise<void> => {
         { role: "user", content: userMessage },
       ];
 
-      const result = await openai.chat.completions.create({
+      const result = await getOpenAI().chat.completions.create({
         model,
         messages,
         temperature,

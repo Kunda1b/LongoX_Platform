@@ -13,6 +13,7 @@
   "dependencies": {
     "@longox/db": "workspace:*",
     "@longox/shared-auth": "workspace:*",
+    "@longox/shared-observability": "workspace:*",
     "@longox/shared-rbac": "workspace:*",
     "drizzle-orm": "catalog:",
     "express": "^5.2.1",

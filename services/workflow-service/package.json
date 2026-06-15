@@ -16,6 +16,7 @@
     "@longox/execution-service": "workspace:*",
     "@longox/shared-cache": "workspace:*",
     "@longox/shared-events": "workspace:*",
+    "@longox/shared-rbac": "workspace:*",
     "@longox/shared-logger": "workspace:*",
     "@longox/shared-observability": "workspace:*",
     "drizzle-orm": "catalog:",
