@@ -43,7 +43,7 @@ async function uniqueTenantSlug(base: string): Promise<string> {
   return `${slug}-${Date.now()}`;
 }
 
-router.post("/auth/register", async (req, res): Promise<void> => {
+router.post(["/auth/register", "/api/auth/register"], async (req, res): Promise<void> => {
   const { name, email, password, organizationName } = req.body as {
     name?: string;
     email?: string;
@@ -163,7 +163,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/auth/login", async (req, res): Promise<void> => {
+router.post(["/auth/login", "/api/auth/login"], async (req, res): Promise<void> => {
   const { email, password } = req.body as { email?: string; password?: string };
   if (!email?.trim() || !password?.trim()) {
     res.status(400).json({ error: "Email and password are required" });
@@ -228,13 +228,13 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   });
 });
 
-router.post("/auth/logout", authMiddleware, (req, res): void => {
+router.post(["/auth/logout", "/api/auth/logout"], authMiddleware, (req, res): void => {
   const token = getBearerToken(req);
   if (token) revokeToken(token);
   res.json({ message: "Logged out successfully" });
 });
 
-router.get("/auth/me", authMiddleware, async (req, res): Promise<void> => {
+router.get(["/auth/me", "/api/auth/me"], authMiddleware, async (req, res): Promise<void> => {
   const [user] = await db
     .select({
       id: usersTable.id,
