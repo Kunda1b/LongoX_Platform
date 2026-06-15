@@ -19,6 +19,8 @@ export const usersTable = pgTable("users", {
   }),
   role: text("role").notNull().default("editor"),
   isActive: boolean("is_active").notNull().default(true),
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+  emailVerificationToken: text("email_verification_token"),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   settings: jsonb("settings").default({}),
   createdAt: timestamp("created_at", { withTimezone: true })

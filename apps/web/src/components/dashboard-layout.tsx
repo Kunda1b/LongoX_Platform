@@ -7,6 +7,7 @@ import { EnvironmentSwitcher } from "@/components/shell/environment-switcher";
 import { GlobalSearch } from "@/components/shell/global-search";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { NotificationCenter } from "@/components/shell/notification-center";
+import { EmailVerificationBanner } from "@/components/email-verification-banner";
 import { Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
@@ -75,6 +76,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
+
+        <EmailVerificationBanner />
 
         <main className="min-w-0 flex-1 overflow-x-hidden p-4 sm:p-5 lg:p-6">
           {children}

@@ -16,6 +16,7 @@ export type User = {
   name: string;
   tenantId: number | null;
   role: string;
+  emailVerifiedAt: string | null;
 };
 
 type AuthContextType = {
@@ -112,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(data.token);
       setUser(data.user);
       setStoredAuth(data.token, data.user);
-      router.push("/dashboard");
+      router.push("/verify-email");
     },
     [router],
   );

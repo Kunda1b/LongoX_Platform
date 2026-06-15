@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { eq, and } from "drizzle-orm";
+import crypto from "node:crypto";
 import {
   db,
   usersTable,
@@ -16,6 +17,7 @@ import {
   revokeToken,
   signToken,
 } from "../lib/auth";
+import { sendVerificationEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -86,6 +88,7 @@ router.post(["/auth/register", "/api/auth/register"], async (req, res): Promise<
   const orgName = trimmedOrg || `${trimmedName}'s Workspace`;
   const slug = await uniqueTenantSlug(trimmedOrg || trimmedEmail.split("@")[0]);
   const passwordHash = await bcrypt.hash(trimmedPassword, 10);
+  const verificationToken = crypto.randomBytes(32).toString("hex");
 
   try {
     const result = await db.transaction(async (tx) => {
@@ -108,6 +111,7 @@ router.post(["/auth/register", "/api/auth/register"], async (req, res): Promise<
           tenantId: tenant.id,
           role: "admin",
           isActive: true,
+          emailVerificationToken: verificationToken,
         })
         .returning();
 
@@ -137,7 +141,7 @@ router.post(["/auth/register", "/api/auth/register"], async (req, res): Promise<
         metadata: { tenantId: tenant.id, email: trimmedEmail },
       });
 
-      return { tenant, user };
+      return { tenant, user, verificationToken };
     });
 
     const authUser = {
@@ -146,8 +150,14 @@ router.post(["/auth/register", "/api/auth/register"], async (req, res): Promise<
       name: result.user.name,
       tenantId: result.user.tenantId ?? null,
       role: result.user.role,
+      emailVerifiedAt: null as string | null,
     };
     const token = signToken(authUser);
+
+    // Fire-and-forget verification email
+    sendVerificationEmail(result.user.email, result.user.name, result.verificationToken).catch(
+      (err) => console.error("[Email] Failed to send verification email:", err),
+    );
 
     res.status(201).json({
       token,
@@ -258,4 +268,80 @@ router.get(["/auth/me", "/api/auth/me"], authMiddleware, async (req, res): Promi
   res.json(user);
 });
 
+// GET /api/auth/verify-email?token=...  (public)
+router.get(
+  ["/auth/verify-email", "/api/auth/verify-email"],
+  async (req, res): Promise<void> => {
+    const token = req.query.token as string | undefined;
+    if (!token) {
+      res.status(400).json({ error: "Verification token is required" });
+      return;
+    }
+
+    const [user] = await db
+      .select({ id: usersTable.id, emailVerifiedAt: usersTable.emailVerifiedAt })
+      .from(usersTable)
+      .where(eq(usersTable.emailVerificationToken, token))
+      .limit(1);
+
+    if (!user) {
+      res.status(400).json({ error: "Invalid or expired verification link" });
+      return;
+    }
+
+    if (user.emailVerifiedAt) {
+      res.json({ message: "Email already verified" });
+      return;
+    }
+
+    await db
+      .update(usersTable)
+      .set({ emailVerifiedAt: new Date(), emailVerificationToken: null })
+      .where(eq(usersTable.id, user.id));
+
+    res.json({ message: "Email verified successfully" });
+  },
+);
+
+// POST /api/auth/resend-verification  (authenticated)
+router.post(
+  ["/auth/resend-verification", "/api/auth/resend-verification"],
+  authMiddleware,
+  async (req, res): Promise<void> => {
+    const [user] = await db
+      .select({
+        id: usersTable.id,
+        email: usersTable.email,
+        name: usersTable.name,
+        emailVerifiedAt: usersTable.emailVerifiedAt,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.user!.id))
+      .limit(1);
+
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    if (user.emailVerifiedAt) {
+      res.status(400).json({ error: "Email is already verified" });
+      return;
+    }
+
+    const newToken = crypto.randomBytes(32).toString("hex");
+    await db
+      .update(usersTable)
+      .set({ emailVerificationToken: newToken })
+      .where(eq(usersTable.id, user.id));
+
+    sendVerificationEmail(user.email, user.name, newToken).catch((err) =>
+      console.error("[Email] Failed to resend verification email:", err),
+    );
+
+    res.json({ message: "Verification email sent" });
+  },
+);
+
 export default router;
+
