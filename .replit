@@ -83,3 +83,10 @@ externalPort = 3001
 [[ports]]
 localPort = 25075
 externalPort = 3000
+
+[userenv]
+
+[userenv.shared]
+NODE_ENV = "development"
+JWT_SECRET = "longox-replit-dev-secret-change-in-production"
+NEXT_TELEMETRY_DISABLED = "1"

@@ -274,7 +274,7 @@ export class AIRouter {
 const defaultConfigs: ProviderConfig[] = [
   {
     type: "openai",
-    apiKey: process.env.OPENAI_API_KEY ?? "",
+    apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? process.env.OPENAI_API_KEY ?? "",
     defaultModel: "gpt-4o-mini",
     priority: 100,
     weight: 1,

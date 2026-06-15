@@ -8,7 +8,7 @@ const router: IRouter = Router();
 
 let _openai: OpenAI | null = null;
 function getOpenAI(): OpenAI {
-  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? "" });
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? process.env.OPENAI_API_KEY ?? "" });
   return _openai;
 }
 
@@ -23,7 +23,7 @@ interface AiRunRequest {
 }
 
 router.post("/ai/runs", async (req, res): Promise<void> => {
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY && !process.env.OPENAI_API_KEY) {
     res.status(503).json({ error: "OpenAI API key not configured" });
     return;
   }

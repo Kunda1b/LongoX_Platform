@@ -21,6 +21,7 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["@radix-ui/react-icons"],
   },
+  allowedDevHosts: ["*"],
 };
 
 export default nextConfig;
