@@ -1,8 +1,10 @@
+import path from "path";
 import type { NextConfig } from "next";
 
 const apiOrigin = (process.env.API_URL ?? "http://localhost:8080").trim().replace(/\/+$/, "");
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: path.join(process.cwd(), ".."),
   async rewrites() {
     return [
       {

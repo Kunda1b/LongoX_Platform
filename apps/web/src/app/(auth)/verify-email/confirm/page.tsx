@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 
 type Status = "verifying" | "success" | "error";
 
-export default function VerifyEmailConfirmPage() {
+function VerifyEmailConfirmContent() {
   const params = useSearchParams();
   const token = params.get("token");
   const [status, setStatus] = useState<Status>("verifying");
@@ -89,5 +89,17 @@ export default function VerifyEmailConfirmPage() {
         )}
       </Card>
     </div>
+  );
+}
+
+export default function VerifyEmailConfirmPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <VerifyEmailConfirmContent />
+    </Suspense>
   );
 }
