@@ -1,10 +1,9 @@
 FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
-COPY services/api-gateway/package.json ./services/api-gateway/
-RUN pnpm install --frozen-lockfile
 COPY . .
+RUN pnpm install --frozen-lockfile
+RUN pnpm approve-builds protobufjs@7.6.4
 RUN pnpm --filter @longox/api-gateway build
 FROM node:22-alpine
 WORKDIR /app
