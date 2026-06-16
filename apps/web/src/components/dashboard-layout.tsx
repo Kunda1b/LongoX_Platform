@@ -8,6 +8,7 @@ import { GlobalSearch } from "@/components/shell/global-search";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { NotificationCenter } from "@/components/shell/notification-center";
 import { EmailVerificationBanner } from "@/components/email-verification-banner";
+import { RouteAccessGuard } from "@/components/route-access-guard";
 import Link from "next/link";
 import { Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -90,6 +91,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
 
+        <RouteAccessGuard />
         <EmailVerificationBanner />
 
         <main className="min-w-0 flex-1 overflow-x-hidden p-4 sm:p-5 lg:p-6">

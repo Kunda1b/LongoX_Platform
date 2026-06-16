@@ -40,7 +40,7 @@ export async function sendInvitationEmail(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      from: "LongoX <noreply@longox.io>",
+      from: process.env.RESEND_FROM_EMAIL ?? "LongoX <onboarding@resend.dev>",
       to,
       subject: `${inviterName} invited you to ${workspaceName} on LongoX`,
       html,
@@ -98,7 +98,7 @@ export async function sendPasswordResetEmail(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      from: "LongoX <noreply@longox.io>",
+      from: process.env.RESEND_FROM_EMAIL ?? "LongoX <onboarding@resend.dev>",
       to,
       subject: "Reset your LongoX password",
       html,
@@ -150,7 +150,7 @@ export async function sendVerificationEmail(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      from: "LongoX <noreply@longox.io>",
+      from: process.env.RESEND_FROM_EMAIL ?? "LongoX <onboarding@resend.dev>",
       to,
       subject: "Verify your email address",
       html,
