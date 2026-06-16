@@ -1,6 +1,6 @@
 export { seedRoles, getSystemRoleId } from "./seed.js";
 
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import {
   db,
   rolesTable,
@@ -185,12 +185,18 @@ function setCachedPermissions(cacheKey: string, permissions: Set<string>): void 
 export function clearPermissionCache(userId?: string): void {
   if (userId) {
     for (const key of permissionCache.keys()) {
-      if (key.startsWith(`user:${userId}:`)) {
+      if (key.startsWith(`perm:${userId}:`)) {
         permissionCache.delete(key);
+      }
+    }
+    for (const key of roleCache.keys()) {
+      if (key.startsWith(`${userId}:`)) {
+        roleCache.delete(key);
       }
     }
   } else {
     permissionCache.clear();
+    roleCache.clear();
   }
 }
 
@@ -200,7 +206,7 @@ async function getUserPermissions(
   userId: number,
   tenantId: number | null,
 ): Promise<Set<string>> {
-  const cacheKey = `user:${userId}:tenant:${tenantId ?? "global"}`;
+  const cacheKey = `perm:${userId}:tenant:${tenantId ?? "global"}`;
   const cached = getCachedPermissions(cacheKey);
   if (cached) return cached;
 
@@ -216,7 +222,9 @@ async function getUserPermissions(
     .where(
       and(
         eq(userRolesTable.userId, String(userId)),
-        tenantId !== null ? eq(userRolesTable.tenantId, tenantId) : undefined,
+        tenantId !== null
+          ? eq(userRolesTable.tenantId, tenantId)
+          : isNull(userRolesTable.tenantId),
       ),
     );
 
@@ -236,11 +244,18 @@ interface CachedRole {
   expiresAt: number;
 }
 
-const roleCache = new Map<number, CachedRole>();
+// Keyed by "${userId}:${tenantId}" to be tenant-scoped
+const roleCache = new Map<string, CachedRole>();
 const ROLE_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-async function getUserRoleName(userId: number): Promise<string | null> {
-  const cached = roleCache.get(userId);
+/**
+ * Fetch the role name for a user scoped to a specific tenant (or globally for
+ * platform users when tenantId is null).  The tenant scope prevents an admin
+ * in workspace A from bypassing permission checks in workspace B.
+ */
+async function getUserRoleName(userId: number, tenantId: number | null): Promise<string | null> {
+  const cacheKey = `${userId}:${tenantId ?? "null"}`;
+  const cached = roleCache.get(cacheKey);
   if (cached && Date.now() < cached.expiresAt) {
     return cached.name;
   }
@@ -249,11 +264,18 @@ async function getUserRoleName(userId: number): Promise<string | null> {
     .select({ name: rolesTable.name })
     .from(userRolesTable)
     .innerJoin(rolesTable, eq(userRolesTable.roleId, rolesTable.id))
-    .where(eq(userRolesTable.userId, String(userId)))
+    .where(
+      and(
+        eq(userRolesTable.userId, String(userId)),
+        tenantId !== null
+          ? eq(userRolesTable.tenantId, tenantId)
+          : isNull(userRolesTable.tenantId),
+      ),
+    )
     .limit(1);
 
   if (row) {
-    roleCache.set(userId, { name: row.name, expiresAt: Date.now() + ROLE_CACHE_TTL_MS });
+    roleCache.set(cacheKey, { name: row.name, expiresAt: Date.now() + ROLE_CACHE_TTL_MS });
     return row.name;
   }
   return null;
@@ -277,24 +299,30 @@ function createAuthorizeMiddleware(options: AuthorizeOptions) {
       return;
     }
 
-    const roleName = await getUserRoleName(user.id);
+    const tenantId = user.tenantId ?? null;
+
+    // Platform-level bypass — these roles are never tenant-scoped.
+    // We still fetch the role from the DB (with null tenantId) to confirm it.
+    const roleName = await getUserRoleName(user.id, null);
     if (
-      roleName === "Super Admin" || user.role === "super_admin" ||
-      roleName === "platform_admin" || user.role === "platform_admin"
+      roleName === "platform_admin" || user.role === "platform_admin" ||
+      roleName === "Super Admin" || user.role === "super_admin"
     ) {
       next();
       return;
     }
 
+    // Tenant-scoped admin / owner bypass — must belong to THIS tenant.
+    const tenantRoleName = tenantId !== null ? await getUserRoleName(user.id, tenantId) : null;
     if (
-      roleName === "Admin" || user.role === "admin" ||
-      roleName === "owner" || user.role === "owner"
+      tenantRoleName === "owner" || tenantRoleName === "admin"
     ) {
       next();
       return;
     }
 
-    const permissions = await getUserPermissions(user.id, user.tenantId ?? null);
+    // Granular permission check scoped to the user's current tenant.
+    const permissions = await getUserPermissions(user.id, tenantId);
 
     if (permissions.has(permissionKey)) {
       next();
@@ -357,17 +385,22 @@ export function authorizeAny(options: AuthorizeOptions[]) {
       return;
     }
 
-    const roleName = await getUserRoleName(user.id);
-    if (roleName === "Super Admin" || user.role === "super_admin") {
-      next();
-      return;
-    }
-    if (roleName === "Admin" || user.role === "admin") {
+    const tenantId = user.tenantId ?? null;
+
+    const platformRole = await getUserRoleName(user.id, null);
+    if (platformRole === "platform_admin" || user.role === "platform_admin" ||
+        platformRole === "Super Admin" || user.role === "super_admin") {
       next();
       return;
     }
 
-    const permissions = await getUserPermissions(user.id, user.tenantId ?? null);
+    const tenantRole = tenantId !== null ? await getUserRoleName(user.id, tenantId) : null;
+    if (tenantRole === "owner" || tenantRole === "admin") {
+      next();
+      return;
+    }
+
+    const permissions = await getUserPermissions(user.id, tenantId);
 
     for (const { resource, action } of options) {
       const key = `${resource}:${action}`;

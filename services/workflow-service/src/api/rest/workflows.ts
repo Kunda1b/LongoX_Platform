@@ -238,31 +238,18 @@ router.post("/workflows/:id/run", authorize({ resource: "workflows", action: "ru
     ? (workflow.nodes as any[])
     : [];
 
-  // Use at least one placeholder node so empty workflows still produce a step
-  const executionNodes =
-    nodes.length > 0
-      ? nodes
-      : [
-          {
-            id: "node-1",
-            name: "Manual Trigger",
-            nodeTypeId: "trigger.manual",
-            position: { x: 0, y: 0 },
-            config: {},
-          },
-          {
-            id: "node-2",
-            name: "HTTP Request",
-            nodeTypeId: "action.http",
-            position: { x: 300, y: 0 },
-            config: { url: "https://api.example.com/data" },
-          },
-        ];
+  if (nodes.length === 0) {
+    res.status(422).json({
+      error: "Workflow has no nodes",
+      message: "Add at least one trigger node to this workflow before running it.",
+    });
+    return;
+  }
 
   const execution = await startWorkflowExecution(
     workflow.id,
     workflow.name,
-    executionNodes,
+    nodes,
     "manual",
     { _source: "manual" },
   );

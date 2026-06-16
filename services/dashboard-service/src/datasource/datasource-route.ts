@@ -121,7 +121,10 @@ async function testConnection(
       return { status: response.status, ok: response.ok };
     }
     default:
-      return { message: `Connection test for ${kind} completed (simulated)` };
+      throw new Error(
+        `Connection testing is not supported for datasource type "${kind}". ` +
+        `Supported types: postgres, rest_api.`,
+      );
   }
 }
 
