@@ -1,3 +1,5 @@
+export { seedRoles, getSystemRoleId } from "./seed.js";
+
 import { eq, and, sql } from "drizzle-orm";
 import {
   db,
@@ -276,12 +278,18 @@ function createAuthorizeMiddleware(options: AuthorizeOptions) {
     }
 
     const roleName = await getUserRoleName(user.id);
-    if (roleName === "Super Admin" || user.role === "super_admin") {
+    if (
+      roleName === "Super Admin" || user.role === "super_admin" ||
+      roleName === "platform_admin" || user.role === "platform_admin"
+    ) {
       next();
       return;
     }
 
-    if (roleName === "Admin" || user.role === "admin") {
+    if (
+      roleName === "Admin" || user.role === "admin" ||
+      roleName === "owner" || user.role === "owner"
+    ) {
       next();
       return;
     }

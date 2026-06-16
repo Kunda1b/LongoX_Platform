@@ -10,6 +10,8 @@ import {
   membershipsTable,
   userRegistrationsTable,
   auditLogTable,
+  userRolesTable,
+  rolesTable,
 } from "@longox/db";
 import {
   authMiddleware,
@@ -18,6 +20,7 @@ import {
   signToken,
 } from "../lib/auth";
 import { sendVerificationEmail, sendPasswordResetEmail } from "../lib/email";
+import { seedRoles, getSystemRoleId } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
@@ -46,6 +49,9 @@ async function uniqueTenantSlug(base: string): Promise<string> {
 }
 
 router.post(["/auth/register", "/api/auth/register"], async (req, res): Promise<void> => {
+  // Ensure system roles are seeded before first registration
+  await seedRoles();
+
   const { name, email, password, organizationName } = req.body as {
     name?: string;
     email?: string;
@@ -109,15 +115,26 @@ router.post(["/auth/register", "/api/auth/register"], async (req, res): Promise<
           passwordHash,
           name: trimmedName,
           tenantId: tenant.id,
-          role: "admin",
+          role: "owner",
           isActive: true,
           emailVerificationToken: verificationToken,
         })
         .returning();
 
+      // Assign the owner role via the RBAC user_roles table
+      const ownerRoleId = await getSystemRoleId("owner");
+      if (ownerRoleId) {
+        await tx.insert(userRolesTable).values({
+          userId: String(user.id),
+          roleId: ownerRoleId,
+          tenantId: tenant.id,
+        });
+      }
+
       await tx.insert(membershipsTable).values({
         tenantId: tenant.id,
         userId: user.id,
+        roleId: ownerRoleId ?? undefined,
         status: "active",
       });
 
@@ -216,12 +233,40 @@ router.post(["/auth/login", "/api/auth/login"], async (req, res): Promise<void> 
 
   const requiresMfa = !!mfa;
 
+  // Look up canonical role from user_roles → roles (fall back to users.role)
+  const [userRoleRow] = await db
+    .select({ name: rolesTable.name })
+    .from(userRolesTable)
+    .innerJoin(rolesTable, eq(userRolesTable.roleId, rolesTable.id))
+    .where(
+      and(
+        eq(userRolesTable.userId, String(user.id)),
+        user.tenantId !== null
+          ? eq(userRolesTable.tenantId, user.tenantId)
+          : undefined,
+      ),
+    )
+    .limit(1);
+
+  // For existing users without a user_roles entry, migrate them to owner on login
+  let canonicalRole = userRoleRow?.name ?? user.role;
+  if (!userRoleRow && (user.role === "admin" || user.role === "owner")) {
+    const ownerRoleId = await getSystemRoleId("owner");
+    if (ownerRoleId && user.tenantId) {
+      await db
+        .insert(userRolesTable)
+        .values({ userId: String(user.id), roleId: ownerRoleId, tenantId: user.tenantId })
+        .onConflictDoNothing();
+    }
+    canonicalRole = "owner";
+  }
+
   const authUser = {
     id: user.id,
     email: user.email,
     name: user.name,
     tenantId: user.tenantId ?? null,
-    role: user.role,
+    role: canonicalRole,
   };
   const token = signToken(authUser);
 
@@ -232,7 +277,9 @@ router.post(["/auth/login", "/api/auth/login"], async (req, res): Promise<void> 
       email: user.email,
       name: user.name,
       tenantId: user.tenantId,
-      role: user.role,
+      role: canonicalRole,
+      emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+      avatarUrl: null,
     },
     requiresMfa,
   });

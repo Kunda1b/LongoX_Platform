@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
+import { useRole, canSeeNavItem } from "@/hooks/use-role";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -40,65 +41,89 @@ import {
   Undo2,
   FileDiff,
   ShieldCheck,
-  Download,
   Clock,
   Route,
   Brain,
+  CreditCard,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 
+type NavRole = "viewer" | "builder" | "admin" | "owner" | "platform";
+
 type NavItem =
-  | { separator: true }
-  | { label: string; href: string; icon: LucideIcon };
+  | { separator: true; label?: string }
+  | { label: string; href: string; icon: LucideIcon; minRole?: NavRole };
 
 export const sidebarNav: NavItem[] = [
+  // ── Main ─────────────────────────────────────────────────────────────────
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Workflows", href: "/workflows", icon: Workflow },
   { label: "Executions", href: "/executions", icon: PlayCircle },
-  { label: "Connectors", href: "/connectors", icon: Cable },
-  { label: "Credentials", href: "/credentials", icon: KeyRound },
-  { label: "Templates", href: "/templates", icon: LayoutTemplate },
-  { label: "Marketplace", href: "/marketplace", icon: ShoppingCart },
-  { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Dashboards", href: "/dashboards", icon: Palette },
-  { label: "Billing", href: "/billing", icon: DollarSign },
-  { label: "Usage & Metering", href: "/metering", icon: BarChart3 },
-  { separator: true },
-  { label: "Environments", href: "/environments", icon: Globe },
-  { label: "Promote", href: "/environments/promote", icon: ArrowUpDown },
-  { label: "Rollback", href: "/environments/rollback", icon: Undo2 },
-  { label: "Diff", href: "/environments/diff", icon: FileDiff },
-  { label: "Promotions", href: "/environments/promotions", icon: Globe },
-  { label: "Tenants", href: "/tenants", icon: Users },
-  { label: "RBAC", href: "/rbac", icon: Shield },
-  { separator: true },
-  { label: "AI Playground", href: "/ai/playground", icon: Bot },
-  { label: "AI Models", href: "/ai/models", icon: HardDrive },
-  { label: "AI Router", href: "/ai/router", icon: Route },
-  { label: "AI Analytics", href: "/ai/analytics", icon: BarChart3 },
-  { label: "Prompts", href: "/ai/prompts", icon: FileText },
-  { label: "Agents", href: "/ai/agents", icon: Brain },
-  { label: "Agent Marketplace", href: "/ai/marketplace", icon: ShoppingCart },
-  { separator: true },
-  { label: "Webhook Endpoints", href: "/webhook-endpoints", icon: Webhook },
-  { label: "Apps", href: "/apps", icon: Puzzle },
-  { label: "Audit Log", href: "/audit-log", icon: ScrollText },
-  { label: "DLQ", href: "/dlq", icon: HardDrive },
-  { label: "Feature Flags", href: "/feature-flags", icon: Flag },
-  { label: "Notifications", href: "/notifications", icon: Bell },
-  { label: "Regions", href: "/settings/regions", icon: MapPin },
-  { separator: true },
-  { label: "Revenue", href: "/revenue", icon: DollarSign },
-  { separator: true },
-  { label: "Compliance", href: "/compliance", icon: ShieldCheck },
-  { label: "Audit Export", href: "/compliance/audit-export", icon: Download },
-  { label: "Data Retention", href: "/compliance/retention", icon: Clock },
-  { label: "GDPR", href: "/compliance/gdpr", icon: ShieldCheck },
-  { separator: true },
-  { label: "SSO", href: "/settings/sso", icon: Shield },
-  { separator: true },
+  { label: "Analytics", href: "/analytics", icon: BarChart3 },
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+  { separator: true, label: "Build" },
+  { label: "Connectors", href: "/connectors", icon: Cable, minRole: "builder" },
+  { label: "Credentials", href: "/credentials", icon: KeyRound, minRole: "builder" },
+  { label: "Templates", href: "/templates", icon: LayoutTemplate },
+  { label: "Marketplace", href: "/marketplace", icon: ShoppingCart, minRole: "builder" },
+  { label: "Apps", href: "/apps", icon: Puzzle, minRole: "builder" },
+  { label: "Webhook Endpoints", href: "/webhook-endpoints", icon: Webhook, minRole: "builder" },
+
+  // ── AI ────────────────────────────────────────────────────────────────────
+  { separator: true, label: "AI" },
+  { label: "AI Playground", href: "/ai/playground", icon: Bot, minRole: "builder" },
+  { label: "Prompts", href: "/ai/prompts", icon: FileText, minRole: "builder" },
+  { label: "Agents", href: "/ai/agents", icon: Brain, minRole: "builder" },
+  { label: "Agent Marketplace", href: "/ai/marketplace", icon: ShoppingCart, minRole: "builder" },
+  { label: "AI Analytics", href: "/ai/analytics", icon: BarChart3, minRole: "builder" },
+  { label: "AI Models", href: "/ai/models", icon: HardDrive, minRole: "admin" },
+  { label: "AI Router", href: "/ai/router", icon: Route, minRole: "admin" },
+
+  // ── Environments ──────────────────────────────────────────────────────────
+  { separator: true, label: "Environments" },
+  { label: "Environments", href: "/environments", icon: Globe, minRole: "builder" },
+  { label: "Promote", href: "/environments/promote", icon: ArrowUpDown, minRole: "admin" },
+  { label: "Rollback", href: "/environments/rollback", icon: Undo2, minRole: "admin" },
+  { label: "Diff", href: "/environments/diff", icon: FileDiff, minRole: "builder" },
+
+  // ── Manage ────────────────────────────────────────────────────────────────
+  { separator: true, label: "Manage" },
+  { label: "Audit Log", href: "/audit-log", icon: ScrollText, minRole: "admin" },
+  { label: "DLQ", href: "/dlq", icon: HardDrive, minRole: "admin" },
+  { label: "Notifications", href: "/notifications", icon: Bell, minRole: "admin" },
+  { label: "Compliance", href: "/compliance", icon: ShieldCheck, minRole: "admin" },
+  { label: "SSO", href: "/settings/sso", icon: Shield, minRole: "admin" },
+
+  // ── Account ───────────────────────────────────────────────────────────────
+  { separator: true, label: "Account" },
+  { label: "Billing", href: "/billing", icon: CreditCard, minRole: "owner" },
+  { label: "Usage & Metering", href: "/metering", icon: Activity, minRole: "owner" },
   { label: "Settings", href: "/settings", icon: Settings },
+
+  // ── Platform (LongoX internal only) ──────────────────────────────────────
+  { separator: true, label: "Platform" },
+  { label: "Tenants", href: "/tenants", icon: Users, minRole: "platform" },
+  { label: "RBAC", href: "/rbac", icon: Shield, minRole: "platform" },
+  { label: "Feature Flags", href: "/feature-flags", icon: Flag, minRole: "platform" },
+  { label: "Regions", href: "/settings/regions", icon: MapPin, minRole: "platform" },
+  { label: "Revenue", href: "/revenue", icon: DollarSign, minRole: "platform" },
+  { label: "Audit Export", href: "/compliance/audit-export", icon: ScrollText, minRole: "platform" },
+  { label: "Data Retention", href: "/compliance/retention", icon: Clock, minRole: "platform" },
+  { label: "GDPR", href: "/compliance/gdpr", icon: ShieldCheck, minRole: "platform" },
 ];
+
+const ROLE_LABEL: Record<string, string> = {
+  owner: "Owner",
+  admin: "Admin",
+  builder: "Builder",
+  viewer: "Viewer",
+  platform_admin: "Platform Admin",
+  support: "Support",
+  finance: "Finance",
+};
 
 function SidebarBrand() {
   return (
@@ -113,23 +138,25 @@ function SidebarBrand() {
 
 function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
   const { user, logout } = useAuth();
+  const { role } = useRole();
 
-  const initials = (user?.name ?? "")
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2) || "?";
+  const initials =
+    (user?.name ?? "")
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "?";
 
   return (
     <div className="shrink-0 border-t p-3">
       <Link
         href="/settings"
         onClick={onNavigate}
-        className="mb-2 flex items-center gap-2 min-w-0 rounded-md px-1 py-0.5 transition-colors hover:bg-sidebar-accent"
+        className="mb-2 flex items-center gap-2 min-w-0 rounded-md px-1 py-1 transition-colors hover:bg-sidebar-accent"
         title="Profile settings"
       >
-        <div className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-semibold text-primary">
+        <div className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-semibold text-primary">
           {user?.avatarUrl ? (
             <img
               src={user.avatarUrl}
@@ -140,9 +167,14 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
             initials
           )}
         </div>
-        <span className="truncate text-xs font-medium">
-          {user?.name ?? user?.email ?? "Guest"}
-        </span>
+        <div className="flex min-w-0 flex-col">
+          <span className="truncate text-xs font-medium leading-tight">
+            {user?.name ?? user?.email ?? "Guest"}
+          </span>
+          <span className="text-[10px] leading-tight text-muted-foreground capitalize">
+            {ROLE_LABEL[role] ?? role}
+          </span>
+        </div>
       </Link>
       <Button
         variant="ghost"
@@ -162,12 +194,38 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { role } = useRole();
+
+  // Collapse empty sections: only emit a separator when at least one item follows it
+  const visibleItems: NavItem[] = [];
+  let pendingSep: { separator: true; label?: string } | null = null;
+
+  for (const item of sidebarNav) {
+    if ("separator" in item) {
+      pendingSep = item;
+      continue;
+    }
+    if (!canSeeNavItem(role, item.minRole)) continue;
+    if (pendingSep) {
+      visibleItems.push(pendingSep);
+      pendingSep = null;
+    }
+    visibleItems.push(item);
+  }
 
   return (
     <nav className="flex-1 overflow-y-auto p-2">
-      {sidebarNav.map((item, i) => {
+      {visibleItems.map((item, i) => {
         if ("separator" in item) {
-          return <div key={i} className="my-2 border-t" />;
+          return (
+            <div key={i} className="mt-4 mb-1 px-3">
+              {item.label && (
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                  {item.label}
+                </p>
+              )}
+            </div>
+          );
         }
         const Icon = item.icon;
         const active =
