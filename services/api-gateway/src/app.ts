@@ -2,6 +2,7 @@ import express from "express";
 import pino from "pino-http";
 import cors from "cors";
 import authRouter from "./routes/auth";
+import invitationsRouter from "./routes/invitations";
 import mfaRouter from "./routes/mfa";
 import ssoRouter from "./routes/sso";
 import webhookEndpointsRouter from "./routes/webhook-endpoints";
@@ -53,8 +54,9 @@ app.use(express.json());
 // Rate limiting on all routes
 app.use(apiRateLimiter.middleware());
 
-// Public routes
+// Public routes (includes public invitation accept GET)
 app.use(authRouter);
+app.use(invitationsRouter);
 
 // Stripe webhook needs raw body and must be before auth middleware
 app.use(webhookRouter);

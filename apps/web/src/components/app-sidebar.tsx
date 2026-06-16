@@ -101,6 +101,7 @@ export const sidebarNav: NavItem[] = [
   { separator: true, label: "Account" },
   { label: "Billing", href: "/billing", icon: CreditCard, minRole: "owner" },
   { label: "Usage & Metering", href: "/metering", icon: Activity, minRole: "owner" },
+  { label: "Team Members", href: "/settings/team", icon: Users, minRole: "admin" },
   { label: "Settings", href: "/settings", icon: Settings },
 
   // ── Platform (LongoX internal only) ──────────────────────────────────────

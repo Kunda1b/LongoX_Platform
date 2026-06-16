@@ -1,3 +1,4 @@
+- [pnpm packageManager field on Replit](pnpm-replit-bootstrap.md) — do not set `packageManager` in package.json; Replit uses pnpm@10.x natively and setting any version triggers a corepack install that crashes with SIGABRT/pthread exhaustion.
 - [Orval webhook requestBody conflict](orval-webhook-body-conflict.md) — webhook endpoint requestBody causes duplicate TriggerWebhookBody export; omit requestBody from spec.
 - [React-query orval options pattern](orval-query-options.md) — UseQueryOptions requires queryKey in v5; omit refetchInterval from hook options or accept TS error.
 - [Execution engine pattern](execution-engine.md) — fire-and-forget async runner in api-server; checkpoints table replaces steps JSONB for new executions.

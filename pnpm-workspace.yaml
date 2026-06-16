@@ -7,12 +7,6 @@ packages:
   - scripts
   - tools/*
 
-allowBuilds:
-  esbuild: true
-  msgpackr-extract: true
-  protobufjs: true
-  sharp: true
-
 autoInstallPeers: false
 nodeLinker: hoisted
 
@@ -78,8 +72,10 @@ minimumReleaseAgeExclude:
 onlyBuiltDependencies:
   - "@swc/core"
   - esbuild
+  - msgpackr-extract
   - msw
   - protobufjs
+  - sharp
   - unrs-resolver
 
 overrides:
@@ -163,4 +159,3 @@ overrides:
   "rollup>@rollup/rollup-win32-ia32": "-"
   "rollup>@rollup/rollup-win32-x64-gnu": "-"
   "rollup>@rollup/rollup-win32-x64-msvc": "-"
-storeDir: C:\Users\Buba Danso\.pnpm-store
