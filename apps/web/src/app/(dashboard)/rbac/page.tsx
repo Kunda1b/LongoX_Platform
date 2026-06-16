@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { Role, WorkspaceMember } from "@longox/api-client-react";
 import {
   useListRoles,
   useListMembers,
@@ -83,14 +84,7 @@ const ROLE_META: Record<RoleName, RoleMeta> = {
 
 const ROLE_ORDER: RoleName[] = ["Owner", "Admin", "Builder", "Viewer"];
 
-interface ApiRole {
-  id: number;
-  name: string;
-  description: string | null;
-  permissionCount: number;
-}
-
-function RoleCard({ role }: { role: ApiRole }) {
+function RoleCard({ role }: { role: Role }) {
   const meta = ROLE_META[role.name as RoleName];
   if (!meta) return null;
   const Icon = meta.icon;
@@ -111,7 +105,7 @@ function RoleCard({ role }: { role: ApiRole }) {
             variant="outline"
             className={`shrink-0 text-xs ${meta.badge}`}
           >
-            {role.permissionCount} permissions
+            {role.permissionCount ?? 0} permissions
           </Badge>
         </div>
         {role.description && (
@@ -141,28 +135,18 @@ function RoleCard({ role }: { role: ApiRole }) {
   );
 }
 
-interface ApiMember {
-  userId: string;
-  name: string;
-  email: string;
-  avatarUrl: string | null;
-  isActive: boolean;
-  joinedAt: string;
-  lastLoginAt: string | null;
-  role: { id: number; name: string; description: string | null } | null;
-}
-
 function MemberRow({
   member,
   roles,
   onRoleChange,
 }: {
-  member: ApiMember;
-  roles: ApiRole[];
+  member: WorkspaceMember;
+  roles: Role[];
   onRoleChange: (userId: string, roleId: number) => Promise<void>;
 }) {
   const [saving, setSaving] = useState(false);
-  const meta = member.role ? ROLE_META[member.role.name as RoleName] : null;
+  const memberRole = member.role ?? null;
+  const meta = memberRole ? ROLE_META[memberRole.name as RoleName] : null;
 
   const initials = member.name
     .split(" ")
@@ -205,7 +189,9 @@ function MemberRow({
 
       <div className="shrink-0">
         <Select
-          defaultValue={member.role ? String(member.role.id) : undefined}
+          defaultValue={
+            memberRole && memberRole.id ? String(memberRole.id) : undefined
+          }
           onValueChange={handleRoleChange}
           disabled={saving}
         >
@@ -241,7 +227,9 @@ export default function RBACPage() {
 
   const sortedRoles = roles
     ? [...roles].sort(
-        (a, b) => ROLE_ORDER.indexOf(a.name as RoleName) - ROLE_ORDER.indexOf(b.name as RoleName),
+        (a, b) =>
+          ROLE_ORDER.indexOf(a.name as RoleName) -
+          ROLE_ORDER.indexOf(b.name as RoleName),
       )
     : [];
 
