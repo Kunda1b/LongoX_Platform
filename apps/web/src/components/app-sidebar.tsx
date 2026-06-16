@@ -114,10 +114,30 @@ function SidebarBrand() {
 function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
   const { user, logout } = useAuth();
 
+  const initials = (user?.name ?? "")
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "?";
+
   return (
     <div className="shrink-0 border-t p-3">
-      <div className="mb-2 truncate text-xs text-muted-foreground">
-        {user?.name ?? user?.email ?? "Guest"}
+      <div className="mb-2 flex items-center gap-2 min-w-0">
+        <div className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-semibold text-primary">
+          {user?.avatarUrl ? (
+            <img
+              src={user.avatarUrl}
+              alt={user?.name ?? "User"}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            initials
+          )}
+        </div>
+        <span className="truncate text-xs font-medium">
+          {user?.name ?? user?.email ?? "Guest"}
+        </span>
       </div>
       <Button
         variant="ghost"

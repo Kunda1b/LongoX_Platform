@@ -67,8 +67,16 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             <NotificationCenter />
             <div className="hidden h-4 w-px bg-border sm:block" />
             <div className="flex items-center gap-2 text-sm">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                {user?.name?.charAt(0)?.toUpperCase() ?? "U"}
+              <div className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                {user?.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  user?.name?.charAt(0)?.toUpperCase() ?? "U"
+                )}
               </div>
               <span className="hidden max-w-[120px] truncate font-medium md:inline">
                 {user?.name}
