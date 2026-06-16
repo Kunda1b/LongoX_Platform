@@ -123,7 +123,12 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="shrink-0 border-t p-3">
-      <div className="mb-2 flex items-center gap-2 min-w-0">
+      <Link
+        href="/settings"
+        onClick={onNavigate}
+        className="mb-2 flex items-center gap-2 min-w-0 rounded-md px-1 py-0.5 transition-colors hover:bg-sidebar-accent"
+        title="Profile settings"
+      >
         <div className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-semibold text-primary">
           {user?.avatarUrl ? (
             <img
@@ -138,7 +143,7 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
         <span className="truncate text-xs font-medium">
           {user?.name ?? user?.email ?? "Guest"}
         </span>
-      </div>
+      </Link>
       <Button
         variant="ghost"
         size="sm"

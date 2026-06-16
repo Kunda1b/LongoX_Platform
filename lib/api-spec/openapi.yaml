@@ -1576,6 +1576,41 @@ paths:
         "204":
           description: Revoked
 
+  # ─── Workspace Members ────────────────────────────────────────────────
+  /members:
+    get:
+      operationId: listMembers
+      tags: [rbac]
+      summary: List workspace members with their roles
+      responses:
+        "200":
+          description: Member list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkspaceMember"
+
+  /members/{userId}/role:
+    put:
+      operationId: assignMemberRole
+      tags: [rbac]
+      summary: Assign a role to a workspace member
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Role assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberRoleAssignment"
+
   # ─── AI Models ────────────────────────────────────────────────────────
   /ai-models:
     get:
@@ -3326,6 +3361,9 @@ components:
         budgetLimit:
           type: number
           nullable: true
+        includedExecutions:
+          type: integer
+          nullable: true
 
     UsageEvent:
       type: object
@@ -3579,6 +3617,58 @@ components:
         createdAt:
           type: string
 
+    WorkspaceMember:
+      type: object
+      required: [userId, name, email, isActive, joinedAt]
+      properties:
+        userId:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        joinedAt:
+          type: string
+        lastLoginAt:
+          type: string
+          nullable: true
+        role:
+          nullable: true
+          type: object
+          required: [id, name]
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            description:
+              type: string
+              nullable: true
+
+    MemberRoleAssignment:
+      type: object
+      required: [userId, roleId, roleName, createdAt]
+      properties:
+        userId:
+          type: string
+        roleId:
+          type: integer
+        roleName:
+          type: string
+        roleDescription:
+          type: string
+          nullable: true
+        tenantId:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+
     UserRole:
       type: object
       required: [id, userId, roleId, roleName, createdAt]
@@ -3782,8 +3872,14 @@ components:
           type: integer
         totalCost:
           type: number
+        totalTokens:
+          type: integer
+          nullable: true
         totalRequests:
           type: integer
+        avgLatencyMs:
+          type: number
+          nullable: true
         byProvider:
           type: array
           items:

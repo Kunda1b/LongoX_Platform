@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql, and, inArray, isNull } from "drizzle-orm";
 import {
   db,
   rolesTable,
@@ -7,6 +7,7 @@ import {
   rolePermissionsTable,
   userRolesTable,
   tenantsTable,
+  usersTable,
 } from "@longox/db";
 import { authorize } from "@longox/shared-rbac";
 
@@ -17,140 +18,150 @@ const router: IRouter = Router();
 let seeded = false;
 
 const SYSTEM_PERMISSIONS = [
-  { resource: "workflows", action: "read", description: "View workflows" },
-  {
-    resource: "workflows",
-    action: "write",
-    description: "Create and edit workflows",
-  },
-  { resource: "workflows", action: "run", description: "Execute workflows" },
-  { resource: "workflows", action: "delete", description: "Delete workflows" },
-  { resource: "connectors", action: "read", description: "View connectors" },
-  {
-    resource: "connectors",
-    action: "install",
-    description: "Install connectors",
-  },
-  { resource: "apps", action: "read", description: "View internal apps" },
-  { resource: "apps", action: "write", description: "Create and edit apps" },
-  { resource: "apps", action: "delete", description: "Delete apps" },
-  { resource: "credentials", action: "read", description: "View credentials" },
-  {
-    resource: "credentials",
-    action: "write",
-    description: "Manage credentials",
-  },
-  { resource: "analytics", action: "read", description: "View analytics" },
-  { resource: "billing", action: "read", description: "View billing" },
-  { resource: "billing", action: "write", description: "Manage billing" },
-  { resource: "users", action: "read", description: "View users" },
-  { resource: "users", action: "write", description: "Manage users" },
-  { resource: "tenants", action: "admin", description: "Administer tenants" },
-  { resource: "templates", action: "read", description: "View templates" },
-  { resource: "templates", action: "write", description: "Manage templates" },
-  { resource: "dashboards", action: "read", description: "View dashboards" },
-  { resource: "dashboards", action: "write", description: "Edit dashboards" },
-  { resource: "dashboards", action: "delete", description: "Delete dashboards" },
-  { resource: "ai", action: "read", description: "View AI models and prompts" },
-  { resource: "ai", action: "write", description: "Manage AI prompts and models" },
-  { resource: "ai", action: "run", description: "Execute AI runs" },
-  { resource: "audit", action: "read", description: "View audit log" },
-  { resource: "executions", action: "read", description: "View executions and DLQ" },
-  { resource: "executions", action: "run", description: "Retry failed executions" },
-  { resource: "connectors", action: "write", description: "Configure connectors" },
+  { resource: "workflows",   action: "read",    description: "View workflows" },
+  { resource: "workflows",   action: "write",   description: "Create and edit workflows" },
+  { resource: "workflows",   action: "run",     description: "Execute workflows" },
+  { resource: "workflows",   action: "delete",  description: "Delete workflows" },
+  { resource: "connectors",  action: "read",    description: "View connectors" },
+  { resource: "connectors",  action: "install", description: "Install connectors" },
+  { resource: "connectors",  action: "write",   description: "Configure connectors" },
+  { resource: "apps",        action: "read",    description: "View internal apps" },
+  { resource: "apps",        action: "write",   description: "Create and edit apps" },
+  { resource: "apps",        action: "delete",  description: "Delete apps" },
+  { resource: "credentials", action: "read",    description: "View credentials" },
+  { resource: "credentials", action: "write",   description: "Manage credentials" },
+  { resource: "analytics",   action: "read",    description: "View analytics" },
+  { resource: "billing",     action: "read",    description: "View billing" },
+  { resource: "billing",     action: "write",   description: "Manage billing & subscriptions" },
+  { resource: "users",       action: "read",    description: "View users" },
+  { resource: "users",       action: "write",   description: "Manage users and roles" },
+  { resource: "tenants",     action: "admin",   description: "Delete or transfer workspace" },
+  { resource: "templates",   action: "read",    description: "View templates" },
+  { resource: "templates",   action: "write",   description: "Manage templates" },
+  { resource: "dashboards",  action: "read",    description: "View dashboards" },
+  { resource: "dashboards",  action: "write",   description: "Edit dashboards" },
+  { resource: "dashboards",  action: "delete",  description: "Delete dashboards" },
+  { resource: "ai",          action: "read",    description: "View AI models and prompts" },
+  { resource: "ai",          action: "write",   description: "Manage AI prompts and models" },
+  { resource: "ai",          action: "run",     description: "Execute AI runs" },
+  { resource: "audit",       action: "read",    description: "View audit log" },
+  { resource: "executions",  action: "read",    description: "View executions and DLQ" },
+  { resource: "executions",  action: "run",     description: "Retry failed executions" },
 ];
+
+// System role definitions — Owner > Admin > Builder > Viewer
+const SYSTEM_ROLES = [
+  {
+    name: "Owner",
+    description: "Workspace owner — full access including billing, workspace deletion, and ownership transfer",
+  },
+  {
+    name: "Admin",
+    description: "Workspace administrator — full access except billing and workspace management",
+  },
+  {
+    name: "Builder",
+    description: "Power user — create and edit workflows, dashboards, and AI agents",
+  },
+  {
+    name: "Viewer",
+    description: "Read-only — view dashboards, workflow runs, and reports",
+  },
+];
+
+const ROLE_PERMISSIONS: Record<string, string[]> = {
+  Owner: SYSTEM_PERMISSIONS.map((p) => `${p.resource}:${p.action}`), // all
+  Admin: [
+    "workflows:read",    "workflows:write",    "workflows:run",    "workflows:delete",
+    "connectors:read",   "connectors:write",   "connectors:install",
+    "apps:read",         "apps:write",         "apps:delete",
+    "credentials:read",  "credentials:write",
+    "analytics:read",
+    "billing:read",
+    "users:read",        "users:write",
+    "templates:read",    "templates:write",
+    "dashboards:read",   "dashboards:write",   "dashboards:delete",
+    "ai:read",           "ai:write",           "ai:run",
+    "audit:read",
+    "executions:read",   "executions:run",
+  ],
+  Builder: [
+    "workflows:read",    "workflows:write",    "workflows:run",
+    "connectors:read",   "connectors:write",   "connectors:install",
+    "apps:read",         "apps:write",
+    "credentials:read",
+    "analytics:read",
+    "templates:read",
+    "dashboards:read",   "dashboards:write",
+    "ai:read",           "ai:write",           "ai:run",
+    "executions:read",   "executions:run",
+  ],
+  Viewer: [
+    "workflows:read",
+    "connectors:read",
+    "apps:read",
+    "analytics:read",
+    "templates:read",
+    "dashboards:read",
+    "ai:read",
+    "executions:read",
+  ],
+};
 
 async function ensureRbacSeed() {
   if (seeded) return;
   seeded = true;
-  const [{ count }] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(permissionsTable);
-  if (count > 0) return;
 
-  const insertedPerms = await db
-    .insert(permissionsTable)
-    .values(SYSTEM_PERMISSIONS)
-    .returning();
-
-  const adminRole = (
-    await db
-      .insert(rolesTable)
-      .values({ name: "Admin", description: "Full platform access" })
-      .returning()
-  )[0];
-  const editorRole = (
-    await db
-      .insert(rolesTable)
-      .values({
-        name: "Editor",
-        description: "Create and run workflows and apps",
-      })
-      .returning()
-  )[0];
-  const viewerRole = (
-    await db
-      .insert(rolesTable)
-      .values({ name: "Viewer", description: "Read-only access" })
-      .returning()
-  )[0];
-
-  const permMap = Object.fromEntries(
-    insertedPerms.map((p) => [`${p.resource}:${p.action}`, p.id]),
+  // 1. Upsert permissions — get existing, insert only missing ones
+  const existingPerms = await db.select().from(permissionsTable);
+  const permMap: Record<string, number> = Object.fromEntries(
+    existingPerms.map((p) => [`${p.resource}:${p.action}`, p.id]),
   );
+  const missingPerms = SYSTEM_PERMISSIONS.filter(
+    (p) => !permMap[`${p.resource}:${p.action}`],
+  );
+  if (missingPerms.length > 0) {
+    const inserted = await db
+      .insert(permissionsTable)
+      .values(missingPerms)
+      .returning();
+    for (const p of inserted) permMap[`${p.resource}:${p.action}`] = p.id;
+  }
 
-  const adminPerms = insertedPerms.map((p) => ({
-    roleId: adminRole.id,
-    permissionId: p.id,
-  }));
-  const editorPerms = [
-    "workflows:read",
-    "workflows:write",
-    "workflows:run",
-    "connectors:read",
-    "connectors:write",
-    "apps:read",
-    "apps:write",
-    "credentials:read",
-    "analytics:read",
-    "templates:read",
-    "dashboards:read",
-    "dashboards:write",
-    "ai:read",
-    "ai:run",
-    "executions:read",
-    "executions:run",
-  ]
-    .map((k) => ({ roleId: editorRole.id, permissionId: permMap[k] }))
-    .filter((r) => r.permissionId != null);
-  const viewerPerms = [
-    "workflows:read",
-    "connectors:read",
-    "apps:read",
-    "analytics:read",
-    "templates:read",
-    "dashboards:read",
-    "ai:read",
-    "executions:read",
-  ]
-    .map((k) => ({ roleId: viewerRole.id, permissionId: permMap[k] }))
-    .filter((r) => r.permissionId != null);
+  // 2. Upsert system roles — insert only roles that don't exist yet
+  const existingRoles = await db
+    .select()
+    .from(rolesTable)
+    .where(isNull(rolesTable.tenantId));
+  const roleMap: Record<string, number> = Object.fromEntries(
+    existingRoles.map((r) => [r.name, r.id]),
+  );
+  for (const roleDef of SYSTEM_ROLES) {
+    if (!roleMap[roleDef.name]) {
+      const [inserted] = await db
+        .insert(rolesTable)
+        .values(roleDef)
+        .returning();
+      roleMap[roleDef.name] = inserted.id;
+    }
+  }
 
-  if (adminPerms.length)
+  // 3. Assign permissions to each role (idempotent via unique constraint)
+  const assignments: { roleId: number; permissionId: number }[] = [];
+  for (const [roleName, permKeys] of Object.entries(ROLE_PERMISSIONS)) {
+    const roleId = roleMap[roleName];
+    if (!roleId) continue;
+    for (const key of permKeys) {
+      const permId = permMap[key];
+      if (permId) assignments.push({ roleId, permissionId: permId });
+    }
+  }
+  if (assignments.length > 0) {
     await db
       .insert(rolePermissionsTable)
-      .values(adminPerms)
+      .values(assignments)
       .onConflictDoNothing();
-  if (editorPerms.length)
-    await db
-      .insert(rolePermissionsTable)
-      .values(editorPerms)
-      .onConflictDoNothing();
-  if (viewerPerms.length)
-    await db
-      .insert(rolePermissionsTable)
-      .values(viewerPerms)
-      .onConflictDoNothing();
+  }
 }
 
 // ─── Permissions ──────────────────────────────────────────────────────────────
@@ -442,6 +453,101 @@ router.delete("/user-roles/:id", authorize({ resource: "users", action: "write" 
   const id = Number(req.params.id);
   await db.delete(userRolesTable).where(eq(userRolesTable.id, id));
   res.status(204).end();
+});
+
+// ─── Workspace Members ────────────────────────────────────────────────────────
+
+router.get("/members", authorize({ resource: "users", action: "read" }), async (req, res): Promise<void> => {
+  await ensureRbacSeed();
+  const tenantId = req.tenantId as number;
+
+  const members = await db
+    .select({
+      id: usersTable.id,
+      name: usersTable.name,
+      email: usersTable.email,
+      avatarUrl: usersTable.avatarUrl,
+      isActive: usersTable.isActive,
+      createdAt: usersTable.createdAt,
+      lastLoginAt: usersTable.lastLoginAt,
+    })
+    .from(usersTable)
+    .where(eq(usersTable.tenantId, tenantId))
+    .orderBy(usersTable.createdAt);
+
+  const userIds = members.map((m) => String(m.id));
+  const roleAssignments =
+    userIds.length > 0
+      ? await db
+          .select({
+            userId: userRolesTable.userId,
+            roleId: rolesTable.id,
+            roleName: rolesTable.name,
+            roleDescription: rolesTable.description,
+          })
+          .from(userRolesTable)
+          .innerJoin(rolesTable, eq(userRolesTable.roleId, rolesTable.id))
+          .where(inArray(userRolesTable.userId, userIds))
+      : [];
+
+  const roleByUser: Record<string, { id: number; name: string; description: string | null }> = {};
+  for (const r of roleAssignments) {
+    roleByUser[r.userId] = { id: r.roleId, name: r.roleName, description: r.roleDescription ?? null };
+  }
+
+  res.json(
+    members.map((m) => ({
+      userId: String(m.id),
+      name: m.name,
+      email: m.email,
+      avatarUrl: m.avatarUrl ?? null,
+      isActive: m.isActive,
+      joinedAt: m.createdAt.toISOString(),
+      lastLoginAt: m.lastLoginAt?.toISOString() ?? null,
+      role: roleByUser[String(m.id)] ?? null,
+    })),
+  );
+});
+
+router.put("/members/:userId/role", authorize({ resource: "users", action: "write" }), async (req, res): Promise<void> => {
+  await ensureRbacSeed();
+  const { userId } = req.params;
+  const { roleId } = req.body as { roleId: number };
+  const tenantId = req.tenantId as number;
+
+  const [user] = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(and(eq(usersTable.id, Number(userId)), eq(usersTable.tenantId, tenantId)));
+
+  if (!user) {
+    res.status(404).json({ error: "User not found in this workspace" });
+    return;
+  }
+
+  const [role] = await db.select().from(rolesTable).where(eq(rolesTable.id, roleId));
+  if (!role) {
+    res.status(404).json({ error: "Role not found" });
+    return;
+  }
+
+  await db.delete(userRolesTable).where(
+    and(eq(userRolesTable.userId, userId), eq(userRolesTable.tenantId, tenantId)),
+  );
+
+  const [assignment] = await db
+    .insert(userRolesTable)
+    .values({ userId, roleId, tenantId })
+    .returning();
+
+  res.json({
+    userId,
+    roleId: assignment.roleId,
+    roleName: role.name,
+    roleDescription: role.description ?? null,
+    tenantId: assignment.tenantId,
+    createdAt: assignment.createdAt.toISOString(),
+  });
 });
 
 export default router;

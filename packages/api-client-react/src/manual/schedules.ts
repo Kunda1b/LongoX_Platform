@@ -5,12 +5,12 @@ import type {
 } from "@tanstack/react-query";
 import { customFetch } from "../custom-fetch";
 import type { ErrorType } from "../custom-fetch";
+import type { ScheduleStats } from "./types";
 import type {
   Schedule,
   ScheduleInput,
-  ScheduleStats,
   ListSchedulesParams,
-} from "./types";
+} from "../generated/api.schemas";
 
 export const getListSchedulesUrl = () => `/api/schedules`;
 

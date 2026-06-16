@@ -5,13 +5,12 @@ import type {
 } from "@tanstack/react-query";
 import { customFetch } from "../custom-fetch";
 import type { ErrorType } from "../custom-fetch";
+import type { QueryResult, ConnectionTestResult } from "./types";
 import type {
   DataSource,
   DataSourceInput,
-  QueryResult,
-  ConnectionTestResult,
   ListDataSourcesParams,
-} from "./types";
+} from "../generated/api.schemas";
 
 export const getListDataSourcesUrl = () => `/api/datasources`;
 

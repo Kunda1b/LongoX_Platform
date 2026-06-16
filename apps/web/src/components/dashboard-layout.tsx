@@ -8,6 +8,7 @@ import { GlobalSearch } from "@/components/shell/global-search";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { NotificationCenter } from "@/components/shell/notification-center";
 import { EmailVerificationBanner } from "@/components/email-verification-banner";
+import Link from "next/link";
 import { Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
@@ -66,12 +67,16 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             </button>
             <NotificationCenter />
             <div className="hidden h-4 w-px bg-border sm:block" />
-            <div className="flex items-center gap-2 text-sm">
-              <div className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-semibold text-primary">
+            <Link
+              href="/settings"
+              className="flex items-center gap-2 text-sm rounded-md px-1 py-0.5 transition-colors hover:bg-accent"
+              title="Profile settings"
+            >
+              <div className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-semibold text-primary ring-1 ring-transparent hover:ring-primary/30 transition-all">
                 {user?.avatarUrl ? (
                   <img
                     src={user.avatarUrl}
-                    alt={user.name}
+                    alt={user?.name ?? "User"}
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -81,7 +86,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               <span className="hidden max-w-[120px] truncate font-medium md:inline">
                 {user?.name}
               </span>
-            </div>
+            </Link>
           </div>
         </header>
 
