@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
@@ -30,7 +30,7 @@ type AcceptedInfo = {
   workspace: { name: string; slug: string };
 };
 
-export default function AcceptInvitationPage() {
+function AcceptInvitationContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { token: authToken, user, login } = useAuth();
@@ -161,4 +161,12 @@ export default function AcceptInvitationPage() {
   }
 
   return null;
+}
+
+export default function AcceptInvitationPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">Validating invitation…</div>}>
+      <AcceptInvitationContent />
+    </Suspense>
+  );
 }
