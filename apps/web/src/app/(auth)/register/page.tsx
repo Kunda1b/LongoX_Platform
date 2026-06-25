@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import {
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const { register, isLoading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -208,5 +208,13 @@ export default function RegisterPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-muted/30">Loading...</div>}>
+      <RegisterForm />
+    </Suspense>
   );
 }
