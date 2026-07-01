@@ -8,3 +8,4 @@
 - [Express req.user augmentation](express-req-augmentation.md) — shared-rbac declares global Express.Request augmentation (user, tenantId, correlationId); services that don't import shared-rbac need their own src/types.d.ts with the same declarations.
 - [Notification webhook schema mismatch](notification-webhook-schema.md) — notification-service webhook-repository was written against a different schema; webhookEndpointsTable lacks tenantId/url/events columns; use (row as any) casts and as any on insert values.
 - [Orval zod config — avoid schemas option](orval-zod-schemas-option.md) — using schemas+mode:split in orval zod config generates a types/ dir and auto-regenerates index.ts with conflicting re-exports; use mode:single + absolute target path to prevent this.
+- [Section 29.2 architecture contracts](arch-contracts.md) — OpenAPI 3.1 at gateway, Prisma canonical schema, GraphQL codegen three-output config, context.ts for resolvers.

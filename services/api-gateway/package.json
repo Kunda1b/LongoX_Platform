@@ -9,6 +9,8 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "graphql:codegen": "graphql-codegen --config graphql/codegen.ts",
+    "openapi:codegen": "openapi-typescript ./openapi/openapi.yaml --output ./openapi/generated/gateway-api.d.ts",
+    "codegen": "pnpm run graphql:codegen && pnpm run openapi:codegen",
     "test": "vitest run --config ../../vitest.config.ts src/graphql/schema.test.ts"
   },
   "dependencies": {
@@ -42,11 +44,14 @@
   "devDependencies": {
     "@graphql-codegen/cli": "^6.1.2",
     "@graphql-codegen/typescript": "^5.0.8",
+    "@graphql-codegen/typescript-operations": "^4.0.0",
+    "@graphql-codegen/typescript-resolvers": "^4.0.0",
     "@types/bcryptjs": "^3.0.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "catalog:",
+    "openapi-typescript": "^7.0.0",
     "tsx": "catalog:"
   }
 }

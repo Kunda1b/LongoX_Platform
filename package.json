@@ -12,7 +12,7 @@
     "test:e2e": "playwright test",
     "lint": "prettier --check .",
     "format": "prettier --write .",
-    "codegen": "pnpm --filter @longox/api-spec run codegen"
+    "codegen": "pnpm --filter @longox/api-spec run codegen && pnpm --filter @longox/api-gateway run codegen && pnpm --filter @longox/shared-types run codegen"
   },
   "private": true,
   "packageManager": "pnpm@11.6.0",

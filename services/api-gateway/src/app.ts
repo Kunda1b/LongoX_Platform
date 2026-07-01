@@ -1,6 +1,7 @@
 import express from "express";
 import pino from "pino-http";
 import cors from "cors";
+import { randomUUID } from "node:crypto";
 import authRouter from "./routes/auth";
 import invitationsRouter from "./routes/invitations";
 import mfaRouter from "./routes/mfa";
@@ -13,7 +14,12 @@ import rbacRouter from "./routes/rbac";
 import tenantsRouter from "./routes/tenants";
 import environmentsRouter from "./routes/environments";
 import complianceRouter from "./routes/compliance";
+import workosAuthRouter from "./routes/workos-auth";
+import scimRouter from "./routes/scim";
+import executionStreamRouter from "./routes/execution-stream";
+import workflowDiffsRouter from "./routes/workflow-diffs";
 import { authMiddleware } from "./lib/auth";
+import { isWorkOSEnabled } from "./lib/workos-auth";
 import { apiRateLimiter } from "./lib/rate-limiter";
 import { auditLogRouter } from "@longox/audit-service";
 import { yoga } from "./graphql/index";
@@ -48,25 +54,88 @@ import { replicationRouter } from "@longox/replication-service";
 
 const app = express();
 
+// ─── Correlation ID (dev — Kong injects this in production) ──────────────────
+// Ensures every request carries x-correlation-id for distributed tracing.
+app.use((req, _res, next) => {
+  const incoming = req.headers["x-correlation-id"] as string | undefined;
+  const correlationId = incoming ?? randomUUID();
+  req.headers["x-correlation-id"] = correlationId;
+  req.correlationId = correlationId;
+  next();
+});
+
 app.use(cors());
-app.use(pino());
-app.use(express.json());
+app.use(pino({
+  customProps: (req) => ({
+    correlationId: req.headers["x-correlation-id"],
+  }),
+}));
+
+// ─── SCIM webhook: raw body BEFORE express.json() ────────────────────────────
+// WorkOS SCIM webhook verification requires the raw request body.
+// Must be mounted before global express.json() middleware.
+app.use(
+  express.raw({
+    type: ["application/json", "application/scim+json"],
+    limit: "1mb",
+    inflate: true,
+  }),
+  // Only apply raw-body parsing to the SCIM endpoint
+  (req, _res, next) => {
+    const path = req.path;
+    if (path === "/auth/scim" || path === "/api/auth/scim") {
+      // Body is already a Buffer — scimRouter will read it
+      return next();
+    }
+    // For all other paths, parse as JSON if still a Buffer
+    if (req.body instanceof Buffer) {
+      try {
+        req.body = JSON.parse(req.body.toString("utf-8"));
+      } catch {
+        req.body = {};
+      }
+    }
+    next();
+  },
+);
+
+// SCIM route must be before express.json() so it gets the raw buffer
+app.use(scimRouter);
+
+// Global JSON parsing for all other routes
+app.use(express.json({ limit: "10mb" }));
 
 // Rate limiting on all routes
 app.use(apiRateLimiter.middleware());
 
-// Public routes (includes public invitation accept GET)
+// ─── Public routes ────────────────────────────────────────────────────────────
+
 app.use(authRouter);
 app.use(invitationsRouter);
+
+// WorkOS AuthKit routes (public — AuthKit URL, callback, token refresh)
+// Only mount when WorkOS is configured; local auth remains fully functional.
+if (isWorkOSEnabled()) {
+  app.use(workosAuthRouter);
+} else {
+  // In dev, still mount the router but it will 503 with a clear message
+  // if you accidentally call the WorkOS endpoints without a key.
+  app.use(workosAuthRouter);
+}
 
 // Stripe webhook needs raw body and must be before auth middleware
 app.use(webhookRouter);
 
 app.get(["/healthz", "/api/healthz"], (_req, res) => {
-  res.json({ status: "ok", service: "api-gateway" });
+  res.json({
+    status: "ok",
+    service: "api-gateway",
+    workos: isWorkOSEnabled() ? "enabled" : "dev-mode",
+  });
 });
 
-// Protected routes
+// ─── Protected routes (authMiddleware gate) ───────────────────────────────────
+
 app.use(authMiddleware);
 
 // Tenant context: extract tenantId from authenticated user
@@ -153,6 +222,12 @@ app.use(usageRouter);
 // Workflows: main CRUD
 app.use(workflowsRouter);
 
+// Workflow version diffs
+app.use(workflowDiffsRouter);
+
+// Execution SSE monitoring stream + approval decisions
+app.use(executionStreamRouter);
+
 // Replication & Region Management
 app.use(replicationRouter);
 
@@ -165,5 +240,9 @@ app.use(aiRoutingPoliciesRouter);
 app.use(aiPlaygroundRouter);
 app.use(promptsGovernanceRouter);
 app.use(agentsRouter);
+
+// WorkOS Admin Portal + MFA (authenticated users only)
+// Already mounted above in the public section — the middleware inside
+// each endpoint handler enforces auth where required.
 
 export default app;

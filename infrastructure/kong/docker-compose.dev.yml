@@ -1,0 +1,61 @@
+version: "3.9"
+
+# Kong DB-less dev stack
+# Usage: docker compose -f infrastructure/kong/docker-compose.dev.yml up -d
+#
+# Ports:
+#   :8000 — Kong proxy (send all API traffic here)
+#   :8001 — Kong admin API (read-only in DB-less mode)
+#   :8002 — Kong Manager UI (optional)
+#
+# Prerequisites: api-gateway running on host :3000
+
+services:
+  kong:
+    image: kong:3.7-ubuntu
+    container_name: longox-kong
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yaml
+      KONG_PROXY_LISTEN: "0.0.0.0:8000, 0.0.0.0:8443 ssl"
+      KONG_ADMIN_LISTEN: "0.0.0.0:8001"
+      KONG_ADMIN_GUI_LISTEN: "0.0.0.0:8002"
+      KONG_LOG_LEVEL: info
+      KONG_PLUGINS: "bundled"
+      KONG_NGINX_PROXY_READ_TIMEOUT: "60s"
+      KONG_NGINX_PROXY_SEND_TIMEOUT: "60s"
+      # Allow the api-gateway host to be the Docker host
+      KONG_DNS_RESOLVER: "8.8.8.8"
+    volumes:
+      - ./kong.yaml:/etc/kong/kong.yaml:ro
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+      - "8002:8002"
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - longox-dev
+
+  # Redis for Kong rate-limiting storage
+  redis:
+    image: redis:7.2-alpine
+    container_name: longox-kong-redis
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - longox-dev
+
+networks:
+  longox-dev:
+    driver: bridge

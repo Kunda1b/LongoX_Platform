@@ -3,6 +3,7 @@ export * from "./viewport";
 export * from "./selection";
 export * from "./normalizer";
 export * from "./diff";
+export * from "./json-patch";
 export * from "./runtime-annotations";
 export * from "./collaboration";
 export {

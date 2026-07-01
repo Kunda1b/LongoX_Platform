@@ -1,3 +1,14 @@
+/**
+ * Authentication middleware.
+ *
+ * In dev (no WORKOS_API_KEY): validates local JWTs signed with JWT_SECRET.
+ * In prod (WORKOS_API_KEY set): also accepts local JWTs that wrap WorkOS
+ * session data. WorkOS access tokens are exchanged at login time; the gateway
+ * issues its own short-lived JWT so downstream services remain stateless.
+ *
+ * The authMiddleware is applied globally in app.ts after public routes.
+ */
+
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
@@ -7,7 +18,10 @@ const JWT_SECRET =
   process.env["JWT_SECRET"] ??
   "flow-builder-nexus-dev-secret-change-in-production";
 const JWT_EXPIRY = "24h";
+
 const revokedTokens = new Map<string, number>();
+
+// ─── Shared types ─────────────────────────────────────────────────────────────
 
 export interface AuthUser {
   id: number;
@@ -21,9 +35,12 @@ declare global {
   namespace Express {
     interface Request {
       user?: AuthUser;
+      correlationId?: string;
     }
   }
 }
+
+// ─── Token operations ─────────────────────────────────────────────────────────
 
 export function signToken(user: AuthUser): string {
   return jwt.sign(user, JWT_SECRET, { expiresIn: JWT_EXPIRY });
@@ -51,7 +68,9 @@ export function getBearerToken(req: Request): string | null {
 
 export function revokeToken(token: string): void {
   const decoded = jwt.decode(token) as { exp?: number } | null;
-  const expiresAt = decoded?.exp ? decoded.exp * 1000 : Date.now() + 24 * 60 * 60 * 1000;
+  const expiresAt = decoded?.exp
+    ? decoded.exp * 1000
+    : Date.now() + 24 * 60 * 60 * 1000;
   cleanupRevokedTokens();
   revokedTokens.set(token, expiresAt);
 }
@@ -60,6 +79,8 @@ export function isTokenRevoked(token: string): boolean {
   cleanupRevokedTokens();
   return revokedTokens.has(token);
 }
+
+// ─── Auth middleware ──────────────────────────────────────────────────────────
 
 export async function authMiddleware(
   req: Request,
@@ -84,6 +105,8 @@ export async function authMiddleware(
     return;
   }
 
+  // Verify the user account is still active in our database.
+  // This catches deactivated users even if their token has not expired.
   const [dbUser] = await db
     .select({ id: usersTable.id, isActive: usersTable.isActive })
     .from(usersTable)

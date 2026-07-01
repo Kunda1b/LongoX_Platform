@@ -1,0 +1,1867 @@
+openapi: 3.1.0
+info:
+  title: LongoX API Gateway
+  version: 1.0.0
+  description: |
+    LongoX — The AI-Native Workflow Operating System for Modern Teams.
+    This is the canonical OpenAPI 3.1 contract at the API gateway boundary.
+    Full spec lives at services/api-gateway/openapi/openapi.yaml per Section 13 / ADR-006.
+  contact:
+    name: LongoX Platform Architecture Team
+    url: https://longox.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: /api/v1
+    description: v1 — current stable API (6-month deprecation window per versioning policy)
+
+tags:
+  - name: auth
+    description: Authentication — login, logout, token refresh
+  - name: tenants
+    description: Tenant management and bootstrapping
+  - name: users
+    description: User management
+  - name: rbac
+    description: Roles and permissions
+  - name: workflows
+    description: Workflow definition and publishing
+  - name: executions
+    description: Workflow execution management
+  - name: triggers
+    description: Inbound event triggers
+  - name: connectors
+    description: Connector marketplace and installs
+  - name: dashboards
+    description: Dashboard builder
+  - name: templates
+    description: Template registry
+  - name: environments
+    description: Deployment environments and promotions
+  - name: billing
+    description: Usage, invoices, and billing
+  - name: ai
+    description: AI run execution and model registry
+  - name: audit
+    description: Audit log
+  - name: admin
+    description: Platform administration
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Security Schemes
+# ─────────────────────────────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Short-lived access token issued by /auth/login or /auth/refresh
+    refreshToken:
+      type: apiKey
+      in: cookie
+      name: longox_refresh
+      description: HttpOnly refresh token cookie; used only on /auth/refresh
+
+  # ─── Shared Parameters ───────────────────────────────────────────────────
+  parameters:
+    IdempotencyKey:
+      name: x-idempotency-key
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Prevents duplicate side-effects on retried requests
+    TenantId:
+      name: x-tenant-id
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Override the active tenant context (platform-admin only)
+    CorrelationId:
+      name: x-correlation-id
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: Client-supplied trace correlation ID; echoed in responses
+    PathId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+
+  # ─── Standard Responses ──────────────────────────────────────────────────
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Access token is missing or invalid
+              details: []
+              correlation_id: "01HNQK8X3F6..."
+              retry_after_seconds: null
+              documentation_url: "https://errors.longox.com/UNAUTHORIZED"
+    Forbidden:
+      description: Authenticated but lacks permission
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Conflict:
+      description: Resource state conflict (e.g. optimistic concurrency failure)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    ValidationError:
+      description: Request body or query parameter failed validation
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: "email must be a valid email address"
+              details:
+                - field: email
+                  rule: format
+                  value: "not-an-email"
+              correlation_id: "01HNQK8X3F6..."
+              retry_after_seconds: null
+              documentation_url: "https://errors.longox.com/VALIDATION_ERROR"
+    RateLimited:
+      description: Too many requests
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until the rate limit resets
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    TokenBudgetExhausted:
+      description: Tenant AI token budget hard cutoff reached
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+  # ─── Schemas ─────────────────────────────────────────────────────────────
+  schemas:
+
+    # ── Error Envelope (Section 13.3) ─────────────────────────────────────
+    ErrorDetail:
+      type: object
+      properties:
+        field:
+          type: string
+        rule:
+          type: string
+        value:
+          type: string
+
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, correlation_id]
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                $ref: "#/components/schemas/ErrorDetail"
+            correlation_id:
+              type: string
+            retry_after_seconds:
+              type: integer
+              nullable: true
+            documentation_url:
+              type: string
+              format: uri
+
+    # ── Pagination ────────────────────────────────────────────────────────
+    PageInfo:
+      type: object
+      required: [hasNextPage, hasPreviousPage]
+      properties:
+        hasNextPage:
+          type: boolean
+        hasPreviousPage:
+          type: boolean
+        startCursor:
+          type: string
+        endCursor:
+          type: string
+
+    # ── Auth ─────────────────────────────────────────────────────────────
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        mfa_code:
+          type: string
+          pattern: '^\d{6}$'
+          description: TOTP code when MFA is enrolled
+        sso_assertion:
+          type: string
+          description: SAML/OIDC assertion for enterprise SSO flows
+
+    TenantContext:
+      type: object
+      required: [tenant_id, name, tier, plan_id]
+      properties:
+        tenant_id:
+          type: string
+        name:
+          type: string
+        tier:
+          type: string
+          enum: [shared, dedicated_namespace, dedicated_cluster]
+        plan_id:
+          type: string
+        region:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [access_token, expires_in, tenant_context]
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+          description: Also set as HttpOnly cookie
+        expires_in:
+          type: integer
+          example: 3600
+        tenant_context:
+          $ref: "#/components/schemas/TenantContext"
+
+    # ── Tenants ──────────────────────────────────────────────────────────
+    Tenant:
+      type: object
+      required: [id, name, slug, plan, tier, status]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        plan:
+          type: string
+        tier:
+          type: string
+          enum: [shared, dedicated_namespace, dedicated_cluster]
+        status:
+          type: string
+          enum: [active, suspended, cancelled]
+        billing_account_id:
+          type: string
+        region_policy:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    # ── Users ────────────────────────────────────────────────────────────
+    User:
+      type: object
+      required: [id, email, name, status]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        status:
+          type: string
+          enum: [active, deactivated]
+        locale:
+          type: string
+        avatar_url:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    UserPage:
+      type: object
+      required: [data, page_info, total_count]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        page_info:
+          $ref: "#/components/schemas/PageInfo"
+        total_count:
+          type: integer
+
+    # ── RBAC ─────────────────────────────────────────────────────────────
+    Role:
+      type: object
+      required: [id, name, scope]
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        name:
+          type: string
+        scope:
+          type: string
+          enum: [platform, tenant, environment, resource]
+        permissions:
+          type: array
+          items:
+            type: string
+
+    RoleInput:
+      type: object
+      required: [name, scope]
+      properties:
+        name:
+          type: string
+        scope:
+          type: string
+          enum: [platform, tenant, environment, resource]
+        permission_ids:
+          type: array
+          items:
+            type: string
+
+    # ── Workflows ────────────────────────────────────────────────────────
+    WorkflowStatus:
+      type: string
+      enum: [draft, active, inactive, archived]
+
+    GraphNode:
+      type: object
+      required: [id, type]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        position:
+          type: object
+          properties:
+            x: { type: number }
+            y: { type: number }
+        config:
+          type: object
+
+    GraphEdge:
+      type: object
+      required: [id, source, target]
+      properties:
+        id:
+          type: string
+        source:
+          type: string
+        target:
+          type: string
+        label:
+          type: string
+        condition:
+          type: object
+
+    GraphSnapshot:
+      type: object
+      required: [nodes, edges]
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphNode"
+        edges:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphEdge"
+        variables:
+          type: array
+          items:
+            type: object
+        policies:
+          type: array
+          items:
+            type: object
+
+    Workflow:
+      type: object
+      required: [id, tenant_id, name, status]
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          $ref: "#/components/schemas/WorkflowStatus"
+        trigger_type:
+          type: string
+          enum: [manual, schedule, webhook, event]
+        current_version_id:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        last_run_at:
+          type: string
+          format: date-time
+        last_run_status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    WorkflowInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        trigger_type:
+          type: string
+          enum: [manual, schedule, webhook, event]
+        graph:
+          $ref: "#/components/schemas/GraphSnapshot"
+        tags:
+          type: array
+          items:
+            type: string
+
+    WorkflowUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        trigger_type:
+          type: string
+        graph:
+          $ref: "#/components/schemas/GraphSnapshot"
+        tags:
+          type: array
+          items:
+            type: string
+
+    WorkflowVersion:
+      type: object
+      required: [id, workflow_id, version_number, checksum, created_at]
+      properties:
+        id:
+          type: string
+        workflow_id:
+          type: string
+        version_number:
+          type: integer
+        graph:
+          $ref: "#/components/schemas/GraphSnapshot"
+        checksum:
+          type: string
+        release_notes:
+          type: string
+        created_by:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    PublishWorkflowInput:
+      type: object
+      properties:
+        expected_draft_version:
+          type: integer
+          description: Optimistic concurrency token — current draft version number
+        release_notes:
+          type: string
+
+    PublishWorkflowResponse:
+      type: object
+      required: [version_id, version_number, checksum, published_at]
+      properties:
+        version_id:
+          type: string
+        version_number:
+          type: integer
+        checksum:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+
+    WorkflowPage:
+      type: object
+      required: [data, page_info, total_count]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Workflow"
+        page_info:
+          $ref: "#/components/schemas/PageInfo"
+        total_count:
+          type: integer
+
+    # ── Executions ───────────────────────────────────────────────────────
+    ExecutionStatus:
+      type: string
+      enum: [pending, running, success, failed, cancelled, timed_out]
+
+    ExecutionTriggerType:
+      type: string
+      enum: [manual, schedule, webhook, event, api]
+
+    StepResult:
+      type: object
+      required: [node_id, status, duration_ms, attempt_number]
+      properties:
+        node_id:
+          type: string
+        status:
+          type: string
+        output:
+          type: object
+        error:
+          type: string
+        duration_ms:
+          type: integer
+        attempt_number:
+          type: integer
+
+    Checkpoint:
+      type: object
+      required: [id, node_id, state, created_at]
+      properties:
+        id:
+          type: string
+        node_id:
+          type: string
+        state:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+
+    Execution:
+      type: object
+      required: [id, workflow_id, status, trigger_type, started_at]
+      properties:
+        id:
+          type: string
+        workflow_id:
+          type: string
+        workflow_version_id:
+          type: string
+        status:
+          $ref: "#/components/schemas/ExecutionStatus"
+        trigger_type:
+          $ref: "#/components/schemas/ExecutionTriggerType"
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+        duration_ms:
+          type: integer
+        error_message:
+          type: string
+        step_results:
+          type: array
+          items:
+            $ref: "#/components/schemas/StepResult"
+        checkpoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/Checkpoint"
+
+    ExecutionPage:
+      type: object
+      required: [data, page_info, total_count]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Execution"
+        page_info:
+          $ref: "#/components/schemas/PageInfo"
+        total_count:
+          type: integer
+
+    # ── Connectors ───────────────────────────────────────────────────────
+    TrustLevel:
+      type: string
+      enum: [first_party, partner, community]
+
+    Connector:
+      type: object
+      required: [id, slug, name, trust_level]
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        category:
+          type: string
+        trust_level:
+          $ref: "#/components/schemas/TrustLevel"
+        scope:
+          type: string
+        installed:
+          type: boolean
+
+    ConnectorInstallInput:
+      type: object
+      required: [version_id, secret_ref]
+      properties:
+        version_id:
+          type: string
+        secret_ref:
+          type: string
+          description: Vault path to bound credentials
+        config:
+          type: object
+
+    ConnectorInstallResponse:
+      type: object
+      required: [install_id, status]
+      properties:
+        install_id:
+          type: string
+        status:
+          type: string
+          example: active
+
+    # ── Templates ────────────────────────────────────────────────────────
+    TemplateVisibility:
+      type: string
+      enum: [public, team, private]
+
+    Template:
+      type: object
+      required: [id, category, visibility, status]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        visibility:
+          $ref: "#/components/schemas/TemplateVisibility"
+        status:
+          type: string
+          enum: [draft, published, deprecated]
+        source_type:
+          type: string
+        install_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    # ── Dashboards ───────────────────────────────────────────────────────
+    Dashboard:
+      type: object
+      required: [id, tenant_id, title, status]
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [draft, published]
+        current_version_id:
+          type: string
+        layout_version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DashboardInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        layout:
+          type: object
+
+    # ── Environments ─────────────────────────────────────────────────────
+    Environment:
+      type: object
+      required: [id, tenant_id, name, type]
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        name:
+          type: string
+          enum: [dev, staging, prod]
+        type:
+          type: string
+        policy:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+
+    # ── Billing ──────────────────────────────────────────────────────────
+    UsageSummary:
+      type: object
+      required: [tenant_id, period_start, period_end]
+      properties:
+        tenant_id:
+          type: string
+        period_start:
+          type: string
+          format: date-time
+        period_end:
+          type: string
+          format: date-time
+        metrics:
+          type: object
+          additionalProperties:
+            type: number
+
+    Invoice:
+      type: object
+      required: [id, invoice_number, status]
+      properties:
+        id:
+          type: string
+        billing_account_id:
+          type: string
+        invoice_number:
+          type: string
+        period_start:
+          type: string
+          format: date-time
+        period_end:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [draft, open, paid, void]
+        total_amount:
+          type: number
+        currency:
+          type: string
+
+    # ── AI ───────────────────────────────────────────────────────────────
+    AiModel:
+      type: object
+      required: [provider, model_name, status]
+      properties:
+        provider:
+          type: string
+          example: openai
+        model_name:
+          type: string
+          example: gpt-4o
+        context_window:
+          type: integer
+        price_json:
+          type: object
+          description: Input/output pricing per token
+        risk_tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [active, deprecated, disabled]
+
+    AiRunInput:
+      type: object
+      required: [prompt_version_id, model]
+      properties:
+        prompt_version_id:
+          type: string
+        model:
+          type: string
+          example: gpt-4o
+        parameters:
+          type: object
+          properties:
+            temperature:
+              type: number
+              default: 0.7
+            max_tokens:
+              type: integer
+              default: 1024
+        fallback_chain:
+          type: array
+          items:
+            type: string
+          description: Ordered model fallback list on failure
+        rag_config:
+          type: object
+          properties:
+            knowledge_base_id:
+              type: string
+            top_k:
+              type: integer
+              default: 5
+        variables:
+          type: object
+          description: Template variable substitution map
+
+    AiRunResponse:
+      type: object
+      required: [run_id, output, token_usage, model, provider]
+      properties:
+        run_id:
+          type: string
+        output:
+          type: string
+        token_usage:
+          type: object
+          required: [prompt_tokens, completion_tokens, cost_usd]
+          properties:
+            prompt_tokens:
+              type: integer
+            completion_tokens:
+              type: integer
+            cached_tokens:
+              type: integer
+            cost_usd:
+              type: number
+        prompt_version_id:
+          type: string
+        model:
+          type: string
+        provider:
+          type: string
+
+    # ── Audit ────────────────────────────────────────────────────────────
+    AuditLogEntry:
+      type: object
+      required: [id, actor_id, action, occurred_at]
+      properties:
+        id:
+          type: string
+        actor_id:
+          type: string
+        action:
+          type: string
+        target_type:
+          type: string
+        target_id:
+          type: string
+        diff_json:
+          type: object
+        occurred_at:
+          type: string
+          format: date-time
+
+    AuditLogPage:
+      type: object
+      required: [data, page_info, total_count]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLogEntry"
+        page_info:
+          $ref: "#/components/schemas/PageInfo"
+        total_count:
+          type: integer
+
+    # ── Feature Flags ────────────────────────────────────────────────────
+    FeatureFlag:
+      type: object
+      required: [id, key, value]
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        key:
+          type: string
+        value:
+          type: object
+        updated_at:
+          type: string
+          format: date-time
+
+    FeatureFlagInput:
+      type: object
+      required: [key, value]
+      properties:
+        tenant_id:
+          type: string
+        key:
+          type: string
+        value:
+          type: object
+
+    # ── Webhook Trigger ──────────────────────────────────────────────────
+    WebhookTriggerResponse:
+      type: object
+      required: [execution_id, queued_at]
+      properties:
+        execution_id:
+          type: string
+        queued_at:
+          type: string
+          format: date-time
+
+# =============================================================================
+# Paths
+# =============================================================================
+security:
+  - bearerAuth: []
+
+paths:
+
+  # ─── Auth ──────────────────────────────────────────────────────────────────
+
+  /auth/login:
+    post:
+      operationId: loginUser
+      tags: [auth]
+      summary: Create a session — supports password, MFA, and SSO
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /auth/logout:
+    post:
+      operationId: logoutUser
+      tags: [auth]
+      summary: Invalidate the current session and refresh token
+      responses:
+        "204":
+          description: Session invalidated
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      tags: [auth]
+      summary: Rotate the access token using the refresh token cookie
+      security:
+        - refreshToken: []
+      responses:
+        "200":
+          description: New access token issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ─── Tenants ───────────────────────────────────────────────────────────────
+
+  /tenants/me:
+    get:
+      operationId: getMyTenant
+      tags: [tenants]
+      summary: Bootstrap the active tenant context for the authenticated user
+      responses:
+        "200":
+          description: Tenant context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ─── Users ────────────────────────────────────────────────────────────────
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List users in the active tenant (admin only)
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, deactivated]
+        - name: first
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: after
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPage"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # ─── RBAC ─────────────────────────────────────────────────────────────────
+
+  /roles:
+    get:
+      operationId: listRoles
+      tags: [rbac]
+      summary: List roles for the active tenant
+      responses:
+        "200":
+          description: Role list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Role"
+    post:
+      operationId: createRole
+      tags: [rbac]
+      summary: Create a new role (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleInput"
+      responses:
+        "201":
+          description: Role created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # ─── Workflows ────────────────────────────────────────────────────────────
+
+  /workflows:
+    get:
+      operationId: listWorkflows
+      tags: [workflows]
+      summary: List workflows for the active tenant
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/WorkflowStatus"
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: first
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: after
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Workflow page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowPage"
+    post:
+      operationId: createWorkflow
+      tags: [workflows]
+      summary: Create a new draft workflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowInput"
+      responses:
+        "201":
+          description: Draft workflow created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /workflows/{id}:
+    get:
+      operationId: getWorkflow
+      tags: [workflows]
+      summary: Get a workflow by ID
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: Workflow
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      operationId: updateWorkflow
+      tags: [workflows]
+      summary: Replace a draft workflow graph (editor only)
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowUpdate"
+      responses:
+        "200":
+          description: Updated workflow
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /workflows/{id}/publish:
+    post:
+      operationId: publishWorkflow
+      tags: [workflows]
+      summary: Publish an immutable workflow version
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishWorkflowInput"
+      responses:
+        "201":
+          description: Immutable version created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublishWorkflowResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /workflows/{id}/clone:
+    post:
+      operationId: cloneWorkflow
+      tags: [workflows]
+      summary: Clone a workflow with a new identity
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "201":
+          description: Cloned workflow
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /workflows/{id}/versions:
+    get:
+      operationId: listWorkflowVersions
+      tags: [workflows]
+      summary: List published version snapshots for a workflow
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+        - name: first
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: after
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Version list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkflowVersion"
+
+  # ─── Executions ───────────────────────────────────────────────────────────
+
+  /executions:
+    get:
+      operationId: listExecutions
+      tags: [executions]
+      summary: List executions, filtered by tenant and workflow
+      parameters:
+        - name: workflow_id
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/ExecutionStatus"
+        - name: first
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: after
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Execution page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionPage"
+
+  /executions/{id}:
+    get:
+      operationId: getExecution
+      tags: [executions]
+      summary: Get execution detail including run state and checkpoints
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: Execution detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Execution"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /executions/{id}/retry:
+    post:
+      operationId: retryExecution
+      tags: [executions]
+      summary: Idempotent retry of a failed execution
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "202":
+          description: Retry queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Execution"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /executions/{id}/cancel:
+    post:
+      operationId: cancelExecution
+      tags: [executions]
+      summary: Soft-cancel a running execution
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "202":
+          description: Cancel requested
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ─── Triggers ─────────────────────────────────────────────────────────────
+
+  /triggers/webhook:
+    post:
+      operationId: receiveWebhookTrigger
+      tags: [triggers]
+      summary: Receive a webhook trigger — public endpoint, HMAC-verified
+      security: []
+      parameters:
+        - name: x-webhook-signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: HMAC-SHA256 of the request body using the endpoint secret
+        - name: x-webhook-timestamp
+          in: header
+          required: true
+          schema:
+            type: integer
+          description: Unix epoch seconds; requests with >5-minute skew are rejected
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Arbitrary webhook payload; structure is connector-defined
+      responses:
+        "202":
+          description: Trigger accepted, execution queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookTriggerResponse"
+        "401":
+          description: Invalid HMAC signature or stale timestamp
+
+  # ─── Connectors ───────────────────────────────────────────────────────────
+
+  /connectors:
+    get:
+      operationId: listConnectors
+      tags: [connectors]
+      summary: Search the connector catalog
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: trust_level
+          in: query
+          schema:
+            $ref: "#/components/schemas/TrustLevel"
+        - name: installed
+          in: query
+          schema:
+            type: boolean
+        - name: first
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Connector list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Connector"
+    post:
+      operationId: createConnector
+      tags: [connectors]
+      summary: Create a new connector definition (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "201":
+          description: Connector created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Connector"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /connectors/{id}/install:
+    post:
+      operationId: installConnector
+      tags: [connectors]
+      summary: Install a connector version into the active tenant
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorInstallInput"
+      responses:
+        "201":
+          description: Connector installed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorInstallResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version already installed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # ─── Templates ────────────────────────────────────────────────────────────
+
+  /templates:
+    get:
+      operationId: listTemplates
+      tags: [templates]
+      summary: Browse the template registry
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: visibility
+          in: query
+          schema:
+            $ref: "#/components/schemas/TemplateVisibility"
+        - name: first
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: after
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Template list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Template"
+    post:
+      operationId: publishTemplate
+      tags: [templates]
+      summary: Publish a signed template artifact (admin only)
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "201":
+          description: Template published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # ─── Dashboards ───────────────────────────────────────────────────────────
+
+  /dashboards:
+    get:
+      operationId: listDashboards
+      tags: [dashboards]
+      summary: List dashboards for the active tenant
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, published]
+      responses:
+        "200":
+          description: Dashboard list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Dashboard"
+    post:
+      operationId: createDashboard
+      tags: [dashboards]
+      summary: Create a new dashboard (editor only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DashboardInput"
+      responses:
+        "201":
+          description: Dashboard created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+
+  /dashboards/{id}/publish:
+    post:
+      operationId: publishDashboard
+      tags: [dashboards]
+      summary: Publish a dashboard version (editor only)
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "201":
+          description: Dashboard version created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ─── Billing ──────────────────────────────────────────────────────────────
+
+  /billing/usage:
+    get:
+      operationId: getBillingUsage
+      tags: [billing]
+      summary: Read-only usage summary for the active billing period
+      parameters:
+        - name: period_start
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: period_end
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Usage summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageSummary"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /invoices:
+    get:
+      operationId: listInvoices
+      tags: [billing]
+      summary: Paged list of invoices for the active billing account
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, open, paid, void]
+        - name: first
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: after
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invoice list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invoice"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # ─── AI ───────────────────────────────────────────────────────────────────
+
+  /ai/runs:
+    post:
+      operationId: createAiRun
+      tags: [ai]
+      summary: Execute a metered, traced AI request — supports JSON or SSE streaming
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/CorrelationId"
+        - name: accept
+          in: header
+          required: false
+          schema:
+            type: string
+            enum: [application/json, text/event-stream]
+          description: Set to text/event-stream to enable SSE streaming (ADR-008)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiRunInput"
+      responses:
+        "200":
+          description: AI run completed (JSON) or stream started (SSE)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiRunResponse"
+            text/event-stream:
+              schema:
+                type: string
+                description: Server-Sent Events stream of token deltas and final usage
+        "402":
+          $ref: "#/components/responses/TokenBudgetExhausted"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /ai/models:
+    get:
+      operationId: listAiModels
+      tags: [ai]
+      summary: List available models from the model registry
+      parameters:
+        - name: provider
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, deprecated]
+      responses:
+        "200":
+          description: Model list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiModel"
+
+  # ─── Audit ────────────────────────────────────────────────────────────────
+
+  /audit:
+    get:
+      operationId: listAuditLog
+      tags: [audit]
+      summary: Security-sensitive audit log search (admin only)
+      parameters:
+        - name: actor_id
+          in: query
+          schema:
+            type: string
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: target_type
+          in: query
+          schema:
+            type: string
+        - name: target_id
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: first
+          in: query
+          schema:
+            type: integer
+            default: 100
+        - name: after
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Audit log page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogPage"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # ─── Admin ────────────────────────────────────────────────────────────────
+
+  /feature-flags:
+    post:
+      operationId: upsertFeatureFlag
+      tags: [admin]
+      summary: Upsert a feature flag — policy-gated, platform admin only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureFlagInput"
+      responses:
+        "200":
+          description: Feature flag upserted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlag"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    get:
+      operationId: listFeatureFlags
+      tags: [admin]
+      summary: List feature flags (admin only)
+      parameters:
+        - name: tenant_id
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Feature flag list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeatureFlag"
+        "403":
+          $ref: "#/components/responses/Forbidden"
