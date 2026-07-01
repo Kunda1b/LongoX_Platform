@@ -6,7 +6,7 @@ metadata:
 data:
   API_PREFIX: "/api/v1"
   LOG_LEVEL: "info"
-  CORS_ORIGINS: "https://app.flowbuilder.io"
+  CORS_ORIGINS: "https://app.longox.io"
   JWT_EXPIRY: "24h"
 ---
 apiVersion: v1

@@ -72,7 +72,7 @@ module "monitoring" {
   source = "../../modules/monitoring"
   environment = "dev"
   eks_cluster_name = module.eks.cluster_name
-  alert_email      = "devops@flowbuilder.io"
+  alert_email      = "devops@longox.io"
 }
 
 module "vault" {

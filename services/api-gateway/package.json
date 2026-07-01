@@ -6,9 +6,13 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "graphql:codegen": "graphql-codegen --config graphql/codegen.ts",
+    "test": "vitest run --config ../../vitest.config.ts src/graphql/schema.test.ts"
   },
   "dependencies": {
+    "@graphql-tools/schema": "^10.0.0",
     "@longox/ai-service": "workspace:*",
     "@longox/audit-service": "workspace:*",
     "@longox/billing-service": "workspace:*",
@@ -29,11 +33,15 @@
     "cors": "^2.8.6",
     "drizzle-orm": "catalog:",
     "express": "^5.2.1",
+    "graphql": "^16.9.0",
+    "graphql-yoga": "^5.10.0",
     "jsonwebtoken": "^9.0.3",
     "pino-http": "^11.0.0",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@graphql-codegen/cli": "^6.1.2",
+    "@graphql-codegen/typescript": "^5.0.8",
     "@types/bcryptjs": "^3.0.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",

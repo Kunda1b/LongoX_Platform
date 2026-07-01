@@ -12,7 +12,7 @@ concurrency:
 
 env:
   NODE_VERSION: "20"
-  PNPM_VERSION: "9"
+  PNPM_VERSION: "11.6.0"
 
 jobs:
   lint:
@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
@@ -58,14 +58,14 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm audit --prod || true
+      - run: pnpm audit --prod
 
   schema-lint:
     name: Schema Lint & Migration Dry-Run
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
@@ -73,14 +73,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @autoflow/db exec drizzle-kit check --config ./drizzle.config.ts || true
+      - name: Validate Drizzle schema
+        env:
+          DATABASE_URL: postgresql://longox:longox@localhost:5432/longox_ci
+        run: pnpm --filter @longox/db exec drizzle-kit check --config ./drizzle.config.ts
 
   api-contract:
     name: API Contract Validation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
@@ -89,16 +92,18 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - name: Validate OpenAPI Spec
-        run: npx @redocly/cli lint lib/api-spec/openapi.yaml || true
+        run: npx @redocly/cli lint lib/api-spec/openapi.yaml
       - name: Validate Zod Schemas
-        run: pnpm --filter @autoflow/api-zod exec tsx src/validate.ts || true
+        run: pnpm --filter @longox/api-zod run validate
+      - name: Verify GraphQL codegen types
+        run: pnpm --filter @longox/api-gateway run graphql:codegen
 
   graphql-check:
     name: GraphQL Schema Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
@@ -108,18 +113,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Check GraphQL Schema
         run: |
-          if [ -f artifacts/api-server/src/graphql/schema.ts ]; then
-            echo "GraphQL schema found at artifacts/api-server/src/graphql/schema.ts"
-          else
-            echo "No GraphQL schema found"
-          fi
+          test -f services/api-gateway/graphql/schema.graphql
+          pnpm --filter @longox/api-gateway run test
 
   test:
     name: Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
@@ -127,7 +129,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm -r --if-present run test
+      - run: pnpm test
 
   build:
     name: Build
@@ -135,7 +137,7 @@ jobs:
     needs: [lint, typecheck, dependency-audit, schema-lint, api-contract, graphql-check, test]
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
@@ -180,9 +182,9 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: autoflow_test
-          POSTGRES_USER: autoflow
-          POSTGRES_PASSWORD: autoflow
+          POSTGRES_DB: longox_test
+          POSTGRES_USER: longox
+          POSTGRES_PASSWORD: longox
         ports:
           - 5432:5432
         options: >-
@@ -192,7 +194,7 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
@@ -200,20 +202,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - name: Build api-server
-        run: pnpm --filter @autoflow/api-server build
+      - name: Build API gateway
+        run: pnpm --filter @longox/api-gateway build
       - name: Start server and run smoke tests
         env:
-          DATABASE_URL: postgresql://autoflow:autoflow@localhost:5432/autoflow_test
+          DATABASE_URL: postgresql://longox:longox@localhost:5432/longox_test
           NODE_ENV: test
           PORT: 4000
         run: |
-          pnpm --filter @autoflow/api-server start &
+          pnpm --filter @longox/api-gateway start &
           SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
           sleep 5
-          # Health check
-          curl -f http://localhost:4000/api/health || exit 1
+          curl -f http://localhost:4000/api/healthz
           echo "Health check passed"
-          # GraphQL endpoint check
-          curl -f http://localhost:4000/api/graphql -X POST -H "Content-Type: application/json" -d '{"query":"{ __typename }"}' || echo "GraphQL check skipped (may not be running)"
-          kill $SERVER_PID 2>/dev/null || true

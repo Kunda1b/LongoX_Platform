@@ -22,7 +22,7 @@ grafana:
   ingress:
     enabled: true
     ingressClassName: nginx
-    hosts: ["grafana.${var.environment}.flowbuilder.io"]
+    hosts: ["grafana.${var.environment}.longox.io"]
 
 alertmanager:
   enabled: true

@@ -7,6 +7,7 @@ on:
 
 env:
   DOCKER_REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: longox
   DOCKER_USERNAME: ${{ github.actor }}
 
 jobs:
@@ -52,8 +53,8 @@ jobs:
           context: ./services/${{ matrix.service }}
           push: true
           tags: |
-            ${{ env.DOCKER_REGISTRY }}/autoflow/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
-            ${{ env.DOCKER_REGISTRY }}/autoflow/${{ matrix.service }}:latest
+            ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
+            ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.service }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -77,10 +78,10 @@ jobs:
               execution-service) ns="platform-execution" ;;
             esac
             # Create canary deployment with version label
-            kubectl set image "deployment/$svc-canary -n $ns" "$svc=${{ env.DOCKER_REGISTRY }}/autoflow/$svc:${{ github.sha }}" 2>/dev/null || \
-            kubectl create deployment "$svc-canary -n $ns" --image="${{ env.DOCKER_REGISTRY }}/autoflow/$svc:${{ github.sha }}" --replicas=1
+            kubectl set image "deployment/$svc-canary" "$svc=${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/$svc:${{ github.sha }}" -n "$ns" 2>/dev/null || \
+            kubectl create deployment "$svc-canary" --image="${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/$svc:${{ github.sha }}" --replicas=1 -n "$ns"
             # Label for canary routing
-            kubectl label deployment "$svc-canary -n $ns" "app.kubernetes.io/canary=true" --overwrite
+            kubectl label deployment "$svc-canary" "app.kubernetes.io/canary=true" --overwrite -n "$ns"
           done
           echo "Canary deployments created. Monitoring for 5 minutes..."
           sleep 300
@@ -92,7 +93,7 @@ jobs:
             case "$svc" in
               execution-service) ns="platform-execution" ;;
             esac
-            kubectl rollout status "deployment/$svc-canary -n $ns" --timeout=3m
+            kubectl rollout status "deployment/$svc-canary" -n "$ns" --timeout=3m
           done
           echo "Canary health checks passed"
 
@@ -116,7 +117,7 @@ jobs:
               execution-service|scheduler-service|ai-service) ns="platform-execution" ;;
               audit-service|metering-service|notification-service|search-service) ns="platform-observability" ;;
             esac
-            kubectl set image "deployment/$svc -n $ns" "$svc=${{ env.DOCKER_REGISTRY }}/autoflow/$svc:${{ github.sha }}" || true
+            kubectl set image "deployment/$svc" "$svc=${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/$svc:${{ github.sha }}" -n "$ns"
           done
           kubectl rollout status deployment/api-gateway -n platform-control --timeout=5m
           # Clean up canary after successful promotion
@@ -125,7 +126,7 @@ jobs:
             case "$svc" in
               execution-service) ns="platform-execution" ;;
             esac
-            kubectl delete deployment "$svc-canary -n $ns" 2>/dev/null || true
+            kubectl delete deployment "$svc-canary" -n "$ns" 2>/dev/null || true
           done
           echo "Full staging deployment complete"
 
@@ -150,9 +151,9 @@ jobs:
             case "$svc" in
               execution-service) ns="platform-execution" ;;
             esac
-            kubectl set image "deployment/$svc-canary -n $ns" "$svc=${{ env.DOCKER_REGISTRY }}/autoflow/$svc:${{ github.ref_name }}" 2>/dev/null || \
-            kubectl create deployment "$svc-canary -n $ns" --image="${{ env.DOCKER_REGISTRY }}/autoflow/$svc:${{ github.ref_name }}" --replicas=1
-            kubectl label deployment "$svc-canary -n $ns" "app.kubernetes.io/canary=true" --overwrite
+            kubectl set image "deployment/$svc-canary" "$svc=${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/$svc:${{ github.ref_name }}" -n "$ns" 2>/dev/null || \
+            kubectl create deployment "$svc-canary" --image="${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/$svc:${{ github.ref_name }}" --replicas=1 -n "$ns"
+            kubectl label deployment "$svc-canary" "app.kubernetes.io/canary=true" --overwrite -n "$ns"
           done
       - name: Monitor canary (10 minute observation window)
         run: |
@@ -164,7 +165,7 @@ jobs:
               case "$svc" in
                 execution-service) ns="platform-execution" ;;
               esac
-              READY=$(kubectl get deployment "$svc-canary -n $ns" -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+              READY=$(kubectl get deployment "$svc-canary" -n "$ns" -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
               echo "[minute $i] $svc canary ready replicas: $READY"
               if [ "$READY" -lt 1 ]; then
                 echo "Canary $svc not healthy at minute $i"
@@ -179,9 +180,9 @@ jobs:
             case "$svc" in
               execution-service) ns="platform-execution" ;;
             esac
-            kubectl rollout status "deployment/$svc-canary -n $ns" --timeout=5m || {
+            kubectl rollout status "deployment/$svc-canary" -n "$ns" --timeout=5m || {
               echo "Canary $svc failed health check. Rolling back..."
-              kubectl delete deployment "$svc-canary -n $ns" 2>/dev/null || true
+              kubectl delete deployment "$svc-canary" -n "$ns" 2>/dev/null || true
               exit 1
             }
           done
@@ -208,7 +209,7 @@ jobs:
               execution-service|scheduler-service|ai-service) ns="platform-execution" ;;
               audit-service|metering-service|notification-service|search-service) ns="platform-observability" ;;
             esac
-            kubectl set image "deployment/$svc -n $ns" "$svc=${{ env.DOCKER_REGISTRY }}/autoflow/$svc:${{ github.ref_name }}" || true
+            kubectl set image "deployment/$svc" "$svc=${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/$svc:${{ github.ref_name }}" -n "$ns"
           done
           kubectl rollout status deployment/api-gateway -n platform-control --timeout=5m
           # Clean up canary deployments
@@ -217,7 +218,7 @@ jobs:
             case "$svc" in
               execution-service) ns="platform-execution" ;;
             esac
-            kubectl delete deployment "$svc-canary -n $ns" 2>/dev/null || true
+            kubectl delete deployment "$svc-canary" -n "$ns" 2>/dev/null || true
           done
 
   rollback:
@@ -242,7 +243,7 @@ jobs:
               execution-service|scheduler-service|ai-service) ns="platform-execution" ;;
               audit-service|metering-service|notification-service|search-service) ns="platform-observability" ;;
             esac
-            kubectl rollout undo "deployment/$svc -n $ns" || true
+            kubectl rollout undo "deployment/$svc" -n "$ns" || true
           done
           # Clean up canaries
           for svc in api-gateway execution-service workflow-service; do
@@ -250,6 +251,6 @@ jobs:
             case "$svc" in
               execution-service) ns="platform-execution" ;;
             esac
-            kubectl delete deployment "$svc-canary -n $ns" 2>/dev/null || true
+            kubectl delete deployment "$svc-canary" -n "$ns" 2>/dev/null || true
           done
           echo "Rollback complete"

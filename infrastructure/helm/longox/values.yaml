@@ -76,11 +76,11 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
   hosts:
-    - host: app.flowbuilder.io
+    - host: app.longox.io
       paths:
         - path: /
           pathType: Prefix
-    - host: api.flowbuilder.io
+    - host: api.longox.io
       paths:
         - path: /api
           pathType: Prefix

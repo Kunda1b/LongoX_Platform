@@ -532,12 +532,12 @@ router.put("/members/:userId/role", authorize({ resource: "users", action: "writ
   }
 
   await db.delete(userRolesTable).where(
-    and(eq(userRolesTable.userId, userId), eq(userRolesTable.tenantId, tenantId)),
+    and(eq(userRolesTable.userId, userId as string), eq(userRolesTable.tenantId, tenantId)),
   );
 
   const [assignment] = await db
     .insert(userRolesTable)
-    .values({ userId, roleId, tenantId })
+    .values({ userId: userId as string, roleId, tenantId })
     .returning();
 
   res.json({

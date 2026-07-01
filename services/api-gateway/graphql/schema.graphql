@@ -1,0 +1,368 @@
+scalar JSON
+scalar Date
+
+type CurrentUser {
+  id: ID!
+  email: String!
+  name: String!
+  avatarUrl: String
+  tenants: [Membership!]!
+}
+
+enum TenantTier {
+  SHARED
+  DEDICATED_NAMESPACE
+  DEDICATED_CLUSTER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  DEACTIVATED
+}
+
+type Tenant {
+  id: ID!
+  name: String!
+  tier: TenantTier!
+  planId: String!
+  region: String!
+  memberships: [Membership!]!
+}
+
+type Membership {
+  userId: ID!
+  tenantId: ID!
+  role: Role!
+  status: MembershipStatus!
+}
+
+type Role {
+  id: ID!
+  name: String!
+  permissions: [String!]!
+}
+
+enum WorkflowStatus {
+  ACTIVE
+  INACTIVE
+  DRAFT
+}
+
+type Workflow {
+  id: ID!
+  tenantId: ID!
+  name: String!
+  status: WorkflowStatus!
+  currentVersionId: ID
+  tags: [String!]!
+  currentVersion: WorkflowVersion
+  versions(first: Int, after: String): WorkflowVersionConnection!
+}
+
+type WorkflowVersion {
+  id: ID!
+  versionNumber: Int!
+  graph: GraphSnapshot!
+  checksum: String!
+  createdBy: ID!
+  publishedAt: String!
+}
+
+type WorkflowVersionConnection {
+  edges: [WorkflowVersionEdge!]!
+  pageInfo: PageInfo!
+}
+
+type WorkflowVersionEdge {
+  node: WorkflowVersion!
+  cursor: String!
+}
+
+type GraphSnapshot {
+  nodes: [Node!]!
+  edges: [Edge!]!
+  variables: [Variable!]!
+  policies: [Policy!]!
+}
+
+type Node {
+  id: ID!
+  name: String!
+  type: String!
+  position: Position
+  config: JSON
+}
+
+type Position {
+  x: Float!
+  y: Float!
+}
+
+type Edge {
+  id: ID!
+  source: ID!
+  target: ID!
+  label: String
+  condition: JSON
+}
+
+type Variable {
+  key: String!
+  value: JSON!
+}
+
+type Policy {
+  type: String!
+  config: JSON!
+}
+
+enum ExecutionStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+  CANCELLED
+  PENDING
+}
+
+type Execution {
+  id: ID!
+  workflowVersionId: ID!
+  status: ExecutionStatus!
+  startedAt: String!
+  finishedAt: String
+  stepResults: [StepResult!]!
+  checkpoints: [Checkpoint!]!
+}
+
+type StepResult {
+  nodeId: ID!
+  status: String!
+  output: JSON
+  error: String
+  durationMs: Int!
+  attemptNumber: Int!
+}
+
+type Checkpoint {
+  id: ID!
+  nodeId: ID!
+  state: JSON!
+  createdAt: String!
+}
+
+enum DashboardStatus {
+  DRAFT
+  PUBLISHED
+}
+
+type Dashboard {
+  id: ID!
+  tenantId: ID!
+  title: String!
+  status: DashboardStatus!
+  currentVersionId: ID
+  currentVersion: DashboardVersion
+}
+
+type DashboardVersion {
+  id: ID!
+  versionNumber: Int!
+  layout: JSON!
+  widgets: [Widget!]!
+  checksum: String!
+}
+
+type Widget {
+  id: ID!
+  type: String!
+  title: String!
+  config: JSON!
+  position: Position!
+  size: WidgetSize!
+}
+
+type WidgetSize {
+  width: Int!
+  height: Int!
+}
+
+enum TrustLevel {
+  OFFICIAL
+  PARTNER
+  COMMUNITY
+}
+
+type Connector {
+  id: ID!
+  slug: String!
+  name: String!
+  trustLevel: TrustLevel!
+  versions: [ConnectorVersion!]!
+}
+
+type ConnectorVersion {
+  id: ID!
+  version: String!
+  supported: Boolean!
+}
+
+enum Visibility {
+  PUBLIC
+  TEAM
+  PRIVATE
+}
+
+type Template {
+  id: ID!
+  category: String!
+  visibility: Visibility!
+  versions: [TemplateVersion!]!
+  installCount: Int!
+}
+
+type TemplateVersion {
+  id: ID!
+  versionNumber: Int!
+  templateId: ID!
+  createdAt: String!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+input WorkflowFilter {
+  status: WorkflowStatus
+  search: String
+  tags: [String!]
+}
+
+input ExecutionFilter {
+  workflowId: ID
+  status: ExecutionStatus
+}
+
+type WorkflowConnection {
+  edges: [WorkflowEdgeNode!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type WorkflowEdgeNode {
+  node: Workflow!
+  cursor: String!
+}
+
+type ExecutionConnection {
+  edges: [ExecutionEdgeNode!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ExecutionEdgeNode {
+  node: Execution!
+  cursor: String!
+}
+
+type TemplateConnection {
+  edges: [TemplateEdgeNode!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type TemplateEdgeNode {
+  node: Template!
+  cursor: String!
+}
+
+type ValidationError {
+  field: String!
+  message: String!
+}
+
+type ValidationWarning {
+  field: String!
+  message: String!
+}
+
+input PublishWorkflowInput {
+  workflowId: ID!
+  expectedDraftVersion: Int!
+  releaseNotes: String
+}
+
+type PublishWorkflowPayload {
+  workflowVersion: WorkflowVersion!
+  validationResult: ValidationResult!
+}
+
+type ValidationResult {
+  valid: Boolean!
+  errors: [ValidationError!]!
+  warnings: [ValidationWarning!]!
+}
+
+input CreateDashboardInput {
+  title: String!
+  layout: JSON!
+}
+
+type CreateDashboardPayload {
+  dashboard: Dashboard!
+}
+
+input InstallConnectorInput {
+  connectorId: ID!
+  version: String!
+  config: JSON!
+}
+
+type InstallConnectorPayload {
+  connector: Connector!
+  credentials: JSON
+}
+
+input PromoteEnvironmentInput {
+  workflowId: ID!
+  sourceEnvironment: String!
+  targetEnvironment: String!
+  versionId: ID!
+}
+
+type PromoteEnvironmentPayload {
+  promotion: Promotion!
+}
+
+type Promotion {
+  id: ID!
+  workflowId: ID!
+  sourceEnvironment: String!
+  targetEnvironment: String!
+  versionId: ID!
+  promotedBy: ID!
+  promotedAt: String!
+  status: String!
+}
+
+type Query {
+  me: CurrentUser!
+  tenants: [Tenant!]!
+  workflows(filter: WorkflowFilter, first: Int, after: String): WorkflowConnection!
+  workflow(id: ID!): Workflow
+  executions(filter: ExecutionFilter, first: Int, after: String): ExecutionConnection!
+  execution(id: ID!): Execution
+  dashboards: [Dashboard!]!
+  connector(id: ID!): Connector
+  templates(category: String, first: Int, after: String): TemplateConnection!
+}
+
+type Mutation {
+  publishWorkflow(input: PublishWorkflowInput!): PublishWorkflowPayload!
+  createDashboard(input: CreateDashboardInput!): CreateDashboardPayload!
+  installConnector(input: InstallConnectorInput!): InstallConnectorPayload!
+  promoteEnvironment(input: PromoteEnvironmentInput!): PromoteEnvironmentPayload!
+}

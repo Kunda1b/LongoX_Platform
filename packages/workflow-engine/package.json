@@ -6,6 +6,10 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config ../../vitest.config.ts"
+  },
   "dependencies": {
     "@longox/shared-types": "workspace:*",
     "@longox/shared-logger": "workspace:*",

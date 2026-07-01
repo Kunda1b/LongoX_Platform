@@ -1,6 +1,6 @@
 apiVersion: v2
 name: longox
-description: Helm chart for Flow Builder Nexus platform
+description: LongoX low-code automation platform
 type: application
 version: 0.1.0
 appVersion: "1.0.0"

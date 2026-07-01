@@ -16,6 +16,7 @@ import complianceRouter from "./routes/compliance";
 import { authMiddleware } from "./lib/auth";
 import { apiRateLimiter } from "./lib/rate-limiter";
 import { auditLogRouter } from "@longox/audit-service";
+import { yoga } from "./graphql/index";
 import { billingRouter, usageRouter, checkoutRouter, plansRouter, webhookRouter } from "@longox/billing-service";
 import {
   componentRouter,
@@ -75,6 +76,9 @@ app.use((req, _res, next) => {
   }
   next();
 });
+
+// GraphQL endpoint (authenticated)
+app.use("/api/graphql", yoga);
 
 // ─── Authorized routes ─────────────────────────────────────────────────────────
 // Each router is wrapped with its required permission middleware.
