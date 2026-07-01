@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 modules = ["nodejs-20", "web"]
+=======
+modules = ["nodejs-20", "web", "bash"]
+>>>>>>> f13ef8c3 (agent)
 
 [deployment]
 router = "application"
@@ -33,7 +37,11 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
+<<<<<<< HEAD
 args = "PORT=8080 pnpm --filter @longox/api-gateway dev"
+=======
+args = "PORT=8080 pnpm --filter @longox/api-server dev"
+>>>>>>> f13ef8c3 (agent)
 waitForPort = 8080
 
 [[workflows.workflow]]
@@ -45,13 +53,22 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
+<<<<<<< HEAD
 args = "PORT=5000 pnpm --filter @longox/web dev"
 waitForPort = 5000
+=======
+args = "PORT=25075 BASE_PATH=/ pnpm --filter @longox/flowcraft dev"
+waitForPort = 25075
+>>>>>>> f13ef8c3 (agent)
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
+<<<<<<< HEAD
 integrations = ["javascript_openai_ai_integrations:2.0.0", "javascript_database:1.0.0"]
+=======
+integrations = ["javascript_openai_ai_integrations:2.0.0"]
+>>>>>>> f13ef8c3 (agent)
 
 [postMerge]
 path = "scripts/post-merge.sh"
@@ -61,6 +78,7 @@ timeoutMs = 20000
 channel = "stable-25_05"
 
 [[ports]]
+<<<<<<< HEAD
 localPort = 3000
 externalPort = 3002
 
@@ -75,6 +93,14 @@ externalPort = 8080
 [[ports]]
 localPort = 9090
 externalPort = 80
+=======
+localPort = 8080
+externalPort = 80
+
+[[ports]]
+localPort = 8081
+externalPort = 8081
+>>>>>>> f13ef8c3 (agent)
 
 [[ports]]
 localPort = 21036
@@ -83,6 +109,7 @@ externalPort = 3001
 [[ports]]
 localPort = 25075
 externalPort = 3000
+<<<<<<< HEAD
 
 [userenv]
 
@@ -93,3 +120,5 @@ NEXT_TELEMETRY_DISABLED = "1"
 API_URL = "http://localhost:8080"
 FRONTEND_URL = "http://localhost:5000"
 APP_URL = "http://localhost:5000"
+=======
+>>>>>>> f13ef8c3 (agent)
