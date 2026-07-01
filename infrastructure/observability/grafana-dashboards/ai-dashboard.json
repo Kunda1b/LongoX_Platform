@@ -1,0 +1,313 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "enable": true,
+        "expr": "timestamp(changes(kube_deployment_status_replicas_available{deployment=\"ai-service\"}[1m]) > 0)",
+        "iconColor": "blue",
+        "name": "Deployment Change",
+        "titleFormat": "Deploy: {{ deployment }}",
+        "tagFormat": "deploy"
+      }
+    ]
+  },
+  "description": "AI Service — run count, token usage, latency, cost, guardrails, RAG, embeddings",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    { "title": "SLO Dashboard", "url": "/d/slo-dashboard", "type": "dashboards" },
+    { "title": "API Gateway", "url": "/d/api-gateway-dashboard", "type": "dashboards" }
+  ],
+  "panels": [
+    {
+      "title": "AI Run Count by Model / Provider",
+      "type": "barchart",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(longox_ai_requests_total[5m])) by (provider, model)",
+          "legendFormat": "{{ provider }} / {{ model }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "stacking": { "mode": "normal" }, "fillOpacity": 80 }
+        }
+      },
+      "options": {
+        "orientation": "auto",
+        "showValue": "auto"
+      }
+    },
+    {
+      "title": "Token Usage per Model",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(longox_ai_tokens_total[5m]) * 60",
+          "legendFormat": "{{ token_type }} — {{ provider }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "lines", "lineWidth": 2, "fillOpacity": 15 },
+          "custom": { "stacking": { "mode": "normal" } }
+        }
+      }
+    },
+    {
+      "title": "AI Response Latency P50 / P95 / P99",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(longox_ai_request_duration_seconds_bucket[5m])) by (le, provider))",
+          "legendFormat": "p50 {{ provider }}"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(longox_ai_request_duration_seconds_bucket[5m])) by (le, provider))",
+          "legendFormat": "p95 {{ provider }}"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(longox_ai_request_duration_seconds_bucket[5m])) by (le, provider))",
+          "legendFormat": "p99 {{ provider }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 },
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 5 },
+            { "color": "red", "value": 10 }
+          ]}
+        }
+      }
+    },
+    {
+      "title": "Cost per Run / Provider",
+      "type": "barchart",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(longox_ai_cost_usd_total[5m])) by (provider)",
+          "legendFormat": "{{ provider }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": { "stacking": { "mode": "normal" }, "fillOpacity": 80 }
+        }
+      },
+      "options": {
+        "orientation": "auto",
+        "showValue": "auto"
+      }
+    },
+    {
+      "title": "Guardrail Hit Rate",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(longox_ai_guardrail_triggered_total[5m])) / sum(rate(longox_ai_requests_total[5m])) * 100",
+          "legendFormat": "guardrail %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 1 },
+            { "color": "red", "value": 5 }
+          ]}
+        }
+      }
+    },
+    {
+      "title": "Budget Utilization",
+      "type": "gauge",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 12 },
+      "targets": [
+        {
+          "expr": "sum(increase(longox_ai_cost_usd_total[30d])) / 1000 * 100",
+          "legendFormat": "budget %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 70 },
+            { "color": "red", "value": 90 }
+          ]}
+        }
+      },
+      "options": {
+        "orientation": "horizontal",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "title": "RAG Query Count",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum(rate(longox_ai_rag_queries_total[5m]))",
+          "legendFormat": "RAG queries/s"
+        },
+        {
+          "expr": "sum(rate(longox_ai_rag_queries_failed_total[5m]))",
+          "legendFormat": "failed"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "Embedding Generation Latency",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(longox_ai_embedding_duration_seconds_bucket[5m])) by (le, provider))",
+          "legendFormat": "p95 {{ provider }}"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(longox_ai_embedding_duration_seconds_bucket[5m])) by (le, provider))",
+          "legendFormat": "p99 {{ provider }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "Model Success Rate",
+      "type": "table",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum(rate(longox_ai_requests_total[1h])) by (provider, model)",
+          "legendFormat": "requests",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "expr": "sum(rate(longox_ai_requests_failed_total[1h])) by (provider, model)",
+          "legendFormat": "errors",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto" }
+        }
+      },
+      "options": {
+        "sortBy": [
+          { "displayName": "Value #A", "desc": true }
+        ]
+      }
+    },
+    {
+      "title": "Provider Error Breakdown (1h)",
+      "type": "piechart",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum(increase(longox_ai_requests_failed_total[1h])) by (provider, error_type)",
+          "legendFormat": "{{ provider }} — {{ error_type }}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "right" },
+        "pieType": "pie",
+        "reduceOptions": { "values": false, "calcs": ["sum"] }
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["longox", "ai"],
+  "templating": {
+    "list": [
+      {
+        "description": "Filter by AI provider",
+        "label": "Provider",
+        "name": "provider",
+        "options": [
+          { "selected": true, "text": "All", "value": ".*" },
+          { "selected": false, "text": "OpenAI", "value": "openai" },
+          { "selected": false, "text": "Anthropic", "value": "anthropic" },
+          { "selected": false, "text": "Google", "value": "google" },
+          { "selected": false, "text": "Mistral", "value": "mistral" },
+          { "selected": false, "text": "Groq", "value": "groq" }
+        ],
+        "query": "label_values(longox_ai_requests_total, provider)",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" }
+      },
+      {
+        "description": "Environment",
+        "label": "Environment",
+        "name": "env",
+        "options": [
+          { "selected": true, "text": "production", "value": "production" },
+          { "selected": false, "text": "staging", "value": "staging" },
+          { "selected": false, "text": "development", "value": "development" }
+        ],
+        "type": "custom"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"],
+    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+  },
+  "title": "LongoX AI Service",
+  "uid": "ai-dashboard",
+  "version": 1
+}

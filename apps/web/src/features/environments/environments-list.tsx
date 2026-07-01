@@ -10,6 +10,7 @@ import { Globe, Plus, Trash2, ArrowUpDown, Undo2, FileDiff } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
+import { AddEnvironmentDialog } from "./add-environment-dialog";
 
 export function EnvironmentsList() {
   const { data: environments, isLoading } = useListEnvironments();
@@ -47,9 +48,7 @@ export function EnvironmentsList() {
             Manage deployment environments with promotion, rollback, and diffing
           </p>
         </div>
-        <Button>
-          <Plus className="mr-1 h-4 w-4" /> Add Environment
-        </Button>
+        <AddEnvironmentDialog />
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">

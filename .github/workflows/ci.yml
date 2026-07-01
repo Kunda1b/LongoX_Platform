@@ -117,7 +117,7 @@ jobs:
           pnpm --filter @longox/api-gateway run test
 
   test:
-    name: Tests
+    name: Unit & Contract Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -131,10 +131,70 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
 
+  security-test:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm vitest run tests/security.test.ts
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm vitest run tests/integration.test.ts
+
+  architecture-verification:
+    name: Architecture Verification (Appendix D)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm vitest run lib/api-spec/architecture-verification.test.ts
+
+  operational-rehearsal:
+    name: Operational Rehearsal Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm vitest run tests/operational-rehearsals.test.ts
+
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint, typecheck, dependency-audit, schema-lint, api-contract, graphql-check, test]
+    needs: [lint, typecheck, dependency-audit, schema-lint, api-contract, graphql-check, test, security-test, integration-test, architecture-verification, operational-rehearsal]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

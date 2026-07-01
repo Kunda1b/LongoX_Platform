@@ -1,0 +1,165 @@
+# ─── LongoX Platform Alertmanager Configuration ────────────────────────────
+# Alertmanager routes alerts from Prometheus to the appropriate receivers.
+#
+# Routing hierarchy:
+#   1. severity=critical + service=platform → PagerDuty (platform key)
+#   2. severity=critical → PagerDuty (general critical key)
+#   3. severity=warning → Slack #ops-warnings
+#   4. default → email (fallback)
+#
+# Secrets are injected via environment variables at runtime.
+
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: "${SMTP_HOST}:${SMTP_PORT}"
+  smtp_from: "alertmanager@longox.ai"
+  smtp_auth_username: "${SMTP_USERNAME}"
+  smtp_auth_password: "${SMTP_PASSWORD}"
+  pagerduty_url: "https://events.pagerduty.com/v2/enqueue"
+  slack_api_url: "${SLACK_WEBHOOK}"
+
+route:
+  receiver: default
+  group_by: [alertname, severity, service, namespace]
+  group_wait: 30s
+  group_interval: 2m
+  repeat_interval: 4h
+
+  routes:
+    # ── Critical: Platform-wide SLO violations get PagerDuty immediately ──
+    - match:
+        severity: critical
+        service: platform
+      receiver: pagerduty-platform
+      repeat_interval: 15m
+
+    # ── Critical: All other critical alerts → PagerDuty ──────────────────
+    - match:
+        severity: critical
+      receiver: pagerduty-critical
+      repeat_interval: 15m
+
+    # ── Warning: All warnings → Slack ────────────────────────────────────
+    - match:
+        severity: warning
+      receiver: slack-warning
+      repeat_interval: 4h
+
+    # ── Info: Notifications → email ──────────────────────────────────────
+    - match:
+        severity: info
+      receiver: email-info
+      repeat_interval: 24h
+
+# ─── Inhibition Rules ──────────────────────────────────────────────────────
+# Suppress lower-severity alerts when a higher-severity alert for the same
+# service is already firing.
+
+inhibit_rules:
+  - source_match:
+      severity: critical
+    target_match:
+      severity: warning
+    equal: [service, namespace]
+
+  - source_match:
+      severity: critical
+    target_match:
+      severity: info
+    equal: [service, namespace]
+
+  # Suppress gateway alerts when upstream targets are all unhealthy
+  - source_match:
+      alertname: NoHealthyUpstreams
+    target_match_re:
+      alertname: "GatewayHighErrorRate|HighRateLimitRejections"
+    equal: [namespace]
+
+# ─── Receivers ─────────────────────────────────────────────────────────────
+
+receivers:
+  # ── Default: Email fallback ────────────────────────────────────────────
+  - name: default
+    email_configs:
+      - to: "${OPS_EMAIL}"
+        send_resolved: true
+        headers:
+          subject: '{{ .GroupLabels.alertname }} [{{ .GroupLabels.severity }}]'
+
+  # ── PagerDuty: Critical platform alerts ────────────────────────────────
+  - name: pagerduty-platform
+    pagerduty_configs:
+      - routing_key: "${PD_PLATFORM_KEY}"
+        severity: critical
+        dedup_key: 'longox/{{ .GroupLabels.service }}/{{ .GroupLabels.alertname }}'
+        client: "LongoX Platform"
+        client_url: "https://grafana.longox.ai"
+        details:
+          firing: '{{ .Alerts.Firing | len }}'
+          resolved: '{{ .Alerts.Resolved | len }}'
+          alertname: '{{ .GroupLabels.alertname }}'
+          service: '{{ .GroupLabels.service }}'
+          namespace: '{{ .GroupLabels.namespace }}'
+          grafana_url: "https://grafana.longox.ai/d/slo-dashboard"
+
+  # ── PagerDuty: All critical alerts ─────────────────────────────────────
+  - name: pagerduty-critical
+    pagerduty_configs:
+      - routing_key: "${PD_ROUTING_KEY}"
+        severity: critical
+        dedup_key: 'longox/critical/{{ .GroupLabels.alertname }}'
+        client: "LongoX Platform"
+        client_url: "https://grafana.longox.ai"
+        details:
+          firing: '{{ .Alerts.Firing | len }}'
+          alertname: '{{ .GroupLabels.alertname }}'
+          service: '{{ .GroupLabels.service }}'
+          description: '{{ .CommonAnnotations.description }}'
+
+  # ── Slack: Warning alerts ──────────────────────────────────────────────
+  - name: slack-warning
+    slack_configs:
+      - api_url: "${SLACK_WEBHOOK}"
+        channel: "#ops-warnings"
+        username: "LongoX Alertmanager"
+        icon_emoji: ":warning:"
+        title: '{{ .GroupLabels.alertname }}'
+        text: >-
+          {{ range .Alerts }}
+            *Alert:* {{ .Annotations.summary }}
+            *Description:* {{ .Annotations.description }}
+            *Severity:* {{ .Labels.severity }}
+            *Service:* {{ .Labels.service }}
+            *Namespace:* {{ .Labels.namespace }}
+            *Graph:* <https://grafana.longox.ai/d/{{ .Labels.service }}-dashboard|Open Dashboard>
+            *Runbook:* <https://runbooks.longox.ai/{{ .Labels.alertname }}|View Runbook>
+            *Started:* {{ .StartsAt }}
+          {{ end }}
+        send_resolved: true
+        actions:
+          - type: button
+            text: "Acknowledge"
+            url: "https://grafana.longox.ai/alerting/silence?alertmanager=grafana&matchers=alertname%3D{{ .GroupLabels.alertname }}"
+          - type: button
+            text: "Runbook"
+            url: "https://runbooks.longox.ai/{{ .GroupLabels.alertname }}"
+
+  # ── Email: Info-level notifications ────────────────────────────────────
+  - name: email-info
+    email_configs:
+      - to: "${OPS_EMAIL}"
+        send_resolved: true
+        headers:
+          subject: '[LongoX] {{ .GroupLabels.alertname }} - {{ .GroupLabels.severity }}'
+        html: >
+          <h2>{{ .GroupLabels.alertname }}</h2>
+          <p><strong>Severity:</strong> {{ .GroupLabels.severity }}</p>
+          <p><strong>Service:</strong> {{ .GroupLabels.service }}</p>
+          <p><strong>Namespace:</strong> {{ .GroupLabels.namespace }}</p>
+          <hr>
+          <p><strong>Alerts Firing:</strong> {{ .Alerts.Firing | len }}</p>
+          {{ range .Alerts }}
+            <p><strong>{{ .Annotations.summary }}</strong></p>
+            <p>{{ .Annotations.description }}</p>
+            <p>Started: {{ .StartsAt }}</p>
+          {{ end }}

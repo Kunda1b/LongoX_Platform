@@ -1,0 +1,41 @@
+cluster-autoscaler:
+  autoDiscovery:
+    clusterName: longox
+    enabled: true
+
+  awsRegion: us-east-1
+
+  rbac:
+    create: true
+    serviceAccount:
+      annotations:
+        eks.amazonaws.com/role-arn: "arn:aws:iam::ACCOUNT_ID:role/longox-eks-cluster-autoscaler"
+
+  replicaCount: 1
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 512Mi
+
+  podDisruptionBudget:
+    enabled: true
+    maxUnavailable: 1
+
+  extraArgs:
+    skip-nodes-with-local-storage: false
+    skip-nodes-with-system-pods: false
+    scale-down-delay-after-add: 10m
+    scale-down-delay-after-delete: 10s
+    scale-down-delay-after-failure: 3m
+    scale-down-unneeded-time: 10m
+    scale-down-utilization-threshold: 0.5
+    max-node-provision-time: 15m
+    balance-similar-node-groups: true
+    expander: least-waste
+
+  nodeSelector:
+    nodegroup-type: on-demand

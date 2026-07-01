@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { KeyRound, Plus, Eye, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { AddCredentialDialog } from "@/features/credentials/add-credential-dialog";
 
 export default function CredentialsPage() {
   const { data: credentials, isLoading } = useListCredentials();
@@ -32,9 +33,7 @@ export default function CredentialsPage() {
             Securely store and manage secrets
           </p>
         </div>
-        <Button>
-          <Plus className="mr-1 h-4 w-4" /> Add Credential
-        </Button>
+        <AddCredentialDialog />
       </div>
 
       <div className="rounded-lg border">

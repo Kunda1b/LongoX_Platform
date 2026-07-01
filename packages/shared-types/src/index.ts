@@ -6,6 +6,9 @@ export * from "./user";
 export * from "./tenant";
 export * from "./pagination";
 export * from "./events";
+export * from "./ai-run-types";
+export * from "./graph-checksum";
+export * from "./event-registry";
 
 // Generated from services/api-gateway/openapi/openapi.yaml
 // Run: pnpm --filter @longox/shared-types run codegen

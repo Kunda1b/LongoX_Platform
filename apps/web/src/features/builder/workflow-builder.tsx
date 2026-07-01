@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TemplateGallerySidebar } from "./template-gallery-sidebar";
 import {
   Zap,
   Blocks,
@@ -55,6 +56,7 @@ import {
   Settings2,
   PanelLeftOpen,
   Menu,
+  LayoutTemplate,
 } from "lucide-react";
 import { useUpdateWorkflow } from "@longox/api-client-react";
 import { useToast } from "@/hooks/use-toast";
@@ -1323,7 +1325,7 @@ function MobileNodeSheet({
 // ─── Conversion helpers ───────────────────────────────────────────────────────
 
 let nodeIdCounter = 1000;
-function generateNodeId() {
+export function generateNodeId() {
   return `node_${Date.now()}_${nodeIdCounter++}`;
 }
 
@@ -1397,6 +1399,7 @@ function WorkflowBuilderInner({
 
   // Mobile sheet state
   const [catalogOpen, setCatalogOpen] = useState(false);
+  const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
 
   const selectedNode = useMemo(
     () => nodes.find((n) => n.id === selectedNodeId) ?? null,
@@ -1552,6 +1555,16 @@ function WorkflowBuilderInner({
       setEdges((eds) =>
         eds.filter((e) => e.source !== nodeId && e.target !== nodeId),
       );
+      setSelectedNodeId(null);
+      setIsDirty(true);
+    },
+    [setNodes, setEdges],
+  );
+
+  const handleApplyTemplate = useCallback(
+    (templateNodes: Node[]) => {
+      setNodes(templateNodes);
+      setEdges([]);
       setSelectedNodeId(null);
       setIsDirty(true);
     },
@@ -1750,6 +1763,15 @@ function WorkflowBuilderInner({
           <Panel position="top-right" className="flex gap-2">
             <Button
               size="sm"
+              variant={templateGalleryOpen ? "default" : "outline"}
+              className="gap-1.5 h-8 text-xs"
+              onClick={() => setTemplateGalleryOpen((o) => !o)}
+            >
+              <LayoutTemplate className="h-3.5 w-3.5" />
+              Templates
+            </Button>
+            <Button
+              size="sm"
               variant="outline"
               className="gap-1.5 h-8 text-xs bg-card"
               onClick={deleteSelected}
@@ -1790,6 +1812,13 @@ function WorkflowBuilderInner({
           onChange={handleConfigChange}
         />
       )}
+
+      {/* Right: Template gallery */}
+      <TemplateGallerySidebar
+        open={templateGalleryOpen}
+        onClose={() => setTemplateGalleryOpen(false)}
+        onApplyTemplate={handleApplyTemplate}
+      />
     </div>
   );
 }

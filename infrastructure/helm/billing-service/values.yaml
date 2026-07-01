@@ -1,0 +1,79 @@
+global:
+  environment: production
+  imageRegistry: ghcr.io/longox
+  imageTag: latest
+
+image:
+  repository: billing-service
+  tag: latest
+  pullPolicy: Always
+
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 2
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: ""
+
+podSecurityContext:
+  fsGroup: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3004
+  metricsPort: 9090
+
+config:
+  logLevel: info
+  apiPrefix: /api/v1
+  extraConfig:
+    TAX_RATE: 0
+    BILLING_CURRENCY: USD
+    INVOICE_DUE_DAYS: 30
+
+extraEnv:
+  NODE_ENV: production
+
+externalSecret:
+  enabled: true
+  storeName: aws-secrets-manager
+  storeKind: ClusterSecretStore
+  refreshInterval: 1h
+  name: billing-service-secrets
+  keys:
+    STRIPE_SECRET_KEY: longox/${environment}/stripe-secret-key
+    STRIPE_WEBHOOK_SECRET: longox/${environment}/stripe-webhook-secret
+    REDIS_URL: longox/${environment}/redis-url
+    DATABASE_URL: longox/${environment}/database-url
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilization: 70
+  targetMemoryUtilization: 80
+
+nodeSelector:
+  nodegroup-type: on-demand
+
+pdb:
+  minAvailable: 1
+
+serviceMonitor:
+  enabled: true
+  interval: 15s
+  path: /metrics
+  prometheusRelease: kube-prometheus-stack
+
+terminationGracePeriodSeconds: 60

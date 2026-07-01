@@ -12,18 +12,21 @@ import catalogRouter from "./routes/catalog";
 import dlqRouter from "./routes/dlq";
 import rbacRouter from "./routes/rbac";
 import tenantsRouter from "./routes/tenants";
+import tenantTiersRouter from "./routes/tenant-tiers";
 import environmentsRouter from "./routes/environments";
 import complianceRouter from "./routes/compliance";
 import workosAuthRouter from "./routes/workos-auth";
 import scimRouter from "./routes/scim";
 import executionStreamRouter from "./routes/execution-stream";
 import workflowDiffsRouter from "./routes/workflow-diffs";
+import ftsSearchRouter from "./routes/search";
+import indexingRouter from "./routes/indexing";
 import { authMiddleware } from "./lib/auth";
 import { isWorkOSEnabled } from "./lib/workos-auth";
 import { apiRateLimiter } from "./lib/rate-limiter";
 import { auditLogRouter } from "@longox/audit-service";
 import { yoga } from "./graphql/index";
-import { billingRouter, usageRouter, checkoutRouter, plansRouter, webhookRouter } from "@longox/billing-service";
+import { billingRouter, usageRouter, checkoutRouter, plansRouter, webhookRouter, billingApiRouter, meteringRouter as billingMeteringRouter } from "@longox/billing-service";
 import {
   componentRouter,
   dashboardRouter,
@@ -167,6 +170,9 @@ app.use(rbacRouter);
 // Tenant management: admin only
 app.use(tenantsRouter);
 
+// Tenant tiers & placement
+app.use(tenantTiersRouter);
+
 // Environment management
 app.use(environmentsRouter);
 
@@ -180,6 +186,7 @@ app.use(auditLogRouter);
 app.use(billingRouter);
 app.use(checkoutRouter);
 app.use(plansRouter);
+app.use(billingApiRouter);
 
 // Marketplace catalog: read-only
 app.use(catalogRouter);
@@ -201,8 +208,12 @@ app.use(permissionsRouter);
 app.use(publishingRouter);
 app.use(queryRouter);
 
-// Search: read-only
+// Search: read-only (v1 — ilike-based)
 app.use(searchRouter);
+
+// FTS Search API (v2 — PostgreSQL full-text search)
+app.use(ftsSearchRouter);
+app.use(indexingRouter);
 
 // Templates: read-only browse, write for admin
 app.use(templatesRouter);
@@ -215,6 +226,8 @@ app.use(connectorsRouter);
 
 // Metering: usage events tracking
 app.use(meteringRouter);
+// Metering: internal service-to-service endpoints
+app.use(billingMeteringRouter);
 
 // Usage: billing.read
 app.use(usageRouter);

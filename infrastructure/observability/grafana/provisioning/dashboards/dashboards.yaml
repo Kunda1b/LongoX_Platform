@@ -1,7 +1,7 @@
 apiVersion: 1
 
 providers:
-  - name: "LongoX Platform"
+  - name: "LongoX Platform — Core Dashboards"
     orgId: 1
     folder: "LongoX"
     type: file
@@ -9,4 +9,14 @@ providers:
     editable: true
     options:
       path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false
+
+  - name: "LongoX Platform — Observability Dashboards"
+    orgId: 1
+    folder: "LongoX"
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/grafana-dashboards
       foldersFromFilesStructure: false

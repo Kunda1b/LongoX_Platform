@@ -1,0 +1,78 @@
+global:
+  environment: production
+  imageRegistry: ghcr.io/longox
+  imageTag: latest
+
+image:
+  repository: template-service
+  tag: latest
+  pullPolicy: Always
+
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 2
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: ""
+
+podSecurityContext:
+  fsGroup: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3007
+  metricsPort: 9090
+
+config:
+  logLevel: info
+  apiPrefix: /api/v1
+  extraConfig:
+    TEMPLATE_CACHE_TTL_MS: 60000
+    TEMPLATE_VERSION_LIMIT: 100
+    TEMPLATE_MAX_SIZE_MB: 50
+
+extraEnv:
+  NODE_ENV: production
+
+externalSecret:
+  enabled: true
+  storeName: aws-secrets-manager
+  storeKind: ClusterSecretStore
+  refreshInterval: 1h
+  name: template-service-secrets
+  keys:
+    S3_TEMPLATE_BUCKET: longox/${environment}/s3-template-bucket
+    REDIS_URL: longox/${environment}/redis-url
+    DATABASE_URL: longox/${environment}/database-url
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilization: 70
+  targetMemoryUtilization: 80
+
+nodeSelector:
+  nodegroup-type: on-demand
+
+pdb:
+  minAvailable: 1
+
+serviceMonitor:
+  enabled: true
+  interval: 15s
+  path: /metrics
+  prometheusRelease: kube-prometheus-stack
+
+terminationGracePeriodSeconds: 60

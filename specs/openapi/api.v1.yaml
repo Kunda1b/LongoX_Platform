@@ -1,0 +1,5683 @@
+openapi: "3.1.0"
+info:
+  title: "LongoX Platform API"
+  version: "1.0.0"
+  description: "LongoX API — low-code automation and internal tools platform"
+  contact:
+    name: "LongoX Support"
+    url: "https://longox.io/support"
+  license:
+    name: "Proprietary"
+servers:
+  - url: "https://api.longox.io"
+    description: "Production"
+  - url: "https://staging-api.longox.io"
+    description: "Staging"
+  - url: "http://localhost:3000"
+    description: "Development"
+
+paths:
+  # ─── Auth ──────────────────────────────────────────────────────────────
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      tags: ["Authentication"]
+      summary: "Authenticate user with email and password"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: "Login successful"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /api/v1/auth/register:
+    post:
+      operationId: register
+      tags: ["Authentication"]
+      summary: "Register a new user and tenant"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: "Registration successful"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/auth/logout:
+    post:
+      operationId: logout
+      tags: ["Authentication"]
+      summary: "Revoke current session"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Logout successful"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /api/v1/auth/session:
+    get:
+      operationId: getSession
+      tags: ["Authentication"]
+      summary: "Get current user session"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Current session user"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionUser"
+
+  /api/v1/auth/mfa/setup:
+    post:
+      operationId: setupMfa
+      tags: ["Authentication"]
+      summary: "Setup MFA TOTP"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "MFA setup details"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MfaSetupResult"
+
+  /api/v1/auth/mfa/verify:
+    post:
+      operationId: verifyMfa
+      tags: ["Authentication"]
+      summary: "Verify MFA code and enable"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyMfaInput"
+      responses:
+        "200":
+          description: "MFA enabled"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  # ─── Users ──────────────────────────────────────────────────────────────
+  /api/v1/users:
+    get:
+      operationId: listUsers
+      tags: ["Users"]
+      summary: "List users"
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PaginationPage"
+        - $ref: "#/components/parameters/PaginationLimit"
+        - $ref: "#/components/parameters/UserSearch"
+        - $ref: "#/components/parameters/TenantHeader"
+      responses:
+        "200":
+          description: "List of users"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  pageSize:
+                    type: integer
+
+  /api/v1/users/me:
+    get:
+      operationId: getCurrentUser
+      tags: ["Users"]
+      summary: "Get current user profile"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Current user"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    put:
+      operationId: updateCurrentUser
+      tags: ["Users"]
+      summary: "Update current user profile"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserInput"
+      responses:
+        "200":
+          description: "Updated user"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /api/v1/users/{id}:
+    get:
+      operationId: getUser
+      tags: ["Users"]
+      summary: "Get user by ID"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "User"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      operationId: updateUser
+      tags: ["Users"]
+      summary: "Update user"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserInput"
+      responses:
+        "200":
+          description: "Updated user"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: ["Users"]
+      summary: "Delete user"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: "Deleted"
+
+  # ─── Workflows ──────────────────────────────────────────────────────────
+  /api/v1/workflows:
+    get:
+      operationId: listWorkflows
+      tags: ["Workflows"]
+      summary: "List workflows"
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PaginationPage"
+        - $ref: "#/components/parameters/PaginationLimit"
+        - $ref: "#/components/parameters/WorkflowStatusFilter"
+        - $ref: "#/components/parameters/WorkflowSearch"
+        - $ref: "#/components/parameters/TenantHeader"
+      responses:
+        "200":
+          description: "List of workflows"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Workflow"
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  pageSize:
+                    type: integer
+    post:
+      operationId: createWorkflow
+      tags: ["Workflows"]
+      summary: "Create a new workflow"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorkflowInput"
+      responses:
+        "201":
+          description: "Created workflow"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/workflows/{id}:
+    get:
+      operationId: getWorkflow
+      tags: ["Workflows"]
+      summary: "Get workflow by ID"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Workflow"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      operationId: updateWorkflow
+      tags: ["Workflows"]
+      summary: "Update workflow"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWorkflowInput"
+      responses:
+        "200":
+          description: "Updated workflow"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+    delete:
+      operationId: deleteWorkflow
+      tags: ["Workflows"]
+      summary: "Delete workflow"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: "Deleted"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/workflows/{id}/publish:
+    post:
+      operationId: publishWorkflow
+      tags: ["Workflows"]
+      summary: "Publish a workflow version"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Published workflow"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+
+  /api/v1/workflows/{id}/run:
+    post:
+      operationId: runWorkflow
+      tags: ["Workflows"]
+      summary: "Execute a workflow"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                input:
+                  type: object
+                environment:
+                  type: string
+      responses:
+        "201":
+          description: "Execution started"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Execution"
+
+  /api/v1/workflows/{id}/versions:
+    get:
+      operationId: listWorkflowVersions
+      tags: ["Workflows"]
+      summary: "List workflow versions"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Workflow versions"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkflowVersion"
+    post:
+      operationId: createWorkflowVersion
+      tags: ["Workflows"]
+      summary: "Create a new workflow version"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVersionInput"
+      responses:
+        "201":
+          description: "Created version"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowVersion"
+
+  /api/v1/workflows/{id}/versions/{versionId}:
+    get:
+      operationId: getWorkflowVersion
+      tags: ["Workflows"]
+      summary: "Get a specific workflow version"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Workflow version"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowVersion"
+
+  /api/v1/workflows/{id}/promotions:
+    get:
+      operationId: listWorkflowPromotions
+      tags: ["Workflows"]
+      summary: "List promotions for a workflow"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Promotions"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkflowPromotion"
+
+  /api/v1/workflows/{id}/diffs:
+    get:
+      operationId: listWorkflowDiffs
+      tags: ["Workflows"]
+      summary: "List diffs for a workflow"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Workflow diffs"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkflowDiff"
+
+  # ─── Executions ─────────────────────────────────────────────────────────
+  /api/v1/executions:
+    get:
+      operationId: listExecutions
+      tags: ["Executions"]
+      summary: "List executions"
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PaginationPage"
+        - $ref: "#/components/parameters/PaginationLimit"
+        - $ref: "#/components/parameters/ExecutionWorkflowFilter"
+        - $ref: "#/components/parameters/ExecutionStatusFilter"
+        - $ref: "#/components/parameters/TenantHeader"
+      responses:
+        "200":
+          description: "List of executions"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Execution"
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  pageSize:
+                    type: integer
+    post:
+      operationId: createExecution
+      tags: ["Executions"]
+      summary: "Start a new execution"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExecutionInput"
+      responses:
+        "201":
+          description: "Execution started"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Execution"
+
+  /api/v1/executions/{id}:
+    get:
+      operationId: getExecution
+      tags: ["Executions"]
+      summary: "Get execution details"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Execution details"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/executions/{id}/cancel:
+    post:
+      operationId: cancelExecution
+      tags: ["Executions"]
+      summary: "Cancel an execution"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Cancelled execution"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Execution"
+
+  /api/v1/executions/{id}/logs:
+    get:
+      operationId: getExecutionLogs
+      tags: ["Executions"]
+      summary: "Get execution logs"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Execution logs"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExecutionLog"
+
+  /api/v1/executions/{id}/checkpoints:
+    get:
+      operationId: getExecutionCheckpoints
+      tags: ["Executions"]
+      summary: "Get execution checkpoints"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Execution checkpoints"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExecutionCheckpoint"
+
+  /api/v1/executions/{id}/approve:
+    post:
+      operationId: approveExecutionTask
+      tags: ["Executions"]
+      summary: "Approve or reject an approval task"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveTaskInput"
+      responses:
+        "200":
+          description: "Approval processed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalTaskResult"
+
+  # ─── Connectors ─────────────────────────────────────────────────────────
+  /api/v1/connectors/marketplace:
+    get:
+      operationId: listConnectorMarketplace
+      tags: ["Connectors"]
+      summary: "List available connectors in marketplace"
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PaginationPage"
+        - $ref: "#/components/parameters/PaginationLimit"
+        - $ref: "#/components/parameters/ConnectorCategoryFilter"
+        - $ref: "#/components/parameters/ConnectorSearch"
+      responses:
+        "200":
+          description: "Connector marketplace listing"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Connector"
+                  total:
+                    type: integer
+
+  /api/v1/connectors/{id}:
+    get:
+      operationId: getConnector
+      tags: ["Connectors"]
+      summary: "Get connector details"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Connector"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Connector"
+
+  /api/v1/connectors/{id}/actions:
+    get:
+      operationId: listConnectorActions
+      tags: ["Connectors"]
+      summary: "List connector actions"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Connector actions"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConnectorAction"
+
+  /api/v1/connectors/{id}/triggers:
+    get:
+      operationId: listConnectorTriggers
+      tags: ["Connectors"]
+      summary: "List connector triggers"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Connector triggers"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConnectorTrigger"
+
+  /api/v1/connectors/{id}/versions:
+    get:
+      operationId: listConnectorVersions
+      tags: ["Connectors"]
+      summary: "List connector versions"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Connector versions"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConnectorVersion"
+
+  /api/v1/connectors/{id}/install:
+    post:
+      operationId: installConnector
+      tags: ["Connectors"]
+      summary: "Install a connector"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Installed connector"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorInstallation"
+
+  /api/v1/connectors/installations:
+    get:
+      operationId: listInstallations
+      tags: ["Connectors"]
+      summary: "List tenant connector installations"
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantHeader"
+      responses:
+        "200":
+          description: "Installations"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConnectorInstallation"
+
+  /api/v1/connectors/installations/{id}:
+    delete:
+      operationId: uninstallConnector
+      tags: ["Connectors"]
+      summary: "Uninstall a connector"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: "Uninstalled"
+
+  /api/v1/connectors/installations/{id}/configure:
+    post:
+      operationId: configureConnector
+      tags: ["Connectors"]
+      summary: "Configure a connector installation"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                config:
+                  type: object
+      responses:
+        "200":
+          description: "Configured installation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorInstallation"
+
+  /api/v1/connectors/installations/{id}/execute:
+    post:
+      operationId: executeConnectorAction
+      tags: ["Connectors"]
+      summary: "Execute a connector action"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecuteConnectorInput"
+      responses:
+        "200":
+          description: "Action result"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorExecuteResult"
+
+  /api/v1/connectors/installations/{id}/test:
+    post:
+      operationId: testConnector
+      tags: ["Connectors"]
+      summary: "Test connector connection"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Test result"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorTestResult"
+
+  /api/v1/connectors/installations/{id}/upgrade:
+    post:
+      operationId: upgradeConnector
+      tags: ["Connectors"]
+      summary: "Upgrade connector version"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                versionId:
+                  type: string
+      responses:
+        "200":
+          description: "Upgraded installation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorInstallation"
+
+  /api/v1/connectors/installations/{id}/rollback:
+    post:
+      operationId: rollbackConnector
+      tags: ["Connectors"]
+      summary: "Rollback connector to previous version"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Rollback result"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorRollbackResult"
+
+  /api/v1/connectors/installations/{id}/webhooks:
+    post:
+      operationId: registerConnectorWebhook
+      tags: ["Connectors"]
+      summary: "Register webhook for connector"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookRegistrationInput"
+      responses:
+        "200":
+          description: "Webhook registered"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookRegistration"
+
+  /api/v1/connectors/installations/{id}/poll:
+    post:
+      operationId: pollConnector
+      tags: ["Connectors"]
+      summary: "Poll connector for new events"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                triggerId:
+                  type: string
+      responses:
+        "200":
+          description: "Poll result"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PollResult"
+
+  # ─── AI ─────────────────────────────────────────────────────────────────
+  /api/v1/ai/runs:
+    post:
+      operationId: createAiRun
+      tags: ["AI"]
+      summary: "Create an AI run"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAiRunInput"
+      responses:
+        "201":
+          description: "Created AI run"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiRun"
+    get:
+      operationId: listAiRuns
+      tags: ["AI"]
+      summary: "List AI runs"
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PaginationPage"
+        - $ref: "#/components/parameters/PaginationLimit"
+      responses:
+        "200":
+          description: "List of AI runs"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AiRun"
+                  total:
+                    type: integer
+
+  /api/v1/ai/runs/{id}:
+    get:
+      operationId: getAiRun
+      tags: ["AI"]
+      summary: "Get AI run details"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "AI run"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiRun"
+
+  /api/v1/ai/runs/{id}/cancel:
+    post:
+      operationId: cancelAiRun
+      tags: ["AI"]
+      summary: "Cancel an AI run"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Run cancelled"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /api/v1/ai/models:
+    get:
+      operationId: listAiModels
+      tags: ["AI"]
+      summary: "List available AI models"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "AI models"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiModel"
+
+  /api/v1/ai/guardrails:
+    post:
+      operationId: createGuardrail
+      tags: ["AI"]
+      summary: "Create a guardrail"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGuardrailInput"
+      responses:
+        "201":
+          description: "Created guardrail"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiGuardrail"
+    get:
+      operationId: listGuardrails
+      tags: ["AI"]
+      summary: "List guardrails"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Guardrails"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiGuardrail"
+
+  /api/v1/ai/moderation/scrub:
+    post:
+      operationId: scrubPii
+      tags: ["AI"]
+      summary: "Scrub PII from content"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScrubPiiInput"
+      responses:
+        "200":
+          description: "Scrubbed content"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScrubPiiResult"
+
+  /api/v1/ai/evaluation/datasets:
+    post:
+      operationId: createEvaluationDataset
+      tags: ["AI Evaluation"]
+      summary: "Create an evaluation dataset"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEvaluationDatasetInput"
+      responses:
+        "201":
+          description: "Created dataset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvaluationDataset"
+    get:
+      operationId: listEvaluationDatasets
+      tags: ["AI Evaluation"]
+      summary: "List evaluation datasets"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Datasets"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EvaluationDataset"
+
+  /api/v1/ai/evaluation/datasets/{id}/entries:
+    post:
+      operationId: addEvaluationEntry
+      tags: ["AI Evaluation"]
+      summary: "Add entries to an evaluation dataset"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                entries:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/EvaluationEntryInput"
+      responses:
+        "200":
+          description: "Updated dataset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvaluationDataset"
+
+  /api/v1/ai/evaluation/runs:
+    post:
+      operationId: createEvaluationRun
+      tags: ["AI Evaluation"]
+      summary: "Create an evaluation run"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEvaluationRunInput"
+      responses:
+        "201":
+          description: "Created evaluation run"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvaluationRun"
+
+  /api/v1/ai/evaluation/runs/{id}:
+    get:
+      operationId: getEvaluationRun
+      tags: ["AI Evaluation"]
+      summary: "Get evaluation run results"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Evaluation run"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvaluationRun"
+
+  /api/v1/ai/evaluation/regression-check:
+    post:
+      operationId: checkRegression
+      tags: ["AI Evaluation"]
+      summary: "Run regression check"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegressionCheckInput"
+      responses:
+        "200":
+          description: "Regression result"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegressionResult"
+
+  # ─── RAG ────────────────────────────────────────────────────────────────
+  /api/v1/rag/knowledge-bases:
+    post:
+      operationId: createKnowledgeBase
+      tags: ["RAG"]
+      summary: "Create a knowledge base"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateKnowledgeBaseInput"
+      responses:
+        "201":
+          description: "Created knowledge base"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnowledgeBase"
+    get:
+      operationId: listKnowledgeBases
+      tags: ["RAG"]
+      summary: "List knowledge bases"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Knowledge bases"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/KnowledgeBase"
+
+  /api/v1/rag/knowledge-bases/{id}/documents:
+    post:
+      operationId: ingestDocument
+      tags: ["RAG"]
+      summary: "Ingest a document into a knowledge base"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IngestDocumentInput"
+      responses:
+        "201":
+          description: "Ingested document"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnowledgeDocument"
+
+  /api/v1/rag/knowledge-bases/{id}/search:
+    post:
+      operationId: searchKnowledgeBase
+      tags: ["RAG"]
+      summary: "Search a knowledge base"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RagSearchInput"
+      responses:
+        "200":
+          description: "Search results"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RagSearchResult"
+
+  /api/v1/rag/knowledge-bases/{id}/query:
+    post:
+      operationId: queryKnowledgeBase
+      tags: ["RAG"]
+      summary: "Query a knowledge base with a question"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RagQueryInput"
+      responses:
+        "200":
+          description: "Query result"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RagQueryResult"
+
+  # ─── Marketplace ────────────────────────────────────────────────────────
+  /api/v1/marketplace/listings:
+    get:
+      operationId: listMarketplaceListings
+      tags: ["Marketplace"]
+      summary: "List marketplace listings"
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PaginationPage"
+        - $ref: "#/components/parameters/PaginationLimit"
+        - $ref: "#/components/parameters/MarketplaceCategoryFilter"
+        - $ref: "#/components/parameters/MarketplaceTypeFilter"
+      responses:
+        "200":
+          description: "Marketplace listings"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MarketplaceListing"
+                  total:
+                    type: integer
+    post:
+      operationId: createMarketplaceListing
+      tags: ["Marketplace"]
+      summary: "Create a marketplace listing"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMarketplaceListingInput"
+      responses:
+        "201":
+          description: "Created listing"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketplaceListing"
+
+  /api/v1/marketplace/listings/pending:
+    get:
+      operationId: listPendingListings
+      tags: ["Marketplace"]
+      summary: "List pending listings for review"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Pending listings"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketplaceListing"
+
+  /api/v1/marketplace/listings/{id}:
+    get:
+      operationId: getMarketplaceListing
+      tags: ["Marketplace"]
+      summary: "Get marketplace listing"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Marketplace listing"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketplaceListing"
+
+  /api/v1/marketplace/listings/{id}/install:
+    post:
+      operationId: installMarketplaceListing
+      tags: ["Marketplace"]
+      summary: "Install marketplace listing"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Installed"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /api/v1/marketplace/listings/{id}/publish:
+    post:
+      operationId: publishMarketplaceListing
+      tags: ["Marketplace"]
+      summary: "Publish a marketplace listing"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Published listing"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketplaceListing"
+
+  /api/v1/marketplace/listings/{id}/submit-for-review:
+    post:
+      operationId: submitListingForReview
+      tags: ["Marketplace"]
+      summary: "Submit listing for review"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Submitted for review"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketplaceListing"
+
+  /api/v1/marketplace/listings/{id}/approve:
+    post:
+      operationId: approveMarketplaceListing
+      tags: ["Marketplace"]
+      summary: "Approve a listing"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Approved listing"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketplaceListing"
+
+  /api/v1/marketplace/listings/{id}/reject:
+    post:
+      operationId: rejectMarketplaceListing
+      tags: ["Marketplace"]
+      summary: "Reject a listing"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: "Rejected listing"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketplaceListing"
+
+  /api/v1/marketplace/listings/{id}/reviews:
+    get:
+      operationId: listMarketplaceReviews
+      tags: ["Marketplace"]
+      summary: "List reviews for a listing"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Reviews"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketplaceReview"
+    post:
+      operationId: createMarketplaceReview
+      tags: ["Marketplace"]
+      summary: "Create a review"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMarketplaceReviewInput"
+      responses:
+        "201":
+          description: "Created review"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketplaceReview"
+
+  /api/v1/marketplace/reviews/pending:
+    get:
+      operationId: listPendingReviews
+      tags: ["Marketplace"]
+      summary: "List pending reviews for moderation"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Pending reviews"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketplaceReview"
+
+  /api/v1/marketplace/reviews/{id}/moderate:
+    post:
+      operationId: moderateReview
+      tags: ["Marketplace"]
+      summary: "Moderate a review"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [approve, reject]
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: "Moderated review"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketplaceReview"
+
+  # ─── Billing ────────────────────────────────────────────────────────────
+  /api/v1/billing/checkout:
+    post:
+      operationId: createCheckoutSession
+      tags: ["Billing"]
+      summary: "Create a Stripe checkout session"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckoutInput"
+      responses:
+        "200":
+          description: "Checkout session"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSession"
+
+  /api/v1/billing/portal:
+    post:
+      operationId: createPortalSession
+      tags: ["Billing"]
+      summary: "Create a Stripe portal session"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                returnUrl:
+                  type: string
+      responses:
+        "200":
+          description: "Portal session"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalSession"
+
+  /api/v1/billing/subscription:
+    get:
+      operationId: getSubscription
+      tags: ["Billing"]
+      summary: "Get current subscription"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Subscription"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+
+  /api/v1/billing/plan:
+    get:
+      operationId: getPlan
+      tags: ["Billing"]
+      summary: "Get current billing plan"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Billing plan"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingPlan"
+
+  /api/v1/billing/usage:
+    get:
+      operationId: getUsage
+      tags: ["Billing"]
+      summary: "Get usage summary"
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UsagePeriod"
+      responses:
+        "200":
+          description: "Usage summary"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageSummary"
+
+  /api/v1/billing/invoices:
+    get:
+      operationId: listInvoices
+      tags: ["Billing"]
+      summary: "List invoices"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Invoices"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invoice"
+
+  /api/v1/billing/invoices/{id}/lines:
+    get:
+      operationId: getInvoiceLines
+      tags: ["Billing"]
+      summary: "Get invoice line items"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Invoice lines"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InvoiceLine"
+
+  /api/v1/billing/entitlements:
+    get:
+      operationId: getEntitlements
+      tags: ["Billing"]
+      summary: "Get tenant entitlements"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Entitlements"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Entitlements"
+
+  /api/v1/billing/metering/record:
+    post:
+      operationId: recordMeteringEvent
+      tags: ["Billing"]
+      summary: "Record a metering event"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeteringEventInput"
+      responses:
+        "204":
+          description: "Recorded"
+
+  # ─── Environments ───────────────────────────────────────────────────────
+  /api/v1/environments:
+    get:
+      operationId: listEnvironments
+      tags: ["Environments"]
+      summary: "List environments"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Environments"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Environment"
+    post:
+      operationId: createEnvironment
+      tags: ["Environments"]
+      summary: "Create an environment"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEnvironmentInput"
+      responses:
+        "201":
+          description: "Created environment"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+
+  /api/v1/environments/{id}:
+    get:
+      operationId: getEnvironment
+      tags: ["Environments"]
+      summary: "Get environment by ID"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Environment"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+    patch:
+      operationId: updateEnvironment
+      tags: ["Environments"]
+      summary: "Update environment"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateEnvironmentInput"
+      responses:
+        "200":
+          description: "Updated environment"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+    delete:
+      operationId: deleteEnvironment
+      tags: ["Environments"]
+      summary: "Delete environment"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: "Deleted"
+
+  /api/v1/environments/promote:
+    post:
+      operationId: promoteEnvironment
+      tags: ["Environments"]
+      summary: "Promote workflow between environments"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PromoteInput"
+      responses:
+        "201":
+          description: "Promotion created"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromotionResult"
+
+  /api/v1/environments/rollback:
+    post:
+      operationId: rollbackPromotion
+      tags: ["Environments"]
+      summary: "Rollback a promotion"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                promotionId:
+                  type: string
+      responses:
+        "200":
+          description: "Rollback result"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RollbackResult"
+
+  /api/v1/environments/promotions:
+    get:
+      operationId: listPromotions
+      tags: ["Environments"]
+      summary: "List all promotions"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Promotions"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkflowPromotion"
+
+  /api/v1/environments/promotions/{id}:
+    get:
+      operationId: getPromotion
+      tags: ["Environments"]
+      summary: "Get promotion details"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Promotion details"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  promotion:
+                    $ref: "#/components/schemas/WorkflowPromotion"
+                  release:
+                    $ref: "#/components/schemas/EnvironmentRelease"
+
+  /api/v1/environments/promotions/{id}/approve:
+    post:
+      operationId: approvePromotion
+      tags: ["Environments"]
+      summary: "Approve a promotion"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type: string
+      responses:
+        "200":
+          description: "Approved promotion"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  promotion:
+                    $ref: "#/components/schemas/WorkflowPromotion"
+                  release:
+                    $ref: "#/components/schemas/EnvironmentRelease"
+
+  /api/v1/environments/promotions/{id}/reject:
+    post:
+      operationId: rejectPromotion
+      tags: ["Environments"]
+      summary: "Reject a promotion"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: "Rejected promotion"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  promotion:
+                    $ref: "#/components/schemas/WorkflowPromotion"
+                  release:
+                    $ref: "#/components/schemas/EnvironmentRelease"
+
+  /api/v1/environments/{id}/releases:
+    get:
+      operationId: listEnvironmentReleases
+      tags: ["Environments"]
+      summary: "List releases for an environment"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Releases"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EnvironmentRelease"
+
+  /api/v1/environments/diff/{workflowId}:
+    get:
+      operationId: getEnvironmentDiff
+      tags: ["Environments"]
+      summary: "Get environment diff for a workflow"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workflowId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Environment diff"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  from:
+                    $ref: "#/components/schemas/WorkflowVersion"
+                  to:
+                    $ref: "#/components/schemas/WorkflowVersion"
+
+  # ─── Templates ──────────────────────────────────────────────────────────
+  /api/v1/templates:
+    get:
+      operationId: listTemplates
+      tags: ["Templates"]
+      summary: "List templates"
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PaginationPage"
+        - $ref: "#/components/parameters/PaginationLimit"
+        - $ref: "#/components/parameters/TemplateCategoryFilter"
+        - $ref: "#/components/parameters/TemplateSearch"
+      responses:
+        "200":
+          description: "Templates"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Template"
+                  total:
+                    type: integer
+    post:
+      operationId: createTemplate
+      tags: ["Templates"]
+      summary: "Create a template"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTemplateInput"
+      responses:
+        "201":
+          description: "Created template"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+
+  /api/v1/templates/{id}:
+    get:
+      operationId: getTemplate
+      tags: ["Templates"]
+      summary: "Get template by ID"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Template"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+
+  /api/v1/templates/{id}/versions:
+    get:
+      operationId: listTemplateVersions
+      tags: ["Templates"]
+      summary: "List template versions"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Template versions"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TemplateVersion"
+
+  # ─── Dashboards ─────────────────────────────────────────────────────────
+  /api/v1/dashboards:
+    get:
+      operationId: listDashboards
+      tags: ["Dashboards"]
+      summary: "List dashboards"
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PaginationPage"
+        - $ref: "#/components/parameters/PaginationLimit"
+        - $ref: "#/components/parameters/DashboardSearch"
+        - $ref: "#/components/parameters/DashboardStatusFilter"
+      responses:
+        "200":
+          description: "Dashboards"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Dashboard"
+                  total:
+                    type: integer
+    post:
+      operationId: createDashboard
+      tags: ["Dashboards"]
+      summary: "Create a dashboard"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDashboardInput"
+      responses:
+        "201":
+          description: "Created dashboard"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+
+  /api/v1/dashboards/{id}:
+    get:
+      operationId: getDashboard
+      tags: ["Dashboards"]
+      summary: "Get dashboard by ID"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Dashboard"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+    put:
+      operationId: updateDashboard
+      tags: ["Dashboards"]
+      summary: "Update dashboard"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDashboardInput"
+      responses:
+        "200":
+          description: "Updated dashboard"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+    delete:
+      operationId: deleteDashboard
+      tags: ["Dashboards"]
+      summary: "Delete dashboard"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: "Deleted"
+
+  /api/v1/dashboards/{id}/publish:
+    post:
+      operationId: publishDashboard
+      tags: ["Dashboards"]
+      summary: "Publish a dashboard"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Published dashboard"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+
+  # ─── Search ─────────────────────────────────────────────────────────────
+  /api/v1/search:
+    get:
+      operationId: search
+      tags: ["Search"]
+      summary: "Global search"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - $ref: "#/components/parameters/PaginationPage"
+        - $ref: "#/components/parameters/PaginationLimit"
+      responses:
+        "200":
+          description: "Search results"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResults"
+
+  # ─── Compliance ─────────────────────────────────────────────────────────
+  /api/v1/compliance/gdpr/export:
+    post:
+      operationId: requestGdprExport
+      tags: ["Compliance"]
+      summary: "Request GDPR data export"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "GDPR export created"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GdprRequest"
+
+  /api/v1/compliance/gdpr/exports:
+    get:
+      operationId: listGdprExports
+      tags: ["Compliance"]
+      summary: "List GDPR export requests"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "GDPR exports"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GdprRequest"
+
+  /api/v1/compliance/gdpr/deletion:
+    post:
+      operationId: requestGdprDeletion
+      tags: ["Compliance"]
+      summary: "Request GDPR account deletion"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: "Deletion requested"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GdprRequest"
+
+  /api/v1/compliance/audit/export:
+    post:
+      operationId: createAuditExport
+      tags: ["Compliance"]
+      summary: "Create audit log export"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuditExportInput"
+      responses:
+        "201":
+          description: "Audit export created"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditExport"
+
+  /api/v1/compliance/audit/exports:
+    get:
+      operationId: listAuditExports
+      tags: ["Compliance"]
+      summary: "List audit exports"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Audit exports"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditExport"
+
+  /api/v1/compliance/evidence:
+    get:
+      operationId: listComplianceEvidence
+      tags: ["Compliance"]
+      summary: "List compliance evidence"
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantHeader"
+      responses:
+        "200":
+          description: "Compliance evidence"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ComplianceEvidence"
+
+  /api/v1/compliance/security-incidents:
+    post:
+      operationId: createSecurityIncident
+      tags: ["Compliance"]
+      summary: "Report a security incident"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSecurityIncidentInput"
+      responses:
+        "201":
+          description: "Incident created"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecurityIncident"
+    get:
+      operationId: listSecurityIncidents
+      tags: ["Compliance"]
+      summary: "List security incidents"
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantHeader"
+      responses:
+        "200":
+          description: "Security incidents"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SecurityIncident"
+
+  /api/v1/compliance/residency:
+    get:
+      operationId: getDataResidency
+      tags: ["Compliance"]
+      summary: "Get data residency configuration"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Residency config"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataResidency"
+    put:
+      operationId: updateDataResidency
+      tags: ["Compliance"]
+      summary: "Update data residency region"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                region:
+                  type: string
+      responses:
+        "200":
+          description: "Updated residency"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataResidency"
+
+  # ─── Tenants ────────────────────────────────────────────────────────────
+  /api/v1/tenants/tiers:
+    get:
+      operationId: listTenantTiers
+      tags: ["Tenants"]
+      summary: "List tenant tiers"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Tenant tiers"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TenantTier"
+    post:
+      operationId: createTenantTier
+      tags: ["Tenants"]
+      summary: "Create a tenant tier"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTenantTierInput"
+      responses:
+        "201":
+          description: "Created tier"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantTier"
+
+  /api/v1/tenants/current/tier:
+    get:
+      operationId: getCurrentTier
+      tags: ["Tenants"]
+      summary: "Get current tenant tier assignment"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Current tier"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tier:
+                    $ref: "#/components/schemas/TenantTier"
+                  assignment:
+                    $ref: "#/components/schemas/TenantTierAssignment"
+    put:
+      operationId: changeCurrentTier
+      tags: ["Tenants"]
+      summary: "Change tenant tier"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tierId:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: "Tier changed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TierChangeResult"
+
+  /api/v1/tenants/current/placement:
+    get:
+      operationId: getCurrentPlacement
+      tags: ["Tenants"]
+      summary: "Get current tenant placement"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Current placement"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantPlacement"
+
+  /api/v1/tenants/current/plan-migration:
+    post:
+      operationId: planTenantMigration
+      tags: ["Tenants"]
+      summary: "Plan a tenant migration"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                targetTierId:
+                  type: string
+      responses:
+        "201":
+          description: "Migration plan created"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MigrationPlan"
+
+  /api/v1/tenants/current/execute-migration:
+    post:
+      operationId: executeTenantMigration
+      tags: ["Tenants"]
+      summary: "Execute a planned migration"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                planId:
+                  type: string
+      responses:
+        "200":
+          description: "Migration executed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantMigration"
+
+  # ─── DR (Disaster Recovery) ─────────────────────────────────────────────
+  /api/v1/dr/backup:
+    post:
+      operationId: createBackup
+      tags: ["Disaster Recovery"]
+      summary: "Create a backup"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBackupInput"
+      responses:
+        "201":
+          description: "Backup created"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackupRecord"
+
+  /api/v1/dr/backups:
+    get:
+      operationId: listBackups
+      tags: ["Disaster Recovery"]
+      summary: "List backups"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Backups"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BackupRecord"
+
+  /api/v1/dr/backups/{id}/validate:
+    post:
+      operationId: validateBackup
+      tags: ["Disaster Recovery"]
+      summary: "Validate a backup"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Validation result"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackupValidation"
+
+  /api/v1/dr/backups/{id}/restore:
+    post:
+      operationId: restoreBackup
+      tags: ["Disaster Recovery"]
+      summary: "Restore from backup"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestoreInput"
+      responses:
+        "200":
+          description: "Restore started"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestoreRecord"
+
+  /api/v1/dr/rollback/plan:
+    post:
+      operationId: planRollback
+      tags: ["Disaster Recovery"]
+      summary: "Plan a release rollback"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                service:
+                  type: string
+                targetVersion:
+                  type: string
+      responses:
+        "200":
+          description: "Rollback plan"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RollbackPlan"
+
+  /api/v1/dr/rollback/execute:
+    post:
+      operationId: executeRollback
+      tags: ["Disaster Recovery"]
+      summary: "Execute a release rollback"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                service:
+                  type: string
+                targetVersion:
+                  type: string
+      responses:
+        "200":
+          description: "Rollback executed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RollbackResult"
+
+  /api/v1/dr/pools:
+    get:
+      operationId: listRegionalPools
+      tags: ["Disaster Recovery"]
+      summary: "List regional pools"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Regional pools"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RegionalPool"
+
+  /api/v1/dr/pools/{region}:
+    get:
+      operationId: getRegionalPool
+      tags: ["Disaster Recovery"]
+      summary: "Get regional pool details"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: region
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Regional pool"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegionalPool"
+
+  /api/v1/dr/drills/failover:
+    post:
+      operationId: triggerFailoverDrill
+      tags: ["Disaster Recovery"]
+      summary: "Trigger a failover drill"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                primaryRegion:
+                  type: string
+                drRegion:
+                  type: string
+      responses:
+        "200":
+          description: "Drill result"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DrillResult"
+
+  # ─── Retention ──────────────────────────────────────────────────────────
+  /api/v1/retention/policy:
+    get:
+      operationId: getRetentionPolicy
+      tags: ["Retention"]
+      summary: "Get retention policy"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Retention policy"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetentionPolicy"
+    put:
+      operationId: updateRetentionPolicy
+      tags: ["Retention"]
+      summary: "Update retention policy"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RetentionPolicyInput"
+      responses:
+        "200":
+          description: "Updated policy"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetentionPolicy"
+
+  /api/v1/retention/partitions/create:
+    post:
+      operationId: createRetentionPartitions
+      tags: ["Retention"]
+      summary: "Create retention partitions"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Partitions created"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /api/v1/retention/partitions:
+    get:
+      operationId: listRetentionPartitions
+      tags: ["Retention"]
+      summary: "List retention partitions"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Partitions"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /api/v1/retention/archive:
+    post:
+      operationId: triggerArchive
+      tags: ["Retention"]
+      summary: "Trigger data archive"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Archive started"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArchiveExport"
+
+  /api/v1/retention/archives:
+    get:
+      operationId: listArchives
+      tags: ["Retention"]
+      summary: "List archive exports"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "Archives"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ArchiveExport"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT Bearer token obtained from /auth/login or /auth/register"
+
+  parameters:
+    TenantHeader:
+      name: x-tenant-id
+      in: header
+      schema:
+        type: string
+      description: "Tenant context for multi-tenant requests"
+    PaginationPage:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PaginationLimit:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    UserSearch:
+      name: search
+      in: query
+      schema:
+        type: string
+    WorkflowStatusFilter:
+      name: status
+      in: query
+      schema:
+        type: string
+        enum: [draft, active, inactive, archived]
+    WorkflowSearch:
+      name: search
+      in: query
+      schema:
+        type: string
+    ExecutionWorkflowFilter:
+      name: workflowId
+      in: query
+      schema:
+        type: string
+    ExecutionStatusFilter:
+      name: status
+      in: query
+      schema:
+        type: string
+        enum: [pending, running, success, failed, cancelled, timed_out]
+    ConnectorCategoryFilter:
+      name: category
+      in: query
+      schema:
+        type: string
+    ConnectorSearch:
+      name: search
+      in: query
+      schema:
+        type: string
+    MarketplaceCategoryFilter:
+      name: category
+      in: query
+      schema:
+        type: string
+    MarketplaceTypeFilter:
+      name: listingType
+      in: query
+      schema:
+        type: string
+    TemplateCategoryFilter:
+      name: category
+      in: query
+      schema:
+        type: string
+    TemplateSearch:
+      name: search
+      in: query
+      schema:
+        type: string
+    DashboardSearch:
+      name: search
+      in: query
+      schema:
+        type: string
+    DashboardStatusFilter:
+      name: status
+      in: query
+      schema:
+        type: string
+        enum: [draft, published]
+    UsagePeriod:
+      name: period
+      in: query
+      schema:
+        type: string
+        enum: [current_month, last_month, current_billing_period]
+
+  responses:
+    BadRequest:
+      description: "Bad request"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Unauthorized:
+      description: "Unauthorized"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Forbidden:
+      description: "Forbidden"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    NotFound:
+      description: "Not found"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Conflict:
+      description: "Conflict"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    UnprocessableEntity:
+      description: "Unprocessable entity"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    TooManyRequests:
+      description: "Too many requests"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    InternalServerError:
+      description: "Internal server error"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+  schemas:
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+
+    RegisterInput:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        organizationName:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/SessionUser"
+        requiresMfa:
+          type: boolean
+
+    SessionUser:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        tenantId:
+          type: string
+          nullable: true
+        role:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        emailVerifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+        locale:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        emailVerifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UpdateUserInput:
+      type: object
+      properties:
+        name:
+          type: string
+        locale:
+          type: string
+        avatarUrl:
+          type: string
+
+    MfaSetupResult:
+      type: object
+      properties:
+        secret:
+          type: string
+        uri:
+          type: string
+        qrCode:
+          type: string
+
+    VerifyMfaInput:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+
+    Workflow:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+        triggerType:
+          type: string
+        currentVersionId:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        nodeCount:
+          type: integer
+        executionCount:
+          type: integer
+        lastRunAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastRunStatus:
+          type: string
+          nullable: true
+        region:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateWorkflowInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        triggerType:
+          type: string
+          default: manual
+        tags:
+          type: array
+          items:
+            type: string
+
+    UpdateWorkflowInput:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        triggerType:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+
+    WorkflowVersion:
+      type: object
+      properties:
+        id:
+          type: string
+        workflowId:
+          type: string
+        versionNumber:
+          type: integer
+        graphJson:
+          type: object
+        checksum:
+          type: string
+        releaseNotes:
+          type: string
+          nullable: true
+        createdById:
+          type: string
+          nullable: true
+        publishedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateVersionInput:
+      type: object
+      required: [graphJson]
+      properties:
+        graphJson:
+          type: object
+        releaseNotes:
+          type: string
+
+    WorkflowDiff:
+      type: object
+      properties:
+        id:
+          type: string
+        workflowId:
+          type: string
+        fromVersionId:
+          type: string
+        toVersionId:
+          type: string
+        patchJson:
+          type: object
+        patchHash:
+          type: string
+        summary:
+          type: object
+        createdBy:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    WorkflowPromotion:
+      type: object
+      properties:
+        id:
+          type: string
+        workflowId:
+          type: string
+        workflowName:
+          type: string
+        fromEnvironment:
+          type: string
+        toEnvironment:
+          type: string
+        status:
+          type: string
+        promotedBy:
+          type: string
+        approvedBy:
+          type: string
+          nullable: true
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        rejectionReason:
+          type: string
+          nullable: true
+        rejectedAt:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    Execution:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        workflowId:
+          type: string
+        workflowVersionId:
+          type: string
+        status:
+          type: string
+        triggerType:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        durationMs:
+          type: integer
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+        region:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    ExecutionDetail:
+      allOf:
+        - $ref: "#/components/schemas/Execution"
+        - type: object
+          properties:
+            checkpoints:
+              type: array
+              items:
+                $ref: "#/components/schemas/ExecutionCheckpoint"
+            logs:
+              type: array
+              items:
+                $ref: "#/components/schemas/ExecutionLog"
+
+    CreateExecutionInput:
+      type: object
+      required: [workflowId]
+      properties:
+        workflowId:
+          type: string
+        workflowVersionId:
+          type: string
+        input:
+          type: object
+        environment:
+          type: string
+
+    ExecutionLog:
+      type: object
+      properties:
+        id:
+          type: string
+        executionId:
+          type: string
+        level:
+          type: string
+        message:
+          type: string
+        nodeId:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+
+    ExecutionCheckpoint:
+      type: object
+      properties:
+        id:
+          type: string
+        executionId:
+          type: string
+        nodeId:
+          type: string
+        attempt:
+          type: integer
+        stateJson:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+
+    ApproveTaskInput:
+      type: object
+      required: [taskId, decision]
+      properties:
+        taskId:
+          type: string
+        decision:
+          type: string
+          enum: [approved, rejected]
+        note:
+          type: string
+
+    ApprovalTaskResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        decision:
+          type: string
+
+    Connector:
+      type: object
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+        displayName:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        icon:
+          type: string
+          nullable: true
+        category:
+          type: string
+        trustLevel:
+          type: string
+        scope:
+          type: string
+          nullable: true
+        authType:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ConnectorAction:
+      type: object
+      properties:
+        id:
+          type: string
+        connectorId:
+          type: string
+        actionId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        inputSchema:
+          type: object
+        outputSchema:
+          type: object
+
+    ConnectorTrigger:
+      type: object
+      properties:
+        id:
+          type: string
+        connectorId:
+          type: string
+        triggerId:
+          type: string
+        triggerType:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        config:
+          type: object
+        pollingInterval:
+          type: integer
+          nullable: true
+
+    ConnectorVersion:
+      type: object
+      properties:
+        id:
+          type: string
+        connectorId:
+          type: string
+        semver:
+          type: string
+        manifestJson:
+          type: object
+        artifactRef:
+          type: string
+          nullable: true
+        signatureRef:
+          type: string
+          nullable: true
+        isSupported:
+          type: boolean
+        publishedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    ConnectorInstallation:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        connectorVersionId:
+          type: string
+        status:
+          type: string
+        installedAt:
+          type: string
+          format: date-time
+        installedBy:
+          type: string
+          nullable: true
+        config:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+
+    ExecuteConnectorInput:
+      type: object
+      required: [actionId]
+      properties:
+        actionId:
+          type: string
+        input:
+          type: object
+
+    ConnectorExecuteResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: string
+          nullable: true
+
+    ConnectorTestResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        latencyMs:
+          type: integer
+
+    ConnectorRollbackResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        previousVersion:
+          type: string
+        currentVersion:
+          type: string
+
+    WebhookRegistrationInput:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          items:
+            type: string
+        secret:
+          type: string
+
+    WebhookRegistration:
+      type: object
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+        events:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    PollResult:
+      type: object
+      properties:
+        hasNewEvents:
+          type: boolean
+        eventCount:
+          type: integer
+        lastCursor:
+          type: string
+
+    CreateAiRunInput:
+      type: object
+      required: [prompt]
+      properties:
+        modelId:
+          type: string
+        prompt:
+          type: string
+        systemPrompt:
+          type: string
+        temperature:
+          type: number
+          format: float
+        maxTokens:
+          type: integer
+        guardrails:
+          type: array
+          items:
+            type: string
+        input:
+          type: object
+        metadata:
+          type: object
+
+    AiRun:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        modelId:
+          type: string
+        status:
+          type: string
+        promptTokens:
+          type: integer
+        completionTokens:
+          type: integer
+        costUsd:
+          type: number
+          format: float
+        result:
+          type: string
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+        guardrailHit:
+          type: boolean
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    AiModel:
+      type: object
+      properties:
+        id:
+          type: string
+        provider:
+          type: string
+        modelName:
+          type: string
+        contextWindow:
+          type: integer
+        priceJson:
+          type: object
+        riskTags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateGuardrailInput:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        config:
+          type: object
+        enabled:
+          type: boolean
+          default: true
+        severity:
+          type: string
+          default: block
+
+    AiGuardrail:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        config:
+          type: object
+        enabled:
+          type: boolean
+        severity:
+          type: string
+        tenantId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ScrubPiiInput:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+        entityTypes:
+          type: array
+          items:
+            type: string
+        replacementStrategy:
+          type: string
+          default: placeholder
+
+    ScrubPiiResult:
+      type: object
+      properties:
+        scrubbedContent:
+          type: string
+        entitiesFound:
+          type: array
+          items:
+            type: string
+        entityCount:
+          type: integer
+
+    CreateEvaluationDatasetInput:
+      type: object
+      required: [name, promptId]
+      properties:
+        name:
+          type: string
+        promptId:
+          type: string
+        description:
+          type: string
+
+    EvaluationDataset:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        promptId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        goldenPairsJson:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    EvaluationEntryInput:
+      type: object
+      required: [input, expectedOutput]
+      properties:
+        input:
+          type: string
+        expectedOutput:
+          type: string
+        metadata:
+          type: object
+
+    CreateEvaluationRunInput:
+      type: object
+      required: [promptVersionId, datasetId]
+      properties:
+        promptVersionId:
+          type: string
+        datasetId:
+          type: string
+        scorerType:
+          type: string
+          default: exact_match
+
+    EvaluationRun:
+      type: object
+      properties:
+        id:
+          type: string
+        promptVersionId:
+          type: string
+        datasetId:
+          type: string
+        score:
+          type: number
+          format: float
+        scorerType:
+          type: string
+        resultsJson:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+
+    RegressionCheckInput:
+      type: object
+      required: [baselineRunId, candidateRunId]
+      properties:
+        baselineRunId:
+          type: string
+        candidateRunId:
+          type: string
+        threshold:
+          type: number
+          format: float
+          default: 0.95
+
+    RegressionResult:
+      type: object
+      properties:
+        isRegression:
+          type: boolean
+        baselineScore:
+          type: number
+          format: float
+        candidateScore:
+          type: number
+          format: float
+        delta:
+          type: number
+          format: float
+        perSampleDeltas:
+          type: array
+          items:
+            type: object
+
+    CreateKnowledgeBaseInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        embeddingModel:
+          type: string
+          default: text-embedding-3-small
+        chunkingConfig:
+          type: object
+
+    KnowledgeBase:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        embeddingModel:
+          type: string
+        chunkingConfig:
+          type: object
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    IngestDocumentInput:
+      type: object
+      required: [sourceRef]
+      properties:
+        sourceRef:
+          type: string
+        metadata:
+          type: object
+
+    KnowledgeDocument:
+      type: object
+      properties:
+        id:
+          type: string
+        knowledgeBaseId:
+          type: string
+        sourceRef:
+          type: string
+        status:
+          type: string
+        chunkCount:
+          type: integer
+        metadata:
+          type: object
+        processedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    RagSearchInput:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+        limit:
+          type: integer
+          default: 10
+        minScore:
+          type: number
+          format: float
+          default: 0.7
+
+    RagSearchResult:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              documentId:
+                type: string
+              content:
+                type: string
+              score:
+                type: number
+                format: float
+              metadata:
+                type: object
+
+    RagQueryInput:
+      type: object
+      required: [question]
+      properties:
+        question:
+          type: string
+        model:
+          type: string
+        temperature:
+          type: number
+          format: float
+        maxTokens:
+          type: integer
+
+    RagQueryResult:
+      type: object
+      properties:
+        answer:
+          type: string
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              documentId:
+                type: string
+              content:
+                type: string
+              score:
+                type: number
+                format: float
+
+    MarketplaceListing:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        listingType:
+          type: string
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        author:
+          type: string
+        authorId:
+          type: string
+        tenantId:
+          type: string
+          nullable: true
+        version:
+          type: string
+        status:
+          type: string
+        visibility:
+          type: string
+        installCount:
+          type: integer
+        rating:
+          type: number
+          format: float
+        reviewCount:
+          type: integer
+        featured:
+          type: boolean
+        verified:
+          type: boolean
+        pricing:
+          type: object
+        isPublic:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateMarketplaceListingInput:
+      type: object
+      required: [title, listingType]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        listingType:
+          type: string
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        pricing:
+          type: object
+        nodes:
+          type: array
+        metadata:
+          type: object
+
+    MarketplaceReview:
+      type: object
+      properties:
+        id:
+          type: string
+        listingId:
+          type: string
+        userId:
+          type: string
+        rating:
+          type: integer
+        title:
+          type: string
+          nullable: true
+        body:
+          type: string
+        status:
+          type: string
+        moderatedBy:
+          type: string
+          nullable: true
+        moderationReason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateMarketplaceReviewInput:
+      type: object
+      required: [rating]
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        title:
+          type: string
+        body:
+          type: string
+
+    CheckoutInput:
+      type: object
+      required: [priceId]
+      properties:
+        priceId:
+          type: string
+        successUrl:
+          type: string
+          format: uri
+        cancelUrl:
+          type: string
+          format: uri
+        trialPeriodDays:
+          type: integer
+
+    CheckoutSession:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        url:
+          type: string
+          format: uri
+
+    PortalSession:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        billingPlanId:
+          type: string
+        status:
+          type: string
+        currentPeriodStart:
+          type: string
+          format: date-time
+        currentPeriodEnd:
+          type: string
+          format: date-time
+        cancelAtPeriodEnd:
+          type: boolean
+        trialEndsAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    BillingPlan:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        displayName:
+          type: string
+        description:
+          type: string
+          nullable: true
+        tier:
+          type: string
+        monthlyPrice:
+          type: number
+          format: float
+        annualPrice:
+          type: number
+          format: float
+          nullable: true
+        currency:
+          type: string
+        includedExecutions:
+          type: integer
+        includedWorkflows:
+          type: integer
+        includedConnectors:
+          type: integer
+        includedAiTokens:
+          type: integer
+        includedStorageMb:
+          type: integer
+        maxUsers:
+          type: integer
+        maxEnvironments:
+          type: integer
+        features:
+          type: array
+          items:
+            type: object
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UsageSummary:
+      type: object
+      properties:
+        periodStart:
+          type: string
+          format: date-time
+        periodEnd:
+          type: string
+          format: date-time
+        totalExecutions:
+          type: integer
+        totalAiTokens:
+          type: integer
+        totalConnectorCalls:
+          type: integer
+        totalCost:
+          type: number
+          format: float
+
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: string
+        billingAccountId:
+          type: string
+        invoiceNumber:
+          type: string
+        periodStart:
+          type: string
+          format: date-time
+        periodEnd:
+          type: string
+          format: date-time
+        status:
+          type: string
+        totalAmount:
+          type: number
+          format: float
+        currency:
+          type: string
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    InvoiceLine:
+      type: object
+      properties:
+        id:
+          type: string
+        invoiceId:
+          type: string
+        metricCode:
+          type: string
+        quantity:
+          type: number
+          format: float
+        unitPrice:
+          type: number
+          format: float
+        amount:
+          type: number
+          format: float
+
+    Entitlements:
+      type: object
+      properties:
+        maxWorkflows:
+          type: integer
+        maxConnectors:
+          type: integer
+        maxEnvironments:
+          type: integer
+        maxMembers:
+          type: integer
+        maxAiTokensMonthly:
+          type: integer
+        maxRagQueriesMonthly:
+          type: integer
+        includeAuditLogging:
+          type: boolean
+        includeSso:
+          type: boolean
+        includeSla:
+          type: string
+        hotRetentionDays:
+          type: integer
+        coldRetentionDays:
+          type: integer
+        regionsAllowed:
+          type: array
+          items:
+            type: string
+
+    MeteringEventInput:
+      type: object
+      required: [eventType, quantity]
+      properties:
+        eventType:
+          type: string
+        quantity:
+          type: number
+          format: float
+        metadata:
+          type: object
+
+    Environment:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        policyJson:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateEnvironmentInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          default: standard
+        policyJson:
+          type: object
+
+    UpdateEnvironmentInput:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        policyJson:
+          type: object
+
+    EnvironmentRelease:
+      type: object
+      properties:
+        id:
+          type: string
+        environmentId:
+          type: string
+        artifactType:
+          type: string
+        sourceVersionId:
+          type: string
+        approvedBy:
+          type: string
+          nullable: true
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        deployedBy:
+          type: string
+        status:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PromoteInput:
+      type: object
+      required: [workflowId, fromEnvironment, toEnvironment]
+      properties:
+        workflowId:
+          type: string
+        fromEnvironment:
+          type: string
+        toEnvironment:
+          type: string
+        notes:
+          type: string
+        approvalRequired:
+          type: boolean
+
+    PromotionResult:
+      type: object
+      properties:
+        promotion:
+          $ref: "#/components/schemas/WorkflowPromotion"
+        release:
+          $ref: "#/components/schemas/EnvironmentRelease"
+        requiresApproval:
+          type: boolean
+
+    RollbackResult:
+      type: object
+      properties:
+        promotion:
+          $ref: "#/components/schemas/WorkflowPromotion"
+        release:
+          $ref: "#/components/schemas/EnvironmentRelease"
+        message:
+          type: string
+
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        category:
+          type: string
+        visibility:
+          type: string
+        status:
+          type: string
+        sourceType:
+          type: string
+        installCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateTemplateInput:
+      type: object
+      required: [name, category]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        sourceType:
+          type: string
+          default: workflow
+        manifestJson:
+          type: object
+
+    TemplateVersion:
+      type: object
+      properties:
+        id:
+          type: string
+        templateId:
+          type: string
+        semver:
+          type: string
+        manifestJson:
+          type: object
+        publishedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    Dashboard:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+        layoutVersion:
+          type: integer
+        currentVersionId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateDashboardInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        layoutJson:
+          type: object
+
+    UpdateDashboardInput:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        layoutJson:
+          type: object
+        status:
+          type: string
+
+    SearchResults:
+      type: object
+      properties:
+        query:
+          type: string
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              type:
+                type: string
+              title:
+                type: string
+              description:
+                type: string
+                nullable: true
+              url:
+                type: string
+              source:
+                type: object
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+
+    GdprRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        userId:
+          type: string
+        requestType:
+          type: string
+        status:
+          type: string
+        dataScope:
+          type: object
+        exportFormat:
+          type: string
+          nullable: true
+        exportStoragePath:
+          type: string
+          nullable: true
+        rejectionReason:
+          type: string
+          nullable: true
+        requestedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    AuditExportInput:
+      type: object
+      required: [dateFrom, dateTo]
+      properties:
+        format:
+          type: string
+          default: json
+        dateFrom:
+          type: string
+          format: date
+        dateTo:
+          type: string
+          format: date
+        filterCriteria:
+          type: object
+
+    AuditExport:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        format:
+          type: string
+        status:
+          type: string
+        dateFrom:
+          type: string
+          format: date
+        dateTo:
+          type: string
+          format: date
+        filterCriteria:
+          type: object
+        rowCount:
+          type: integer
+          nullable: true
+        fileSizeBytes:
+          type: integer
+          nullable: true
+        storagePath:
+          type: string
+          nullable: true
+        createdBy:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ComplianceEvidence:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        evidenceType:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        payload:
+          type: object
+        hash:
+          type: string
+        source:
+          type: string
+        severity:
+          type: string
+        retentionUntil:
+          type: string
+          format: date
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateSecurityIncidentInput:
+      type: object
+      required: [incidentType, title]
+      properties:
+        incidentType:
+          type: string
+        severity:
+          type: string
+          default: medium
+        title:
+          type: string
+        description:
+          type: string
+        affectedResources:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+
+    SecurityIncident:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        incidentType:
+          type: string
+        severity:
+          type: string
+        status:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        detectedBy:
+          type: string
+        resolvedBy:
+          type: string
+          nullable: true
+        resolution:
+          type: string
+          nullable: true
+        affectedResources:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+        detectedAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DataResidency:
+      type: object
+      properties:
+        region:
+          type: string
+        status:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+
+    TenantTier:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        infrastructureLevel:
+          type: string
+        maxWorkflows:
+          type: integer
+        maxConnectors:
+          type: integer
+        maxEnvironments:
+          type: integer
+        maxMembers:
+          type: integer
+        maxStorageGb:
+          type: integer
+        maxAiTokensMonthly:
+          type: integer
+        maxRagQueriesMonthly:
+          type: integer
+        includeAuditLogging:
+          type: boolean
+        includeSso:
+          type: boolean
+        includeSla:
+          type: string
+        hotRetentionDays:
+          type: integer
+        coldRetentionDays:
+          type: integer
+        regionsAllowed:
+          type: array
+          items:
+            type: string
+        supportLevel:
+          type: string
+        monthlyPriceCents:
+          type: integer
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateTenantTierInput:
+      type: object
+      required: [name, infrastructureLevel, maxWorkflows, maxConnectors, maxEnvironments, maxMembers, maxStorageGb, maxAiTokensMonthly, maxRagQueriesMonthly, hotRetentionDays, coldRetentionDays]
+      properties:
+        name:
+          type: string
+        infrastructureLevel:
+          type: string
+        maxWorkflows:
+          type: integer
+        maxConnectors:
+          type: integer
+        maxEnvironments:
+          type: integer
+        maxMembers:
+          type: integer
+        maxStorageGb:
+          type: integer
+        maxAiTokensMonthly:
+          type: integer
+        maxRagQueriesMonthly:
+          type: integer
+        includeAuditLogging:
+          type: boolean
+        includeSso:
+          type: boolean
+        includeSla:
+          type: string
+        hotRetentionDays:
+          type: integer
+        coldRetentionDays:
+          type: integer
+        regionsAllowed:
+          type: array
+          items:
+            type: string
+        supportLevel:
+          type: string
+        monthlyPriceCents:
+          type: integer
+        sortOrder:
+          type: integer
+
+    TenantTierAssignment:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        tierId:
+          type: string
+        assignedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        assignedBy:
+          type: string
+        changeReason:
+          type: string
+          nullable: true
+        infrastructureLevel:
+          type: string
+        dedicatedNamespace:
+          type: string
+          nullable: true
+        dedicatedClusterId:
+          type: string
+          nullable: true
+
+    TierChangeResult:
+      type: object
+      properties:
+        message:
+          type: string
+        tierId:
+          type: string
+        infrastructureLevel:
+          type: string
+        placement:
+          $ref: "#/components/schemas/TenantPlacement"
+
+    TenantPlacement:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        region:
+          type: string
+        clusterId:
+          type: string
+          nullable: true
+        namespace:
+          type: string
+          nullable: true
+        infrastructureLevel:
+          type: string
+        assignedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MigrationPlan:
+      type: object
+      properties:
+        planId:
+          type: string
+        plan:
+          type: object
+          properties:
+            fromTierId:
+              type: string
+            toTierId:
+              type: string
+            fromPlacement:
+              type: string
+            toPlacement:
+              type: string
+            fromCluster:
+              type: string
+            toCluster:
+              type: string
+        steps:
+          type: array
+          items:
+            type: object
+
+    TenantMigration:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        fromTierId:
+          type: string
+        toTierId:
+          type: string
+        fromPlacement:
+          type: string
+        toPlacement:
+          type: string
+        fromCluster:
+          type: string
+        toCluster:
+          type: string
+        status:
+          type: string
+        steps:
+          type: object
+        dataVerified:
+          type: boolean
+        trafficSwitched:
+          type: boolean
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+        rolledBackAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateBackupInput:
+      type: object
+      properties:
+        backupType:
+          type: string
+          default: manual
+        scope:
+          type: string
+          default: full
+        metadata:
+          type: object
+
+    BackupRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        backupType:
+          type: string
+        scope:
+          type: string
+        status:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        storagePath:
+          type: string
+          nullable: true
+        fileSizeBytes:
+          type: integer
+          nullable: true
+        checksum:
+          type: string
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    BackupValidation:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        checksumMatch:
+          type: boolean
+        integrityPassed:
+          type: boolean
+        warnings:
+          type: array
+          items:
+            type: string
+
+    RestoreInput:
+      type: object
+      properties:
+        restoreType:
+          type: string
+          default: full
+        targetEnvironment:
+          type: string
+        notes:
+          type: string
+
+    RestoreRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        backupId:
+          type: string
+        tenantId:
+          type: string
+        restoreType:
+          type: string
+        status:
+          type: string
+        targetEnvironment:
+          type: string
+          nullable: true
+        tablesRestored:
+          type: array
+          items:
+            type: string
+        rowCountRestored:
+          type: integer
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        restoredBy:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    RollbackPlan:
+      type: object
+      properties:
+        service:
+          type: string
+        currentVersion:
+          type: string
+        targetVersion:
+          type: string
+        steps:
+          type: array
+          items:
+            type: object
+        estimatedDowntime:
+          type: string
+        risks:
+          type: array
+          items:
+            type: string
+
+    RegionalPool:
+      type: object
+      properties:
+        id:
+          type: string
+        regionId:
+          type: string
+        status:
+          type: string
+        workerCount:
+          type: integer
+        activeExecutions:
+          type: integer
+        queueDepth:
+          type: integer
+        cpuUtilization:
+          type: number
+          format: float
+        memoryUtilization:
+          type: number
+          format: float
+        dbReplicaLagSeconds:
+          type: number
+          format: float
+        lastHealthCheck:
+          type: string
+          format: date-time
+          nullable: true
+        lastHeartbeat:
+          type: string
+          format: date-time
+          nullable: true
+        isPrimary:
+          type: boolean
+        failoverEligible:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DrillResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        failoverTime:
+          type: string
+        dataLossDetected:
+          type: boolean
+        dataLossBytes:
+          type: integer
+        warnings:
+          type: array
+          items:
+            type: string
+        durationMs:
+          type: integer
+
+    RetentionPolicy:
+      type: object
+      properties:
+        hotRetentionDays:
+          type: integer
+        coldRetentionDays:
+          type: integer
+        archiveEnabled:
+          type: boolean
+        archiveBucket:
+          type: string
+          nullable: true
+        coldQueryEnabled:
+          type: boolean
+        partitionInterval:
+          type: string
+
+    RetentionPolicyInput:
+      type: object
+      properties:
+        hotRetentionDays:
+          type: integer
+        coldRetentionDays:
+          type: integer
+        archiveEnabled:
+          type: boolean
+        archiveBucket:
+          type: string
+        coldQueryEnabled:
+          type: boolean
+        partitionInterval:
+          type: string
+
+    ArchiveExport:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        tableName:
+          type: string
+        partitionName:
+          type: string
+        exportFormat:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        rowCount:
+          type: integer
+          nullable: true
+        fileSizeBytes:
+          type: integer
+          nullable: true
+        filePath:
+          type: string
+        storageUrl:
+          type: string
+          nullable: true
+        status:
+          type: string
+        errorMessage:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+tags:
+  - name: "Authentication"
+    description: "User authentication and session management"
+  - name: "Users"
+    description: "User management and profiles"
+  - name: "Workflows"
+    description: "Workflow CRUD and version management"
+  - name: "Executions"
+    description: "Workflow execution management"
+  - name: "Connectors"
+    description: "Connector marketplace and installations"
+  - name: "AI"
+    description: "AI model runs and guardrails"
+  - name: "AI Evaluation"
+    description: "AI prompt evaluation datasets and runs"
+  - name: "RAG"
+    description: "Retrieval augmented generation knowledge bases"
+  - name: "Marketplace"
+    description: "Marketplace listings and reviews"
+  - name: "Billing"
+    description: "Billing, subscriptions, usage, and metering"
+  - name: "Environments"
+    description: "Environment management and promotions"
+  - name: "Templates"
+    description: "Workflow and dashboard templates"
+  - name: "Dashboards"
+    description: "Dashboard CRUD and publishing"
+  - name: "Search"
+    description: "Global search across platform resources"
+  - name: "Compliance"
+    description: "GDPR, audit, compliance evidence, and security incidents"
+  - name: "Tenants"
+    description: "Multi-tenant tiers, placement, and migrations"
+  - name: "Disaster Recovery"
+    description: "Backup, restore, regional pools, and failover drills"
+  - name: "Retention"
+    description: "Data retention policy, partitions, and archiving"

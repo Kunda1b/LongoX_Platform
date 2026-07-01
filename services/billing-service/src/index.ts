@@ -6,3 +6,5 @@ export { default as billingRouter } from "./api/rest/billing";
 export { default as checkoutRouter } from "./api/rest/checkout";
 export { default as plansRouter } from "./api/rest/plans";
 export { default as webhookRouter } from "./api/rest/webhook";
+export { default as billingApiRouter } from "./api/billing-routes";
+export { default as meteringRouter } from "./api/metering-routes";

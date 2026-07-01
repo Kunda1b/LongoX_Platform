@@ -15,6 +15,9 @@ export const tenantSettingsTable = pgTable("tenant_settings", {
     .notNull()
     .unique()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
+  tierId: integer("tier_id"),
+  infrastructureLevel: text("infrastructure_level"),
+  placementRegion: text("placement_region"),
   retentionHotDays: integer("retention_hot_days").notNull().default(395),
   retentionColdDays: integer("retention_cold_days").notNull().default(2555),
   maxWorkflowCount: integer("max_workflow_count"),

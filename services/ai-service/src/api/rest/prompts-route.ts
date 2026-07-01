@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, sql } from "drizzle-orm";
 import { db, promptsTable, promptVersionsTable } from "@longox/db";
+import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
@@ -66,13 +67,13 @@ function fmtPrompt(row: typeof promptsTable.$inferSelect) {
   };
 }
 
-router.get("/prompts", async (_req, res): Promise<void> => {
+router.get("/prompts", authorize("ai:read"), async (_req, res): Promise<void> => {
   await ensurePrompts();
   const rows = await db.select().from(promptsTable).orderBy(promptsTable.id);
   res.json(rows.map(fmtPrompt));
 });
 
-router.get("/prompts/:id", async (req, res): Promise<void> => {
+router.get("/prompts/:id", authorize("ai:read"), async (req, res): Promise<void> => {
   const [row] = await db
     .select()
     .from(promptsTable)
@@ -84,7 +85,7 @@ router.get("/prompts/:id", async (req, res): Promise<void> => {
   res.json(fmtPrompt(row));
 });
 
-router.post("/prompts", async (req, res): Promise<void> => {
+router.post("/prompts", authorize("ai:write"), async (req, res): Promise<void> => {
   const { name, description, content, tags } = req.body as {
     name: string;
     description?: string;
@@ -115,7 +116,7 @@ router.post("/prompts", async (req, res): Promise<void> => {
   res.status(201).json(fmtPrompt(row));
 });
 
-router.patch("/prompts/:id", async (req, res): Promise<void> => {
+router.patch("/prompts/:id", authorize("ai:write"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const updates: Record<string, unknown> = {};
   const b = req.body as Partial<{
@@ -158,7 +159,7 @@ router.patch("/prompts/:id", async (req, res): Promise<void> => {
   res.json(fmtPrompt(row));
 });
 
-router.delete("/prompts/:id", async (req, res): Promise<void> => {
+router.delete("/prompts/:id", authorize("ai:delete"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   await db
     .delete(promptVersionsTable)
@@ -167,7 +168,7 @@ router.delete("/prompts/:id", async (req, res): Promise<void> => {
   res.status(204).end();
 });
 
-router.get("/prompts/:id/versions", async (req, res): Promise<void> => {
+router.get("/prompts/:id/versions", authorize("ai:read"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const rows = await db
     .select()
@@ -187,7 +188,7 @@ router.get("/prompts/:id/versions", async (req, res): Promise<void> => {
   );
 });
 
-router.post("/prompts/:id/publish", async (req, res): Promise<void> => {
+router.post("/prompts/:id/publish", authorize("ai:write"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   await db
     .update(promptVersionsTable)

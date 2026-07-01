@@ -3,3 +3,7 @@ export * from "./registry";
 export * from "./auth";
 export * from "./action";
 export * from "./trigger";
+export * from "./manifest";
+export * from "./trust";
+export * from "./permissions";
+export * from "./lifecycle";

@@ -128,6 +128,7 @@ export async function publishWorkflow(
       name: workflow.name,
       nodes: graph.nodes as any,
       changeNote: changeNote ?? `v${nextVersionNumber}`,
+      published: true,
       publishedBy: publishedBy ?? null,
     } as any)
     .returning();

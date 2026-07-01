@@ -1,0 +1,78 @@
+kong:
+  image:
+    repository: kong
+    tag: "3.7"
+
+  env:
+    database: "off"
+    declarative_config: /etc/kong/kong.yaml
+
+  admin:
+    enabled: true
+    type: ClusterIP
+    http:
+      enabled: true
+      servicePort: 8001
+
+  proxy:
+    enabled: true
+    type: LoadBalancer
+    http:
+      enabled: true
+      servicePort: 8000
+      containerPort: 8000
+    tls:
+      enabled: true
+      servicePort: 8443
+      containerPort: 8443
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+
+  ingressController:
+    enabled: false
+
+  enterprise:
+    enabled: false
+
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      namespace: monitoring
+
+  plugins:
+    configMaps:
+      - name: kong-plugin-jwt-keycloak
+        pluginName: jwt-keycloak
+
+  replicaCount: 2
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1
+      memory: 2Gi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+  extraConfigMaps:
+    - name: kong-declarative-config
+      mountPath: /etc/kong
+      items:
+        - key: kong.yaml
+          path: kong.yaml
+
+  nodeSelector:
+    nodegroup-type: on-demand

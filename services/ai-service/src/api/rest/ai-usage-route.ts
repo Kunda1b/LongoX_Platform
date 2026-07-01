@@ -1,10 +1,11 @@
 import { Router, type IRouter } from "express";
 import { sql } from "drizzle-orm";
 import { db, tokenUsageTable, aiModelsTable } from "@longox/db";
+import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
-router.get("/ai/usage", async (req, res): Promise<void> => {
+router.get("/ai/usage", authorize("ai:read"), async (req, res): Promise<void> => {
   const limit = Math.min(Number(req.query.limit ?? 50), 200);
   const rows = await db
     .select()
@@ -27,7 +28,7 @@ router.get("/ai/usage", async (req, res): Promise<void> => {
   );
 });
 
-router.get("/ai/usage/summary", async (_req, res): Promise<void> => {
+router.get("/ai/usage/summary", authorize("ai:read"), async (_req, res): Promise<void> => {
   const totals = await db
     .select({
       totalInputTokens: sql<number>`coalesce(sum(input_tokens), 0)::int`,

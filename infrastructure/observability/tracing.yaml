@@ -1,0 +1,314 @@
+# ─── LongoX Platform Distributed Tracing Configuration ─────────────────────
+# OpenTelemetry Collector configuration for traces.
+#
+# Architecture:
+#   Service (OTel SDK) → OTel Collector (batch/process) → Grafana Tempo
+#
+# Sampling strategies:
+#   - Head-based: 10% of all traces by default
+#   - 100% for:
+#     * Traces with errors (status_code = ERROR)
+#     * Traces involving SLO-critical operations (workflow publish, billing)
+#     * Traces slower than 5x the p99 latency (slow trace capture)
+
+tracing:
+
+  # ─── Sampling ──────────────────────────────────────────────────────────
+  sampling:
+    # Default head-based probability sampling
+    default_sampler: parentbased_traceidratio
+    default_ratio: 0.1  # 10% of all requests
+
+    # Per-service overrides
+    overrides:
+      - service: api-gateway
+        ratio: 0.15         # Slightly higher for gateway (entry point)
+      - service: ai-service
+        ratio: 0.05         # AI calls are high-volume but expensive to trace
+      - service: execution-service
+        ratio: 0.1
+      - service: execution-worker
+        ratio: 0.1
+      - service: billing-service
+        ratio: 0.5          # Higher for billing (financial operations)
+      - service: search-service
+        ratio: 0.05
+
+    # Tail-based sampling rules (processed in OTel Collector)
+    # Traces matching ANY rule below are kept at 100%
+    tail_sampling:
+      policies:
+        # Always sample errors
+        - name: always-sample-errors
+          type: status_code
+          rules:
+            - status_code: ERROR
+
+        # Always sample slow traces (P99 + margin for each service)
+        - name: always-sample-slow-gateway
+          type: latency
+          rules:
+            - service: api-gateway
+              threshold_ms: 10000  # 10s — well above p99
+
+        - name: always-sample-slow-ai
+          type: latency
+          rules:
+            - service: ai-service
+              threshold_ms: 30000  # 30s — AI can be slow
+
+        - name: always-sample-slow-execution
+          type: latency
+          rules:
+            - service: execution-service
+              threshold_ms: 120000  # 2m — long-running executions
+
+        - name: always-sample-slow-billing
+          type: latency
+          rules:
+            - service: billing-service
+              threshold_ms: 10000
+
+        # Always sample SLO-critical operations
+        - name: always-sample-workflow-publish
+          type: string_attribute
+          rules:
+            - key: operation.type
+              value: workflow.publish
+
+        - name: always-sample-execution-timeout
+          type: string_attribute
+          rules:
+            - key: execution.result
+              value: timeout
+
+        - name: always-sample-auth-failure
+          type: string_attribute
+          rules:
+            - key: auth.result
+              value: failed
+
+        # Always sample traces with SLO violations
+        - name: always-sample-slo-violation
+          type: string_attribute
+          rules:
+            - key: slo.violation
+              value: "true"
+
+  # ─── Span Attributes ──────────────────────────────────────────────────
+  # Attributes to capture on every span. These are in addition to the
+  # standard OpenTelemetry semantic conventions.
+  span_attributes:
+
+    # Required — always captured
+    required:
+      - http.method
+      - http.url
+      - http.route
+      - http.status_code
+      - http.request_content_length
+      - http.response_content_length
+      - http.user_agent
+      - net.peer.ip
+      - net.host.name
+      - net.host.port
+
+      # LongoX-specific
+      - longox.correlation_id
+      - longox.tenant_id
+      - longox.user_id
+      - longox.service
+      - longox.namespace
+      - longox.environment
+      - longox.version
+
+    # Service-specific
+    services:
+      api-gateway:
+        - longox.route_pattern
+        - longox.rate_limit_remaining
+        - longox.auth_method  # jwt | workos | none
+        - longox.auth_principal
+        - kong.request_id
+        - kong.service
+
+      ai-service:
+        - ai.provider           # openai | anthropic | google | mistral | groq
+        - ai.model              # gpt-4o | claude-3-opus | gemini-pro | etc
+        - ai.model_id
+        - ai.request_type       # chat | completion | embedding | moderation
+        - ai.prompt_tokens
+        - ai.completion_tokens
+        - ai.total_tokens
+        - ai.cost_usd
+        - ai.guardrail_triggered
+        - ai.guardrail_action   # block | warn | flag
+
+      execution-service:
+        - execution.workflow_id
+        - execution.id
+        - execution.version
+        - execution.trigger_type  # manual | scheduled | webhook | event
+        - execution.status        # running | completed | failed | timeout
+        - execution.node_count
+        - execution.retry_count
+        - execution.timeout_ms
+
+      billing-service:
+        - billing.operation      # create_subscription | invoice | payment
+        - billing.plan_id
+        - billing.tenant_id
+        - billing.amount_cents
+        - billing.currency
+        - billing.stripe_event_type
+
+      search-service:
+        - search.query
+        - search.result_count
+        - search.latency_ms
+        - search.index_name
+
+    # Captured but hashed for PII compliance
+    pii_hashed:
+      - http.url.query_string
+      - net.peer.ip
+
+    # Dropped entirely (never leave the service)
+    pii_dropped:
+      - http.request.headers.authorization
+      - http.request.headers.cookie
+      - http.request.headers["x-api-key"]
+      - http.request.body
+      - http.response.body
+
+  # ─── Exporters ──────────────────────────────────────────────────────────
+  exporters:
+    # Primary: OTLP to Grafana Tempo
+    - name: tempo
+      type: otlp
+      endpoint: tempo.platform-observability.svc.cluster.local:4317
+      tls:
+        insecure: true
+      headers:
+        x-scope-orgid: longox
+
+    # Secondary: Debug / development (stdout)
+    - name: debug
+      type: console
+      verbosity: basic  # basic | normal | detailed
+
+    # Archive: S3-compatible object store for long-term trace retention
+    - name: s3-archive
+      type: otlp
+      endpoint: tempo-archive.platform-observability.svc.cluster.local:4317
+      tls:
+        insecure: true
+      headers:
+        x-scope-orgid: longox
+
+  # ─── Trace Propagation ──────────────────────────────────────────────────
+  # Propagators are configured in the OpenTelemetry SDK per service.
+  propagation:
+    propagators:
+      - tracecontext           # W3C Trace Context (standard)
+      - baggage                # W3C Baggage
+      - b3                     # Zipkin B3 (for Kong compatibility)
+
+    # HTTP headers for context propagation
+    headers:
+      traceparent: "00-{trace_id}-{span_id}-01"
+      tracestate: "longox=@{tenant_id}"
+      baggage: "tenant_id={tenant_id},service={service}"
+
+  # ─── Service-to-Service Trace Context ────────────────────────────────────
+  # All inter-service communication includes trace context via:
+  #   - HTTP: W3C Trace Context headers (traceparent, tracestate)
+  #   - NATS: Trace context embedded in message headers
+  #   - BullMQ: Trace context in job metadata
+  #   - PostgreSQL: Trace context in session variables (sql comment injection)
+  service_mesh:
+    http:
+      propagator: tracecontext
+      headers:
+        - traceparent
+        - tracestate
+        - baggage
+
+    nats:
+      enabled: true
+      header_prefix: "longox-"
+      headers:
+        - trace_id
+        - span_id
+        - trace_flags
+        - tenant_id
+        - correlation_id
+
+    bullmq:
+      enabled: true
+      job_metadata_field: "traceContext"
+      fields:
+        - traceId
+        - spanId
+        - traceFlags
+
+    postgresql:
+      enabled: true
+      # Inject trace context as SQL comments for db query tracing
+      # e.g., /* trace_id='abc123' */ SELECT * FROM workflows
+      comment_injection: true
+      sanitize_queries: true  # Strip parameter values before sending to Tempo
+
+  # ─── Database Query Tracing ──────────────────────────────────────────────
+  database_tracing:
+    enabled: true
+    # Sanitize SQL queries to remove parameter values
+    sanitization:
+      enabled: true
+      replacement: "?"
+      patterns:
+        - regex: '''[^'']*'''
+          replacement: "'?'"
+        - regex: '\b\d{4,}\b'
+          replacement: "?"
+        - regex: 'IN\s*\([^)]+\)'
+          replacement: "IN (?)"
+
+    # Capture only slow queries (>100ms) to reduce volume
+    slow_query_threshold_ms: 100
+
+    # Always capture these query patterns
+    capture_all:
+      - "INSERT INTO audit_logs"
+      - "UPDATE billing_*"
+      - "DELETE FROM workflows"
+      - "UPDATE users SET password_hash"
+
+  # ─── Resource Attributes ─────────────────────────────────────────────────
+  # Attached to every span by the OTel Collector
+  resource:
+    service.name: "${service_name}"
+    service.namespace: "${namespace}"
+    service.version: "${version}"
+    service.instance.id: "${pod_name}"
+    deployment.environment: "${environment}"
+    cloud.provider: "aws"
+    cloud.region: "${aws_region}"
+    cloud.availability_zone: "${aws_az}"
+    k8s.cluster.name: "longox-${environment}"
+    k8s.namespace.name: "${namespace}"
+    k8s.pod.name: "${pod_name}"
+    k8s.container.name: "${container_name}"
+    k8s.node.name: "${node_name}"
+
+  # ─── Batch Processor ─────────────────────────────────────────────────────
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  # ─── Memory Limits ───────────────────────────────────────────────────────
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128

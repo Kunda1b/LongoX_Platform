@@ -73,6 +73,7 @@ export const RESOURCE_ACTIONS: Record<string, Action[]> = {
   ai: ["read", "write", "run"],
   audit: ["read"],
   executions: ["read", "run"],
+  environments: ["read", "write", "admin", "promote"],
 };
 
 /** Canonical permission keys for route guards. Use with authorize(Permissions.workflows.read). */
@@ -110,6 +111,12 @@ export const Permissions = {
   ai: { read: "ai:read", write: "ai:write", run: "ai:run" },
   audit: { read: "audit:read" },
   executions: { read: "executions:read", run: "executions:run" },
+  environments: {
+    read: "environments:read",
+    write: "environments:write",
+    admin: "environments:admin",
+    promote: "environments:promote",
+  },
 } as const;
 
 const PERMISSION_ALIASES: Record<string, string> = {

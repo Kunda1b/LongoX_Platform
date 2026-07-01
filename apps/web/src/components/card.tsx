@@ -1,4 +1,1 @@
-import React from "react";
-export default function card() {
-  return <div>card component</div>;
-}
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from "@/components/ui/card";

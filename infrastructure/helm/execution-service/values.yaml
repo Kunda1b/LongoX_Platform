@@ -1,0 +1,117 @@
+global:
+  environment: production
+  imageRegistry: ghcr.io/longox
+  imageTag: latest
+
+image:
+  repository: execution-service
+  tag: latest
+  pullPolicy: Always
+
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 2
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: ""
+
+podSecurityContext:
+  fsGroup: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3002
+  metricsPort: 9090
+
+config:
+  logLevel: info
+  apiPrefix: /api/v1
+  extraConfig:
+    MAX_CONCURRENT_JOBS: 50
+    EXECUTION_TIMEOUT_MS: 600000
+    SQS_QUEUE_URL: 
+
+extraEnv:
+  NODE_ENV: production
+
+externalSecret:
+  enabled: true
+  storeName: aws-secrets-manager
+  storeKind: ClusterSecretStore
+  refreshInterval: 1h
+  name: execution-service-secrets
+  keys:
+    S3_SECRET_KEY: longox/${environment}/s3-secret-key
+    S3_BUCKET_JOBS: longox/${environment}/s3-bucket-jobs
+    REDIS_URL: longox/${environment}/redis-url
+    DATABASE_URL: longox/${environment}/database-url
+    S3_ACCESS_KEY: longox/${environment}/s3-access-key
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilization: 70
+  targetMemoryUtilization: 80
+
+nodeSelector:
+  nodegroup-type: on-demand
+
+pdb:
+  minAvailable: 1
+
+serviceMonitor:
+  enabled: true
+  interval: 15s
+  path: /metrics
+  prometheusRelease: kube-prometheus-stack
+
+worker:
+  enabled: true
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1
+      memory: 2Gi
+  nodeSelector:
+    nodegroup-type: spot
+
+scheduler:
+  enabled: true
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 250m
+      memory: 512Mi
+  nodeSelector:
+    nodegroup-type: on-demand
+
+migration:
+  enabled: true
+  backoffLimit: 3
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+terminationGracePeriodSeconds: 60

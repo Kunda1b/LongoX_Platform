@@ -10,15 +10,15 @@ import { tenantsTable } from "./tenants";
 
 export const aiEvaluationDatasetsTable = pgTable("ai_evaluation_datasets", {
   id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
   tenantId: integer("tenant_id")
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  description: text("description"),
   promptId: integer("prompt_id"),
-  modelId: integer("model_id"),
-  samples: jsonb("samples").notNull().default([]),
-  sampleCount: integer("sample_count").notNull().default(0),
+  entryCount: integer("entry_count").notNull().default(0),
+  status: text("status").notNull().default("draft"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

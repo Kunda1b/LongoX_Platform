@@ -1,0 +1,78 @@
+global:
+  environment: production
+  imageRegistry: ghcr.io/longox
+  imageTag: latest
+
+image:
+  repository: connector-service
+  tag: latest
+  pullPolicy: Always
+
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 2
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: ""
+
+podSecurityContext:
+  fsGroup: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3003
+  metricsPort: 9090
+
+config:
+  logLevel: info
+  apiPrefix: /api/v1
+  extraConfig:
+    CONNECTOR_SYNC_INTERVAL_MS: 300000
+    MAX_CONNECTIONS_PER_WORKER: 10
+    CONNECTOR_TIMEOUT_MS: 120000
+
+extraEnv:
+  NODE_ENV: production
+
+externalSecret:
+  enabled: true
+  storeName: aws-secrets-manager
+  storeKind: ClusterSecretStore
+  refreshInterval: 1h
+  name: connector-service-secrets
+  keys:
+    REDIS_URL: longox/${environment}/redis-url
+    DATABASE_URL: longox/${environment}/database-url
+    CONNECTOR_OAUTH_STORE: longox/${environment}/connector-oauth-store
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilization: 70
+  targetMemoryUtilization: 80
+
+nodeSelector:
+  nodegroup-type: on-demand
+
+pdb:
+  minAvailable: 1
+
+serviceMonitor:
+  enabled: true
+  interval: 15s
+  path: /metrics
+  prometheusRelease: kube-prometheus-stack
+
+terminationGracePeriodSeconds: 60

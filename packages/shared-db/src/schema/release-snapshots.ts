@@ -1,0 +1,26 @@
+import {
+  pgTable,
+  text,
+  serial,
+  timestamp,
+  integer,
+  jsonb,
+} from "drizzle-orm/pg-core";
+
+export const releaseSnapshotsTable = pgTable("release_snapshots", {
+  id: serial("id").primaryKey(),
+  serviceName: text("service_name").notNull(),
+  version: text("version").notNull(),
+  chartVersion: text("chart_version"),
+  helmRevision: integer("helm_revision"),
+  configChecksum: text("config_checksum"),
+  migrationVersion: integer("migration_version"),
+  snapshotData: jsonb("snapshot_data").default({}),
+  rolledBackAt: timestamp("rolled_back_at", { withTimezone: true }),
+  rolledBackToVersion: text("rolled_back_to_version"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export type ReleaseSnapshot = typeof releaseSnapshotsTable.$inferSelect;

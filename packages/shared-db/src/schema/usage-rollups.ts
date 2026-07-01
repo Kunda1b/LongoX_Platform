@@ -5,6 +5,7 @@ import {
   timestamp,
   integer,
   numeric,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { tenantsTable } from "./tenants";
 
@@ -21,6 +22,9 @@ export const usageRollupsTable = pgTable("usage_rollups", {
   metricUnit: text("metric_unit").notNull(),
   totalQuantity: numeric("total_quantity", { precision: 20, scale: 4 }).notNull().default("0"),
   billableQuantity: numeric("billable_quantity", { precision: 20, scale: 4 }).notNull().default("0"),
+  meteredTotal: numeric("metered_total", { precision: 20, scale: 4 }).notNull().default("0"),
+  billableTotal: numeric("billable_total", { precision: 12, scale: 6 }).notNull().default("0"),
+  breakdown: jsonb("breakdown").default({}),
   tier: text("tier"),
   rate: numeric("rate", { precision: 12, scale: 6 }),
   cost: numeric("cost", { precision: 12, scale: 6 }).notNull().default("0"),
@@ -31,3 +35,4 @@ export const usageRollupsTable = pgTable("usage_rollups", {
 });
 
 export type UsageRollupRecord = typeof usageRollupsTable.$inferSelect;
+export type InsertUsageRollup = typeof usageRollupsTable.$inferInsert;

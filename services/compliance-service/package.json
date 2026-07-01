@@ -1,0 +1,24 @@
+{
+  "name": "@longox/compliance-service",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@longox/db": "workspace:*",
+    "@longox/shared-rbac": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "catalog:",
+    "tsx": "catalog:"
+  }
+}

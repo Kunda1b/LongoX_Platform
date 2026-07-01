@@ -3,10 +3,11 @@ import { eq, and, desc } from "drizzle-orm";
 import { db, promptsTable, promptVersionsTable, promptApprovalsTable } from "@longox/db";
 import { aiRouter } from "../routing/ai-router";
 import type { ChatMessage } from "../providers";
+import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
-router.get("/prompts/:id/versions", async (req, res): Promise<void> => {
+router.get("/prompts/:id/versions", authorize("ai:read"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const rows = await db
     .select()
@@ -26,7 +27,7 @@ router.get("/prompts/:id/versions", async (req, res): Promise<void> => {
   );
 });
 
-router.post("/prompts/:id/publish", async (req, res): Promise<void> => {
+router.post("/prompts/:id/publish", authorize("ai:write"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const { approverId, comment } = req.body as {
     approverId?: number;
@@ -77,7 +78,7 @@ router.post("/prompts/:id/publish", async (req, res): Promise<void> => {
   });
 });
 
-router.post("/prompts/:id/rollback", async (req, res): Promise<void> => {
+router.post("/prompts/:id/rollback", authorize("ai:write"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const { targetVersion } = req.body as { targetVersion: number };
 
@@ -142,7 +143,7 @@ router.post("/prompts/:id/rollback", async (req, res): Promise<void> => {
   });
 });
 
-router.post("/prompts/:id/submit-for-review", async (req, res): Promise<void> => {
+router.post("/prompts/:id/submit-for-review", authorize("ai:write"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const [row] = await db
     .update(promptsTable)
@@ -164,7 +165,7 @@ router.post("/prompts/:id/submit-for-review", async (req, res): Promise<void> =>
   res.json({ id: row.id, status: row.status, version: row.version });
 });
 
-router.post("/prompts/:id/reject", async (req, res): Promise<void> => {
+router.post("/prompts/:id/reject", authorize("ai:write"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const { comment } = req.body as { comment?: string };
 
@@ -190,7 +191,7 @@ router.post("/prompts/:id/reject", async (req, res): Promise<void> => {
   res.json({ id: row.id, status: row.status });
 });
 
-router.get("/prompts/:id/approval-history", async (req, res): Promise<void> => {
+router.get("/prompts/:id/approval-history", authorize("ai:read"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const rows = await db
     .select()
@@ -212,7 +213,7 @@ router.get("/prompts/:id/approval-history", async (req, res): Promise<void> => {
   );
 });
 
-router.post("/prompts/:id/test", async (req, res): Promise<void> => {
+router.post("/prompts/:id/test", authorize("ai:run"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const { variables, modelId, provider } = req.body as {
     variables?: Record<string, string>;

@@ -1,0 +1,43 @@
+cert-manager:
+  installCRDs: true
+  replicaCount: 2
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  nodeSelector:
+    nodegroup-type: on-demand
+
+  extraArgs:
+    - --dns01-recursive-nameservers=8.8.8.8:53,1.1.1.1:53
+    - --dns01-recursive-nameservers-only
+
+  ingressShim:
+    defaultIssuerName: letsencrypt-prod
+    defaultIssuerKind: ClusterIssuer
+
+  webhook:
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+
+  cainjector:
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi

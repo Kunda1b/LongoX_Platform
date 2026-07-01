@@ -1,0 +1,71 @@
+{{- if .Values.controller.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "chart.fullname" . }}-controller
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controller
+spec:
+  replicas: {{ .Values.controller.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: controller
+  template:
+    metadata:
+      labels:
+        {{- include "chart.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: controller
+    spec:
+      serviceAccountName: {{ include "chart.fullname" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds | default 60 }}
+      containers:
+        - name: controller
+          image: "{{ include "chart.image" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
+          command: ["node", "dist/controller.js"]
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.service.metricsPort }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "chart.fullname" . }}
+            - secretRef:
+                name: {{ .Values.externalSecret.name | default (printf "%s-secrets" (include "chart.fullname" .)) }}
+                optional: true
+          env:
+            {{- range $key, $value := .Values.extraEnv }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: SERVICE_ROLE
+              value: controller
+          resources:
+            {{- toYaml .Values.controller.resources | nindent 12 }}
+          {{- include "chart.probes" . | nindent 10 }}
+          securityContext:
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop: ["ALL"]
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    {{- include "chart.selectorLabels" . | nindent 20 }}
+                    app.kubernetes.io/component: controller
+                topologyKey: topology.kubernetes.io/zone
+      nodeSelector:
+        {{- toYaml .Values.controller.nodeSelector | nindent 8 }}
+{{- end }}

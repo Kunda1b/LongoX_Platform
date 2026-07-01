@@ -139,6 +139,8 @@ export function createSseWriter(res: any): SseClient {
   return client;
 }
 
+export { sseExecutionBus } from "./execution-bus";
+export type { ExecutionEventPayload } from "./execution-bus";
 export { publishEvent } from "./publisher";
 
 export type { PlatformEvent, PlatformEventType };

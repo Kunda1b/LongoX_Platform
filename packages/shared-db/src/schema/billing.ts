@@ -51,14 +51,4 @@ export const invoicesTable = pgTable("invoices", {
     .notNull()
     .defaultNow(),
 });
-export const invoiceLinesTable = pgTable("invoice_lines", {
-  id: serial("id").primaryKey(),
-  invoiceId: integer("invoice_id")
-    .notNull()
-    .references(() => invoicesTable.id, { onDelete: "cascade" }),
-  metricCode: text("metric_code").notNull(),
-  description: text("description"),
-  quantity: real("quantity").notNull().default(0),
-  unitPrice: real("unit_price").notNull().default(0),
-  totalPrice: real("total_price").notNull().default(0),
-});
+

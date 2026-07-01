@@ -1,37 +1,5 @@
-/**
- * SSE Execution Monitoring — multiplexed event stream.
- *
- * GET /api/executions/:id/stream
- *   Accept: text/event-stream
- *
- * Streams real-time events for a specific execution through the gateway.
- * The client receives Server-Sent Events with the following event types:
- *
- *   execution   — overall execution status changes
- *   node        — individual node start/complete/fail/retry
- *   approval    — approval gate paused / decided
- *   retry       — node retry scheduled
- *   dlq         — node moved to DLQ after max attempts
- *   heartbeat   — keepalive every 15 s to prevent proxy timeouts
- *   error       — stream-level error (closed after)
- *
- * Each event carries:
- *   id:    "<executionId>/<sequence>"
- *   event: "<event-type>"
- *   data:  JSON string of the payload
- *   retry: 3000 (ms)
- *
- * Reconnection:
- *   Clients should include "Last-Event-ID" header on reconnect.
- *   The server replays checkpoint state for that execution.
- *
- * Authentication:
- *   Bearer token validated by authMiddleware before this handler runs.
- *   The execution must belong to the authenticated user's tenant.
- */
-
 import { Router, type Request, type Response } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import {
   db,
   executionsTable,
@@ -40,12 +8,9 @@ import {
   dlqEntriesTable,
 } from "@longox/db";
 import { authorize } from "@longox/shared-rbac";
+import { sseExecutionBus } from "@longox/shared-realtime";
 
 const router = Router();
-
-// ─── In-process SSE registry ──────────────────────────────────────────────────
-// Maps executionId → Set of active SSE clients.
-// In multi-instance deployments, replace with Redis pub/sub.
 
 type SSEClient = {
   res: Response;
@@ -55,19 +20,16 @@ type SSEClient = {
 
 const clients = new Map<number, Set<SSEClient>>();
 
-/** Register a new SSE client for an execution. */
 function addClient(executionId: number, client: SSEClient): void {
   if (!clients.has(executionId)) clients.set(executionId, new Set());
   clients.get(executionId)!.add(client);
 }
 
-/** Remove a client when they disconnect. */
 function removeClient(executionId: number, client: SSEClient): void {
   clients.get(executionId)?.delete(client);
   if (clients.get(executionId)?.size === 0) clients.delete(executionId);
 }
 
-/** Send an SSE event to all connected clients for an execution. */
 export function broadcastExecutionEvent(
   executionId: number,
   eventType: string,
@@ -86,8 +48,6 @@ export function broadcastExecutionEvent(
   }
 }
 
-// ─── SSE helpers ─────────────────────────────────────────────────────────────
-
 function sendSSEEvent(
   res: Response,
   opts: { id: string; event: string; data: Record<string, unknown> },
@@ -100,20 +60,16 @@ function sendSSEEvent(
     res.write(`\n`);
     if (typeof (res as any).flush === "function") (res as any).flush();
   } catch {
-    // Client disconnected mid-write; cleanup handled by 'close' event
   }
 }
 
-function sendHeartbeat(res: Response, executionId: number, seq: number): void {
+function sendHeartbeat(res: Response): void {
   try {
     res.write(`: heartbeat\n\n`);
     if (typeof (res as any).flush === "function") (res as any).flush();
   } catch {
-    // ignore
   }
 }
-
-// ─── Route handler ─────────────────────────────────────────────────────────────
 
 router.get(
   ["/api/executions/:id/stream", "/api/v1/executions/:id/stream"],
@@ -125,7 +81,6 @@ router.get(
       return;
     }
 
-    // Verify the execution exists and belongs to the user's tenant
     const [execution] = await db
       .select()
       .from(executionsTable)
@@ -137,26 +92,21 @@ router.get(
       return;
     }
 
-    // Tenant isolation check
     const tenantId = req.user?.tenantId;
     if (tenantId && execution.tenantId && execution.tenantId !== tenantId) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
 
-    // ── Upgrade to SSE ───────────────────────────────────────────────────────
-
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache, no-transform");
     res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
+    res.setHeader("X-Accel-Buffering", "no");
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.flushHeaders();
 
     const client: SSEClient = { res, seq: 0, executionId };
     addClient(executionId, client);
-
-    // ── Replay current state (for reconnecting clients) ──────────────────────
 
     const lastEventId = req.headers["last-event-id"];
     const lastSeq = lastEventId
@@ -164,10 +114,8 @@ router.get(
       : 0;
 
     if (lastSeq === 0) {
-      // Fresh connect — send current execution state
       await sendInitialState(executionId, res, client);
     } else {
-      // Reconnect — just send current execution status
       client.seq++;
       sendSSEEvent(res, {
         id: `${executionId}/${client.seq}`,
@@ -184,32 +132,44 @@ router.get(
       });
     }
 
-    // ── Heartbeat timer ──────────────────────────────────────────────────────
+    const unsubscribe = sseExecutionBus.onExecutionEvent(
+      executionId,
+      (payload) => {
+        if (res.writableEnded) {
+          unsubscribe();
+          return;
+        }
+        client.seq++;
+        sendSSEEvent(res, {
+          id: `${executionId}/${client.seq}`,
+          event: payload.eventType,
+          data: payload.data,
+        });
+      },
+    );
 
     const heartbeatInterval = setInterval(() => {
       if (res.writableEnded) {
         clearInterval(heartbeatInterval);
         return;
       }
-      sendHeartbeat(res, executionId, client.seq);
+      sendHeartbeat(res);
     }, 15_000);
-
-    // ── Cleanup on disconnect ────────────────────────────────────────────────
 
     req.on("close", () => {
       clearInterval(heartbeatInterval);
+      unsubscribe();
       removeClient(executionId, client);
       if (!res.writableEnded) res.end();
     });
 
     req.on("error", () => {
       clearInterval(heartbeatInterval);
+      unsubscribe();
       removeClient(executionId, client);
     });
   },
 );
-
-// ─── Replay current state ─────────────────────────────────────────────────────
 
 async function sendInitialState(
   executionId: number,
@@ -224,7 +184,6 @@ async function sendInitialState(
 
   if (!execution) return;
 
-  // 1. Overall execution state
   client.seq++;
   sendSSEEvent(res, {
     id: `${executionId}/${client.seq}`,
@@ -233,7 +192,7 @@ async function sendInitialState(
       executionId,
       workflowId: execution.workflowId,
       status: execution.status,
-      triggerType: execution.triggerType,
+      triggerType: (execution as any).triggerType,
       startedAt: execution.startedAt?.toISOString(),
       finishedAt: execution.finishedAt?.toISOString(),
       durationMs: execution.durationMs,
@@ -241,7 +200,6 @@ async function sendInitialState(
     },
   });
 
-  // 2. All completed/failed checkpoints
   const checkpoints = await db
     .select()
     .from(executionCheckpointsTable)
@@ -268,7 +226,6 @@ async function sendInitialState(
     });
   }
 
-  // 3. Pending approval tasks
   const approvals = await db
     .select()
     .from(approvalTasksTable)
@@ -293,7 +250,6 @@ async function sendInitialState(
     }
   }
 
-  // 4. DLQ entries (failed nodes)
   const dlqEntries = await db
     .select()
     .from(dlqEntriesTable)
@@ -315,9 +271,6 @@ async function sendInitialState(
     });
   }
 }
-
-// ─── Approval-specific route ──────────────────────────────────────────────────
-// POST /api/executions/:id/approve — resume a paused approval gate
 
 router.post(
   ["/api/executions/:id/approve", "/api/v1/executions/:id/approve"],
@@ -366,7 +319,6 @@ router.post(
       } as any)
       .where(eq(approvalTasksTable.id, task_id));
 
-    // Broadcast approval decision to SSE clients
     broadcastExecutionEvent(executionId, "approval", {
       executionId,
       taskId: task_id,

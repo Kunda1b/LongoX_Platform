@@ -1,4 +1,1 @@
-import React from "react";
-export default function button() {
-  return <div>button component</div>;
-}
+export { Button, buttonVariants } from "@/components/ui/button";

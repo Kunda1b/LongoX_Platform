@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { eq, and } from "drizzle-orm";
 import { db, userMfaTable, usersTable } from "@longox/db";
 import { authMiddleware, signToken } from "../lib/auth";
+import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
@@ -136,6 +137,7 @@ router.post(
 
 router.post(
   "/auth/mfa/challenge",
+  authMiddleware,
   async (req: Request, res: Response): Promise<void> => {
     const { userId, code } = req.body as { userId?: number; code?: string };
 

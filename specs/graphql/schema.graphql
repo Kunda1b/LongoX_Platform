@@ -1,0 +1,2069 @@
+scalar DateTime
+scalar JSON
+scalar UUID
+
+# ─── Enums ────────────────────────────────────────────────────────────────
+
+enum UserStatus {
+  active
+  deactivated
+}
+
+enum WorkflowStatus {
+  draft
+  active
+  inactive
+  archived
+}
+
+enum ExecutionStatus {
+  pending
+  running
+  success
+  failed
+  cancelled
+  timed_out
+}
+
+enum ExecutionTriggerType {
+  manual
+  schedule
+  webhook
+  event
+  api
+}
+
+enum ConnectorTrustLevel {
+  first_party
+  partner
+  community
+}
+
+enum ConnectorAuthType {
+  apikey
+  oauth2
+  basic
+  jwt
+}
+
+enum InstallationStatus {
+  active
+  disabled
+  pending
+}
+
+enum EnvironmentType {
+  standard
+  dev
+  staging
+  prod
+}
+
+enum ReleaseStatus {
+  pending
+  approved
+  deployed
+  rolled_back
+}
+
+enum PromotionStatus {
+  pending
+  approved
+  rejected
+  promoted
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+  escalated
+}
+
+enum DashboardStatus {
+  draft
+  published
+}
+
+enum TemplateStatus {
+  draft
+  published
+  deprecated
+}
+
+enum TemplateVisibility {
+  public
+  team
+  private
+}
+
+enum AiRunStatus {
+  pending
+  running
+  completed
+  failed
+  cancelled
+  guardrail_blocked
+}
+
+enum AiGuardrailSeverity {
+  block
+  warn
+  monitor
+}
+
+enum KnowledgeBaseStatus {
+  active
+  inactive
+}
+
+enum DocumentStatus {
+  pending
+  processing
+  ready
+  error
+}
+
+enum ListingStatus {
+  draft
+  submitted
+  published
+  rejected
+  archived
+}
+
+enum ListingVisibility {
+  public
+  private
+}
+
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+}
+
+enum ReviewAction {
+  approve
+  reject
+}
+
+enum SubscriptionStatus {
+  active
+  past_due
+  cancelled
+  trialing
+  incomplete
+}
+
+enum InvoiceStatus {
+  draft
+  open
+  paid
+  void
+}
+
+enum TenantStatus {
+  active
+  suspended
+  cancelled
+}
+
+enum InfrastructureLevel {
+  shared
+  dedicated_namespace
+  dedicated_cluster
+}
+
+enum MigrationStatus {
+  planned
+  in_progress
+  completed
+  failed
+  rolled_back
+}
+
+enum BackupStatus {
+  pending
+  running
+  completed
+  failed
+  validating
+}
+
+enum BackupType {
+  manual
+  automated
+  scheduled
+}
+
+enum PoolStatus {
+  active
+  degraded
+  down
+  failover
+}
+
+enum IncidentSeverity {
+  critical
+  high
+  medium
+  low
+  info
+}
+
+enum IncidentStatus {
+  open
+  investigating
+  contained
+  resolved
+  closed
+}
+
+enum EvidenceSeverity {
+  critical
+  high
+  medium
+  low
+  info
+}
+
+enum GdprRequestType {
+  export
+  deletion
+  rectification
+}
+
+enum GdprRequestStatus {
+  pending
+  processing
+  completed
+  rejected
+}
+
+enum RetentionAction {
+  archive
+  delete
+  cold_storage
+}
+
+enum NotificationChannel {
+  in_app
+  email
+  webhook
+}
+
+enum ScheduleInterval {
+  once
+  recurring
+  cron
+}
+
+enum SearchResultType {
+  workflow
+  dashboard
+  template
+  connector
+  ai_prompt
+  knowledge_base
+}
+
+enum MetricPeriod {
+  current_month
+  last_month
+  current_billing_period
+}
+
+# ─── Filters ──────────────────────────────────────────────────────────────
+
+input UserFilters {
+  search: String
+  status: UserStatus
+  tenantId: UUID
+}
+
+input WorkflowFilters {
+  status: WorkflowStatus
+  search: String
+  tenantId: UUID
+  tags: [String!]
+}
+
+input ExecutionFilters {
+  workflowId: UUID
+  status: ExecutionStatus
+  tenantId: UUID
+  startDate: DateTime
+  endDate: DateTime
+}
+
+input ConnectorFilters {
+  category: String
+  search: String
+  trustLevel: ConnectorTrustLevel
+  installed: Boolean
+}
+
+input AiRunFilters {
+  status: AiRunStatus
+  modelId: UUID
+  tenantId: UUID
+}
+
+input ListingFilters {
+  status: ListingStatus
+  category: String
+  listingType: String
+  featured: Boolean
+}
+
+input TemplateFilters {
+  category: String
+  status: TemplateStatus
+  search: String
+}
+
+input SearchFilters {
+  type: [SearchResultType!]
+  tenantId: UUID
+}
+
+input EvidenceFilters {
+  evidenceType: String
+  severity: EvidenceSeverity
+}
+
+input IncidentFilters {
+  status: IncidentStatus
+  severity: IncidentSeverity
+  incidentType: String
+}
+
+input BackupFilters {
+  status: BackupStatus
+  backupType: BackupType
+}
+
+input UsagePeriod {
+  period: MetricPeriod
+  startDate: DateTime
+  endDate: DateTime
+}
+
+# ─── Connection Types ─────────────────────────────────────────────────────
+
+type WorkflowConnection {
+  edges: [Workflow!]!
+  total: Int!
+  page: Int!
+  pageSize: Int!
+}
+
+type ExecutionConnection {
+  edges: [Execution!]!
+  total: Int!
+  page: Int!
+  pageSize: Int!
+}
+
+type ConnectorConnection {
+  edges: [Connector!]!
+  total: Int!
+  page: Int!
+  pageSize: Int!
+}
+
+type AiRunConnection {
+  edges: [AiRun!]!
+  total: Int!
+  page: Int!
+  pageSize: Int!
+}
+
+# ─── Core Entity Types ────────────────────────────────────────────────────
+
+type Tenant {
+  id: UUID!
+  name: String!
+  slug: String!
+  status: TenantStatus!
+  planId: String!
+  regionPolicy: String
+  tier: Int!
+  billingAccountId: String
+  primaryRegion: String
+  allowedRegions: [String!]!
+  dataResidencyRequired: Boolean!
+  settings: TenantSettings
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type TenantSettings {
+  id: UUID!
+  tenantId: UUID!
+  retentionHotMonths: Int!
+  retentionColdYears: Int!
+  maxWorkflowCount: Int
+  maxExecutionConcurrency: Int
+  maxConnectorInstalls: Int
+  maxAiRequestsPerDay: Int
+  allowedRegions: [String!]!
+  allowedAuthProviders: [String!]!
+  ipAllowlist: [String!]!
+  webhookRequireSignature: Boolean!
+  auditRetentionDays: Int!
+  sessionTimeoutMinutes: Int!
+  mfaRequired: Boolean!
+  ssoRequired: Boolean!
+  features: JSON!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type User {
+  id: UUID!
+  email: String!
+  name: String!
+  status: UserStatus!
+  locale: String
+  profileJson: JSON
+  avatarUrl: String
+  emailVerifiedAt: DateTime
+  lastLoginAt: DateTime
+  memberships: [Membership!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Membership {
+  id: UUID!
+  userId: UUID!
+  tenantId: UUID!
+  roleId: UUID
+  status: String!
+  invitedBy: String
+  joinedAt: DateTime!
+  user: User!
+  tenant: Tenant!
+  role: RbacRole
+}
+
+type RbacRole {
+  id: UUID!
+  tenantId: UUID
+  name: String!
+  scope: String!
+  permissions: [RbacPermission!]!
+  memberships: [Membership!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type RbacPermission {
+  id: UUID!
+  code: String!
+  description: String
+  createdAt: DateTime!
+}
+
+type RolePermission {
+  id: UUID!
+  roleId: UUID!
+  permissionId: UUID!
+  role: RbacRole!
+  permission: RbacPermission!
+}
+
+# ─── Workflow Types ───────────────────────────────────────────────────────
+
+type Workflow {
+  id: UUID!
+  tenantId: UUID!
+  name: String!
+  description: String
+  status: WorkflowStatus!
+  triggerType: String!
+  currentVersionId: UUID
+  tags: [String!]!
+  nodeCount: Int!
+  executionCount: Int!
+  lastRunAt: DateTime
+  lastRunStatus: String
+  region: String
+  currentVersion: WorkflowVersion
+  versions: [WorkflowVersion!]!
+  executions: [Execution!]!
+  diffs: [WorkflowDiff!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type WorkflowVersion {
+  id: UUID!
+  workflowId: UUID!
+  versionNumber: Int!
+  graphJson: JSON!
+  checksum: String!
+  releaseNotes: String
+  createdBy: User
+  publishedAt: DateTime!
+  createdAt: DateTime!
+}
+
+type WorkflowDiff {
+  id: UUID!
+  workflowId: UUID!
+  fromVersionId: UUID!
+  toVersionId: UUID!
+  patchJson: JSON!
+  patchHash: String!
+  summary: JSON
+  createdBy: String
+  createdAt: DateTime!
+}
+
+type WorkflowPromotion {
+  id: UUID!
+  workflowId: UUID!
+  workflowName: String!
+  fromEnvironment: String!
+  toEnvironment: String!
+  status: PromotionStatus!
+  promotedBy: String!
+  approvedBy: String
+  approvedAt: DateTime
+  rejectionReason: String
+  rejectedAt: DateTime
+  notes: String
+  createdAt: DateTime!
+}
+
+# ─── Execution Types ──────────────────────────────────────────────────────
+
+type Execution {
+  id: UUID!
+  tenantId: UUID!
+  workflowId: UUID!
+  workflowVersionId: UUID!
+  status: ExecutionStatus!
+  triggerType: ExecutionTriggerType!
+  startedAt: DateTime!
+  finishedAt: DateTime
+  durationMs: Int
+  errorMessage: String
+  region: String
+  checkpoints: [ExecutionCheckpoint!]!
+  createdAt: DateTime!
+}
+
+type ExecutionLog {
+  id: UUID!
+  executionId: UUID!
+  level: String!
+  message: String!
+  nodeId: String
+  timestamp: DateTime!
+  metadata: JSON
+}
+
+type ExecutionCheckpoint {
+  id: UUID!
+  executionId: UUID!
+  nodeId: String!
+  attempt: Int!
+  stateJson: JSON!
+  createdAt: DateTime!
+}
+
+type ApprovalTask {
+  id: UUID!
+  workflowId: UUID!
+  requesterId: UUID!
+  approverId: UUID
+  status: ApprovalStatus!
+  dueAt: DateTime
+  escalatedAt: DateTime
+  resolvedAt: DateTime
+  comment: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type DeadLetterEntry {
+  id: UUID!
+  executionId: UUID!
+  nodeId: String!
+  reason: String!
+  payloadJson: JSON!
+  status: String!
+  createdAt: DateTime!
+}
+
+# ─── Connector Types ──────────────────────────────────────────────────────
+
+type Connector {
+  id: UUID!
+  slug: String!
+  name: String!
+  displayName: String
+  description: String
+  icon: String
+  category: String!
+  trustLevel: ConnectorTrustLevel!
+  scope: String
+  authType: ConnectorAuthType!
+  isActive: Boolean!
+  versions: [ConnectorVersion!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type ConnectorVersion {
+  id: UUID!
+  connectorId: UUID!
+  semver: String!
+  manifestJson: JSON!
+  artifactRef: String
+  signatureRef: String
+  isSupported: Boolean!
+  publishedAt: DateTime!
+  createdAt: DateTime!
+}
+
+type ConnectorAction {
+  id: UUID!
+  connectorId: UUID!
+  actionId: String!
+  name: String!
+  description: String!
+  inputSchema: JSON!
+  outputSchema: JSON!
+}
+
+type ConnectorTrigger {
+  id: UUID!
+  connectorId: UUID!
+  triggerId: String!
+  triggerType: String!
+  name: String!
+  description: String!
+  config: JSON
+  pollingInterval: Int
+}
+
+type ConnectorInstallation {
+  id: UUID!
+  tenantId: UUID!
+  connectorVersionId: UUID!
+  status: InstallationStatus!
+  installedAt: DateTime!
+  installedBy: String
+  config: JSON!
+  createdAt: DateTime!
+}
+
+type ConnectorExecuteResult {
+  success: Boolean!
+  data: JSON
+  error: String
+}
+
+type ConnectorTestResult {
+  success: Boolean!
+  message: String!
+  latencyMs: Int!
+}
+
+type ConnectorRollbackResult {
+  success: Boolean!
+  previousVersion: String!
+  currentVersion: String!
+}
+
+type WebhookRegistration {
+  id: UUID!
+  url: String!
+  events: [String!]!
+  status: String!
+  createdAt: DateTime!
+}
+
+type PollResult {
+  hasNewEvents: Boolean!
+  eventCount: Int!
+  lastCursor: String
+}
+
+# ─── AI Types ─────────────────────────────────────────────────────────────
+
+type AiModel {
+  id: UUID!
+  provider: String!
+  modelName: String!
+  contextWindow: Int!
+  priceJson: JSON!
+  riskTags: [String!]!
+  status: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type AiRun {
+  id: UUID!
+  tenantId: UUID!
+  modelId: UUID!
+  status: AiRunStatus!
+  promptTokens: Int
+  completionTokens: Int
+  cachedTokens: Int
+  costUsd: Float
+  result: String
+  errorMessage: String
+  guardrailHit: Boolean
+  startedAt: DateTime!
+  completedAt: DateTime
+  createdAt: DateTime!
+}
+
+type AiPrompt {
+  id: UUID!
+  tenantId: UUID!
+  name: String!
+  description: String
+  status: String!
+  currentVersion: AiPromptVersion
+  versions: [AiPromptVersion!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type AiPromptVersion {
+  id: UUID!
+  promptId: UUID!
+  versionNumber: Int!
+  templateText: String!
+  parametersJson: JSON!
+  checksum: String!
+  createdBy: String
+  publishedAt: DateTime!
+  createdAt: DateTime!
+}
+
+type AiGuardrail {
+  id: UUID!
+  name: String!
+  type: String!
+  config: JSON!
+  enabled: Boolean!
+  severity: AiGuardrailSeverity!
+  tenantId: UUID!
+  hits: [AiGuardrailHit!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type AiGuardrailHit {
+  id: UUID!
+  guardrailId: UUID!
+  runId: UUID
+  promptId: UUID
+  violationType: String!
+  violationDetail: String
+  blocked: Boolean!
+  createdAt: DateTime!
+}
+
+# ─── Evaluation Types ─────────────────────────────────────────────────────
+
+type EvaluationDataset {
+  id: UUID!
+  tenantId: UUID!
+  promptId: UUID!
+  name: String!
+  description: String
+  entries: [EvaluationDatasetEntry!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type EvaluationDatasetEntry {
+  id: UUID!
+  datasetId: UUID!
+  input: String!
+  expectedOutput: String!
+  metadata: JSON
+  createdAt: DateTime!
+}
+
+type EvaluationRun {
+  id: UUID!
+  promptVersionId: UUID!
+  datasetId: UUID!
+  score: Float!
+  scorerType: String!
+  results: [EvaluationRunResult!]!
+  createdAt: DateTime!
+}
+
+type EvaluationRunResult {
+  id: UUID!
+  runId: UUID!
+  entryId: UUID!
+  score: Float!
+  output: String!
+  metadata: JSON
+  createdAt: DateTime!
+}
+
+type RegressionResult {
+  isRegression: Boolean!
+  baselineScore: Float!
+  candidateScore: Float!
+  delta: Float!
+  perSampleDeltas: [JSON!]!
+}
+
+# ─── RAG Types ────────────────────────────────────────────────────────────
+
+type KnowledgeBase {
+  id: UUID!
+  tenantId: UUID!
+  name: String!
+  description: String
+  embeddingModel: String!
+  chunkingConfig: JSON!
+  isActive: Boolean!
+  documents: [KnowledgeDocument!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type KnowledgeDocument {
+  id: UUID!
+  knowledgeBaseId: UUID!
+  sourceRef: String!
+  status: DocumentStatus!
+  chunkCount: Int!
+  metadata: JSON!
+  processedAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type RagSearchResult {
+  results: [RagSearchHit!]!
+}
+
+type RagSearchHit {
+  documentId: UUID!
+  content: String!
+  score: Float!
+  metadata: JSON
+}
+
+type RagQueryResult {
+  answer: String!
+  sources: [RagSearchHit!]!
+}
+
+# ─── Marketplace Types ────────────────────────────────────────────────────
+
+type MarketplaceListing {
+  id: UUID!
+  title: String!
+  description: String!
+  listingType: String!
+  category: String!
+  tags: [String!]!
+  author: String!
+  authorId: UUID!
+  tenantId: UUID
+  version: String!
+  status: ListingStatus!
+  visibility: ListingVisibility!
+  installCount: Int!
+  rating: Float!
+  reviewCount: Int!
+  featured: Boolean!
+  verified: Boolean!
+  pricing: JSON!
+  isPublic: Boolean!
+  reviews: [MarketplaceReview!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type MarketplaceReview {
+  id: UUID!
+  listingId: UUID!
+  userId: UUID!
+  rating: Int!
+  title: String
+  body: String
+  status: ReviewStatus!
+  moderatedBy: UUID
+  moderationReason: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type MarketplaceInstall {
+  id: UUID!
+  listingId: UUID!
+  tenantId: UUID!
+  installedBy: UUID!
+  createdAt: DateTime!
+}
+
+# ─── Billing Types ────────────────────────────────────────────────────────
+
+type BillingPlan {
+  id: UUID!
+  name: String!
+  displayName: String!
+  description: String
+  tier: String!
+  monthlyPrice: Float!
+  annualPrice: Float
+  currency: String!
+  includedExecutions: Int!
+  includedWorkflows: Int!
+  includedConnectors: Int!
+  includedAiTokens: Int!
+  includedStorageMb: Int!
+  maxUsers: Int!
+  maxEnvironments: Int!
+  features: JSON!
+  isActive: Boolean!
+  sortOrder: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Subscription {
+  id: UUID!
+  tenantId: UUID!
+  billingPlanId: UUID!
+  status: SubscriptionStatus!
+  currentPeriodStart: DateTime!
+  currentPeriodEnd: DateTime!
+  cancelAtPeriodEnd: Boolean!
+  trialEndsAt: DateTime
+  plan: BillingPlan
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Invoice {
+  id: UUID!
+  billingAccountId: UUID!
+  invoiceNumber: String!
+  periodStart: DateTime!
+  periodEnd: DateTime!
+  status: InvoiceStatus!
+  totalAmount: Float!
+  currency: String!
+  paidAt: DateTime
+  lines: [InvoiceLine!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type InvoiceLine {
+  id: UUID!
+  invoiceId: UUID!
+  metricCode: String!
+  quantity: Float!
+  unitPrice: Float!
+  amount: Float!
+}
+
+type UsageSummary {
+  periodStart: DateTime!
+  periodEnd: DateTime!
+  totalExecutions: Int!
+  totalAiTokens: Int!
+  totalConnectorCalls: Int!
+  totalCost: Float!
+  byMetric: [UsageMetric!]!
+}
+
+type UsageMetric {
+  metricCode: String!
+  quantity: Float!
+  cost: Float!
+}
+
+type Entitlements {
+  maxWorkflows: Int!
+  maxConnectors: Int!
+  maxEnvironments: Int!
+  maxMembers: Int!
+  maxAiTokensMonthly: Int!
+  maxRagQueriesMonthly: Int!
+  includeAuditLogging: Boolean!
+  includeSso: Boolean!
+  includeSla: String!
+  hotRetentionDays: Int!
+  coldRetentionDays: Int!
+  regionsAllowed: [String!]!
+}
+
+type CheckoutSession {
+  sessionId: String!
+  url: String!
+}
+
+type PortalSession {
+  url: String!
+}
+
+# ─── Environment Types ────────────────────────────────────────────────────
+
+type Environment {
+  id: UUID!
+  tenantId: UUID!
+  name: String!
+  type: EnvironmentType!
+  policyJson: JSON!
+  releases: [EnvironmentRelease!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type EnvironmentRelease {
+  id: UUID!
+  environmentId: UUID!
+  artifactType: String!
+  sourceVersionId: UUID!
+  approvedBy: String
+  approvedAt: DateTime
+  deployedBy: String!
+  status: ReleaseStatus!
+  notes: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type PromotionResult {
+  promotion: WorkflowPromotion!
+  release: EnvironmentRelease
+  requiresApproval: Boolean!
+}
+
+type RollbackResult {
+  promotion: WorkflowPromotion!
+  release: EnvironmentRelease
+  message: String!
+}
+
+# ─── Template Types ───────────────────────────────────────────────────────
+
+type Template {
+  id: UUID!
+  name: String!
+  description: String
+  category: String!
+  visibility: TemplateVisibility!
+  status: TemplateStatus!
+  sourceType: String!
+  installCount: Int!
+  versions: [TemplateVersion!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type TemplateVersion {
+  id: UUID!
+  templateId: UUID!
+  semver: String!
+  manifestJson: JSON!
+  publishedAt: DateTime!
+  createdAt: DateTime!
+}
+
+# ─── Dashboard Types ──────────────────────────────────────────────────────
+
+type Dashboard {
+  id: UUID!
+  tenantId: UUID!
+  title: String!
+  description: String
+  status: DashboardStatus!
+  layoutVersion: Int!
+  currentVersion: DashboardVersion
+  versions: [DashboardVersion!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type DashboardVersion {
+  id: UUID!
+  dashboardId: UUID!
+  versionNumber: Int!
+  layoutJson: JSON!
+  checksum: String!
+  createdBy: String
+  publishedAt: DateTime!
+  widgets: [DashboardWidget!]!
+  createdAt: DateTime!
+}
+
+type DashboardWidget {
+  id: UUID!
+  dashboardVersionId: UUID!
+  widgetId: String!
+  type: String!
+  title: String
+  configJson: JSON!
+  positionJson: JSON!
+  createdAt: DateTime!
+}
+
+# ─── Compliance Types ─────────────────────────────────────────────────────
+
+type GdprRequest {
+  id: UUID!
+  tenantId: UUID!
+  userId: UUID!
+  requestType: GdprRequestType!
+  status: GdprRequestStatus!
+  dataScope: JSON
+  exportFormat: String
+  exportStoragePath: String
+  rejectionReason: String
+  requestedAt: DateTime!
+  completedAt: DateTime
+}
+
+type AuditExport {
+  id: UUID!
+  tenantId: UUID!
+  format: String!
+  status: String!
+  dateFrom: String!
+  dateTo: String!
+  filterCriteria: JSON
+  rowCount: Int
+  fileSizeBytes: Int
+  storagePath: String
+  createdBy: UUID
+  createdAt: DateTime!
+  completedAt: DateTime
+  expiresAt: DateTime
+}
+
+type ComplianceEvidence {
+  id: UUID!
+  tenantId: UUID!
+  evidenceType: String!
+  title: String!
+  description: String
+  payload: JSON
+  hash: String!
+  source: String!
+  severity: EvidenceSeverity!
+  retentionUntil: String
+  expiresAt: DateTime
+  createdAt: DateTime!
+}
+
+type SecurityIncident {
+  id: UUID!
+  tenantId: UUID!
+  incidentType: String!
+  severity: IncidentSeverity!
+  status: IncidentStatus!
+  title: String!
+  description: String
+  detectedBy: String!
+  resolvedBy: UUID
+  resolution: String
+  affectedResources: [String!]!
+  evidence: [SecurityIncidentEvidence!]!
+  metadata: JSON
+  detectedAt: DateTime!
+  resolvedAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type SecurityIncidentEvidence {
+  id: UUID!
+  incidentId: UUID!
+  evidenceType: String!
+  data: JSON
+  hash: String!
+  capturedAt: DateTime!
+  createdAt: DateTime!
+}
+
+type DataResidency {
+  region: String!
+  status: String!
+  updatedAt: DateTime!
+}
+
+# ─── Tenant Types ─────────────────────────────────────────────────────────
+
+type TenantTier {
+  id: UUID!
+  name: String!
+  infrastructureLevel: InfrastructureLevel!
+  maxWorkflows: Int!
+  maxConnectors: Int!
+  maxEnvironments: Int!
+  maxMembers: Int!
+  maxStorageGb: Int!
+  maxAiTokensMonthly: Int!
+  maxRagQueriesMonthly: Int!
+  includeAuditLogging: Boolean!
+  includeSso: Boolean!
+  includeSla: String!
+  hotRetentionDays: Int!
+  coldRetentionDays: Int!
+  regionsAllowed: [String!]!
+  supportLevel: String!
+  monthlyPriceCents: Int!
+  sortOrder: Int!
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type TenantTierAssignment {
+  id: UUID!
+  tenantId: UUID!
+  tierId: UUID!
+  assignedAt: DateTime!
+  expiresAt: DateTime
+  assignedBy: String!
+  changeReason: String
+  infrastructureLevel: InfrastructureLevel!
+  dedicatedNamespace: String
+  dedicatedClusterId: String
+}
+
+type TenantPlacement {
+  tenantId: UUID!
+  region: String!
+  clusterId: String
+  namespace: String
+  infrastructureLevel: InfrastructureLevel!
+  assignedAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type TenantMigration {
+  id: UUID!
+  tenantId: UUID!
+  fromTierId: UUID!
+  toTierId: UUID!
+  fromPlacement: String!
+  toPlacement: String!
+  fromCluster: String!
+  toCluster: String!
+  status: MigrationStatus!
+  steps: JSON
+  dataVerified: Boolean!
+  trafficSwitched: Boolean!
+  startedAt: DateTime
+  completedAt: DateTime
+  errorMessage: String
+  rolledBackAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type MigrationPlan {
+  planId: UUID!
+  plan: MigrationPlanDetails!
+  steps: [JSON!]!
+}
+
+type MigrationPlanDetails {
+  fromTierId: UUID!
+  toTierId: UUID!
+  fromPlacement: String!
+  toPlacement: String!
+  fromCluster: String!
+  toCluster: String!
+}
+
+type TierChangeResult {
+  message: String!
+  tierId: UUID!
+  infrastructureLevel: InfrastructureLevel!
+  placement: TenantPlacement!
+}
+
+# ─── DR Types ─────────────────────────────────────────────────────────────
+
+type BackupRecord {
+  id: UUID!
+  tenantId: UUID!
+  backupType: BackupType!
+  scope: String!
+  status: BackupStatus!
+  startedAt: DateTime!
+  completedAt: DateTime
+  storagePath: String
+  fileSizeBytes: Int
+  checksum: String
+  rowCounts: JSON
+  metadata: JSON
+  errorMessage: String
+  expiresAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type BackupValidation {
+  valid: Boolean!
+  checksumMatch: Boolean!
+  integrityPassed: Boolean!
+  warnings: [String!]!
+}
+
+type RestoreRecord {
+  id: UUID!
+  backupId: UUID!
+  tenantId: UUID!
+  restoreType: String!
+  status: String!
+  targetEnvironment: String
+  tablesRestored: [String!]
+  rowCountRestored: Int
+  errorMessage: String
+  startedAt: DateTime!
+  completedAt: DateTime
+  restoredBy: String
+  notes: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type RegionalPool {
+  id: UUID!
+  regionId: String!
+  status: PoolStatus!
+  workerCount: Int!
+  activeExecutions: Int!
+  queueDepth: Int!
+  cpuUtilization: Float!
+  memoryUtilization: Float!
+  dbReplicaLagSeconds: Float!
+  lastHealthCheck: DateTime
+  lastHeartbeat: DateTime
+  isPrimary: Boolean!
+  failoverEligible: Boolean!
+  metadata: JSON
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type RollbackPlan {
+  service: String!
+  currentVersion: String!
+  targetVersion: String!
+  steps: [JSON!]!
+  estimatedDowntime: String!
+  risks: [String!]!
+}
+
+type DrillResult {
+  success: Boolean!
+  failoverTime: String!
+  dataLossDetected: Boolean!
+  dataLossBytes: Int
+  warnings: [String!]!
+  durationMs: Int!
+}
+
+type ReleaseRollback {
+  service: String!
+  fromVersion: String!
+  toVersion: String!
+  status: String!
+  rolledBackAt: DateTime!
+  snapshot: ReleaseSnapshot!
+}
+
+type ReleaseSnapshot {
+  id: UUID!
+  serviceName: String!
+  version: String!
+  chartVersion: String
+  helmRevision: Int
+  configChecksum: String
+  migrationVersion: Int
+  snapshotData: JSON
+  rolledBackAt: DateTime
+  rolledBackToVersion: String
+  createdAt: DateTime!
+}
+
+# ─── Retention Types ──────────────────────────────────────────────────────
+
+type RetentionPolicy {
+  hotRetentionDays: Int!
+  coldRetentionDays: Int!
+  archiveEnabled: Boolean!
+  archiveBucket: String
+  coldQueryEnabled: Boolean!
+  partitionInterval: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type ArchiveExport {
+  id: UUID!
+  tenantId: UUID!
+  tableName: String!
+  partitionName: String!
+  exportFormat: String!
+  startDate: String!
+  endDate: String!
+  rowCount: Int
+  fileSizeBytes: Int
+  filePath: String!
+  storageUrl: String
+  status: String!
+  errorMessage: String
+  createdAt: DateTime!
+  completedAt: DateTime
+}
+
+# ─── Search Types ─────────────────────────────────────────────────────────
+
+type SearchResults {
+  query: String!
+  results: [SearchResult!]!
+  total: Int!
+  page: Int!
+  pageSize: Int!
+}
+
+type SearchResult {
+  id: UUID!
+  type: SearchResultType!
+  title: String!
+  description: String
+  url: String!
+  source: JSON
+}
+
+# ─── Input Types ──────────────────────────────────────────────────────────
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+input RegisterInput {
+  name: String!
+  email: String!
+  password: String!
+  organizationName: String
+}
+
+input VerifyMfaInput {
+  code: String!
+}
+
+input CreateWorkflowInput {
+  name: String!
+  description: String
+  triggerType: String
+  tags: [String!]
+}
+
+input UpdateWorkflowInput {
+  name: String
+  description: String
+  triggerType: String
+  tags: [String!]
+  status: WorkflowStatus
+}
+
+input CreateVersionInput {
+  graphJson: JSON!
+  releaseNotes: String
+}
+
+input CreateExecutionInput {
+  workflowId: UUID!
+  workflowVersionId: UUID
+  input: JSON
+  environment: String
+}
+
+input ApproveTaskInput {
+  taskId: UUID!
+  decision: String!
+  note: String
+}
+
+input InstallConnectorInput {
+  versionId: UUID
+  config: JSON
+}
+
+input ConfigureConnectorInput {
+  config: JSON!
+}
+
+input ExecuteConnectorInput {
+  actionId: String!
+  input: JSON
+}
+
+input WebhookInput {
+  url: String!
+  events: [String!]
+  secret: String
+}
+
+input PollInput {
+  triggerId: String!
+}
+
+input CreateAiRunInput {
+  modelId: UUID
+  prompt: String!
+  systemPrompt: String
+  temperature: Float
+  maxTokens: Int
+  guardrails: [UUID!]
+  input: JSON
+  metadata: JSON
+}
+
+input CreateGuardrailInput {
+  name: String!
+  type: String!
+  config: JSON
+  enabled: Boolean
+  severity: AiGuardrailSeverity
+}
+
+input UpdateGuardrailInput {
+  name: String
+  type: String
+  config: JSON
+  enabled: Boolean
+  severity: AiGuardrailSeverity
+}
+
+input ScrubPiiInput {
+  content: String!
+  entityTypes: [String!]
+  replacementStrategy: String
+}
+
+input ScrubPiiResult {
+  scrubbedContent: String!
+  entitiesFound: [String!]!
+  entityCount: Int!
+}
+
+input CreateEvaluationDatasetInput {
+  name: String!
+  promptId: UUID!
+  description: String
+}
+
+input EvaluationEntryInput {
+  input: String!
+  expectedOutput: String!
+  metadata: JSON
+}
+
+input CreateEvaluationRunInput {
+  promptVersionId: UUID!
+  datasetId: UUID!
+  scorerType: String
+}
+
+input RegressionCheckInput {
+  baselineRunId: UUID!
+  candidateRunId: UUID!
+  threshold: Float
+}
+
+input CreateKbInput {
+  name: String!
+  description: String
+  embeddingModel: String
+  chunkingConfig: JSON
+}
+
+input IngestDocumentInput {
+  sourceRef: String!
+  metadata: JSON
+}
+
+input SearchInput {
+  query: String!
+  limit: Int
+  minScore: Float
+}
+
+input RagQueryInput {
+  question: String!
+  model: String
+  temperature: Float
+  maxTokens: Int
+}
+
+input CreateListingInput {
+  title: String!
+  description: String
+  listingType: String!
+  category: String
+  tags: [String!]
+  pricing: JSON
+  nodes: JSON
+  metadata: JSON
+}
+
+input UpdateListingInput {
+  title: String
+  description: String
+  listingType: String
+  category: String
+  tags: [String!]
+  pricing: JSON
+  nodes: JSON
+  metadata: JSON
+}
+
+input CreateReviewInput {
+  rating: Int!
+  title: String
+  body: String
+}
+
+input UpdateReviewInput {
+  rating: Int
+  title: String
+  body: String
+}
+
+input CheckoutInput {
+  priceId: String!
+  successUrl: String
+  cancelUrl: String
+  trialPeriodDays: Int
+}
+
+input MeteringEventInput {
+  eventType: String!
+  quantity: Float!
+  metadata: JSON
+}
+
+input CreateEnvironmentInput {
+  name: String!
+  type: String
+  policyJson: JSON
+}
+
+input UpdateEnvironmentInput {
+  name: String
+  type: String
+  policyJson: JSON
+}
+
+input PromoteInput {
+  workflowId: UUID!
+  fromEnvironment: String!
+  toEnvironment: String!
+  notes: String
+  approvalRequired: Boolean
+}
+
+input CreateTemplateInput {
+  name: String!
+  description: String
+  category: String!
+  sourceType: String
+  manifestJson: JSON
+}
+
+input CreateDashboardInput {
+  title: String!
+  description: String
+  layoutJson: JSON
+}
+
+input UpdateDashboardInput {
+  title: String
+  description: String
+  layoutJson: JSON
+  status: DashboardStatus
+}
+
+input AuditExportInput {
+  format: String
+  dateFrom: String!
+  dateTo: String!
+  filterCriteria: JSON
+}
+
+input EvidenceInput {
+  evidenceType: String!
+  title: String!
+  description: String
+  payload: JSON
+  hash: String!
+  source: String!
+  severity: EvidenceSeverity
+}
+
+input CreateIncidentInput {
+  incidentType: String!
+  severity: IncidentSeverity
+  title: String!
+  description: String
+  affectedResources: [String!]
+  metadata: JSON
+}
+
+input UpdateIncidentInput {
+  incidentType: String
+  severity: IncidentSeverity
+  title: String
+  description: String
+  affectedResources: [String!]
+  status: IncidentStatus
+  metadata: JSON
+}
+
+input CreateTierInput {
+  name: String!
+  infrastructureLevel: InfrastructureLevel!
+  maxWorkflows: Int!
+  maxConnectors: Int!
+  maxEnvironments: Int!
+  maxMembers: Int!
+  maxStorageGb: Int!
+  maxAiTokensMonthly: Int!
+  maxRagQueriesMonthly: Int!
+  includeAuditLogging: Boolean
+  includeSso: Boolean
+  includeSla: String
+  hotRetentionDays: Int!
+  coldRetentionDays: Int!
+  regionsAllowed: [String!]
+  supportLevel: String
+  monthlyPriceCents: Int
+  sortOrder: Int
+}
+
+input UpdateTierInput {
+  name: String
+  infrastructureLevel: InfrastructureLevel
+  maxWorkflows: Int
+  maxConnectors: Int
+  maxEnvironments: Int
+  maxMembers: Int
+  maxStorageGb: Int
+  maxAiTokensMonthly: Int
+  maxRagQueriesMonthly: Int
+  includeAuditLogging: Boolean
+  includeSso: Boolean
+  includeSla: String
+  hotRetentionDays: Int
+  coldRetentionDays: Int
+  regionsAllowed: [String!]
+  supportLevel: String
+  monthlyPriceCents: Int
+  sortOrder: Int
+}
+
+input CreateBackupInput {
+  backupType: BackupType
+  scope: String
+  metadata: JSON
+}
+
+input RestoreInput {
+  restoreType: String
+  targetEnvironment: String
+  notes: String
+}
+
+input RetentionPolicyInput {
+  hotRetentionDays: Int
+  coldRetentionDays: Int
+  archiveEnabled: Boolean
+  archiveBucket: String
+  coldQueryEnabled: Boolean
+  partitionInterval: String
+}
+
+# ─── Query ────────────────────────────────────────────────────────────────
+
+type Query {
+  # Auth
+  session: User
+
+  # Users
+  users(filters: UserFilters): [User!]!
+  user(id: ID!): User
+
+  # Workflows
+  workflows(filters: WorkflowFilters): WorkflowConnection!
+  workflow(id: ID!): Workflow
+  workflowVersions(workflowId: ID!): [WorkflowVersion!]!
+  workflowVersion(workflowId: ID!, versionId: ID!): WorkflowVersion
+  workflowPromotions(workflowId: ID!): [WorkflowPromotion!]!
+  workflowDiffs(workflowId: ID!): [WorkflowDiff!]!
+
+  # Executions
+  executions(filters: ExecutionFilters): ExecutionConnection!
+  execution(id: ID!): Execution
+  executionLogs(executionId: ID!): [ExecutionLog!]!
+  executionCheckpoints(executionId: ID!): [ExecutionCheckpoint!]!
+
+  # Connectors
+  connectors(filters: ConnectorFilters): ConnectorConnection!
+  connector(id: ID!): Connector
+  connectorActions(connectorId: ID!): [ConnectorAction!]!
+  connectorTriggers(connectorId: ID!): [ConnectorTrigger!]!
+  connectorVersions(connectorId: ID!): [ConnectorVersion!]!
+  installations: [ConnectorInstallation!]!
+
+  # AI
+  aiRuns(filters: AiRunFilters): AiRunConnection!
+  aiRun(id: ID!): AiRun
+  aiModels: [AiModel!]!
+  aiGuardrails: [AiGuardrail!]!
+
+  # RAG
+  knowledgeBases: [KnowledgeBase!]!
+  knowledgeBase(id: ID!): KnowledgeBase
+
+  # Evaluation
+  evaluationDatasets: [EvaluationDataset!]!
+  evaluationRun(id: ID!): EvaluationRun
+
+  # Marketplace
+  marketplaceListings(filters: ListingFilters): [MarketplaceListing!]!
+  marketplaceListing(id: ID!): MarketplaceListing
+  marketplaceReviews(listingId: ID!): [MarketplaceReview!]!
+  pendingMarketplaceListings: [MarketplaceListing!]!
+  pendingMarketplaceReviews: [MarketplaceReview!]!
+
+  # Billing
+  subscription: Subscription
+  plan: BillingPlan
+  usage(period: UsagePeriod): UsageSummary
+  invoices: [Invoice!]!
+  entitlements: Entitlements
+
+  # Environments
+  environments: [Environment!]!
+  environment(id: ID!): Environment
+  promotions: [WorkflowPromotion!]!
+  promotion(id: ID!): WorkflowPromotion
+  releases(environmentId: ID!): [EnvironmentRelease!]!
+  environmentDiff(workflowId: ID!): EnvironmentDiff
+
+  # Templates
+  templates(filters: TemplateFilters): [Template!]!
+  template(id: ID!): Template
+
+  # Dashboards
+  dashboards: [Dashboard!]!
+  dashboard(id: ID!): Dashboard
+
+  # Search
+  search(query: String!, filters: SearchFilters): SearchResults!
+
+  # Compliance
+  gdprExports: [GdprRequest!]!
+  auditExports: [AuditExport!]!
+  evidence(filters: EvidenceFilters): [ComplianceEvidence!]!
+  securityIncidents(filters: IncidentFilters): [SecurityIncident!]!
+  residency: DataResidency
+
+  # Tenants
+  tiers: [TenantTier!]!
+  currentTier: TenantTierAssignment
+  currentPlacement: TenantPlacement
+  migrations: [TenantMigration!]!
+
+  # DR
+  backups(filters: BackupFilters): [BackupRecord!]!
+  pools: [RegionalPool!]!
+  pool(region: String!): RegionalPool
+
+  # Retention
+  retentionPolicy: RetentionPolicy!
+  retentionPartitions: [JSON!]!
+  archives: [ArchiveExport!]!
+}
+
+type EnvironmentDiff {
+  from: WorkflowVersion
+  to: WorkflowVersion
+}
+
+# ─── Mutation ─────────────────────────────────────────────────────────────
+
+type Mutation {
+  # Auth
+  login(input: LoginInput!): AuthResult!
+  register(input: RegisterInput!): AuthResult!
+  logout: Boolean!
+  setupMfa: MfaSetupResult!
+  verifyMfa(input: VerifyMfaInput!): AuthResult!
+
+  # Workflows
+  createWorkflow(input: CreateWorkflowInput!): Workflow!
+  updateWorkflow(id: ID!, input: UpdateWorkflowInput!): Workflow!
+  deleteWorkflow(id: ID!): Boolean!
+  publishWorkflow(id: ID!): Workflow!
+  runWorkflow(id: ID!): Execution!
+  createWorkflowVersion(id: ID!, input: CreateVersionInput!): WorkflowVersion!
+
+  # Executions
+  cancelExecution(id: ID!): Execution!
+  approveExecutionTask(id: ID!, input: ApproveTaskInput!): Execution!
+
+  # Connectors
+  installConnector(id: ID!, input: InstallConnectorInput!): ConnectorInstallation!
+  configureConnector(installationId: ID!, input: ConfigureConnectorInput!): ConnectorInstallation!
+  executeConnector(installationId: ID!, input: ExecuteConnectorInput!): ConnectorExecuteResult!
+  testConnector(installationId: ID!): ConnectorTestResult!
+  upgradeConnector(installationId: ID!, versionId: ID!): ConnectorInstallation!
+  rollbackConnector(installationId: ID!): ConnectorRollbackResult!
+  uninstallConnector(installationId: ID!): Boolean!
+  registerWebhook(installationId: ID!, input: WebhookInput!): WebhookRegistration!
+  pollConnector(installationId: ID!, input: PollInput!): PollResult!
+
+  # AI
+  createAiRun(input: CreateAiRunInput!): AiRun!
+  cancelAiRun(id: ID!): Boolean!
+  createGuardrail(input: CreateGuardrailInput!): AiGuardrail!
+  updateGuardrail(id: ID!, input: UpdateGuardrailInput!): AiGuardrail!
+  deleteGuardrail(id: ID!): Boolean!
+  scrubPii(input: ScrubPiiInput!): ScrubPiiResult!
+
+  # AI Evaluation
+  createEvaluationDataset(input: CreateEvaluationDatasetInput!): EvaluationDataset!
+  addEvaluationEntries(datasetId: ID!, entries: [EvaluationEntryInput!]!): EvaluationDataset!
+  removeEvaluationEntry(datasetId: ID!, entryId: ID!): Boolean!
+  deleteEvaluationDataset(id: ID!): Boolean!
+  createEvaluationRun(input: CreateEvaluationRunInput!): EvaluationRun!
+  checkRegression(input: RegressionCheckInput!): RegressionResult!
+
+  # RAG
+  createKnowledgeBase(input: CreateKbInput!): KnowledgeBase!
+  deleteKnowledgeBase(id: ID!): Boolean!
+  ingestDocument(kbId: ID!, input: IngestDocumentInput!): KnowledgeDocument!
+  deleteDocument(kbId: ID!, docId: ID!): Boolean!
+  searchKnowledgeBase(kbId: ID!, input: SearchInput!): RagSearchResult!
+  queryKnowledgeBase(kbId: ID!, input: RagQueryInput!): RagQueryResult!
+  reindexKnowledgeBase(kbId: ID!): Boolean!
+
+  # Marketplace
+  createListing(input: CreateListingInput!): MarketplaceListing!
+  updateListing(id: ID!, input: UpdateListingInput!): MarketplaceListing!
+  deleteListing(id: ID!): Boolean!
+  installListing(id: ID!): Boolean!
+  publishListing(id: ID!): MarketplaceListing!
+  unpublishListing(id: ID!): MarketplaceListing!
+  submitForReview(id: ID!): MarketplaceListing!
+  approveListing(id: ID!): MarketplaceListing!
+  rejectListing(id: ID!, reason: String!): MarketplaceListing!
+  createReview(listingId: ID!, input: CreateReviewInput!): MarketplaceReview!
+  updateReview(id: ID!, input: UpdateReviewInput!): MarketplaceReview!
+  deleteReview(id: ID!): Boolean!
+  moderateReview(id: ID!, action: ReviewAction!, reason: String): MarketplaceReview!
+
+  # Billing
+  createCheckoutSession(input: CheckoutInput!): CheckoutSession!
+  createPortalSession(returnUrl: String!): PortalSession!
+  cancelSubscription: Subscription!
+  recordMeteringEvent(input: MeteringEventInput!): Boolean!
+
+  # Environments
+  createEnvironment(input: CreateEnvironmentInput!): Environment!
+  updateEnvironment(id: ID!, input: UpdateEnvironmentInput!): Environment!
+  deleteEnvironment(id: ID!): Boolean!
+  promoteEnvironment(input: PromoteInput!): PromotionResult!
+  approvePromotion(id: ID!, note: String): WorkflowPromotion!
+  rejectPromotion(id: ID!, reason: String!): WorkflowPromotion!
+  rollbackPromotion(id: ID!): RollbackResult!
+
+  # Templates
+  createTemplate(input: CreateTemplateInput!): Template!
+  deleteTemplate(id: ID!): Boolean!
+  useTemplate(id: ID!): Boolean!
+  forkTemplate(id: ID!): Template!
+
+  # Dashboards
+  createDashboard(input: CreateDashboardInput!): Dashboard!
+  updateDashboard(id: ID!, input: UpdateDashboardInput!): Dashboard!
+  deleteDashboard(id: ID!): Boolean!
+  publishDashboard(id: ID!): Dashboard!
+
+  # Compliance
+  requestGdprExport: GdprRequest!
+  requestGdprDeletion(reason: String!): GdprRequest!
+  cancelGdprDeletion(id: ID!): Boolean!
+  createAuditExport(input: AuditExportInput!): AuditExport!
+  storeEvidence(input: EvidenceInput!): ComplianceEvidence!
+  createSecurityIncident(input: CreateIncidentInput!): SecurityIncident!
+  updateSecurityIncident(id: ID!, input: UpdateIncidentInput!): SecurityIncident!
+  resolveSecurityIncident(id: ID!, resolution: String!): SecurityIncident!
+  addIncidentEvidence(incidentId: ID!, input: EvidenceInput!): SecurityIncident!
+  setDataResidency(region: String!): DataResidency!
+
+  # Tenants
+  createTier(input: CreateTierInput!): TenantTier!
+  updateTier(id: ID!, input: UpdateTierInput!): TenantTier!
+  changeTier(tierId: ID!): TierChangeResult!
+  planMigration(targetTierId: ID!): MigrationPlan!
+  executeMigration(planId: ID!): TenantMigration!
+  rollbackMigration(migrationId: ID!): TenantMigration!
+
+  # DR
+  createBackup(input: CreateBackupInput!): BackupRecord!
+  validateBackup(id: ID!): BackupValidation!
+  restoreBackup(id: ID!, input: RestoreInput!): RestoreRecord!
+  planRollback(service: String!, targetVersion: String!): RollbackPlan!
+  executeRollback(service: String!, targetVersion: String!): ReleaseRollback!
+  registerPoolHeartbeat(region: String!): RegionalPool!
+  triggerFailoverDrill(primaryRegion: String!, drRegion: String!): DrillResult!
+  triggerBackupDrill: DrillResult!
+
+  # Retention
+  updateRetentionPolicy(input: RetentionPolicyInput!): RetentionPolicy!
+  createPartitions: Boolean!
+  triggerArchive: ArchiveExport!
+  triggerRetentionRun(tenantId: ID!, action: RetentionAction!): Boolean!
+}
+
+# ─── Union / Result Types ─────────────────────────────────────────────────
+
+type AuthResult {
+  token: String!
+  user: SessionUser!
+  requiresMfa: Boolean!
+}
+
+type MfaSetupResult {
+  secret: String!
+  uri: String!
+  qrCode: String!
+}
+
+schema {
+  query: Query
+  mutation: Mutation
+}

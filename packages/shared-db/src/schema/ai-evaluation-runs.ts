@@ -4,11 +4,13 @@ import {
   serial,
   timestamp,
   integer,
-  numeric,
+  real,
+  boolean,
   jsonb,
 } from "drizzle-orm/pg-core";
 import { tenantsTable } from "./tenants";
 import { aiEvaluationDatasetsTable } from "./ai-evaluation-datasets";
+import { promptsTable } from "./prompts";
 
 export const aiEvaluationRunsTable = pgTable("ai_evaluation_runs", {
   id: serial("id").primaryKey(),
@@ -18,22 +20,19 @@ export const aiEvaluationRunsTable = pgTable("ai_evaluation_runs", {
   datasetId: integer("dataset_id")
     .notNull()
     .references(() => aiEvaluationDatasetsTable.id, { onDelete: "cascade" }),
-  promptId: integer("prompt_id").notNull(),
-  promptVersionId: integer("prompt_version_id"),
-  modelId: integer("model_id"),
-  modelName: text("model_name"),
-  provider: text("provider"),
+  promptId: integer("prompt_id")
+    .notNull()
+    .references(() => promptsTable.id, { onDelete: "cascade" }),
+  promptVersion: integer("prompt_version"),
   status: text("status").notNull().default("pending"),
-  overallScore: numeric("overall_score", { precision: 5, scale: 2 }),
-  results: jsonb("results"),
-  passedCount: integer("passed_count").notNull().default(0),
-  failedCount: integer("failed_count").notNull().default(0),
-  totalCount: integer("total_count").notNull().default(0),
-  thresholdMet: text("threshold_met"),
-  errorMessage: text("error_message"),
+  totalEntries: integer("total_entries").notNull().default(0),
+  passedEntries: integer("passed_entries").notNull().default(0),
+  failedEntries: integer("failed_entries").notNull().default(0),
+  score: real("score"),
+  threshold: real("threshold").notNull().default(70),
+  passed: boolean("passed"),
   startedAt: timestamp("started_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
-  createdBy: text("created_by"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

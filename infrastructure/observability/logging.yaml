@@ -1,0 +1,220 @@
+# ─── LongoX Platform Structured Logging Configuration ──────────────────────
+# This file defines the structured logging schema, log levels per service,
+# sampling rules, PII redaction patterns, and retention policies.
+#
+# Services use pino (Node.js) for structured JSON logging. In production,
+# logs are shipped via the OpenTelemetry Collector to Grafana Loki.
+#
+# Log format: JSON with the following required top-level keys:
+#   { "level", "time", "msg", "service", "namespace", "correlationId" }
+
+logging:
+  # ─── Global Settings ──────────────────────────────────────────────────
+  global:
+    format: json
+    level: info
+    redactPII: true
+    includeTimestamp: true
+    timestampFormat: "iso"
+    instrumentation:
+      - correlationId
+      - traceId
+      - spanId
+      - service
+      - namespace
+      - version
+
+  # ─── Log Levels Per Service ───────────────────────────────────────────
+  services:
+    api-gateway:
+      level: info
+      namespace: platform-control
+      # Auth endpoints are high-volume but low-risk — keep at info
+      # Set to debug only when troubleshooting auth flows
+      overrides:
+        auth: info
+        rate-limiter: warn
+        graphql: info
+
+    execution-service:
+      level: info
+      namespace: platform-execution
+      overrides:
+        worker: info
+        bullmq: warn
+
+    execution-worker:
+      level: info
+      namespace: platform-execution
+      overrides:
+        bullmq: warn
+
+    ai-service:
+      level: info
+      namespace: platform-services
+      overrides:
+        openai: warn   # OpenAI SDK logs are verbose
+        anthropic: warn
+        "ai-usage": info
+
+    billing-service:
+      level: info
+      namespace: platform-services
+      overrides:
+        stripe: warn   # Stripe SDK logs are verbose
+
+    search-service:
+      level: info
+      namespace: platform-services
+      overrides:
+        typesense: warn
+
+    kong:
+      level: info
+      format: json
+
+  # ─── Sampling Rules ───────────────────────────────────────────────────
+  # High-volume endpoints are sampled to reduce log volume.
+  # Sampling is head-based: a percentage of requests are fully logged.
+  # All errors (status >= 400) bypass sampling.
+  sampling:
+    enabled: true
+    default_sample_rate: 0.1  # 10% of requests at info level
+    endpoints:
+      - pattern: /api/healthz
+        sample_rate: 0.01    # 1% — health checks are very high volume
+      - pattern: /api/health
+        sample_rate: 0.01
+      - pattern: /auth/login
+        sample_rate: 0.5     # 50% — security-relevant, keep more
+      - pattern: /auth/register
+        sample_rate: 0.5
+      - pattern: /api/graphql
+        sample_rate: 0.05    # 5% — GraphQL is high volume but chatty
+      - pattern: /api/search
+        sample_rate: 0.1     # 10%
+      - pattern: /api/marketplace
+        sample_rate: 0.2     # 20%
+    error_bypass: true       # All errors logged at full volume
+    slow_request_threshold_ms: 5000  # Requests >5s bypass sampling
+
+  # ─── PII Redaction Patterns ──────────────────────────────────────────
+  # Fields matching these patterns are redacted or hashed before logging.
+  # The raw values are still available in traces (with appropriate access
+  # control) and in the database.
+  pii_redaction:
+    enabled: true
+    redaction_string: "[REDACTED]"
+    hash_fields:
+      - email
+      - phone
+      - ssn
+      - taxId
+      - creditCard
+      - cvv
+      - password
+      - passwordHash
+      - token
+      - accessToken
+      - refreshToken
+      - apiKey
+      - secretKey
+      - privateKey
+      - stripe_customer_id
+      - billing_address
+      - ip_address
+    patterns:
+      - field_regex: ".*(?:email|e-mail).*"
+        action: hash
+      - field_regex: ".*(?:password|passwd|pwd).*"
+        action: redact
+      - field_regex: ".*(?:token|jwt|bearer|api[_-]?key|secret).*"
+        action: redact
+      - field_regex: ".*(?:credit.?card|cc.?number|cvv|ssn|tax.?id).*"
+        action: redact
+      - field_regex: ".*(?:phone|telephone|mobile).*"
+        action: hash
+      - field_regex: ".*ip.*address.*"
+        action: hash
+      - path_regex: "/auth/.*"
+        # Redact request/response bodies for auth endpoints
+        body_fields:
+          - password
+          - token
+          - accessToken
+          - refreshToken
+          - mfaCode
+          - backupCode
+        action: redact
+
+  # ─── Multi-line Stack Trace Handling ──────────────────────────────────
+  # Stack traces are captured as a single log entry with the error field.
+  # The OpenTelemetry Collector re-assembles multi-line exceptions into
+  # a single span event.
+  stack_traces:
+    mode: "inline"           # "inline" | "separate"
+    max_lines: 50
+    max_chars: 5000
+    include_source: true
+
+  # ─── Log Retention Policies ───────────────────────────────────────────
+  # Structured log retention in Loki / S3.
+  retention:
+    default:
+      structured: 30d        # Hot storage (Loki / Elasticsearch)
+      archive: 90d           # Cold storage (S3 / GCS)
+    services:
+      api-gateway:
+        structured: 30d
+        archive: 90d
+      execution-service:
+        structured: 30d
+        archive: 90d
+      execution-worker:
+        structured: 30d
+        archive: 90d
+      ai-service:
+        structured: 60d      # AI audit logs kept longer
+        archive: 180d
+      billing-service:
+        structured: 90d      # Financial audit trail
+        archive: 365d        # 1 year for compliance
+      search-service:
+        structured: 14d
+        archive: 30d
+      kong:
+        structured: 7d       # Kong access logs are high volume
+        archive: 30d
+    audit_logs:
+      structured: 365d       # Audit logs retained for 1 year
+      archive: 2555d         # 7 years for compliance (GDPR/SOC2)
+
+  # ─── Audit Events ─────────────────────────────────────────────────────
+  # Audit-logged operations are always recorded at full fidelity regardless
+  # of sampling. These cover compliance-relevant actions.
+  audit_events:
+    - workflow.created
+    - workflow.updated
+    - workflow.deleted
+    - workflow.published
+    - workflow.archived
+    - execution.started
+    - execution.completed
+    - execution.cancelled
+    - execution.approved
+    - execution.rejected
+    - user.created
+    - user.deleted
+    - user.role_changed
+    - tenant.created
+    - tenant.suspended
+    - billing.subscription_changed
+    - billing.invoice_paid
+    - billing.invoice_failed
+    - ai.model_added
+    - ai.model_removed
+    - connector.installed
+    - connector.removed
+    - marketplace.listing_published
+    - api_key.created
+    - api_key.revoked

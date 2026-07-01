@@ -1,4 +1,1 @@
-import React from "react";
-export default function table() {
-  return <div>table component</div>;
-}
+export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption } from "@/components/ui/table";

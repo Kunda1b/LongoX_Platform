@@ -2,10 +2,11 @@ import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, dashboardsTable } from "@longox/db";
 import { derivePages } from "./dashboard-page";
+import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
-router.get("/dashboards/:id/pages", async (req, res): Promise<void> => {
+router.get("/dashboards/:id/pages", authorize("dashboards:read"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (Number.isNaN(id)) {
     res.status(400).json({ error: "Invalid dashboard id" });

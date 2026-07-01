@@ -14,19 +14,17 @@ import { publishEvent } from "@longox/shared-realtime";
 import {
   db,
   executionsTable,
-  executionCheckpointsTable,
-  dlqEntriesTable,
   auditLogTable,
   workflowVersionsTable,
   workflowsTable,
-  usageEventsTable,
 } from "@longox/db";
 import { createExecutors, findExecutor } from "../executors/registry";
+import { runWorkflowDAG } from "../runners/dag-worker";
+import type { WorkflowGraph } from "@longox/workflow-engine";
 import {
   recordJobCompleted,
   recordJobFailed,
   recordJobRetried,
-  recordNodeExecution,
   updateQueueDepth,
 } from "../telemetry/metrics";
 
@@ -97,18 +95,6 @@ export async function writeAudit(
   } as any);
 }
 
-function maxAttemptsForNode(nodeTypeId: string): number {
-  return nodeTypeId.startsWith("trigger.") ? 1 : 2;
-}
-
-function sortNodes(nodes: any[]): any[] {
-  return [...nodes].sort(
-    (a, b) => (a.position?.x ?? 0) - (b.position?.x ?? 0),
-  );
-}
-
-// ─── Core runner (executes workflow nodes sequentially) ───────────────────────
-
 interface WorkflowNode {
   id: string;
   name: string;
@@ -116,262 +102,6 @@ interface WorkflowNode {
   nodeTypeId?: string;
   position?: { x: number; y: number };
   config?: Record<string, unknown>;
-}
-
-export async function runWorkflow(
-  executionId: number,
-  workflowId: number,
-  workflowName: string,
-  nodes: WorkflowNode[],
-  triggerPayload: Record<string, unknown> = {},
-  triggerType = "manual",
-): Promise<void> {
-  const sorted = sortNodes(nodes);
-
-  let currentInput: Record<string, unknown> = {
-    ...triggerPayload,
-    _triggerType: triggerType,
-  };
-  let failed = false;
-
-  const checkpoints = await db
-    .select()
-    .from(executionCheckpointsTable)
-    .where(eq(executionCheckpointsTable.executionId, executionId))
-    .orderBy(executionCheckpointsTable.startedAt);
-
-  const completedNodeIds = new Set(
-    checkpoints
-      .filter((c) => c.status === "success")
-      .map((c) => c.nodeId),
-  );
-
-  const successfulCheckpoints = checkpoints.filter(
-    (c) => c.status === "success",
-  );
-  if (successfulCheckpoints.length > 0) {
-    const lastCompleted =
-      successfulCheckpoints[successfulCheckpoints.length - 1];
-    if (lastCompleted.outputData) {
-      currentInput = {
-        ...((lastCompleted.outputData ?? {}) as Record<string, unknown>),
-        _prevNode: lastCompleted.nodeId,
-      };
-    }
-  }
-
-  for (const node of sorted) {
-    if (completedNodeIds.has(node.id)) {
-      continue;
-    }
-
-    const nodeTypeId = node.nodeTypeId ?? node.type ?? "action.http";
-    const executor = findExecutor(executors, nodeTypeId);
-    const maxAttempts = maxAttemptsForNode(nodeTypeId);
-
-    if (!executor) {
-      await db.insert(dlqEntriesTable).values({
-        executionId,
-        workflowId,
-        workflowName,
-        nodeId: node.id,
-        nodeName: node.name,
-        nodeType: nodeTypeId,
-        errorMessage: `No executor found for node type "${nodeTypeId}"`,
-        attempts: 1,
-        jobData: { nodeTypeId, config: node.config ?? {}, lastInput: currentInput },
-      });
-
-      await db
-        .update(executionsTable)
-        .set({
-          status: "failed",
-          finishedAt: new Date(),
-          errorMessage: `Node "${node.name}" failed: no executor for "${nodeTypeId}"`,
-        })
-        .where(eq(executionsTable.id, executionId));
-
-      await db
-        .update(workflowsTable)
-        .set({ lastRunStatus: "failed", lastRunAt: new Date() })
-        .where(eq(workflowsTable.id, workflowId));
-
-      failed = true;
-      break;
-    }
-
-    let lastError: string | null = null;
-    let succeeded = false;
-    let finalOutput: Record<string, unknown> | null = null;
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      const startedAt = new Date();
-
-      const [checkpoint] = await db
-        .insert(executionCheckpointsTable)
-        .values({
-          executionId,
-          nodeId: node.id,
-          nodeName: node.name,
-          nodeType: nodeTypeId,
-          status: "running",
-          attemptNumber: attempt,
-          inputData: currentInput,
-          startedAt,
-        })
-        .returning();
-
-      const result = await executor.execute(
-        node,
-        {
-          executionId,
-          workflowId,
-          workflowName,
-          triggerType,
-          triggerPayload,
-          variables: {},
-          startedAt: new Date(),
-        },
-        currentInput,
-      );
-      const duration = Date.now() - startedAt.getTime();
-
-      if (result.status === "success") {
-        finalOutput = result.output;
-        await db
-          .update(executionCheckpointsTable)
-          .set({
-            status: "success",
-            outputData: result.output,
-            completedAt: new Date(),
-            durationMs: result.durationMs || duration,
-          })
-          .where(eq(executionCheckpointsTable.id, checkpoint.id));
-        succeeded = true;
-        break;
-      }
-
-      lastError = result.error ?? "Unknown error";
-      await db
-        .update(executionCheckpointsTable)
-        .set({
-          status: "failed",
-          errorMessage: lastError,
-          completedAt: new Date(),
-          durationMs: result.durationMs || duration,
-        })
-        .where(eq(executionCheckpointsTable.id, checkpoint.id));
-
-      if (attempt < maxAttempts) {
-        await new Promise((r) => setTimeout(r, 500 * attempt));
-      }
-    }
-
-    if (!succeeded) {
-      await db.insert(dlqEntriesTable).values({
-        executionId,
-        workflowId,
-        workflowName,
-        nodeId: node.id,
-        nodeName: node.name,
-        nodeType: nodeTypeId,
-        errorMessage: lastError ?? "Unknown error",
-        attempts: maxAttempts,
-        jobData: {
-          nodeTypeId,
-          config: node.config ?? {},
-          lastInput: currentInput,
-        },
-      });
-
-      await writeAudit(
-        "execution.node_failed",
-        "execution",
-        String(executionId),
-        {
-          nodeId: node.id,
-          nodeName: node.name,
-          nodeType: nodeTypeId,
-          error: lastError,
-        },
-      );
-
-      await db
-        .update(executionsTable)
-        .set({
-          status: "failed",
-          finishedAt: new Date(),
-          durationMs: sql`EXTRACT(EPOCH FROM (NOW() - ${executionsTable.startedAt})) * 1000`,
-          errorMessage: `Node "${node.name}" failed after ${maxAttempts} attempt(s): ${lastError}`,
-        })
-        .where(eq(executionsTable.id, executionId));
-
-      await db
-        .update(workflowsTable)
-        .set({ lastRunStatus: "failed", lastRunAt: new Date() })
-        .where(eq(workflowsTable.id, workflowId));
-
-      await writeAudit("execution.failed", "execution", String(executionId), {
-        workflowId,
-        failedNode: node.name,
-        error: lastError,
-      });
-      failed = true;
-      break;
-    }
-
-    if (finalOutput) {
-      currentInput = { ...finalOutput, _prevNode: node.id };
-    }
-  }
-
-  if (!failed) {
-    const [exec] = await db
-      .select()
-      .from(executionsTable)
-      .where(eq(executionsTable.id, executionId));
-    const durationMs = exec ? Date.now() - exec.startedAt.getTime() : 0;
-
-    await db
-      .update(executionsTable)
-      .set({ status: "success", finishedAt: new Date(), durationMs })
-      .where(eq(executionsTable.id, executionId));
-    await db
-      .update(workflowsTable)
-      .set({ lastRunStatus: "success", lastRunAt: new Date() })
-      .where(eq(workflowsTable.id, workflowId));
-    await writeAudit("execution.completed", "execution", String(executionId), {
-      workflowId,
-      workflowName,
-      durationMs,
-    });
-
-    try {
-      await db.insert(usageEventsTable).values({
-        workflowId,
-        workflowName,
-        eventType: "workflow.run",
-        quantity: 1,
-        metadata: {
-          executionId,
-          durationMs,
-          nodeCount: sorted.length,
-          triggerType,
-        },
-      });
-    } catch {
-      // Non-fatal
-    }
-
-    publishEvent({
-      type: "execution.completed",
-      aggregateId: String(executionId),
-      aggregateType: "execution",
-      payload: { workflowId, workflowName, triggerType, durationMs },
-      actorId: "0",
-      actorType: "system",
-    });
-  }
 }
 
 // ─── Job Processors ────────────────────────────────────────────────────────────
@@ -391,14 +121,21 @@ async function processWorkflowExecution(data: WorkflowJobData): Promise<void> {
     .set({ status: "running" })
     .where(eq(executionsTable.id, executionId));
 
-  await runWorkflow(
+  const raw = nodes as any;
+  const graph: WorkflowGraph = {
+    nodes: Array.isArray(raw) ? raw : Array.isArray(raw?.nodes) ? raw.nodes : [],
+    edges: Array.isArray(raw?.edges) ? raw.edges : [],
+    timeoutMs: raw?.timeoutMs ?? 30 * 60 * 1000,
+  };
+
+  await runWorkflowDAG({
     executionId,
     workflowId,
     workflowName,
-    nodes as WorkflowNode[],
+    graph,
     triggerPayload,
     triggerType,
-  );
+  });
 }
 
 async function processWebhookDelivery(data: WebhookJobData): Promise<void> {

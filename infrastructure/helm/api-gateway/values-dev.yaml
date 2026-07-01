@@ -1,0 +1,23 @@
+global:
+  environment: dev
+  imageTag: develop
+
+replicaCount: 1
+
+autoscaling:
+  minReplicas: 1
+  maxReplicas: 3
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 250m
+    memory: 512Mi
+
+config:
+  logLevel: debug
+  extraConfig:
+    CORS_ORIGINS: "*"
+    JWT_EXPIRY: "24h"

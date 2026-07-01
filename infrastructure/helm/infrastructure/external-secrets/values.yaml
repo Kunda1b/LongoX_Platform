@@ -1,0 +1,26 @@
+external-secrets:
+  installCRDs: true
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+  serviceMonitor:
+    enabled: true
+    namespace: monitoring
+
+  leaderElect: true
+
+  authSecretRef:
+    name: ""
+    key: ""
+
+  scopedNamespace: ""
+  scopedSyncClusterStore: ""
+
+  nodeSelector:
+    nodegroup-type: on-demand

@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, like, and } from "drizzle-orm";
 import { db, dashboardsTable } from "@longox/db";
+import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
@@ -17,7 +18,7 @@ function serializeDashboard(d: typeof dashboardsTable.$inferSelect) {
   };
 }
 
-router.get("/dashboards/stats", async (_req, res): Promise<void> => {
+router.get("/dashboards/stats", authorize("dashboards:read"), async (_req, res): Promise<void> => {
   const all = await db.select().from(dashboardsTable);
   const total = all.length;
   const published = all.filter((d) => d.status === "published").length;
@@ -31,7 +32,7 @@ router.get("/dashboards/stats", async (_req, res): Promise<void> => {
   res.json({ total, published, draft, totalWidgets });
 });
 
-router.get("/dashboards", async (req, res): Promise<void> => {
+router.get("/dashboards", authorize("dashboards:read"), async (req, res): Promise<void> => {
   const conditions = [];
   if (req.query.status)
     conditions.push(eq(dashboardsTable.status, String(req.query.status)));
@@ -47,7 +48,7 @@ router.get("/dashboards", async (req, res): Promise<void> => {
   res.json(dashboards.map(serializeDashboard));
 });
 
-router.post("/dashboards", async (req, res): Promise<void> => {
+router.post("/dashboards", authorize("dashboards:write"), async (req, res): Promise<void> => {
   const { name, description, widgets } = req.body as {
     name?: string;
     description?: string;
@@ -71,7 +72,7 @@ router.post("/dashboards", async (req, res): Promise<void> => {
   res.status(201).json(serializeDashboard(dashboard));
 });
 
-router.get("/dashboards/:id", async (req, res): Promise<void> => {
+router.get("/dashboards/:id", authorize("dashboards:read"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -90,7 +91,7 @@ router.get("/dashboards/:id", async (req, res): Promise<void> => {
   res.json(serializeDashboard(dashboard));
 });
 
-router.patch("/dashboards/:id", async (req, res): Promise<void> => {
+router.patch("/dashboards/:id", authorize("dashboards:write"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -124,7 +125,7 @@ router.patch("/dashboards/:id", async (req, res): Promise<void> => {
   res.json(serializeDashboard(dashboard));
 });
 
-router.delete("/dashboards/:id", async (req, res): Promise<void> => {
+router.delete("/dashboards/:id", authorize("dashboards:delete"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -143,7 +144,7 @@ router.delete("/dashboards/:id", async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
-router.post("/dashboards/:id/publish", async (req, res): Promise<void> => {
+router.post("/dashboards/:id/publish", authorize("dashboards:write"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });

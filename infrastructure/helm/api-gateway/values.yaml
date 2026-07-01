@@ -1,0 +1,82 @@
+global:
+  environment: production
+  imageRegistry: ghcr.io/longox
+  imageTag: latest
+
+image:
+  repository: api-gateway
+  tag: latest
+  pullPolicy: Always
+
+replicaCount: 2
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: ""
+
+podSecurityContext:
+  fsGroup: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+  metricsPort: 9090
+
+config:
+  logLevel: info
+  apiPrefix: /api/v1
+  extraConfig:
+    CORS_ORIGINS: "https://app.longox.io"
+    JWT_EXPIRY: "24h"
+    RATE_LIMIT_WINDOW_MS: "60000"
+    RATE_LIMIT_MAX: "100"
+
+extraEnv:
+  NODE_ENV: production
+
+externalSecret:
+  enabled: true
+  storeName: aws-secrets-manager
+  storeKind: ClusterSecretStore
+  refreshInterval: 1h
+  name: api-gateway-secrets
+  keys:
+    DATABASE_URL: longox/{{ .Values.global.environment }}/database-url
+    JWT_SECRET: longox/{{ .Values.global.environment }}/jwt-secret
+    REDIS_URL: longox/{{ .Values.global.environment }}/redis-url
+    WORKOS_API_KEY: longox/{{ .Values.global.environment }}/workos-api-key
+    WORKOS_CLIENT_ID: longox/{{ .Values.global.environment }}/workos-client-id
+    STRIPE_SECRET_KEY: longox/{{ .Values.global.environment }}/stripe-secret-key
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilization: 70
+  targetMemoryUtilization: 80
+
+nodeSelector:
+  nodegroup-type: on-demand
+
+pdb:
+  minAvailable: 1
+
+serviceMonitor:
+  enabled: true
+  interval: 15s
+  path: /metrics
+  prometheusRelease: kube-prometheus-stack
+
+terminationGracePeriodSeconds: 60

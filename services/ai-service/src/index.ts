@@ -6,5 +6,8 @@ export { default as aiRoutingPoliciesRouter } from "./routing/ai-routing-policie
 export { default as aiPlaygroundRouter } from "./playground/ai-playground-route";
 export { default as promptsGovernanceRouter } from "./governance/prompts-governance-route";
 export { default as agentsRouter } from "./agents/agents-route";
+export { default as ragRouter } from "./api/rag-routes";
 export { aiRouter, AIRouter } from "./routing/ai-router";
 export type { AIProviderType, RoutingStrategy } from "./routing/ai-router";
+export { default as aiRunsRoute } from "./api/ai-runs-route";
+export * from "./application/services";

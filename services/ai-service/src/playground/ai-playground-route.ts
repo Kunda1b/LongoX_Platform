@@ -3,10 +3,11 @@ import { eq, and, desc } from "drizzle-orm";
 import { db, aiPlaygroundSessionsTable, aiModelsTable } from "@longox/db";
 import { aiRouter } from "../routing/ai-router";
 import type { ChatMessage } from "../providers";
+import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
-router.post("/ai/playground/run", async (req, res): Promise<void> => {
+router.post("/ai/playground/run", authorize("ai:run"), async (req, res): Promise<void> => {
   const tenantId = req.tenantId;
   if (!tenantId) {
     res.status(400).json({ error: "Tenant context required" });
@@ -107,7 +108,7 @@ router.post("/ai/playground/run", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/ai/playground/compare", async (req, res): Promise<void> => {
+router.post("/ai/playground/compare", authorize("ai:run"), async (req, res): Promise<void> => {
   const tenantId = req.tenantId;
   if (!tenantId) {
     res.status(400).json({ error: "Tenant context required" });
@@ -186,7 +187,7 @@ router.post("/ai/playground/compare", async (req, res): Promise<void> => {
   });
 });
 
-router.get("/ai/playground/sessions", async (req, res): Promise<void> => {
+router.get("/ai/playground/sessions", authorize("ai:read"), async (req, res): Promise<void> => {
   const tenantId = req.tenantId;
   if (!tenantId) {
     res.status(400).json({ error: "Tenant context required" });
@@ -221,7 +222,7 @@ router.get("/ai/playground/sessions", async (req, res): Promise<void> => {
   );
 });
 
-router.get("/ai/router/health", async (_req, res): Promise<void> => {
+router.get("/ai/router/health", authorize("ai:read"), async (_req, res): Promise<void> => {
   res.json(aiRouter.getAllHealth());
 });
 

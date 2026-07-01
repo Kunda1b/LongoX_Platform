@@ -1,0 +1,402 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "enable": true,
+        "expr": "timestamp(changes(kube_deployment_status_replicas_available[1m]) > 0)",
+        "iconColor": "blue",
+        "name": "Deployment Change",
+        "titleFormat": "Deploy: {{ deployment }}",
+        "tagFormat": "deploy"
+      },
+      {
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "enable": true,
+        "expr": "timestamp(changes(kube_node_status_condition{status=\"true\"}[5m]) > 0)",
+        "iconColor": "red",
+        "name": "Node Status Change",
+        "titleFormat": "Node: {{ node }}",
+        "tagFormat": "node"
+      }
+    ]
+  },
+  "description": "Cluster & infrastructure — nodes, CPU, memory, network, pods, PVC, HPA, certs, DB, Redis, S3",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    { "title": "SLO Dashboard", "url": "/d/slo-dashboard", "type": "dashboards" },
+    { "title": "API Gateway", "url": "/d/api-gateway-dashboard", "type": "dashboards" }
+  ],
+  "panels": [
+    {
+      "title": "Node Count by Type / Region",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "count(kube_node_info) by (node_role)",
+          "legendFormat": "{{ node_role }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "displayMode": "list" }
+        }
+      },
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"] }
+      }
+    },
+    {
+      "title": "CPU Utilization by Namespace",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 4, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\",namespace=~\"$namespace\"}[5m])) by (namespace)",
+          "legendFormat": "{{ namespace }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "Memory Utilization by Namespace",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(container_memory_working_set_bytes{container!=\"\",namespace=~\"$namespace\"}) by (namespace)",
+          "legendFormat": "{{ namespace }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "Pod Restart Count (by Service)",
+      "type": "barchart",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 4 },
+      "targets": [
+        {
+          "expr": "sum(rate(kube_pod_container_status_restarts_total[5m])) by (pod)",
+          "legendFormat": "{{ pod }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "stacking": { "mode": "normal" }, "fillOpacity": 80 },
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.1 },
+            { "color": "red", "value": 1 }
+          ]}
+        }
+      },
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "auto"
+      }
+    },
+    {
+      "title": "PVC Usage (by Claim)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 4 },
+      "targets": [
+        {
+          "expr": "kubelet_volume_stats_used_bytes",
+          "legendFormat": "{{ persistentvolumeclaim }}"
+        },
+        {
+          "expr": "kubelet_volume_stats_capacity_bytes",
+          "legendFormat": "{{ persistentvolumeclaim }} capacity"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "HPA Current / Max Replicas",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 4 },
+      "targets": [
+        {
+          "expr": "kube_horizontalpodautoscaler_status_current_replicas",
+          "legendFormat": "current — {{ horizontalpodautoscaler }}"
+        },
+        {
+          "expr": "kube_horizontalpodautoscaler_spec_max_replicas",
+          "legendFormat": "max — {{ horizontalpodautoscaler }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "Certificate Expiry Countdown",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "min(certificate_expiry_days)",
+          "legendFormat": "days to expiry"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtduration",
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 30 },
+            { "color": "red", "value": 14 }
+          ]}
+        }
+      }
+    },
+    {
+      "title": "Database Connections",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 4, "y": 12 },
+      "targets": [
+        {
+          "expr": "pg_connections_used",
+          "legendFormat": "used"
+        },
+        {
+          "expr": "pg_connections_max",
+          "legendFormat": "max"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 },
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 80 },
+            { "color": "red", "value": 90 }
+          ]}
+        }
+      }
+    },
+    {
+      "title": "Database Replica Lag",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 12, "y": 12 },
+      "targets": [
+        {
+          "expr": "pg_replication_lag_seconds",
+          "legendFormat": "{{ replica }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 },
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 10 },
+            { "color": "red", "value": 60 }
+          ]}
+        }
+      }
+    },
+    {
+      "title": "Redis Memory Usage",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 20, "y": 12 },
+      "targets": [
+        {
+          "expr": "redis_memory_used_bytes",
+          "legendFormat": "used"
+        },
+        {
+          "expr": "redis_memory_max_bytes",
+          "legendFormat": "max"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 },
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.8 },
+            { "color": "red", "value": 0.9 }
+          ]}
+        }
+      }
+    },
+    {
+      "title": "Redis Operations Rate",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 4, "y": 20 },
+      "targets": [
+        {
+          "expr": "rate(redis_commands_processed_total[5m])",
+          "legendFormat": "ops/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "Network IO by Namespace",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "targets": [
+        {
+          "expr": "sum(rate(container_network_receive_bytes_total{namespace=~\"$namespace\"}[5m])) by (namespace)",
+          "legendFormat": "rx — {{ namespace }}"
+        },
+        {
+          "expr": "sum(rate(container_network_transmit_bytes_total{namespace=~\"$namespace\"}[5m])) by (namespace)",
+          "legendFormat": "tx — {{ namespace }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "S3 Bucket Sizes",
+      "type": "barchart",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 4, "y": 28 },
+      "targets": [
+        {
+          "expr": "aws_s3_bucket_size_bytes",
+          "legendFormat": "{{ bucket }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "stacking": { "mode": "normal" }, "fillOpacity": 80 }
+        }
+      },
+      "options": {
+        "orientation": "auto",
+        "showValue": "auto"
+      }
+    },
+    {
+      "title": "Cluster CPU / Memory Usage %",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
+      "targets": [
+        {
+          "expr": "cluster:cpu:usage * 100",
+          "legendFormat": "CPU %"
+        },
+        {
+          "expr": "cluster:memory:usage * 100",
+          "legendFormat": "Memory %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 },
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 70 },
+            { "color": "red", "value": 85 }
+          ]}
+        }
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["longox", "infrastructure"],
+  "templating": {
+    "list": [
+      {
+        "description": "Filter by Kubernetes namespace",
+        "label": "Namespace",
+        "name": "namespace",
+        "options": [
+          { "selected": true, "text": "All", "value": ".*" },
+          { "selected": false, "text": "platform-control", "value": "platform-control" },
+          { "selected": false, "text": "platform-services", "value": "platform-services" },
+          { "selected": false, "text": "platform-execution", "value": "platform-execution" },
+          { "selected": false, "text": "platform-observability", "value": "platform-observability" }
+        ],
+        "query": "label_values(kube_namespace_labels, namespace)",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" }
+      },
+      {
+        "description": "Environment",
+        "label": "Environment",
+        "name": "env",
+        "options": [
+          { "selected": true, "text": "production", "value": "production" },
+          { "selected": false, "text": "staging", "value": "staging" },
+          { "selected": false, "text": "development", "value": "development" }
+        ],
+        "type": "custom"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"],
+    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+  },
+  "title": "LongoX Infrastructure",
+  "uid": "infrastructure-dashboard",
+  "version": 1
+}

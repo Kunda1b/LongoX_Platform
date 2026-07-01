@@ -4,5 +4,4 @@ export {
   jobQueue,
   startWorkflowExecution,
   writeAudit,
-  runWorkflow,
 } from "../queue/bullmq-queue";

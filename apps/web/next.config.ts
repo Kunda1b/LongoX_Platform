@@ -19,6 +19,8 @@ const nextConfig: NextConfig = {
     "@longox/shared-realtime",
     "@longox/shared-events",
     "@longox/workflow-canvas",
+    "@longox/dashboard-renderer",
+    "@longox/dashboard-widgets",
   ],
   experimental: {
     optimizePackageImports: ["@radix-ui/react-icons"],

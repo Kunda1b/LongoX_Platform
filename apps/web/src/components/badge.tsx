@@ -1,4 +1,1 @@
-import React from "react";
-export default function badge() {
-  return <div>badge component</div>;
-}
+export { Badge, badgeVariants } from "@/components/ui/badge";

@@ -1,0 +1,17 @@
+global:
+  environment: staging
+  imageTag: staging
+
+replicaCount: 2
+
+autoscaling:
+  minReplicas: 2
+  maxReplicas: 6
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi

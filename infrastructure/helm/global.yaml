@@ -1,0 +1,48 @@
+global:
+  imageRegistry: "ghcr.io/longox"
+  imageTag: "latest"
+  imagePullPolicy: "Always"
+
+  commonLabels:
+    app.kubernetes.io/part-of: longox
+    app.kubernetes.io/managed-by: helm
+
+  environment: production
+  dnsDomain: longox.io
+
+  observability:
+    otelEndpoint: "http://otel-collector.monitoring:4318"
+    otelProtocol: "http/protobuf"
+    samplingRate: 0.1
+    metricsEnabled: true
+    tracesEnabled: true
+    logsEnabled: true
+
+  featureFlags:
+    enableWorkflowV2: false
+    enableAIAgent: true
+    enableMarketplace: true
+    enableCompliance: false
+    enableMultiRegion: false
+    enableSSEStreaming: true
+
+  databases:
+    postgres:
+      host: ""
+      port: 5432
+      name: longox
+      secretName: database-credentials
+    redis:
+      host: ""
+      port: 6379
+      secretName: redis-credentials
+
+  messaging:
+    type: nats
+    url: "nats://nats.platform-services:4222"
+    jetstreamEnabled: true
+
+  kong:
+    enabled: true
+    url: "http://kong-kong-proxy.kong:8000"
+    adminUrl: "http://kong-kong-admin.kong:8001"

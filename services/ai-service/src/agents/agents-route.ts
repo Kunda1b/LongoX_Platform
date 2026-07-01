@@ -2,10 +2,11 @@ import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, agentMemoryTable } from "@longox/db";
 import { randomUUID } from "node:crypto";
+import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
-router.post("/agents/run", async (req, res): Promise<void> => {
+router.post("/agents/run", authorize("ai:run"), async (req, res): Promise<void> => {
   const tenantId = req.tenantId;
   if (!tenantId) {
     res.status(400).json({ error: "Tenant context required" });
@@ -78,7 +79,7 @@ router.post("/agents/run", async (req, res): Promise<void> => {
   });
 });
 
-router.get("/agents/memory", async (req, res): Promise<void> => {
+router.get("/agents/memory", authorize("ai:read"), async (req, res): Promise<void> => {
   const tenantId = req.tenantId;
   if (!tenantId) {
     res.status(400).json({ error: "Tenant context required" });
@@ -114,7 +115,7 @@ router.get("/agents/memory", async (req, res): Promise<void> => {
   );
 });
 
-router.delete("/agents/memory/:id", async (req, res): Promise<void> => {
+router.delete("/agents/memory/:id", authorize("ai:write"), async (req, res): Promise<void> => {
   const tenantId = req.tenantId ?? 0;
   await db
     .delete(agentMemoryTable)

@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, sql } from "drizzle-orm";
 import { db, aiModelsTable } from "@longox/db";
+import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
@@ -85,7 +86,7 @@ function fmt(row: typeof aiModelsTable.$inferSelect) {
   };
 }
 
-router.get("/ai-models", async (_req, res): Promise<void> => {
+router.get("/ai-models", authorize("ai:read"), async (_req, res): Promise<void> => {
   await ensureModels();
   const rows = await db
     .select()
@@ -94,7 +95,7 @@ router.get("/ai-models", async (_req, res): Promise<void> => {
   res.json(rows.map(fmt));
 });
 
-router.get("/ai-models/:id", async (req, res): Promise<void> => {
+router.get("/ai-models/:id", authorize("ai:read"), async (req, res): Promise<void> => {
   await ensureModels();
   const [row] = await db
     .select()
@@ -107,7 +108,7 @@ router.get("/ai-models/:id", async (req, res): Promise<void> => {
   res.json(fmt(row));
 });
 
-router.post("/ai-models", async (req, res): Promise<void> => {
+router.post("/ai-models", authorize("ai:write"), async (req, res): Promise<void> => {
   const {
     provider,
     name,
@@ -147,7 +148,7 @@ router.post("/ai-models", async (req, res): Promise<void> => {
   res.status(201).json(fmt(row));
 });
 
-router.patch("/ai-models/:id", async (req, res): Promise<void> => {
+router.patch("/ai-models/:id", authorize("ai:write"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const updates: Record<string, unknown> = {};
   const b = req.body as Partial<{
@@ -182,7 +183,7 @@ router.patch("/ai-models/:id", async (req, res): Promise<void> => {
   res.json(fmt(row));
 });
 
-router.delete("/ai-models/:id", async (req, res): Promise<void> => {
+router.delete("/ai-models/:id", authorize("ai:delete"), async (req, res): Promise<void> => {
   await db
     .delete(aiModelsTable)
     .where(eq(aiModelsTable.id, Number(req.params.id)));

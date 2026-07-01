@@ -8,10 +8,11 @@ import {
 } from "@longox/db";
 import { eq, gte } from "drizzle-orm";
 import { GetRecentActivityQueryParams } from "@longox/api-zod";
+import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
-router.get("/dashboard/summary", async (_req, res): Promise<void> => {
+router.get("/dashboard/summary", authorize("dashboards:read"), async (_req, res): Promise<void> => {
   const [workflows, executions, connectors, apps] = await Promise.all([
     db.select().from(workflowsTable),
     db.select().from(executionsTable),
@@ -46,7 +47,7 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
   });
 });
 
-router.get("/dashboard/activity", async (req, res): Promise<void> => {
+router.get("/dashboard/activity", authorize("dashboards:read"), async (req, res): Promise<void> => {
   const params = GetRecentActivityQueryParams.safeParse(req.query);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

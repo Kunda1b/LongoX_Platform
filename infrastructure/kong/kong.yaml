@@ -114,8 +114,8 @@ services:
       # ── Protected: Workflows ──────────────────────────────────────────────────
       - name: workflows
         paths:
-          - ~/api/v1/workflows
-          - ~/api/workflows
+          - ~^/api/v1/workflows
+          - ~^/api/workflows
         strip_path: false
         methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
         plugins:
@@ -136,8 +136,8 @@ services:
       # ── Protected: Executions ─────────────────────────────────────────────────
       - name: executions
         paths:
-          - ~/api/v1/executions
-          - ~/api/executions
+          - ~^/api/v1/executions
+          - ~^/api/executions
         strip_path: false
         methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
         plugins:
@@ -157,8 +157,8 @@ services:
       # ── Protected: Execution SSE Stream ──────────────────────────────────────
       - name: execution-stream
         paths:
-          - ~/api/v1/executions/[^/]+/stream
-          - ~/api/executions/[^/]+/stream
+          - ~^/api/v1/executions/[^/]+/stream
+          - ~^/api/executions/[^/]+/stream
         strip_path: false
         methods: [GET]
         plugins:
@@ -177,8 +177,8 @@ services:
       # ── Protected: AI ─────────────────────────────────────────────────────────
       - name: ai
         paths:
-          - ~/api/v1/ai
-          - ~/api/ai
+          - ~^/api/v1/ai
+          - ~^/api/ai
         strip_path: false
         methods: [GET, POST, OPTIONS]
         plugins:
@@ -198,12 +198,12 @@ services:
       # ── Protected: Billing ────────────────────────────────────────────────────
       - name: billing
         paths:
-          - ~/api/v1/billing
-          - ~/api/billing
-          - ~/api/v1/invoices
-          - ~/api/invoices
-          - ~/api/v1/plans
-          - ~/api/plans
+          - ~^/api/v1/billing
+          - ~^/api/billing
+          - ~^/api/v1/invoices
+          - ~^/api/invoices
+          - ~^/api/v1/plans
+          - ~^/api/plans
         strip_path: false
         methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
         plugins:
@@ -222,8 +222,8 @@ services:
       # ── Protected: Connectors ─────────────────────────────────────────────────
       - name: connectors
         paths:
-          - ~/api/v1/connectors
-          - ~/api/connectors
+          - ~^/api/v1/connectors
+          - ~^/api/connectors
         strip_path: false
         methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
         plugins:
@@ -242,8 +242,8 @@ services:
       # ── Protected: Dashboards ─────────────────────────────────────────────────
       - name: dashboards
         paths:
-          - ~/api/v1/dashboards
-          - ~/api/dashboards
+          - ~^/api/v1/dashboards
+          - ~^/api/dashboards
         strip_path: false
         methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
         plugins:
@@ -255,8 +255,8 @@ services:
       # ── Protected: Templates ──────────────────────────────────────────────────
       - name: templates
         paths:
-          - ~/api/v1/templates
-          - ~/api/templates
+          - ~^/api/v1/templates
+          - ~^/api/templates
         strip_path: false
         methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
         plugins:
@@ -268,8 +268,8 @@ services:
       # ── Protected: Search ─────────────────────────────────────────────────────
       - name: search
         paths:
-          - ~/api/v1/search
-          - ~/api/search
+          - ~^/api/v1/search
+          - ~^/api/search
         strip_path: false
         methods: [GET, OPTIONS]
         plugins:
@@ -288,8 +288,8 @@ services:
       # ── Protected: Marketplace ────────────────────────────────────────────────
       - name: marketplace
         paths:
-          - ~/api/v1/marketplace
-          - ~/api/marketplace
+          - ~^/api/v1/marketplace
+          - ~^/api/marketplace
         strip_path: false
         methods: [GET, POST, OPTIONS]
         plugins:
@@ -301,8 +301,8 @@ services:
       # ── Protected: Audit ──────────────────────────────────────────────────────
       - name: audit
         paths:
-          - ~/api/v1/audit
-          - ~/api/audit
+          - ~^/api/v1/audit
+          - ~^/api/audit
         strip_path: false
         methods: [GET, OPTIONS]
         plugins:
@@ -321,8 +321,8 @@ services:
       # ── Protected: Metering ───────────────────────────────────────────────────
       - name: metering
         paths:
-          - ~/api/v1/metering
-          - ~/api/metering
+          - ~^/api/v1/metering
+          - ~^/api/metering
         strip_path: false
         methods: [GET, POST, OPTIONS]
         plugins:
@@ -334,8 +334,8 @@ services:
       # ── Protected: Replication ────────────────────────────────────────────────
       - name: replication
         paths:
-          - ~/api/v1/replication
-          - ~/api/replication
+          - ~^/api/v1/replication
+          - ~^/api/replication
         strip_path: false
         methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
         plugins:
@@ -366,18 +366,18 @@ services:
       # ── Protected: RBAC / Tenants / Users ─────────────────────────────────────
       - name: admin
         paths:
-          - ~/api/v1/tenants
-          - ~/api/tenants
-          - ~/api/v1/users
-          - ~/api/users
-          - ~/api/v1/roles
-          - ~/api/roles
-          - ~/api/v1/environments
-          - ~/api/environments
-          - ~/api/v1/compliance
-          - ~/api/compliance
-          - ~/api/v1/feature-flags
-          - ~/api/feature-flags
+          - ~^/api/v1/tenants
+          - ~^/api/tenants
+          - ~^/api/v1/users
+          - ~^/api/users
+          - ~^/api/v1/roles
+          - ~^/api/roles
+          - ~^/api/v1/environments
+          - ~^/api/environments
+          - ~^/api/v1/compliance
+          - ~^/api/compliance
+          - ~^/api/v1/feature-flags
+          - ~^/api/feature-flags
         strip_path: false
         methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
         plugins:

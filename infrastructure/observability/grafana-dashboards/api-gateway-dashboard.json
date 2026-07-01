@@ -1,0 +1,290 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "enable": true,
+        "expr": "timestamp(changes(kube_deployment_status_replicas_available{deployment=\"api-gateway\"}[1m]) > 0)",
+        "iconColor": "blue",
+        "name": "Deployment Change",
+        "titleFormat": "Deploy: {{ deployment }}",
+        "tagFormat": "deploy"
+      }
+    ]
+  },
+  "description": "API Gateway overview — RPS, latency, error rates, rate limiting, and upstream health",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    { "title": "SLO Dashboard", "url": "/d/slo-dashboard", "type": "dashboards" },
+    { "title": "Infrastructure", "url": "/d/infrastructure-dashboard", "type": "dashboards" }
+  ],
+  "panels": [
+    {
+      "title": "Requests Per Second by Route",
+      "type": "barchart",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{route=~\"$route\"}[5m])) by (route)",
+          "legendFormat": "{{ route }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "stacking": { "mode": "normal" }, "fillOpacity": 80 }
+        }
+      },
+      "options": {
+        "orientation": "auto",
+        "showValue": "auto"
+      }
+    },
+    {
+      "title": "P50 / P95 / P99 Latency by Endpoint",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{route=~\"$route\"}[5m])) by (le, route))",
+          "legendFormat": "p50 {{ route }}"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{route=~\"$route\"}[5m])) by (le, route))",
+          "legendFormat": "p95 {{ route }}"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{route=~\"$route\"}[5m])) by (le, route))",
+          "legendFormat": "p99 {{ route }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 },
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 1 },
+            { "color": "red", "value": 5 }
+          ]}
+        }
+      }
+    },
+    {
+      "title": "Error Rate by Status Code",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{route=~\"$route\",status=~\"4..\"}[5m])) by (status)",
+          "legendFormat": "4xx {{ status }}"
+        },
+        {
+          "expr": "sum(rate(http_requests_total{route=~\"$route\",status=~\"5..\"}[5m])) by (status)",
+          "legendFormat": "5xx {{ status }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "bars",
+            "stacking": { "mode": "normal" },
+            "fillOpacity": 80
+          },
+          "color": { "mode": "palette-classic" }
+        }
+      }
+    },
+    {
+      "title": "Active Connections",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(kong_nginx_connections_total)",
+          "legendFormat": "total"
+        },
+        {
+          "expr": "sum(kong_nginx_connections_active)",
+          "legendFormat": "active"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "Rate Limiting Hits (Rejected)",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(kong_rate_limiting_requests[5m]))",
+          "legendFormat": "rejected/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 10 },
+            { "color": "red", "value": 100 }
+          ]}
+        }
+      }
+    },
+    {
+      "title": "Upstream Target Health",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 12 },
+      "targets": [
+        {
+          "expr": "sum(kong_upstream_target_health{state=\"healthy\"})",
+          "legendFormat": "healthy"
+        },
+        {
+          "expr": "sum(kong_upstream_target_health{state=\"unhealthy\"})",
+          "legendFormat": "unhealthy"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "red", "value": 0 }
+          ]}
+        }
+      }
+    },
+    {
+      "title": "Top 5 Slowest Endpoints",
+      "type": "table",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "topk(5, histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, route)))",
+          "legendFormat": "p99 {{ route }}",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "align": "auto" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "route" },
+            "properties": [{ "id": "custom.width", "value": 300 }]
+          }
+        ]
+      },
+      "options": {
+        "sortBy": [
+          { "displayName": "Value #A", "desc": true }
+        ]
+      }
+    },
+    {
+      "title": "HTTP Request Duration Heatmap",
+      "type": "heatmap",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum(increase(http_request_duration_seconds_bucket[5m])) by (le)",
+          "format": "heatmap",
+          "legendFormat": "{{ le }}"
+        }
+      ],
+      "options": {
+        "calculate": false,
+        "yAxis": { "unit": "s" },
+        "rows": { "mode": "auto" }
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["longox", "gateway"],
+  "templating": {
+    "list": [
+      {
+        "description": "Filter by route pattern",
+        "label": "Route",
+        "name": "route",
+        "options": [
+          { "selected": true, "text": "All API routes", "value": "/api/.*" },
+          { "selected": false, "text": "Auth", "value": "/auth/.*" },
+          { "selected": false, "text": "Workflows", "value": "/api/workflows.*" },
+          { "selected": false, "text": "Executions", "value": "/api/executions.*" },
+          { "selected": false, "text": "AI", "value": "/api/ai.*" },
+          { "selected": false, "text": "Billing", "value": "/api/billing.*" },
+          { "selected": false, "text": "Search", "value": "/api/search.*" },
+          { "selected": false, "text": "Marketplace", "value": "/api/marketplace.*" },
+          { "selected": false, "text": "GraphQL", "value": "/api/graphql.*" }
+        ],
+        "query": "/api/.*",
+        "type": "custom"
+      },
+      {
+        "description": "Environment",
+        "label": "Environment",
+        "name": "env",
+        "options": [
+          { "selected": true, "text": "production", "value": "production" },
+          { "selected": false, "text": "staging", "value": "staging" },
+          { "selected": false, "text": "development", "value": "development" }
+        ],
+        "type": "custom"
+      },
+      {
+        "description": "Time range",
+        "label": "Time Range",
+        "name": "timeRange",
+        "options": [
+          { "selected": true, "text": "Last 1h", "value": "now-1h" },
+          { "selected": false, "text": "Last 6h", "value": "now-6h" },
+          { "selected": false, "text": "Last 24h", "value": "now-24h" },
+          { "selected": false, "text": "Last 7d", "value": "now-7d" },
+          { "selected": false, "text": "Last 30d", "value": "now-30d" }
+        ],
+        "query": "now-1h",
+        "type": "custom"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"],
+    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+  },
+  "title": "LongoX API Gateway",
+  "uid": "api-gateway-dashboard",
+  "version": 1
+}

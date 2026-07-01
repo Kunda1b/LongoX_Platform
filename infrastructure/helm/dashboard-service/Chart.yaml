@@ -1,0 +1,9 @@
+apiVersion: v2
+name: dashboard-service
+description: LongoX Dashboard & Analytics Service
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - longox
+  - dashboard-service

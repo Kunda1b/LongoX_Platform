@@ -1,10 +1,11 @@
 import { Router, type IRouter } from "express";
 import { eq, and as andOp } from "drizzle-orm";
 import { db, dataSourcesTable } from "@longox/db";
+import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
-router.get("/datasources", async (req, res): Promise<void> => {
+router.get("/datasources", authorize("dashboards:read"), async (req, res): Promise<void> => {
   const tenantId = (req as any).user?.tenantId;
   const conditions = [];
   if (tenantId) conditions.push(eq(dataSourcesTable.tenantId, tenantId));
@@ -18,7 +19,7 @@ router.get("/datasources", async (req, res): Promise<void> => {
   res.json(sources);
 });
 
-router.post("/datasources", async (req, res): Promise<void> => {
+router.post("/datasources", authorize("dashboards:write"), async (req, res): Promise<void> => {
   const { name, kind, config } = req.body as Record<string, unknown>;
 
   if (!name || !kind) {
@@ -39,7 +40,7 @@ router.post("/datasources", async (req, res): Promise<void> => {
   res.status(201).json(source);
 });
 
-router.delete("/datasources/:id", async (req, res): Promise<void> => {
+router.delete("/datasources/:id", authorize("dashboards:delete"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -58,7 +59,7 @@ router.delete("/datasources/:id", async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
-router.post("/datasources/:id/test", async (req, res): Promise<void> => {
+router.post("/datasources/:id/test", authorize("dashboards:write"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });

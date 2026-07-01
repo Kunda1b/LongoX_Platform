@@ -21,6 +21,7 @@ import {
   writeAudit,
 } from "@longox/execution-service/workflow-runner";
 import { authorize } from "@longox/shared-rbac";
+import { publishWorkflow } from "../../application/commands/publish-workflow.command";
 
 const router: IRouter = Router();
 
@@ -285,49 +286,42 @@ router.post("/workflows/:id/publish", authorize({ resource: "workflows", action:
   const changeNote =
     (req.body as { changeNote?: string })?.changeNote ?? "Published";
 
-  const existing = await db
-    .select({ version: workflowVersionsTable.version })
-    .from(workflowVersionsTable)
-    .where(eq(workflowVersionsTable.workflowId, params.data.id))
-    .orderBy(desc(workflowVersionsTable.version))
-    .limit(1);
-  const nextVersion = (existing[0]?.version ?? 0) + 1;
+  const rawNodes = workflow.nodes as any;
+  const graph = {
+    nodes: Array.isArray(rawNodes) ? rawNodes : Array.isArray(rawNodes?.nodes) ? rawNodes.nodes : [],
+    edges: Array.isArray(rawNodes?.edges) ? rawNodes.edges : [],
+  };
 
-  const [version] = await db
-    .insert(workflowVersionsTable)
-    .values({
+  try {
+    const result = await publishWorkflow({
       workflowId: params.data.id,
-      version: nextVersion,
-      name: workflow.name,
-      nodes: (workflow.nodes ?? []) as Parameters<typeof db.insert>[0],
+      tenantId: req.user!.tenantId ?? 0,
+      graph,
+      changeNote,
+      publishedBy: req.user!.name,
+    });
+
+    await writeAudit(
+      "workflow.published",
+      "workflow",
+      String(params.data.id),
+      { version: result.versionNumber, changeNote, diffId: result.diffId },
+      "user",
+    );
+
+    res.status(201).json({
+      id: result.versionId,
+      workflowId: params.data.id,
+      version: result.versionNumber,
       changeNote,
       published: true,
-    })
-    .returning();
-
-  await db
-    .update(workflowsTable)
-    .set({ status: "active" })
-    .where(eq(workflowsTable.id, params.data.id));
-
-  await writeAudit(
-    "workflow.published",
-    "workflow",
-    String(workflow.id),
-    { version: nextVersion, changeNote },
-    "user",
-  );
-
-  res.status(201).json({
-    id: version.id,
-    workflowId: version.workflowId,
-    version: version.version,
-    name: version.name,
-    nodes: version.nodes,
-    changeNote: version.changeNote ?? null,
-    published: version.published,
-    createdAt: version.createdAt.toISOString(),
-  });
+      diffComputed: result.diffId !== null,
+      createdAt: result.publishedAt,
+    });
+  } catch (err: any) {
+    const status = err.statusCode ?? 500;
+    res.status(status).json({ error: err.message ?? "Publish failed" });
+  }
 });
 
 router.post("/workflows/:id/duplicate", authorize({ resource: "workflows", action: "write" }), async (req, res): Promise<void> => {

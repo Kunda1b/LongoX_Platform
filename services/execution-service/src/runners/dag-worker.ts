@@ -36,8 +36,8 @@ import {
   type WorkflowGraph,
 } from "@longox/workflow-engine";
 import { createExecutors } from "../executors/registry";
+import { sseExecutionBus } from "@longox/shared-realtime";
 import { writeAudit } from "../queue/bullmq-queue";
-import { broadcastExecutionEvent } from "../../../api-gateway/src/routes/execution-stream";
 
 // ─── Checkpoint store (DB-backed) ─────────────────────────────────────────────
 
@@ -203,50 +203,50 @@ export async function runWorkflowDAG(opts: {
         break;
 
       case "node.started":
-        broadcastExecutionEvent(executionId, "node", {
+        sseExecutionBus.broadcast({ executionId, eventType: "node", data: {
           executionId,
           nodeId: event.nodeId,
           nodeName: event.nodeName,
           status: "running",
           attempt: event.attempt,
-        });
+        }});
         break;
 
       case "node.completed":
-        broadcastExecutionEvent(executionId, "node", {
+        sseExecutionBus.broadcast({ executionId, eventType: "node", data: {
           executionId,
           nodeId: event.nodeId,
           status: "success",
           durationMs: event.durationMs,
-        });
+        }});
         break;
 
       case "node.failed":
-        broadcastExecutionEvent(executionId, "node", {
+        sseExecutionBus.broadcast({ executionId, eventType: "node", data: {
           executionId,
           nodeId: event.nodeId,
           status: "failed",
           error: event.error,
           attempt: event.attempt,
-        });
+        }});
         break;
 
       case "node.retrying":
-        broadcastExecutionEvent(executionId, "retry", {
+        sseExecutionBus.broadcast({ executionId, eventType: "retry", data: {
           executionId,
           nodeId: event.nodeId,
           attempt: event.attempt,
           delayMs: event.delayMs,
-        });
+        }});
         break;
 
       case "node.paused":
-        broadcastExecutionEvent(executionId, "approval", {
+        sseExecutionBus.broadcast({ executionId, eventType: "approval", data: {
           executionId,
           nodeId: event.nodeId,
           approvalTaskId: event.approvalTaskId,
           status: "pending",
-        });
+        }});
         break;
 
       case "dlq.entry":
@@ -261,11 +261,11 @@ export async function runWorkflowDAG(opts: {
           attempts: 3,
           jobData: {},
         } as any);
-        broadcastExecutionEvent(executionId, "dlq", {
+        sseExecutionBus.broadcast({ executionId, eventType: "dlq", data: {
           executionId,
           nodeId: event.nodeId,
           error: event.error,
-        });
+        }});
         break;
 
       case "execution.completed":
@@ -281,11 +281,11 @@ export async function runWorkflowDAG(opts: {
           .update(workflowsTable)
           .set({ lastRunStatus: "success", lastRunAt: new Date() })
           .where(eq(workflowsTable.id, workflowId));
-        broadcastExecutionEvent(executionId, "execution", {
+        sseExecutionBus.broadcast({ executionId, eventType: "execution", data: {
           executionId,
           status: "success",
           durationMs: event.durationMs,
-        });
+        }});
         await writeAudit("execution.completed", "execution", String(executionId), {
           workflowId,
           durationMs: event.durationMs,
@@ -305,11 +305,11 @@ export async function runWorkflowDAG(opts: {
           .update(workflowsTable)
           .set({ lastRunStatus: "failed", lastRunAt: new Date() })
           .where(eq(workflowsTable.id, workflowId));
-        broadcastExecutionEvent(executionId, "execution", {
+        sseExecutionBus.broadcast({ executionId, eventType: "execution", data: {
           executionId,
           status: "failed",
           error: event.error,
-        });
+        }});
         await writeAudit("execution.failed", "execution", String(executionId), {
           workflowId,
           error: event.error,
@@ -381,11 +381,11 @@ export async function runWorkflowDAG(opts: {
       })
       .where(eq(executionsTable.id, executionId));
 
-    broadcastExecutionEvent(executionId, "execution", {
+    sseExecutionBus.broadcast({ executionId, eventType: "execution", data: {
       executionId,
       status: "failed",
       error: msg,
-    });
+    }});
 
     throw err;
   }

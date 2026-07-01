@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, like, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import {
   appsTable,
   connectorsTable,
@@ -7,6 +7,7 @@ import {
   db,
 } from "@longox/db";
 import { authorize } from "@longox/shared-rbac";
+import { ftsSearchService } from "../services/search.service";
 
 const router: IRouter = Router();
 
@@ -85,15 +86,20 @@ router.get("/connectors", authorize({ resource: "connectors", action: "read" }),
     conditions.push(
       eq(connectorsTable.isInstalled, String(req.query.installed) === "true"),
     );
-  if (req.query.search) {
-    const pattern = `%${String(req.query.search)}%`;
-    conditions.push(
-      or(
-        like(connectorsTable.name, pattern),
-        like(connectorsTable.description, pattern),
-        like(connectorsTable.displayName, pattern),
-      ),
-    );
+
+  const searchQuery = req.query.search as string | undefined;
+  if (searchQuery) {
+    const searchResult = await ftsSearchService.search(searchQuery, {
+      resourceTypes: ["connector"],
+      limit: 100,
+    });
+    const ids = searchResult.results.map((r) => parseInt(r.resourceId, 10));
+    if (ids.length > 0) {
+      conditions.push(inArray(connectorsTable.id, ids));
+    } else {
+      res.json([]);
+      return;
+    }
   }
 
   const rows = await db
@@ -226,11 +232,20 @@ router.get("/apps", authorize({ resource: "apps", action: "read" }), async (req,
   if (req.query.type) conditions.push(eq(appsTable.type, String(req.query.type)));
   if (req.query.status)
     conditions.push(eq(appsTable.status, String(req.query.status)));
-  if (req.query.search) {
-    const pattern = `%${String(req.query.search)}%`;
-    conditions.push(
-      or(like(appsTable.name, pattern), like(appsTable.description, pattern)),
-    );
+
+  const searchQuery = req.query.search as string | undefined;
+  if (searchQuery) {
+    const searchResult = await ftsSearchService.search(searchQuery, {
+      resourceTypes: ["app"],
+      limit: 100,
+    });
+    const ids = searchResult.results.map((r) => parseInt(r.resourceId, 10));
+    if (ids.length > 0) {
+      conditions.push(inArray(appsTable.id, ids));
+    } else {
+      res.json([]);
+      return;
+    }
   }
 
   const rows = await db

@@ -1,0 +1,17 @@
+global:
+  environment: production
+  imageTag: latest
+
+replicaCount: 3
+
+autoscaling:
+  minReplicas: 3
+  maxReplicas: 10
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: 1
+    memory: 2Gi

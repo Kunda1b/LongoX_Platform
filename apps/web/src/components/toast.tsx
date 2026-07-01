@@ -1,4 +1,2 @@
-import React from "react";
-export default function toast() {
-  return <div>toast component</div>;
-}
+export { Toast, ToastAction, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from "@/components/ui/toast";
+export { Toaster } from "@/components/ui/toaster";

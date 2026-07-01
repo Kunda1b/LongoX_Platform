@@ -1,0 +1,296 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "enable": true,
+        "expr": "timestamp(changes(kube_deployment_status_replicas_available{deployment=~\"execution-service|execution-worker\"}[1m]) > 0)",
+        "iconColor": "blue",
+        "name": "Deployment Change",
+        "titleFormat": "Deploy: {{ deployment }}",
+        "tagFormat": "deploy"
+      }
+    ]
+  },
+  "description": "Workflow platform — publish rate, execution status, duration, queue depth, DAG complexity",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    { "title": "SLO Dashboard", "url": "/d/slo-dashboard", "type": "dashboards" },
+    { "title": "API Gateway", "url": "/d/api-gateway-dashboard", "type": "dashboards" },
+    { "title": "AI Service", "url": "/d/ai-dashboard", "type": "dashboards" }
+  ],
+  "panels": [
+    {
+      "title": "Workflow Publish Rate",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(longox_workflow_publish_total[5m]))",
+          "legendFormat": "publish rate"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 20 }
+        }
+      }
+    },
+    {
+      "title": "Execution Count by Status",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(longox_jobs_completed_total[5m]))",
+          "legendFormat": "success"
+        },
+        {
+          "expr": "sum(rate(longox_jobs_failed_total[5m]))",
+          "legendFormat": "failed"
+        },
+        {
+          "expr": "sum(rate(longox_jobs_failed_total{error_type=\"timeout\"}[5m]))",
+          "legendFormat": "timeout"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 },
+          "color": { "mode": "palette-classic" }
+        }
+      }
+    },
+    {
+      "title": "Execution Duration P50 / P95 / P99",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(longox_jobs_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(longox_jobs_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(longox_jobs_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 },
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 10 },
+            { "color": "red", "value": 30 }
+          ]}
+        }
+      }
+    },
+    {
+      "title": "Concurrent Executions",
+      "type": "gauge",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(longox_jobs_active)",
+          "legendFormat": "active"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 10 },
+            { "color": "red", "value": 50 }
+          ]},
+          "min": 0,
+          "max": 100
+        }
+      },
+      "options": {
+        "orientation": "horizontal",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "title": "Workflow Version Publishes",
+      "type": "barchart",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(increase(longox_workflow_publish_total[1h])) by (version)",
+          "legendFormat": "v{{ version }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "stacking": { "mode": "normal" }, "fillOpacity": 80 }
+        }
+      },
+      "options": {
+        "orientation": "auto",
+        "showValue": "auto"
+      }
+    },
+    {
+      "title": "Queue Depth by Queue Name",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "longox_queue_depth",
+          "legendFormat": "waiting"
+        },
+        {
+          "expr": "longox_jobs_active",
+          "legendFormat": "active"
+        },
+        {
+          "expr": "longox_jobs_delayed",
+          "legendFormat": "delayed"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 },
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 1000 },
+            { "color": "red", "value": 5000 }
+          ]}
+        }
+      }
+    },
+    {
+      "title": "Node-Level Execution Duration (P95)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(longox_nodes_duration_seconds_bucket[5m])) by (le, node_type))",
+          "legendFormat": "p95 {{ node_type }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "DAG Complexity Distribution",
+      "type": "histogram",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum(increase(longox_workflow_node_count_bucket[1h])) by (le)",
+          "legendFormat": "{{ le }} nodes",
+          "format": "heatmap"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "hideFrom": { "legend": false, "tooltip": false, "viz": false } }
+        }
+      },
+      "options": {
+        "bucketOffset": 0
+      }
+    },
+    {
+      "title": "Job Retry / Error Rate",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum(rate(longox_jobs_retried_total[5m])) / sum(rate(longox_jobs_completed_total[5m])) * 100",
+          "legendFormat": "retry %"
+        },
+        {
+          "expr": "sum(rate(longox_jobs_failed_total[5m])) / sum(rate(longox_jobs_completed_total[5m])) * 100",
+          "legendFormat": "failure %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 },
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 10 },
+            { "color": "red", "value": 25 }
+          ]}
+        }
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["longox", "workflow", "execution"],
+  "templating": {
+    "list": [
+      {
+        "description": "Filter by workflow name",
+        "label": "Workflow",
+        "name": "workflow",
+        "options": [{ "selected": true, "text": "All", "value": ".*" }],
+        "query": "label_values(longox_workflow_publish_total, workflow_name)",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" }
+      },
+      {
+        "description": "Environment",
+        "label": "Environment",
+        "name": "env",
+        "options": [
+          { "selected": true, "text": "production", "value": "production" },
+          { "selected": false, "text": "staging", "value": "staging" },
+          { "selected": false, "text": "development", "value": "development" }
+        ],
+        "type": "custom"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"],
+    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+  },
+  "title": "LongoX Workflow Platform",
+  "uid": "workflow-dashboard",
+  "version": 1
+}

@@ -1,0 +1,215 @@
+# ─── LongoX Platform Synthetic Canary Checks ───────────────────────────────
+# These checks run as CloudWatch Synthetics canaries (or equivalent) from
+# multiple AWS regions to validate API availability from the edge.
+#
+# Each check:
+#   - Hits the specified endpoint from all configured regions
+#   - Validates the HTTP response status code
+#   - Reports success/failure as a Prometheus metric: synthetic_check_success
+#   - Reports latency as: synthetic_check_duration_seconds
+#
+# Alerts fire when any check fails from 2+ regions in a 5-minute window.
+
+checks:
+  - name: api-health
+    endpoint: /api/health
+    method: GET
+    expectedStatus: 200
+    period: 60s
+    timeout: 10s
+    regions:
+      - us-east-1
+      - eu-west-1
+      - ap-southeast-1
+    headers:
+      Accept: application/json
+    body: null
+    assertions:
+      - type: statusCode
+        operator: equals
+        value: 200
+      - type: jsonPath
+        path: $.status
+        operator: equals
+        value: ok
+
+  - name: workflow-create
+    endpoint: /api/workflows
+    method: POST
+    expectedStatus: 201
+    period: 300s
+    timeout: 30s
+    regions:
+      - us-east-1
+      - eu-west-1
+    headers:
+      Content-Type: application/json
+      Authorization: Bearer ${SYNTHETIC_API_TOKEN}
+    body: |
+      {
+        "name": "synthetic-check-workflow-${TIMESTAMP}",
+        "description": "Synthetic monitoring workflow — auto-created by canary",
+        "triggerType": "manual",
+        "nodes": [
+          {
+            "id": "start",
+            "type": "trigger",
+            "config": {}
+          }
+        ],
+        "edges": [],
+        "isActive": false
+      }
+    assertions:
+      - type: statusCode
+        operator: equals
+        value: 201
+      - type: jsonPath
+        path: $.id
+        operator: exists
+
+  - name: marketplace-list
+    endpoint: /api/marketplace/listings
+    method: GET
+    expectedStatus: 200
+    period: 120s
+    timeout: 15s
+    regions:
+      - us-east-1
+      - eu-west-1
+      - ap-southeast-1
+    headers:
+      Accept: application/json
+    assertions:
+      - type: statusCode
+        operator: equals
+        value: 200
+      - type: jsonPath
+        path: $.data
+        operator: exists
+
+  - name: auth-check
+    endpoint: /api/auth/session
+    method: GET
+    expectedStatus: 401
+    period: 60s
+    timeout: 10s
+    regions:
+      - us-east-1
+      - eu-west-1
+      - ap-southeast-1
+    headers:
+      Accept: application/json
+    assertions:
+      - type: statusCode
+        operator: equals
+        value: 401
+    notes: >
+      401 Unauthorized is the expected response — we are checking that the
+      auth endpoint is live and responding. Authenticated session checks
+      are covered by the workflow-create synthetic.
+
+  - name: billing-health
+    endpoint: /api/billing/health
+    method: GET
+    expectedStatus: 200
+    period: 300s
+    timeout: 15s
+    regions:
+      - us-east-1
+      - eu-west-1
+    headers:
+      Accept: application/json
+      Authorization: Bearer ${SYNTHETIC_API_TOKEN}
+    assertions:
+      - type: statusCode
+        operator: equals
+        value: 200
+      - type: jsonPath
+        path: $.status
+        operator: equals
+        value: ok
+
+  - name: search-health
+    endpoint: /api/search/health
+    method: GET
+    expectedStatus: 200
+    period: 120s
+    timeout: 10s
+    regions:
+      - us-east-1
+      - eu-west-1
+    headers:
+      Accept: application/json
+    assertions:
+      - type: statusCode
+        operator: equals
+        value: 200
+
+  - name: graphql-introspection
+    endpoint: /api/graphql
+    method: POST
+    expectedStatus: 200
+    period: 300s
+    timeout: 15s
+    regions:
+      - us-east-1
+    headers:
+      Content-Type: application/json
+      Authorization: Bearer ${SYNTHETIC_API_TOKEN}
+    body: |
+      {
+        "query": "{ __schema { types { name } } }",
+        "operationName": null,
+        "variables": {}
+      }
+    assertions:
+      - type: statusCode
+        operator: equals
+        value: 200
+      - type: jsonPath
+        path: $.data.__schema
+        operator: exists
+
+# ─── Prometheus Metrics Export ─────────────────────────────────────────────
+# Synthetics runtime exports metrics to Prometheus for alerting and dashboards.
+#
+# Metrics:
+#   synthetic_check_success{name="api-health", region="us-east-1"} 1
+#   synthetic_check_duration_seconds{name="api-health", region="us-east-1"} 0.234
+#   synthetic_check_status_code{name="api-health", region="us-east-1"} 200
+
+metrics:
+  - name: synthetic_check_success
+    type: gauge
+    labels: [name, region, method]
+    help: "1 if the synthetic check passed, 0 if it failed"
+  - name: synthetic_check_duration_seconds
+    type: histogram
+    labels: [name, region, method]
+    buckets: [0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60]
+    help: "Duration of synthetic check requests"
+  - name: synthetic_check_status_code
+    type: gauge
+    labels: [name, region, method]
+    help: "HTTP status code returned by the synthetic check"
+
+# ─── Alerting ──────────────────────────────────────────────────────────────
+# These alerts are defined in prometheus-rules.yaml but referenced here for
+# context. Synthetics failures from multiple regions trigger escalation.
+
+alerts:
+  - name: SyntheticCheckFailed
+    description: >
+      Synthetic check {{ $labels.name }} failed in {{ $labels.region }}.
+      Expected status {{ $labels.expected_status }}, got {{ $labels.actual_status }}.
+    severity: warning
+    condition: "synthetic_check_success == 0"
+
+  - name: MultiRegionSyntheticFailure
+    description: >
+      Synthetic check {{ $labels.name }} failed in 2+ regions in the last 5 minutes.
+      This indicates a region-wide or global outage.
+    severity: critical
+    condition: >
+      count by (name) (synthetic_check_success{name="api-health"} == 0) >= 2

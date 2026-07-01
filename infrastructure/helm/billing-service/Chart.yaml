@@ -1,0 +1,9 @@
+apiVersion: v2
+name: billing-service
+description: LongoX Billing & Invoicing Service
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - longox
+  - billing-service

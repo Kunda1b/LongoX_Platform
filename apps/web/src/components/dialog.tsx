@@ -1,4 +1,1 @@
-import React from "react";
-export default function dialog() {
-  return <div>dialog component</div>;
-}
+export { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";

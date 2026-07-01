@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, aiRoutingPoliciesTable } from "@longox/db";
+import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
@@ -23,7 +24,7 @@ function fmt(row: typeof aiRoutingPoliciesTable.$inferSelect) {
   };
 }
 
-router.get("/ai-routing-policies", async (req, res): Promise<void> => {
+router.get("/ai-routing-policies", authorize("ai:read"), async (req, res): Promise<void> => {
   const tenantId = req.tenantId ?? 0;
   if (!tenantId) {
     res.status(400).json({ error: "Tenant context required" });
@@ -37,7 +38,7 @@ router.get("/ai-routing-policies", async (req, res): Promise<void> => {
   res.json(rows.map(fmt));
 });
 
-router.get("/ai-routing-policies/:id", async (req, res): Promise<void> => {
+router.get("/ai-routing-policies/:id", authorize("ai:read"), async (req, res): Promise<void> => {
   const tenantId = req.tenantId ?? 0;
   const [row] = await db
     .select()
@@ -55,7 +56,7 @@ router.get("/ai-routing-policies/:id", async (req, res): Promise<void> => {
   res.json(fmt(row));
 });
 
-router.post("/ai-routing-policies", async (req, res): Promise<void> => {
+router.post("/ai-routing-policies", authorize("ai:write"), async (req, res): Promise<void> => {
   const tenantId = req.tenantId ?? 0;
   if (!tenantId) {
     res.status(400).json({ error: "Tenant context required" });
@@ -104,7 +105,7 @@ router.post("/ai-routing-policies", async (req, res): Promise<void> => {
   res.status(201).json(fmt(row));
 });
 
-router.patch("/ai-routing-policies/:id", async (req, res): Promise<void> => {
+router.patch("/ai-routing-policies/:id", authorize("ai:write"), async (req, res): Promise<void> => {
   const tenantId = req.tenantId ?? 0;
   const id = Number(req.params.id);
   const updates: Record<string, unknown> = {};
@@ -148,7 +149,7 @@ router.patch("/ai-routing-policies/:id", async (req, res): Promise<void> => {
   res.json(fmt(row));
 });
 
-router.delete("/ai-routing-policies/:id", async (req, res): Promise<void> => {
+router.delete("/ai-routing-policies/:id", authorize("ai:delete"), async (req, res): Promise<void> => {
   const tenantId = req.tenantId ?? 0;
   await db
     .delete(aiRoutingPoliciesTable)

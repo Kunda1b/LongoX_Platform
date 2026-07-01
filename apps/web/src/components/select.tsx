@@ -1,4 +1,1 @@
-import React from "react";
-export default function select() {
-  return <div>select component</div>;
-}
+export { Select, SelectGroup, SelectValue, SelectTrigger, SelectContent, SelectLabel, SelectItem, SelectSeparator, SelectScrollUpButton, SelectScrollDownButton } from "@/components/ui/select";

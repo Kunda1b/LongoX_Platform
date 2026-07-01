@@ -1,4 +1,1 @@
-import React from "react";
-export default function modal() {
-  return <div>modal component</div>;
-}
+export { Dialog as Modal, DialogTrigger as ModalTrigger, DialogContent as ModalContent, DialogHeader as ModalHeader, DialogTitle as ModalTitle, DialogDescription as ModalDescription, DialogFooter as ModalFooter, DialogClose as ModalClose } from "@/components/ui/dialog";

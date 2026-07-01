@@ -1,4 +1,10 @@
-import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  timestamp,
+  integer,
+} from "drizzle-orm/pg-core";
 
 export const workflowPromotionsTable = pgTable("workflow_promotions", {
   id: serial("id").primaryKey(),
@@ -9,6 +15,9 @@ export const workflowPromotionsTable = pgTable("workflow_promotions", {
   status: text("status").notNull().default("promoted"),
   promotedBy: text("promoted_by").notNull().default("user"),
   approvedBy: text("approved_by"),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  rejectionReason: text("rejection_reason"),
+  rejectedAt: timestamp("rejected_at", { withTimezone: true }),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

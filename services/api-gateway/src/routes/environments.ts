@@ -1,8 +1,9 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, and, desc, sql } from "drizzle-orm";
-import { db, environmentsTable, workflowPromotionsTable, workflowVersionsTable, workflowsTable } from "@longox/db";
+import { db, environmentsTable, environmentReleasesTable, workflowPromotionsTable, workflowVersionsTable, workflowsTable } from "@longox/db";
 import { authorize } from "@longox/shared-rbac";
 import { z } from "zod";
+import { promotionApprovalService } from "../services/promotion-approval.service";
 
 const router: IRouter = Router();
 
@@ -11,6 +12,8 @@ const promoteSchema = z.object({
   fromEnvironment: z.string(),
   toEnvironment: z.string(),
   notes: z.string().optional(),
+  approvalRequired: z.boolean().optional(),
+  approverEmails: z.array(z.string()).optional(),
 });
 
 const rollbackSchema = z.object({
@@ -148,48 +151,28 @@ router.post(
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    const { workflowId, fromEnvironment, toEnvironment, notes } = parsed.data;
+    const { workflowId, fromEnvironment, toEnvironment, notes, approvalRequired } = parsed.data;
+    const promotedBy = req.user?.email ?? "system";
 
-    const [workflow] = await db
-      .select()
-      .from(workflowsTable)
-      .where(eq(workflowsTable.id, workflowId))
-      .limit(1);
-
-    if (!workflow) {
-      res.status(404).json({ error: "Workflow not found" });
-      return;
-    }
-
-    const [latestVersion] = await db
-      .select()
-      .from(workflowVersionsTable)
-      .where(eq(workflowVersionsTable.workflowId, workflowId))
-      .orderBy(desc(workflowVersionsTable.version))
-      .limit(1);
-
-    const [promotion] = await db
-      .insert(workflowPromotionsTable)
-      .values({
+    try {
+      const result = await promotionApprovalService.requestPromotion({
         workflowId,
-        workflowName: workflow.name,
         fromEnvironment,
         toEnvironment,
-        status: "promoted",
-        promotedBy: req.user?.email ?? "system",
         notes,
-      })
-      .returning();
+        approvalRequired,
+        promotedBy,
+      });
 
-    await db.insert(workflowVersionsTable).values({
-      workflowId,
-      version: (latestVersion?.version ?? 0) + 1,
-      name: workflow.name,
-      nodes: workflow.nodes ?? [],
-      changeNote: `Promoted from ${fromEnvironment} to ${toEnvironment}`,
-    });
-
-    res.status(201).json({ promotion, workflow });
+      res.status(201).json({
+        promotion: result.promotion,
+        release: result.release,
+        requiresApproval: result.requiresApproval,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Promotion failed";
+      res.status(400).json({ error: message });
+    }
   },
 );
 
@@ -203,6 +186,73 @@ router.post(
       return;
     }
     const { promotionId } = parsed.data;
+    const rolledBackBy = req.user?.email ?? "system";
+
+    try {
+      const result = await promotionApprovalService.rollbackPromotion(promotionId, rolledBackBy);
+      res.json({
+        message: `Rolled back ${result.promotion.workflowName} from ${result.promotion.toEnvironment} to ${result.promotion.fromEnvironment}`,
+        promotion: result.promotion,
+        release: result.release,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Rollback failed";
+      res.status(400).json({ error: message });
+    }
+  },
+);
+
+router.post(
+  "/environments/promotions/:id/approve",
+  authorize({ resource: "environments", action: "promote" }),
+  async (req: Request, res: Response): Promise<void> => {
+    const promotionId = Number(req.params.id);
+    const approvedBy = req.user?.email ?? "system";
+    const note = req.body.note as string | undefined;
+
+    try {
+      const result = await promotionApprovalService.approvePromotion(promotionId, approvedBy, note);
+      res.json({
+        promotion: result.promotion,
+        release: result.release,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Approval failed";
+      res.status(400).json({ error: message });
+    }
+  },
+);
+
+router.post(
+  "/environments/promotions/:id/reject",
+  authorize({ resource: "environments", action: "promote" }),
+  async (req: Request, res: Response): Promise<void> => {
+    const promotionId = Number(req.params.id);
+    const reason = req.body.reason as string;
+    if (!reason?.trim()) {
+      res.status(400).json({ error: "reason is required" });
+      return;
+    }
+    const rejectedBy = req.user?.email ?? "system";
+
+    try {
+      const result = await promotionApprovalService.rejectPromotion(promotionId, reason, rejectedBy);
+      res.json({
+        promotion: result.promotion,
+        release: result.release,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Rejection failed";
+      res.status(400).json({ error: message });
+    }
+  },
+);
+
+router.get(
+  "/environments/promotions/:id",
+  authorize({ resource: "environments", action: "read" }),
+  async (req: Request, res: Response): Promise<void> => {
+    const promotionId = Number(req.params.id);
 
     const [promotion] = await db
       .select()
@@ -215,12 +265,58 @@ router.post(
       return;
     }
 
-    await db
-      .update(workflowPromotionsTable)
-      .set({ status: "rolled_back" })
-      .where(eq(workflowPromotionsTable.id, promotionId));
+    const [release] = await db
+      .select()
+      .from(environmentReleasesTable)
+      .where(
+        and(
+          eq(environmentReleasesTable.artifactId, promotion.workflowId),
+          eq(environmentReleasesTable.fromEnvironment, promotion.fromEnvironment),
+          eq(environmentReleasesTable.toEnvironment, promotion.toEnvironment),
+        ),
+      )
+      .orderBy(desc(environmentReleasesTable.createdAt))
+      .limit(1);
 
-    res.json({ message: `Rolled back ${promotion.workflowName} from ${promotion.toEnvironment} to ${promotion.fromEnvironment}` });
+    res.json({ promotion, release: release ?? null });
+  },
+);
+
+router.get(
+  "/environments/:id/releases",
+  authorize({ resource: "environments", action: "read" }),
+  async (req: Request, res: Response): Promise<void> => {
+    const environmentId = Number(req.params.id);
+
+    const releases = await db
+      .select()
+      .from(environmentReleasesTable)
+      .where(eq(environmentReleasesTable.environmentId, environmentId))
+      .orderBy(desc(environmentReleasesTable.createdAt));
+
+    res.json(
+      releases.map((r) => ({
+        id: r.id,
+        environmentId: r.environmentId,
+        releaseType: r.releaseType,
+        artifactType: r.artifactType,
+        artifactId: r.artifactId,
+        artifactVersionId: r.artifactVersionId,
+        artifactChecksum: r.artifactChecksum,
+        fromEnvironment: r.fromEnvironment,
+        toEnvironment: r.toEnvironment,
+        status: r.status,
+        approvalRequired: r.approvalRequired,
+        approvedBy: r.approvedBy,
+        approvedAt: r.approvedAt?.toISOString() ?? null,
+        diffReview: r.diffReview,
+        rollbackOf: r.rollbackOf,
+        deployedBy: r.deployedBy,
+        notes: r.notes,
+        createdAt: r.createdAt.toISOString(),
+        updatedAt: r.updatedAt.toISOString(),
+      })),
+    );
   },
 );
 
@@ -264,6 +360,9 @@ router.get(
       status: p.status,
       promotedBy: p.promotedBy,
       approvedBy: p.approvedBy,
+      approvedAt: p.approvedAt?.toISOString() ?? null,
+      rejectionReason: p.rejectionReason,
+      rejectedAt: p.rejectedAt?.toISOString() ?? null,
       notes: p.notes,
       createdAt: p.createdAt.toISOString(),
     })));

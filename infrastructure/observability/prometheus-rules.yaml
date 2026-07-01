@@ -1,0 +1,438 @@
+# ─── LongoX Platform Prometheus Recording & Alerting Rules ────────────────
+# Load this file into Prometheus via `rule_files` in prometheus.yml:
+#
+#   rule_files:
+#     - "/etc/prometheus/prometheus-rules.yaml"
+#
+# Groups are evaluated every 30s by default.
+
+groups:
+  # ──────────────────────────────────────────────────────────────────────────
+  # SLO Recording Rules
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: slo_recording_rules
+    interval: 30s
+    rules:
+      # -- Gateway success rate (30d window) --
+      - record: slo:gateway:success_rate:30d
+        expr: |
+          (
+            sum(rate(http_requests_total{route=~"/api/.*"}[30d]))
+            -
+            sum(rate(http_requests_total{route=~"/api/.*",status=~"5.."}[30d]))
+          )
+          / sum(rate(http_requests_total{route=~"/api/.*"}[30d]))
+
+      # -- Auth success rate (30d window) --
+      - record: slo:auth:success_rate:30d
+        expr: |
+          (
+            sum(rate(http_requests_total{route=~"/auth/.*"}[30d]))
+            -
+            sum(rate(http_requests_total{route=~"/auth/.*",status=~"5.."}[30d]))
+          )
+          / sum(rate(http_requests_total{route=~"/auth/.*"}[30d]))
+
+      # -- Workflow publish latency p99 (7d window) --
+      - record: slo:workflow_publish:latency_p99:7d
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(longox_workflow_publish_duration_seconds_bucket[7d]))
+            by (le)
+          )
+
+      # -- Execution duration p99 (7d window) --
+      - record: slo:execution:duration_p99:7d
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(longox_jobs_duration_seconds_bucket[7d]))
+            by (le)
+          )
+
+      # -- AI response p99 (7d window) --
+      - record: slo:ai:response_p99:7d
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(longox_ai_request_duration_seconds_bucket[7d]))
+            by (le)
+          )
+
+      # -- Billing success rate (30d window) --
+      - record: slo:billing:success_rate:30d
+        expr: |
+          (
+            sum(rate(http_requests_total{route=~"/api/billing/.*"}[30d]))
+            -
+            sum(rate(http_requests_total{route=~"/api/billing/.*",status=~"5.."}[30d]))
+          )
+          / sum(rate(http_requests_total{route=~"/api/billing/.*"}[30d]))
+
+      # -- Search latency p99 (7d window) --
+      - record: slo:search:latency_p99:7d
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(longox_search_duration_seconds_bucket[7d]))
+            by (le)
+          )
+
+      # -- Queue depth (instant) --
+      - record: slo:queues:depth:1h
+        expr: |
+          avg(longox_queue_depth)
+
+      # -- Global error rate (1h window) --
+      - record: slo:errors:rate:1h
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[1h]))
+          /
+          sum(rate(http_requests_total[1h]))
+
+      # -- Cluster CPU saturation (5m window) --
+      - record: slo:cluster:cpu_saturation:5m
+        expr: |
+          1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))
+
+      # -- Error budget remaining (per SLO) --
+      - record: slo:budget_remaining:gateway
+        expr: |
+          clamp_min(
+            (slo:gateway:success_rate:30d - 0.999)
+            / (1 - 0.999)
+            * 100,
+            0
+          )
+
+      - record: slo:budget_remaining:auth
+        expr: |
+          clamp_min(
+            (slo:auth:success_rate:30d - 0.9995)
+            / (1 - 0.9995)
+            * 100,
+            0
+          )
+
+      - record: slo:budget_remaining:billing
+        expr: |
+          clamp_min(
+            (slo:billing:success_rate:30d - 0.9999)
+            / (1 - 0.9999)
+            * 100,
+            0
+          )
+
+      # -- Burn rate (instant) --
+      - record: slo:burn_rate:gateway
+        expr: |
+          (1 - slo:gateway:success_rate:30d) / (1 - 0.999)
+
+      - record: slo:burn_rate:auth
+        expr: |
+          (1 - slo:auth:success_rate:30d) / (1 - 0.9995)
+
+      - record: slo:burn_rate:billing
+        expr: |
+          (1 - slo:billing:success_rate:30d) / (1 - 0.9999)
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Service-level Recording Rules (shorter windows for alerting)
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: service_recording_rules
+    interval: 30s
+    rules:
+      # -- Gateway error rate (5m) --
+      - record: cluster:gateway:error_rate:5m
+        expr: |
+          sum(rate(http_requests_total{route=~"/api/.*",status=~"5.."}[5m]))
+          / sum(rate(http_requests_total{route=~"/api/.*"}[5m]))
+
+      # -- Auth latency p99 (5m) --
+      - record: cluster:auth:latency_p99:5m
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{route=~"/auth/.*"}[5m]))
+            by (le)
+          )
+
+      # -- Workflow publish latency p99 (5m) --
+      - record: cluster:workflow:publish_latency_p99:5m
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(longox_workflow_publish_duration_seconds_bucket[5m]))
+            by (le)
+          )
+
+      # -- Execution timeout rate (5m) --
+      - record: cluster:execution:timeout_rate:5m
+        expr: |
+          sum(rate(longox_jobs_failed_total{error_type="timeout"}[5m]))
+          / sum(rate(longox_jobs_completed_total[5m]))
+
+      # -- AI response p99 (5m) --
+      - record: cluster:ai:response_p99:5m
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(longox_ai_request_duration_seconds_bucket[5m]))
+            by (le)
+          )
+
+      # -- CPU usage by namespace --
+      - record: cluster:namespace:cpu:usage
+        expr: |
+          sum(rate(container_cpu_usage_seconds_total[5m])) by (namespace)
+
+      # -- Cluster CPU usage ratio --
+      - record: cluster:cpu:usage
+        expr: |
+          sum(rate(container_cpu_usage_seconds_total[5m]))
+          / sum(kube_node_status_allocatable{resource="cpu"})
+
+      # -- Cluster memory usage ratio --
+      - record: cluster:memory:usage
+        expr: |
+          sum(container_memory_working_set_bytes)
+          / sum(kube_node_status_allocatable{resource="memory"})
+
+      # -- Pod restart count by service --
+      - record: cluster:pod:restarts:5m
+        expr: |
+          sum(rate(kube_pod_container_status_restarts_total[5m])) by (pod, namespace)
+
+      # -- Database connection pool usage --
+      - record: cluster:database:connection_pool_usage
+        expr: |
+          pg_connections_used / pg_connections_max
+
+      # -- Redis memory usage ratio --
+      - record: cluster:redis:memory_usage
+        expr: |
+          redis_memory_used_bytes / redis_memory_max_bytes
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Alerting Rules
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: alerting_rules
+    interval: 30s
+    rules:
+      # -- Gateway High Error Rate --
+      - alert: GatewayHighErrorRate
+        expr: |
+          cluster:gateway:error_rate:5m > 0.01
+        for: 3m
+        labels:
+          severity: critical
+          service: api-gateway
+          namespace: platform-control
+        annotations:
+          summary: "API Gateway error rate >1% in last 5m"
+          description: >
+            Gateway error rate is {{ $value | humanizePercentage }} over the last 5 minutes.
+            Expected < 1%. Route: API Gateway.
+
+      # -- Auth High Latency --
+      - alert: AuthHighLatency
+        expr: |
+          cluster:auth:latency_p99:5m > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: api-gateway
+          namespace: platform-control
+        annotations:
+          summary: "Auth latency p99 >2s"
+          description: >
+            Auth endpoint p99 latency is {{ $value | humanizeDuration }}.
+            Expected < 2s.
+
+      # -- Workflow Publish Slow --
+      - alert: WorkflowPublishSlow
+        expr: |
+          cluster:workflow:publish_latency_p99:5m > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: workflow-service
+          namespace: platform-services
+        annotations:
+          summary: "Workflow publish latency p99 >1s"
+          description: >
+            Workflow publish p99 latency is {{ $value | humanizeDuration }}.
+            Expected < 1s.
+
+      # -- Execution Timeout --
+      - alert: ExecutionTimeout
+        expr: |
+          cluster:execution:timeout_rate:5m > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          service: execution-service
+          namespace: platform-execution
+        annotations:
+          summary: "Executions timing out >5% in last 5m"
+          description: >
+            Execution timeout rate is {{ $value | humanizePercentage }}.
+            Expected < 5%.
+
+      # -- AI Latency High --
+      - alert: AILatencyHigh
+        expr: |
+          cluster:ai:response_p99:5m > 10
+        for: 3m
+        labels:
+          severity: critical
+          service: ai-service
+          namespace: platform-services
+        annotations:
+          summary: "AI response p99 >10s"
+          description: >
+            AI response p99 latency is {{ $value | humanizeDuration }}.
+            Expected < 10s.
+
+      # -- Queue Backlog --
+      - alert: QueueBacklog
+        expr: |
+          longox_queue_depth > 5000
+        for: 2m
+        labels:
+          severity: warning
+          service: execution-worker
+          namespace: platform-execution
+        annotations:
+          summary: "Queue depth exceeds 5000"
+          description: >
+            BullMQ queue depth is {{ $value }}. Expected < 5000.
+            This may indicate worker throughput is insufficient.
+
+      # -- Error Budget Burn (critical) --
+      - alert: ErrorBudgetBurn
+        expr: |
+          slo:burn_rate:gateway > 14
+          or slo:burn_rate:auth > 14
+          or slo:burn_rate:billing > 14
+        for: 5m
+        labels:
+          severity: critical
+          service: platform
+        annotations:
+          summary: "Error budget burning too fast"
+          description: >
+            Burn rate is {{ $value }}x. Error budget will be exhausted
+            in approximately 2 days at this rate.
+
+      # -- High CPU Usage --
+      - alert: HighCPUUsage
+        expr: |
+          cluster:cpu:usage > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          service: cluster
+          namespace: platform-observability
+        annotations:
+          summary: "Cluster CPU >80%"
+          description: >
+            Cluster-wide CPU usage is {{ $value | humanizePercentage }}.
+            Expected < 80%.
+
+      # -- High Memory Usage --
+      - alert: HighMemoryUsage
+        expr: |
+          cluster:memory:usage > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          service: cluster
+          namespace: platform-observability
+        annotations:
+          summary: "Cluster memory >85%"
+          description: >
+            Cluster-wide memory usage is {{ $value | humanizePercentage }}.
+            Expected < 85%.
+
+      # -- Database Connections --
+      - alert: DatabaseConnections
+        expr: |
+          cluster:database:connection_pool_usage > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: postgresql
+        annotations:
+          summary: "DB connection pool >80%"
+          description: >
+            Database connection pool is at {{ $value | humanizePercentage }} capacity.
+            Consider increasing max_connections or scaling connections.
+
+      # -- Redis Memory Usage --
+      - alert: RedisMemoryUsage
+        expr: |
+          cluster:redis:memory_usage > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis memory >80%"
+          description: >
+            Redis memory usage is at {{ $value | humanizePercentage }} of max.
+            Consider increasing maxmemory or eviction policy tuning.
+
+      # -- Certificate Expiry --
+      - alert: CertificateExpiry
+        expr: |
+          certificate_expiry_days < 30
+        for: 1h
+        labels:
+          severity: warning
+          service: ingress
+        annotations:
+          summary: "TLS cert expires in <30d"
+          description: >
+            TLS certificate expires in {{ $value | humanizeDuration }}.
+            Renew before expiry.
+
+      # -- No Healthy Upstreams --
+      - alert: NoHealthyUpstreams
+        expr: |
+          kong_upstream_target_health{state="healthy"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: api-gateway
+        annotations:
+          summary: "No healthy upstream targets"
+          description: >
+            All upstream targets for {{ $labels.upstream }} are unhealthy.
+            Traffic is being dropped.
+
+      # -- High Rate Limiting Rejections --
+      - alert: HighRateLimitRejections
+        expr: |
+          rate(kong_rate_limiting_requests{service="api-gateway"}[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: api-gateway
+        annotations:
+          summary: "High rate limit rejection rate"
+          description: >
+            Rate limiting is rejecting {{ $value | humanize }} requests/sec.
+            Consider reviewing rate limit policies.
+
+      # -- Job Retry Spike --
+      - alert: JobRetrySpike
+        expr: |
+          sum(rate(longox_jobs_retried_total[5m]))
+          /
+          sum(rate(longox_jobs_completed_total[5m]))
+          > 0.25
+        for: 5m
+        labels:
+          severity: warning
+          service: execution-service
+          namespace: platform-execution
+        annotations:
+          summary: "Job retry rate >25%"
+          description: >
+            Job retry rate is {{ $value | humanizePercentage }}.
+            Investigate worker or dependency issues.

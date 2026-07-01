@@ -64,6 +64,11 @@ const ALL_PERMISSIONS: Array<{ resource: string; action: string; description: st
   { resource: "executions", action: "read", description: "View execution history" },
   { resource: "executions", action: "run", description: "Trigger and rerun executions" },
 
+  { resource: "environments", action: "read", description: "View environments" },
+  { resource: "environments", action: "write", description: "Create and edit environments" },
+  { resource: "environments", action: "admin", description: "Delete and manage environment policies" },
+  { resource: "environments", action: "promote", description: "Promote workflows between environments" },
+
   { resource: "tenants", action: "admin", description: "Platform: manage all tenants" },
   { resource: "feature_flags", action: "write", description: "Platform: manage feature flags" },
   { resource: "regions", action: "admin", description: "Platform: manage deployment regions" },
@@ -75,6 +80,7 @@ const ALL_PERMISSIONS: Array<{ resource: string; action: string; description: st
 const ROLE_PERMISSIONS: Record<string, Array<[string, string]>> = {
   owner: [
     ["workflows", "read"], ["workflows", "write"], ["workflows", "run"], ["workflows", "delete"],
+    ["environments", "read"], ["environments", "write"], ["environments", "admin"], ["environments", "promote"],
     ["connectors", "read"], ["connectors", "write"], ["connectors", "install"],
     ["credentials", "read"], ["credentials", "write"],
     ["apps", "read"], ["apps", "write"], ["apps", "delete"],
@@ -89,6 +95,7 @@ const ROLE_PERMISSIONS: Record<string, Array<[string, string]>> = {
   ],
   admin: [
     ["workflows", "read"], ["workflows", "write"], ["workflows", "run"], ["workflows", "delete"],
+    ["environments", "read"], ["environments", "write"], ["environments", "promote"],
     ["connectors", "read"], ["connectors", "write"], ["connectors", "install"],
     ["credentials", "read"], ["credentials", "write"],
     ["apps", "read"], ["apps", "write"], ["apps", "delete"],
@@ -103,6 +110,7 @@ const ROLE_PERMISSIONS: Record<string, Array<[string, string]>> = {
   ],
   builder: [
     ["workflows", "read"], ["workflows", "write"], ["workflows", "run"], ["workflows", "delete"],
+    ["environments", "read"], ["environments", "promote"],
     ["connectors", "read"], ["connectors", "install"],
     ["credentials", "read"], ["credentials", "write"],
     ["apps", "read"], ["apps", "write"],
@@ -114,6 +122,7 @@ const ROLE_PERMISSIONS: Record<string, Array<[string, string]>> = {
   ],
   viewer: [
     ["workflows", "read"],
+    ["environments", "read"],
     ["dashboards", "read"],
     ["analytics", "read"],
     ["executions", "read"],
@@ -121,6 +130,7 @@ const ROLE_PERMISSIONS: Record<string, Array<[string, string]>> = {
   ],
   platform_admin: [
     ["workflows", "read"], ["workflows", "write"], ["workflows", "run"], ["workflows", "delete"],
+    ["environments", "read"], ["environments", "write"], ["environments", "admin"], ["environments", "promote"],
     ["connectors", "read"], ["connectors", "write"], ["connectors", "install"],
     ["credentials", "read"], ["credentials", "write"],
     ["apps", "read"], ["apps", "write"], ["apps", "delete"],
@@ -139,11 +149,13 @@ const ROLE_PERMISSIONS: Record<string, Array<[string, string]>> = {
   ],
   support: [
     ["workflows", "read"],
+    ["environments", "read"],
     ["executions", "read"],
     ["audit", "read"],
     ["tenants", "admin"],
   ],
   finance: [
+    ["environments", "read"],
     ["billing", "read"], ["billing", "write"],
     ["analytics", "read"],
     ["revenue", "read"],

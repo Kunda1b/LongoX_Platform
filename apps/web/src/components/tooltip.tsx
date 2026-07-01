@@ -1,4 +1,1 @@
-import React from "react";
-export default function tooltip() {
-  return <div>tooltip component</div>;
-}
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
