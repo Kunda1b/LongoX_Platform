@@ -7,3 +7,4 @@ export * from "./dag-runner";
 export * from "./node-lease";
 export * from "./saga";
 export * from "./approval";
+export * as GraphContract from "./graph-contract";

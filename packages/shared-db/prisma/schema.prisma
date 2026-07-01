@@ -99,6 +99,7 @@ model User {
   status                     String    @default("active") // active | deactivated
   locale                     String?
   profileJson                Json?     @map("profile_json")
+  workosUserId               String?   @map("workos_user_id")
   avatarUrl                  String?   @map("avatar_url")
   emailVerifiedAt            DateTime? @map("email_verified_at")
   lastLoginAt                DateTime? @map("last_login_at")
@@ -247,6 +248,29 @@ model WorkflowDiff {
 
   @@index([workflowId, fromVersionId, toVersionId])
   @@map("workflow_diffs")
+}
+
+// =============================================================================
+// Domain: Workflow Promotion
+// =============================================================================
+
+model WorkflowPromotion {
+  id              String    @id @default(cuid())
+  workflowId      String    @map("workflow_id")
+  workflowName    String    @map("workflow_name")
+  fromEnvironment  String   @map("from_environment")
+  toEnvironment    String   @map("to_environment")
+  status          String    @default("promoted")
+  promotedBy      String    @default("user") @map("promoted_by")
+  approvedBy      String?   @map("approved_by")
+  approvedAt      DateTime? @map("approved_at")
+  rejectionReason String?   @map("rejection_reason")
+  rejectedAt      DateTime? @map("rejected_at")
+  notes           String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([workflowId])
+  @@map("workflow_promotions")
 }
 
 // =============================================================================
@@ -577,6 +601,23 @@ model ApprovalTask {
 // Domain: Billing
 // =============================================================================
 
+/// Append-only usage tracking events (Drizzle compatibility)
+model UsageEvent {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  workflowId   String?  @map("workflow_id")
+  workflowName String?  @map("workflow_name")
+  eventType    String   @map("event_type")
+  quantity     Int      @default(1)
+  metadata     Json     @default("{}")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, eventType])
+  @@map("usage_events")
+}
+
 /// High-volume append-only — partitioned monthly by occurred_at
 model MeteringEvent {
   id         String   @id @default(cuid())
@@ -590,6 +631,37 @@ model MeteringEvent {
 
   @@index([tenantId, eventType, occurredAt])
   @@map("metering_events")
+}
+
+/// Catalog of available billing plans (Drizzle compatibility)
+model BillingPlan {
+  id                    String   @id @default(cuid())
+  name                  String   @unique
+  displayName           String   @map("display_name")
+  description           String?
+  tier                  String   @default("free")
+  monthlyPrice          Float    @default(0) @map("monthly_price")
+  annualPrice           Float?   @map("annual_price")
+  currency              String   @default("USD")
+  stripePriceIdMonthly  String?  @map("stripe_price_id_monthly")
+  stripePriceIdAnnual   String?  @map("stripe_price_id_annual")
+  stripeProductId       String?  @map("stripe_product_id")
+  includedExecutions    Int      @default(100) @map("included_executions")
+  includedWorkflows     Int      @default(5) @map("included_workflows")
+  includedConnectors    Int      @default(3) @map("included_connectors")
+  includedAiTokens      Int      @default(10000) @map("included_ai_tokens")
+  includedStorageMb     Int      @default(500) @map("included_storage_mb")
+  maxUsers              Int      @default(1) @map("max_users")
+  maxEnvironments       Int      @default(1) @map("max_environments")
+  overageExecutionsPrice Float   @default(0.01) @map("overage_executions_price")
+  overageAiTokensPrice  Float    @default(0.002) @map("overage_ai_tokens_price")
+  features              Json     @default("[]")
+  isActive              Boolean  @default(true) @map("is_active")
+  sortOrder             Int      @default(0) @map("sort_order")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("billing_plans")
 }
 
 /// Pre-aggregated rollups for billing and dashboards
@@ -869,6 +941,81 @@ model AuditLog {
 }
 
 // =============================================================================
+// Domain: Region, Replication & DR
+// =============================================================================
+
+model Region {
+  id                    String   @id @default(cuid())
+  regionId              String   @unique @map("region_id")
+  name                  String
+  endpoint              String
+  label                 String?
+  priority              Int      @default(0)
+  isActive              Boolean  @default(true) @map("is_active")
+  isPrimary             Boolean  @default(false) @map("is_primary")
+  capabilities          String[] @default([])
+  dataResidencyCompliant Boolean @default(true) @map("data_residency_compliant")
+  failoverPriority      Int?     @map("failover_priority")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("regions")
+}
+
+model ReplicationConfig {
+  id                 String   @id @default(cuid())
+  sourceRegionId     String   @map("source_region_id")
+  targetRegionId     String   @map("target_region_id")
+  entityType         String   @map("entity_type")
+  replicationMode    String   @default("async") @map("replication_mode")
+  batchSize          Int      @default(100) @map("batch_size")
+  syncIntervalMs     Int      @default(30000) @map("sync_interval_ms")
+  conflictResolution String   @default("last-write-wins") @map("conflict_resolution")
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@index([sourceRegionId, targetRegionId])
+  @@map("replication_configs")
+}
+
+model ReplicationLog {
+  id            String    @id @default(cuid())
+  configId      String    @map("config_id")
+  entityId      String    @map("entity_id")
+  entityType    String    @map("entity_type")
+  sourceRegion  String    @map("source_region")
+  targetRegion  String    @map("target_region")
+  status        String    @default("pending")
+  payload       Json      @default("{}")
+  errorMessage  String?   @map("error_message")
+  replicatedAt  DateTime? @map("replicated_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([configId, status])
+  @@map("replication_log")
+}
+
+model DrPolicy {
+  id               String   @id @default(cuid())
+  name             String
+  description      String?
+  primaryRegionId  String   @map("primary_region_id")
+  failoverRegionId String   @map("failover_region_id")
+  recoveryTier     String   @default("standard") @map("recovery_tier")
+  rpoSeconds       Int      @default(300) @map("rpo_seconds")
+  rtoSeconds       Int      @default(900) @map("rto_seconds")
+  autoFailover     Boolean  @default(false) @map("auto_failover")
+  healthThreshold  Float    @default(0.3) @map("health_threshold")
+  isActive         Boolean  @default(true) @map("is_active")
+  lastDrillAt      DateTime? @map("last_drill_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([name])
+  @@map("dr_policies")
+}
+
+// =============================================================================
 // Domain: Platform
 // =============================================================================
 
@@ -907,7 +1054,7 @@ model WebhookDelivery {
 
 model FeatureFlag {
   id        String   @id @default(cuid())
-  tenantId  String?  @map("tenant_id") // null = global default
+  tenantId  String?  @map("tenant_id")
   key       String
   valueJson Json     @map("value_json")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -917,4 +1064,1008 @@ model FeatureFlag {
   @@unique([tenantId, key])
   @@index([tenantId, key])
   @@map("feature_flags")
+}
+
+// =============================================================================
+// Domain: Connector Actions & Triggers (from Drizzle connectors.ts)
+// =============================================================================
+
+model ConnectorAction {
+  id           String @id @default(cuid())
+  connectorId  String @map("connector_id")
+  actionId     String @map("action_id")
+  name         String
+  description  String
+  inputSchema  Json   @map("input_schema")
+  outputSchema Json   @map("output_schema")
+
+  connector Connector @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+
+  @@unique([connectorId, actionId])
+  @@map("connector_actions")
+}
+
+model ConnectorTrigger {
+  id              String  @id @default(cuid())
+  connectorId     String  @map("connector_id")
+  triggerId       String  @map("trigger_id")
+  triggerType     String  @map("trigger_type")
+  name            String
+  description     String
+  config          Json    @default("{}")
+  pollingInterval Int?    @map("polling_interval")
+
+  connector Connector @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+
+  @@unique([connectorId, triggerId])
+  @@map("connector_triggers")
+}
+
+model ConnectorExecution {
+  id               String   @id @default(cuid())
+  connectorId      String   @map("connector_id")
+  connectorVersion String   @map("connector_version")
+  executionId      String   @map("execution_id")
+  actionId         String?  @map("action_id")
+  triggerId        String?  @map("trigger_id")
+  tenantId         String   @map("tenant_id")
+  status           String
+  durationMs       Int?     @map("duration_ms")
+  errorMessage     String?  @map("error_message")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([connectorId, executionId])
+  @@map("connector_executions")
+}
+
+model ConnectorPollingState {
+  id          String    @id @default(cuid())
+  connectorId String    @map("connector_id")
+  triggerId   String    @map("trigger_id")
+  tenantId    String    @default("default") @map("tenant_id")
+  lastCursor  String?   @map("last_cursor")
+  lastRunAt   DateTime? @map("last_run_at")
+
+  @@unique([connectorId, triggerId, tenantId])
+  @@map("connector_polling_states")
+}
+
+// =============================================================================
+// Domain: SSO & Identity
+// =============================================================================
+
+model UserMfa {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  method     String    @default("totp")
+  secret     String
+  enabled    Boolean   @default(true)
+  verifiedAt DateTime? @map("verified_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@map("user_mfa")
+}
+
+model SsoConnection {
+  id                  String   @id @default(cuid())
+  tenantId            Int?     @map("tenant_id")
+  provider            String
+  providerClientId    String   @map("provider_client_id")
+  providerClientSecret String  @map("provider_client_secret")
+  providerIssuerUrl   String?  @map("provider_issuer_url")
+  enabled             Boolean  @default(true)
+  domain              String?
+  metadata            String?
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("sso_connections")
+}
+
+model UserSsoIdentity {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  provider        String
+  providerUserId  String   @map("provider_user_id")
+  providerEmail   String?  @map("provider_email")
+  rawAttributes   String?  @map("raw_attributes")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@map("user_sso_identities")
+}
+
+// =============================================================================
+// Domain: User Registration
+// =============================================================================
+
+model UserRegistration {
+  id               String   @id @default(cuid())
+  userId           String   @map("user_id")
+  tenantId         String   @map("tenant_id")
+  email            String
+  organizationName String?  @map("organization_name")
+  status           String   @default("completed")
+  ipAddress        String?  @map("ip_address")
+  userAgent        String?  @map("user_agent")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("user_registrations")
+}
+
+// =============================================================================
+// Domain: Workspace Invitations
+// =============================================================================
+
+model WorkspaceInvitation {
+  id         String    @id @default(cuid())
+  tenantId   String    @map("tenant_id")
+  email      String
+  roleId     String    @map("role_id")
+  invitedBy  String?   @map("invited_by")
+  token      String
+  status     String    @default("pending")
+  expiresAt  DateTime  @map("expires_at")
+  acceptedAt DateTime? @map("accepted_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role   RbacRole @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@index([token])
+  @@index([tenantId, email])
+  @@map("workspace_invitations")
+}
+
+// =============================================================================
+// Domain: Schedule
+// =============================================================================
+
+model Schedule {
+  id              String    @id @default(cuid())
+  tenantId        String    @map("tenant_id")
+  workflowId      String    @map("workflow_id")
+  name            String
+  description     String?
+  interval        String    @default("once")
+  cronExpression  String?   @map("cron_expression")
+  timezone        String    @default("UTC")
+  startAt         DateTime  @map("start_at")
+  endAt           DateTime? @map("end_at")
+  status          String    @default("active")
+  lastRunAt       DateTime? @map("last_run_at")
+  nextRunAt       DateTime? @map("next_run_at")
+  maxRuns         Int?      @map("max_runs")
+  runCount        Int       @default(0) @map("run_count")
+  retryOnFailure  Boolean   @default(true) @map("retry_on_failure")
+  maxRetries      Int       @default(3) @map("max_retries")
+  metadata        Json      @default("{}")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, workflowId])
+  @@map("schedules")
+}
+
+// =============================================================================
+// Domain: Webhook Endpoints
+// =============================================================================
+
+model WebhookEndpoint {
+  id              String    @id @default(cuid())
+  workflowId      String    @map("workflow_id")
+  name            String
+  description     String?
+  secret          String?
+  isActive        Boolean   @default(true) @map("is_active")
+  lastTriggeredAt DateTime? @map("last_triggered_at")
+  triggerCount    Int       @default(0) @map("trigger_count")
+  allowedIps      Json      @default("[]") @map("allowed_ips")
+  headers         Json      @default("{}")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([workflowId])
+  @@map("webhook_endpoints")
+}
+
+// =============================================================================
+// Domain: Notification
+// =============================================================================
+
+model Notification {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  type        String   @default("info")
+  title       String
+  body        String?
+  channel     String   @default("in_app")
+  status      String   @default("unread")
+  recipientId String?  @map("recipient_id")
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@map("notifications")
+}
+
+model NotificationTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  channel   String   @default("in_app")
+  subject   String?
+  body      String
+  variables Json     @default("[]")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("notification_templates")
+}
+
+// =============================================================================
+// Domain: App
+// =============================================================================
+
+model App {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  type         String   @default("dashboard")
+  status       String   @default("draft")
+  pageCount    Int      @default(1) @map("page_count")
+  viewCount    Int      @default(0) @map("view_count")
+  layout       Json?    @default("{}")
+  lastEditedAt DateTime @default(now()) @map("last_edited_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([type, status])
+  @@map("apps")
+}
+
+// =============================================================================
+// Domain: Credential
+// =============================================================================
+
+model Credential {
+  id            String   @id @default(cuid())
+  name          String
+  connectorId   Int      @map("connector_id")
+  connectorName String   @map("connector_name")
+  fields        String[] @default([])
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("credentials")
+}
+
+// =============================================================================
+// Domain: Marketplace
+// =============================================================================
+
+model MarketplaceListing {
+  id                   String   @id @default(cuid())
+  title                String
+  description          String   @default("")
+  listingType          String   @map("listing_type")
+  category             String   @default("general")
+  tags                 String[] @default([])
+  author               String   @default("LongoX")
+  authorId             String   @map("author_id")
+  tenantId             String?  @map("tenant_id")
+  version              String   @default("1.0.0")
+  status               String   @default("draft")
+  visibility           String   @default("private")
+  installCount         Int      @default(0) @map("install_count")
+  rating               Float    @default(0)
+  reviewCount          Int      @default(0) @map("review_count")
+  featured             Boolean  @default(false)
+  verified             Boolean  @default(false)
+  pricing              Json     @default("{\"free\":true}")
+  resourceId           String?  @map("resource_id")
+  nodes                Json     @default("[]")
+  metadata             Json     @default("{}")
+  platformSharePercent Int      @default(20) @map("platform_share_percent")
+  sellerPayoutAccount  String?  @map("seller_payout_account")
+  totalRevenue         Float    @default(0) @map("total_revenue")
+  isPublic             Boolean  @default(false) @map("is_public")
+  communityTemplate    Boolean  @default(false) @map("community_template")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  installs MarketplaceInstall[]
+  reviews MarketplaceReview[]
+
+  @@index([status, visibility])
+  @@map("marketplace_listings")
+}
+
+model MarketplaceInstall {
+  id         String   @id @default(cuid())
+  listingId  String   @map("listing_id")
+  tenantId   String   @map("tenant_id")
+  installedBy String  @map("installed_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  listing MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, tenantId])
+  @@map("marketplace_installs")
+}
+
+model MarketplaceReview {
+  id                String   @id @default(cuid())
+  listingId         String   @map("listing_id")
+  userId            String   @map("user_id")
+  rating            Int
+  title             String?
+  body              String?
+  status            String   @default("pending")
+  moderatedBy       String?  @map("moderated_by")
+  moderationReason  String?  @map("moderation_reason")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  listing MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, status])
+  @@map("marketplace_reviews")
+}
+
+model RevenueShare {
+  id                String   @id @default(cuid())
+  listingId         String   @map("listing_id")
+  sellerTenantId    String   @map("seller_tenant_id")
+  platformPercentage Float   @default(20) @map("platform_percentage")
+  sellerPercentage  Float    @default(80) @map("seller_percentage")
+  totalEarned       Float    @default(0) @map("total_earned")
+  platformRevenue   Float    @default(0) @map("platform_revenue")
+  sellerPayout      Float    @default(0) @map("seller_payout")
+  payoutStatus      String   @default("pending") @map("payout_status")
+  lastPayoutAt      DateTime? @map("last_payout_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([listingId])
+  @@map("revenue_shares")
+}
+
+model AgentDeployment {
+  id                   String   @id @default(cuid())
+  listingId            String   @map("listing_id")
+  tenantId             String   @map("tenant_id")
+  deployedBy           String   @map("deployed_by")
+  targetEnvironment    String   @default("sandbox") @map("target_environment")
+  status               String   @default("deploying")
+  config               Json     @default("{}")
+  deploymentMetadata   Json     @default("{}") @map("deployment_metadata")
+  deployedAt           DateTime @default(now()) @map("deployed_at")
+  completedAt          DateTime? @map("completed_at")
+
+  @@index([listingId, tenantId])
+  @@map("agent_deployments")
+}
+
+// =============================================================================
+// Domain: AI Guardrails & Provider Routes
+// =============================================================================
+
+model AiGuardrail {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   @default("content_filter")
+  config    Json     @default("{}")
+  enabled   Boolean  @default(true)
+  severity  String   @default("block")
+  tenantId  String   @map("tenant_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  hits AiGuardrailHit[]
+
+  @@index([tenantId])
+  @@map("ai_guardrails")
+}
+
+model AiGuardrailHit {
+  id              String   @id @default(cuid())
+  guardrailId     String   @map("guardrail_id")
+  runId           String?  @map("run_id")
+  promptId        String?  @map("prompt_id")
+  violationType   String   @map("violation_type")
+  violationDetail String?  @map("violation_detail")
+  blocked         Boolean  @default(false)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  guardrail AiGuardrail @relation(fields: [guardrailId], references: [id], onDelete: Cascade)
+
+  @@index([guardrailId])
+  @@map("ai_guardrail_hits")
+}
+
+model AiProviderRoute {
+  id        String @id @default(cuid())
+  provider  String
+  modelName String   @map("model_name")
+  priority  Int      @default(0)
+  weight    Int      @default(100)
+  config    Json     @default("{}")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  @@unique([provider, modelName])
+  @@map("ai_provider_routes")
+}
+
+model AiRoutingPolicy {
+  id          String   @id @default(cuid())
+  tenantId    String?  @map("tenant_id")
+  name        String
+  strategy    String   @default("lowest_cost")
+  rules       Json     @default("[]")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@map("ai_routing_policies")
+}
+
+model AiPlaygroundSession {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  userId    String   @map("user_id")
+  modelId   String   @map("model_id")
+  prompt    String
+  response  String?
+  config    Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId, userId])
+  @@map("ai_playground_sessions")
+}
+
+model AgentMemory {
+  id        String   @id @default(cuid())
+  agentId   String   @map("agent_id")
+  key       String
+  value     Json
+  ttl       Int?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([agentId, key])
+  @@map("agent_memory")
+}
+
+// =============================================================================
+// Domain: Evaluation Dataset Entries & Results
+// =============================================================================
+
+model AiEvalDatasetEntry {
+  id             String   @id @default(cuid())
+  datasetId      String   @map("dataset_id")
+  input          String
+  expectedOutput String   @map("expected_output")
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  dataset AiEvalDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  @@index([datasetId])
+  @@map("ai_eval_dataset_entries")
+}
+
+model AiEvalRunResult {
+  id        String   @id @default(cuid())
+  runId     String   @map("run_id")
+  entryId   String   @map("entry_id")
+  score     Float
+  output    String
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  run AiEvalRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+  @@map("ai_eval_run_results")
+}
+
+// =============================================================================
+// Domain: Prompt Approval
+// =============================================================================
+
+model PromptApproval {
+  id          String    @id @default(cuid())
+  promptId    String    @map("prompt_id")
+  versionId   String    @map("version_id")
+  requesterId String    @map("requester_id")
+  approverId  String?   @map("approver_id")
+  status      String    @default("pending")
+  comment     String?
+  decidedAt   DateTime? @map("decided_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([promptId, status])
+  @@map("prompt_approvals")
+}
+
+// =============================================================================
+// Domain: Tenant Tier, Placement & Migration
+// =============================================================================
+
+model TenantTier {
+  id                    String   @id @default(cuid())
+  name                  String
+  infrastructureLevel   String   @map("infrastructure_level")
+  maxWorkflows          Int      @map("max_workflows")
+  maxConnectors         Int      @map("max_connectors")
+  maxEnvironments       Int      @map("max_environments")
+  maxMembers            Int      @map("max_members")
+  maxStorageGb          Int      @map("max_storage_gb")
+  maxAiTokensMonthly    BigInt   @map("max_ai_tokens_monthly")
+  maxRagQueriesMonthly  BigInt   @map("max_rag_queries_monthly")
+  includeAuditLogging   Boolean  @default(false) @map("include_audit_logging")
+  includeSso            Boolean  @default(false) @map("include_sso")
+  includeSla            String   @default("none") @map("include_sla")
+  hotRetentionDays      Int      @map("hot_retention_days")
+  coldRetentionDays     Int      @map("cold_retention_days")
+  regionsAllowed        String[] @map("regions_allowed")
+  supportLevel          String   @default("community") @map("support_level")
+  monthlyPriceCents     Int      @default(0) @map("monthly_price_cents")
+  isActive              Boolean  @default(true) @map("is_active")
+  sortOrder             Int      @default(0) @map("sort_order")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("tenant_tiers")
+}
+
+model TenantTierAssignment {
+  id                  String   @id @default(cuid())
+  tenantId            String   @unique @map("tenant_id")
+  tierId              String   @map("tier_id")
+  assignedAt          DateTime @default(now()) @map("assigned_at")
+  expiresAt           DateTime? @map("expires_at")
+  assignedBy          String   @map("assigned_by")
+  changeReason        String?  @map("change_reason")
+  infrastructureLevel String   @map("infrastructure_level")
+  dedicatedNamespace  String?  @map("dedicated_namespace")
+  dedicatedClusterId  String?  @map("dedicated_cluster_id")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("tenant_tier_assignments")
+}
+
+model TenantPlacement {
+  id                  String   @id @default(cuid())
+  tenantId            String   @unique @map("tenant_id")
+  region              String
+  clusterId           String?  @map("cluster_id")
+  namespace           String?
+  infrastructureLevel String   @map("infrastructure_level")
+  assignedAt          DateTime @default(now()) @map("assigned_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("tenant_placement")
+}
+
+model TenantMigration {
+  id              String    @id @default(cuid())
+  tenantId        String    @map("tenant_id")
+  fromTierId      String    @map("from_tier_id")
+  toTierId        String    @map("to_tier_id")
+  fromPlacement   String    @map("from_placement")
+  toPlacement     String    @map("to_placement")
+  fromCluster     String    @map("from_cluster")
+  toCluster       String    @map("to_cluster")
+  status          String    @default("planned")
+  steps           Json      @default("[]")
+  dataVerified    Boolean   @default(false) @map("data_verified")
+  trafficSwitched Boolean   @default(false) @map("traffic_switched")
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  errorMessage    String?   @map("error_message")
+  rolledBackAt    DateTime? @map("rolled_back_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, status])
+  @@map("tenant_migrations")
+}
+
+// =============================================================================
+// Domain: Backup, Restore & DR
+// =============================================================================
+
+model BackupRecord {
+  id          String    @id @default(cuid())
+  tenantId    String    @map("tenant_id")
+  backupType  String    @default("manual") @map("backup_type")
+  scope       String    @default("full")
+  status      String    @default("pending")
+  startedAt   DateTime  @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  storagePath String?   @map("storage_path")
+  fileSizeBytes BigInt? @map("file_size_bytes")
+  checksum    String?
+  rowCounts   Json      @default("{}") @map("row_counts")
+  metadata    Json      @default("{}")
+  errorMessage String?  @map("error_message")
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  restoreRecords RestoreRecord[]
+
+  @@index([tenantId, status])
+  @@map("backup_records")
+}
+
+model RestoreRecord {
+  id                String    @id @default(cuid())
+  backupId          String    @map("backup_id")
+  tenantId          String    @map("tenant_id")
+  restoreType       String    @default("full") @map("restore_type")
+  status            String    @default("pending")
+  targetEnvironment String?   @map("target_environment")
+  tablesRestored    String[]  @map("tables_restored")
+  rowCountRestored  Int?      @map("row_count_restored")
+  integrityChecked  Int       @default(0) @map("integrity_checked")
+  integrityPassed   Int       @default(0) @map("integrity_passed")
+  warnings          Json      @default("[]")
+  errorMessage      String?   @map("error_message")
+  startedAt         DateTime  @default(now()) @map("started_at")
+  completedAt       DateTime? @map("completed_at")
+  restoredBy        String?   @map("restored_by")
+  notes             String?
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  backup BackupRecord @relation(fields: [backupId], references: [id], onDelete: Cascade)
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([backupId])
+  @@map("restore_records")
+}
+
+model RegionalPool {
+  id                  String    @id @default(cuid())
+  regionId            String    @unique @map("region_id")
+  status              String    @default("active")
+  workerCount         Int       @default(0) @map("worker_count")
+  activeExecutions    Int       @default(0) @map("active_executions")
+  queueDepth          Int       @default(0) @map("queue_depth")
+  cpuUtilization      Float     @default(0) @map("cpu_utilization")
+  memoryUtilization   Float     @default(0) @map("memory_utilization")
+  dbReplicaLagSeconds Float     @default(0) @map("db_replica_lag_seconds")
+  lastHealthCheck     DateTime? @map("last_health_check")
+  lastHeartbeat       DateTime? @map("last_heartbeat")
+  isPrimary           Int       @default(0) @map("is_primary")
+  failoverEligible    Int       @default(0) @map("failover_eligible")
+  metadata            Json      @default("{}")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@map("regional_pools")
+}
+
+model ReleaseSnapshot {
+  id              String    @id @default(cuid())
+  serviceName     String    @map("service_name")
+  version         String
+  chartVersion    String?   @map("chart_version")
+  helmRevision    Int?      @map("helm_revision")
+  configChecksum  String?   @map("config_checksum")
+  migrationVersion Int?     @map("migration_version")
+  snapshotData    Json      @default("{}") @map("snapshot_data")
+  rolledBackAt    DateTime? @map("rolled_back_at")
+  rolledBackToVersion String? @map("rolled_back_to_version")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([serviceName, version])
+  @@map("release_snapshots")
+}
+
+// =============================================================================
+// Domain: Retention, Archive, GDPR & Compliance
+// =============================================================================
+
+model RetentionConfig {
+  id                  String   @id @default(cuid())
+  tenantId            String   @unique @map("tenant_id")
+  hotRetentionDays    Int      @default(395) @map("hot_retention_days")
+  coldRetentionDays   Int      @default(2555) @map("cold_retention_days")
+  archiveEnabled      Boolean  @default(false) @map("archive_enabled")
+  archiveBucket       String?  @map("archive_bucket")
+  coldQueryEnabled    Boolean  @default(false) @map("cold_query_enabled")
+  partitionInterval   String   @default("month") @map("partition_interval")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("retention_config")
+}
+
+model ArchiveExport {
+  id          String    @id @default(cuid())
+  tenantId    String    @map("tenant_id")
+  tableName   String    @map("table_name")
+  partitionName String  @map("partition_name")
+  exportFormat String   @default("parquet") @map("export_format")
+  startDate   DateTime   @map("start_date")
+  endDate     DateTime   @map("end_date")
+  rowCount    Int?      @map("row_count")
+  fileSizeBytes BigInt? @map("file_size_bytes")
+  filePath    String    @map("file_path")
+  storageUrl  String?   @map("storage_url")
+  status      String    @default("pending")
+  errorMessage String?  @map("error_message")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  completedAt DateTime? @map("completed_at")
+
+  @@index([tenantId, status])
+  @@map("archive_exports")
+}
+
+model GdprRequest {
+  id              String    @id @default(cuid())
+  tenantId        String    @map("tenant_id")
+  userId          String    @map("user_id")
+  requestType     String    @map("request_type")
+  status          String    @default("pending")
+  dataScope       Json      @default("{}") @map("data_scope")
+  exportFormat    String?   @map("export_format")
+  exportStoragePath String? @map("export_storage_path")
+  rejectionReason String?   @map("rejection_reason")
+  fulfilledBy     String?   @map("fulfilled_by")
+  requestedAt     DateTime  @default(now()) @map("requested_at")
+  completedAt     DateTime? @map("completed_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@map("gdpr_requests")
+}
+
+model ComplianceEvidence {
+  id              String    @id @default(cuid())
+  tenantId        String    @map("tenant_id")
+  evidenceType    String    @map("evidence_type")
+  title           String
+  description     String?
+  payload         Json      @default("{}")
+  hash            String
+  source          String
+  severity        String    @default("info")
+  retentionUntil  DateTime? @map("retention_until")
+  expiresAt       DateTime? @map("expires_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, evidenceType])
+  @@map("compliance_evidence")
+}
+
+model SecurityIncident {
+  id                String    @id @default(cuid())
+  tenantId          String    @map("tenant_id")
+  incidentType      String    @map("incident_type")
+  severity          String    @default("medium")
+  status            String    @default("open")
+  title             String
+  description       String?
+  detectedBy        String    @default("system") @map("detected_by")
+  resolvedBy        String?   @map("resolved_by")
+  resolution        String?
+  affectedResources Json      @default("[]") @map("affected_resources")
+  metadata          Json      @default("{}")
+  detectedAt        DateTime  @default(now()) @map("detected_at")
+  resolvedAt        DateTime? @map("resolved_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  tenant   Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  evidence SecurityIncidentEvidence[]
+
+  @@index([tenantId, status])
+  @@map("security_incidents")
+}
+
+model SecurityIncidentEvidence {
+  id            String   @id @default(cuid())
+  incidentId    String   @map("incident_id")
+  evidenceType  String   @map("evidence_type")
+  data          Json     @default("{}")
+  hash          String
+  capturedAt    DateTime @default(now()) @map("captured_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  incident SecurityIncident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId])
+  @@map("security_incident_evidence")
+}
+
+model AuditExport {
+  id             String    @id @default(cuid())
+  tenantId       String    @map("tenant_id")
+  format         String
+  status         String    @default("pending")
+  dateFrom       DateTime  @map("date_from")
+  dateTo         DateTime  @map("date_to")
+  filterCriteria Json      @default("{}") @map("filter_criteria")
+  rowCount       Int?      @map("row_count")
+  fileSizeBytes  BigInt?   @map("file_size_bytes")
+  storagePath    String?   @map("storage_path")
+  createdBy      String?   @map("created_by")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  completedAt    DateTime? @map("completed_at")
+  expiresAt      DateTime? @map("expires_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@map("audit_exports")
+}
+
+// =============================================================================
+// Domain: Overage & Enterprise Commitments
+// =============================================================================
+
+model OverageEvent {
+  id              String   @id @default(cuid())
+  tenantId        String   @map("tenant_id")
+  resource        String
+  overageQuantity Float    @default(0) @map("overage_quantity")
+  rate            Float    @default(0)
+  amount          Float    @default(0)
+  periodStart     DateTime @map("period_start")
+  periodEnd       DateTime @map("period_end")
+  metadata        Json     @default("{}")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, periodStart, periodEnd])
+  @@map("overage_events")
+}
+
+model EnterpriseCommitment {
+  id                String   @id @default(cuid())
+  tenantId          String   @map("tenant_id")
+  name              String
+  commitmentType    String   @map("commitment_type")
+  annualAmount      Float    @default(0) @map("annual_amount")
+  currency          String   @default("usd")
+  includedExecutions Int     @default(0) @map("included_executions")
+  includedAiTokens   Int     @default(0) @map("included_ai_tokens")
+  includedRagQueries Int     @default(0) @map("included_rag_queries")
+  includedStorageGb   Int     @default(0) @map("included_storage_gb")
+  maxWorkflows      Int?     @map("max_workflows")
+  maxMembers        Int?     @map("max_members")
+  maxConnectors     Int?     @map("max_connectors")
+  maxDashboards     Int?     @map("max_dashboards")
+  startDate         DateTime @map("start_date")
+  endDate           DateTime @map("end_date")
+  isActive          Boolean  @default(true) @map("is_active")
+  metadata          Json     @default("{}")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, isActive])
+  @@map("enterprise_commitments")
+}
+
+// =============================================================================
+// Domain: Search Index
+// =============================================================================
+
+model SearchIndex {
+  id           String   @id @default(cuid())
+  resourceId   String   @map("resource_id")
+  resourceType String   @map("resource_type")
+  tenantId     String?  @map("tenant_id")
+  title        String
+  description  String?
+  content      String?
+  metadata     Json     @default("{}")
+  vector       Unsupported("vector(1536)")?
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([resourceType, tenantId])
+  @@index([tenantId])
+    @@map("search_index")
+}
+
+model SearchSuggestion {
+  id                String   @id @default(cuid())
+  query             String
+  tenantId          String?  @map("tenant_id")
+  resultCount       Int      @default(0) @map("result_count")
+  clickedDocumentId String?  @map("clicked_document_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, query])
+  @@map("search_suggestions")
+}
+
+// =============================================================================
+// Domain: Analytics & Reporting Read Models
+// =============================================================================
+
+model AnalyticsReadModel {
+  id         String   @id @default(cuid())
+  tenantId   String   @map("tenant_id")
+  modelType  String   @map("model_type")
+  data       Json
+  period     String
+  computedAt DateTime @default(now()) @map("computed_at")
+
+  @@index([tenantId, modelType, period])
+  @@map("analytics_read_models")
+}
+
+model ReportingReadModel {
+  id         String   @id @default(cuid())
+  tenantId   String   @map("tenant_id")
+  reportType String   @map("report_type")
+  data       Json
+  period     String
+  computedAt DateTime @default(now()) @map("computed_at")
+
+  @@index([tenantId, reportType, period])
+  @@map("reporting_read_models")
+}
+
+// =============================================================================
+// Domain: Region Policy
+// =============================================================================
+
+model RegionPolicy {
+  id                 String   @id @default(cuid())
+  name               String
+  region             String
+  tier               String   @default("standard")
+  replicationFactor  Int      @default(1) @map("replication_factor")
+  notes              String?
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@unique([name, region])
+  @@map("region_policies")
+}
+
+// =============================================================================
+// Domain: Email Messages
+// =============================================================================
+
+model EmailMessage {
+  id         String    @id @default(cuid())
+  tenantId   String    @map("tenant_id")
+  to         String
+  subject    String
+  body       String
+  status     String    @default("pending")
+  sentAt     DateTime? @map("sent_at")
+  error      String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId, status])
+  @@map("email_messages")
 }

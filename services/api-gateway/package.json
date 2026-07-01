@@ -26,6 +26,7 @@
     "@longox/metering-service": "workspace:*",
     "@longox/replication-service": "workspace:*",
     "@longox/search-service": "workspace:*",
+    "@longox/shared-auth": "workspace:*",
     "@longox/shared-logger": "workspace:*",
     "@longox/shared-observability": "workspace:*",
     "@longox/shared-rbac": "workspace:*",
@@ -38,6 +39,7 @@
     "graphql": "^16.9.0",
     "graphql-yoga": "^5.10.0",
     "jsonwebtoken": "^9.0.3",
+    "@workos-inc/node": "^7.0.0",
     "pino-http": "^11.0.0",
     "zod": "catalog:"
   },

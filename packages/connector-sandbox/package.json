@@ -1,0 +1,19 @@
+{
+  "name": "@longox/connector-sandbox",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./isolate": "./src/isolate.ts",
+    "./policy": "./src/policy.ts",
+    "./audit": "./src/audit.ts"
+  },
+  "dependencies": {
+    "@longox/shared-types": "workspace:*",
+    "@longox/shared-logger": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:"
+  }
+}

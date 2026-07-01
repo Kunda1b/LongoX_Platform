@@ -4,10 +4,12 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./workos": "./src/workos.ts"
   },
   "dependencies": {
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "@workos-inc/node": "^7.0.0"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10",
