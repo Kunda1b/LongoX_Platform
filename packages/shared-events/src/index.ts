@@ -42,21 +42,75 @@ export type PlatformEventType =
   | "agent.run.failed";
 
 export interface PlatformEvent {
-  id: string;
-  type: PlatformEventType;
-  aggregateId: string;
-  aggregateType: string;
+  // ─── ADR §19.1 mandatory fields (architecture names) ───────────────────────
+  // The architecture mandates these exact field names for the platform event
+  // envelope. The original implementation used shortened names (`id`, `type`,
+  // `version`, `timestamp`). To preserve backward compatibility while complying
+  // with the architecture, we expose BOTH the architecture names (below) and
+  // the legacy aliases (further below). New code MUST use the architecture names.
+  /** Architecture: `event_id` — UUID, primary dedupe key, prefix `evt_`. */
+  event_id: string;
+  /** Architecture: `event_type` — dotted namespace.type. */
+  event_type: PlatformEventType;
+  /** Architecture: `event_version` — int, schema version of the payload. */
+  event_version: number;
+  /** Architecture: `occurred_at` — ISO 8601 UTC. */
+  occurred_at: string;
+  /** Architecture: `tenant_id` — prefix `tnt_`, nullable for platform-level. */
+  tenant_id: string | null;
+  /** Architecture: `correlation_id`. */
+  correlation_id: string | null;
+  /** Architecture: `aggregate_id`. */
+  aggregate_id: string;
+  /** Architecture: `actor_id` — prefix `usr_`. */
+  actor_id: string | null;
+  /** Architecture: `payload`. */
   payload: Record<string, unknown>;
-  actorId: string | null;
-  actorType: "user" | "system" | "webhook" | "schedule";
-  correlationId: string | null;
-  causationId: string | null;
+  /** Architecture: `schema_url` — e.g. `https://schemas.longox.com/events/workflow.published.v2.json`. */
+  schema_url: string;
+
+  // ─── Legacy aliases (preserved for backward compat with existing services) ──
+  /** @deprecated use `event_id`. */
+  id: string;
+  /** @deprecated use `event_type`. */
+  type: PlatformEventType;
+  /** @deprecated use `event_version`. */
   version: number;
+  /** @deprecated use `occurred_at`. */
   timestamp: string;
+  /** @deprecated use `tenant_id`. */
+  tenantId?: string | null;
+  /** @deprecated use `correlation_id`. */
+  correlationId?: string | null;
+  /** @deprecated use `aggregate_id`. */
+  aggregateId: string;
+  /** @deprecated use `actor_id`. */
+  actorId?: string | null;
+  /** Legacy field — kept for code that reads it. */
+  aggregateType: string;
+  /** Legacy field — kept for code that reads it. */
+  actorType: "user" | "system" | "webhook" | "schedule";
+  /** Legacy field — kept for code that reads it. */
+  causationId: string | null;
+  /** Legacy field — kept for code that reads it. */
   metadata: Record<string, unknown>;
 }
 
 export type EventHandler<T = unknown> = (event: T) => Promise<void> | void;
+
+/**
+ * Compute the canonical `schema_url` for an event type.
+ *
+ * Per architecture.md §19.1, every event carries a `schema_url` field pointing
+ * to its JSON Schema (e.g. `https://schemas.longox.com/events/workflow.published.v2.json`).
+ * The schemas are versioned and stored at `packages/shared-types/schemas/events/`.
+ */
+export function schemaUrlFor(type: PlatformEventType, version = 1): string {
+  // Map the platform event type to the canonical schema file name.
+  // The schema file naming convention is `<event-type>.v<version>.json`.
+  const fileName = `${type}.v${version}.json`;
+  return `https://schemas.longox.com/events/${fileName}`;
+}
 
 export function createEvent(
   type: PlatformEventType,
@@ -70,21 +124,200 @@ export function createEvent(
   correlationId?: string,
   causationId?: string,
   metadata: Record<string, unknown> = {},
+  options: { tenantId?: string | null; eventVersion?: number } = {},
 ): PlatformEvent {
+  const id = randomUUID();
+  const eventVersion = options.eventVersion ?? 1;
   return {
-    id: randomUUID(),
-    type,
-    aggregateId,
-    aggregateType,
+    // Architecture-compliant names
+    event_id: id,
+    event_type: type,
+    event_version: eventVersion,
+    occurred_at: new Date().toISOString(),
+    tenant_id: options.tenantId ?? null,
+    correlation_id: correlationId ?? null,
+    aggregate_id: aggregateId,
+    actor_id: actor.id ?? null,
     payload,
-    actorId: actor.id ?? null,
-    actorType: actor.type ?? "system",
-    correlationId: correlationId ?? null,
-    causationId: causationId ?? null,
-    version: 1,
-    metadata,
+    schema_url: schemaUrlFor(type, eventVersion),
+
+    // Legacy aliases
+    id,
+    type,
+    version: eventVersion,
     timestamp: new Date().toISOString(),
+    tenantId: options.tenantId ?? null,
+    correlationId: correlationId ?? null,
+    aggregateId,
+    actorId: actor.id ?? null,
+    aggregateType,
+    actorType: actor.type ?? "system",
+    causationId: causationId ?? null,
+    metadata,
   };
+}
+
+// ─── ADR §19.1 — Mandatory event field validator ─────────────────────────────
+// Per architecture.md §19.1 and §19.5, every platform event MUST carry the 9
+// mandatory fields. This validator runs at build time (CI) and at runtime
+// (before publish). An invalid event is rejected with a typed error so the
+// caller can shape the response per the §13.3 error envelope.
+
+export type EventValidationError = {
+  field: string;
+  reason: string;
+};
+
+export class EventValidationException extends Error {
+  constructor(public readonly errors: EventValidationError[]) {
+    super(
+      `Event validation failed: ${errors.map((e) => `${e.field} (${e.reason})`).join(", ")}`,
+    );
+    this.name = "EventValidationException";
+  }
+}
+
+/**
+ * Validate that an event carries all 9 mandatory fields per §19.1.
+ *
+ * Mandatory fields:
+ *   event_id (UUID, prefix evt_), event_type (dotted), event_version (int >0),
+ *   occurred_at (ISO 8601 UTC), tenant_id (prefix tnt_ or null),
+ *   correlation_id, aggregate_id, actor_id (prefix usr_ or null),
+ *   payload (object), schema_url (URL).
+ *
+ * @returns `null` if valid, or an array of validation errors.
+ */
+export function validateEvent(
+  event: Partial<PlatformEvent>,
+): EventValidationError[] | null {
+  const errors: EventValidationError[] = [];
+
+  // event_id — UUID with optional evt_ prefix
+  if (!event.event_id && !event.id) {
+    errors.push({ field: "event_id", reason: "missing" });
+  } else {
+    const id = event.event_id ?? event.id ?? "";
+    const uuidRe =
+      /^(evt_)?[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRe.test(id)) {
+      errors.push({
+        field: "event_id",
+        reason: "must be a UUID, optionally prefixed with evt_",
+      });
+    }
+  }
+
+  // event_type — dotted namespace.type
+  const type = event.event_type ?? event.type;
+  if (!type) {
+    errors.push({ field: "event_type", reason: "missing" });
+  } else if (!/^[a-z_]+\.[a-z_-]+$/i.test(type)) {
+    errors.push({
+      field: "event_type",
+      reason: "must be dotted namespace.type (e.g. workflow.published)",
+    });
+  }
+
+  // event_version — positive integer
+  const version = event.event_version ?? event.version;
+  if (version === undefined || version === null) {
+    errors.push({ field: "event_version", reason: "missing" });
+  } else if (!Number.isInteger(version) || version < 1) {
+    errors.push({
+      field: "event_version",
+      reason: "must be a positive integer",
+    });
+  }
+
+  // occurred_at — ISO 8601 UTC
+  const occurredAt = event.occurred_at ?? event.timestamp;
+  if (!occurredAt) {
+    errors.push({ field: "occurred_at", reason: "missing" });
+  } else if (Number.isNaN(Date.parse(occurredAt))) {
+    errors.push({ field: "occurred_at", reason: "must be ISO 8601 UTC" });
+  }
+
+  // tenant_id — nullable, prefix tnt_ when present
+  const tenantId = event.tenant_id ?? event.tenantId;
+  if (tenantId !== null && tenantId !== undefined) {
+    if (!/^tnt_[a-z0-9_-]+$/i.test(String(tenantId))) {
+      errors.push({
+        field: "tenant_id",
+        reason: "must be null or prefixed with tnt_",
+      });
+    }
+  }
+
+  // correlation_id — present (may be null)
+  if (event.correlation_id === undefined && event.correlationId === undefined) {
+    errors.push({
+      field: "correlation_id",
+      reason: "missing (set to null if no correlation)",
+    });
+  }
+
+  // aggregate_id — required
+  const aggregateId = event.aggregate_id ?? event.aggregateId;
+  if (!aggregateId) {
+    errors.push({ field: "aggregate_id", reason: "missing" });
+  }
+
+  // actor_id — nullable, prefix usr_ when present
+  const actorId = event.actor_id ?? event.actorId;
+  if (actorId !== null && actorId !== undefined) {
+    if (!/^(usr_|system|webhook|schedule)/i.test(String(actorId))) {
+      errors.push({
+        field: "actor_id",
+        reason:
+          "must be null, prefixed with usr_, or one of: system, webhook, schedule",
+      });
+    }
+  }
+
+  // payload — object
+  if (event.payload === undefined) {
+    errors.push({
+      field: "payload",
+      reason: "missing (set to {} if no payload)",
+    });
+  } else if (
+    typeof event.payload !== "object" ||
+    Array.isArray(event.payload)
+  ) {
+    errors.push({ field: "payload", reason: "must be a JSON object" });
+  }
+
+  // schema_url — required, must be a URL
+  if (!event.schema_url) {
+    errors.push({
+      field: "schema_url",
+      reason: "missing (use schemaUrlFor() to compute the canonical URL)",
+    });
+  } else {
+    try {
+      // eslint-disable-next-line no-new
+      new URL(event.schema_url);
+    } catch {
+      errors.push({ field: "schema_url", reason: "must be a valid URL" });
+    }
+  }
+
+  return errors.length === 0 ? null : errors;
+}
+
+/**
+ * Assert that an event is valid; throw EventValidationException if not.
+ *
+ * Use this at the boundary of every event publisher to fail fast on invalid
+ * events. The CI build-time check (per §19.1) calls this against the event
+ * schema fixtures in `packages/shared-types/schemas/events/`.
+ */
+export function assertEventValid(event: Partial<PlatformEvent>): void {
+  const errors = validateEvent(event);
+  if (errors) {
+    throw new EventValidationException(errors);
+  }
 }
 
 export interface EventBus {
@@ -251,10 +484,7 @@ export class RedisEventBus implements EventBus {
   }
 
   async disconnect(): Promise<void> {
-    await Promise.all([
-      this.subscriber?.quit(),
-      this.publisher?.quit(),
-    ]);
+    await Promise.all([this.subscriber?.quit(), this.publisher?.quit()]);
     this.subscriber = null;
     this.publisher = null;
   }

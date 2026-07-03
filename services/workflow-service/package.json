@@ -19,6 +19,7 @@
     "@longox/shared-rbac": "workspace:*",
     "@longox/shared-logger": "workspace:*",
     "@longox/shared-observability": "workspace:*",
+    "@longox/workflow-canvas": "workspace:*",
     "drizzle-orm": "catalog:",
     "express": "^5.2.1"
   },

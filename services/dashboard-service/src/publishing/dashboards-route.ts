@@ -73,7 +73,7 @@ router.post("/dashboards", authorize("dashboards:write"), async (req, res): Prom
 });
 
 router.get("/dashboards/:id", authorize("dashboards:read"), async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
     return;
@@ -92,7 +92,7 @@ router.get("/dashboards/:id", authorize("dashboards:read"), async (req, res): Pr
 });
 
 router.patch("/dashboards/:id", authorize("dashboards:write"), async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
     return;
@@ -126,7 +126,7 @@ router.patch("/dashboards/:id", authorize("dashboards:write"), async (req, res):
 });
 
 router.delete("/dashboards/:id", authorize("dashboards:delete"), async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
     return;
@@ -145,7 +145,7 @@ router.delete("/dashboards/:id", authorize("dashboards:delete"), async (req, res
 });
 
 router.post("/dashboards/:id/publish", authorize("dashboards:write"), async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
     return;

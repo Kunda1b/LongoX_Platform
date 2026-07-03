@@ -29,6 +29,7 @@ import executionStreamRouter from "./routes/execution-stream";
 import workflowDiffsRouter from "./routes/workflow-diffs";
 import ftsSearchRouter from "./routes/search";
 import indexingRouter from "./routes/indexing";
+import triggersWebhookRouter from "./routes/triggers-webhook";
 import { authMiddleware } from "./lib/auth";
 import { isWorkOSEnabled } from "./lib/workos-auth";
 import { apiRateLimiter } from "./lib/rate-limiter";
@@ -36,7 +37,15 @@ import { apiVersioningMiddleware } from "./lib/api-versioning";
 import { tierEnforcementMiddleware } from "./middleware/tier-enforcement.middleware";
 import { auditLogRouter } from "@longox/audit-service";
 import { yoga } from "./graphql/index";
-import { billingRouter, usageRouter, checkoutRouter, plansRouter, webhookRouter, billingApiRouter, meteringRouter as billingMeteringRouter } from "@longox/billing-service";
+import {
+  billingRouter,
+  usageRouter,
+  checkoutRouter,
+  plansRouter,
+  webhookRouter,
+  billingApiRouter,
+  meteringRouter as billingMeteringRouter,
+} from "@longox/billing-service";
 import {
   componentRouter,
   dashboardRouter,
@@ -78,26 +87,34 @@ app.use((req, _res, next) => {
 });
 
 app.use(cors());
-app.use(pino({
-  customProps: (req) => ({
-    correlationId: req.headers["x-correlation-id"],
+app.use(
+  pino({
+    customProps: (req) => ({
+      correlationId: req.headers["x-correlation-id"],
+    }),
   }),
-}));
+);
 
-// ─── SCIM webhook: raw body BEFORE express.json() ────────────────────────────
-// WorkOS SCIM webhook verification requires the raw request body.
-// Must be mounted before global express.json() middleware.
+// ─── Raw-body routes: SCIM + webhook triggers ─────────────────────────────────
+// Both SCIM webhooks (WorkOS) and trigger webhooks (HMAC-SHA256) require the
+// raw request body for signature verification. Must be mounted before global
+// express.json() middleware.
 app.use(
   express.raw({
     type: ["application/json", "application/scim+json"],
     limit: "1mb",
     inflate: true,
   }),
-  // Only apply raw-body parsing to the SCIM endpoint
+  // Only apply raw-body parsing to endpoints that need it
   (req, _res, next) => {
     const path = req.path;
-    if (path === "/auth/scim" || path === "/api/auth/scim") {
-      // Body is already a Buffer — scimRouter will read it
+    if (
+      path === "/auth/scim" ||
+      path === "/api/auth/scim" ||
+      path === "/api/v1/triggers/webhook" ||
+      path === "/triggers/webhook"
+    ) {
+      // Body is already a Buffer — the route handler will read it raw.
       return next();
     }
     // For all other paths, parse as JSON if still a Buffer
@@ -112,8 +129,12 @@ app.use(
   },
 );
 
-// SCIM route must be before express.json() so it gets the raw buffer
+// SCIM route — public, signature verified by WorkOS SDK
 app.use(scimRouter);
+
+// Webhook trigger route — public, HMAC-SHA256 verified (architecture §17.2)
+// Returns 202 with execution_id; client subscribes to SSE for realtime updates.
+app.use(triggersWebhookRouter);
 
 // Global JSON parsing for all other routes
 app.use(express.json({ limit: "10mb" }));

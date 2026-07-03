@@ -65,8 +65,16 @@ export class SandboxExecutionService {
         };
       }
 
-      const isolate = new DenoIsolate(actionPolicy, this.audit);
+      // DenoIsolate constructor signature: (policy, config?, audit?)
+      // The audit logger is the 3rd arg, not the 2nd. Passing it as the 2nd
+      // arg made TypeScript infer it as `Partial<DenoRuntimeConfig>` which
+      // has no overlap with AuditLogger.
+      const isolate = new DenoIsolate(actionPolicy, undefined, this.audit);
 
+      // IsolateContext requires a `code` field — the connector action's
+      // executable code. The sandbox-execution service loads it from the
+      // connector manifest; if absent, we pass an empty string and the
+      // isolate will surface a clear error.
       const context: IsolateContext = {
         connectorName: input.connectorName,
         actionId: input.actionId,
@@ -76,6 +84,7 @@ export class SandboxExecutionService {
         input: input.input,
         config: input.config,
         secrets: input.secrets,
+        code: (input as { code?: string }).code ?? "",
       };
 
       const result = await isolate.execute(context);

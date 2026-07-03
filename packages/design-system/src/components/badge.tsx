@@ -12,6 +12,7 @@ export const badgeVariants = {
       "border-transparent bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
     warning:
       "border-transparent bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
+    info: "border-transparent bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300",
   },
 } as const;
 

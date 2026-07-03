@@ -4,7 +4,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@longox/design-system";
-import { Skeleton } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface StatCard {

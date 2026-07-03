@@ -1,4 +1,9 @@
-import { db, aiEvaluationDatasetsTable, aiEvaluationRunsTable, promptsTable } from "@longox/db";
+import {
+  db,
+  aiEvaluationDatasetsTable,
+  aiEvaluationRunsTable,
+  promptsTable,
+} from "@longox/db";
 import { eq, and, gte, desc } from "drizzle-orm";
 import { evaluationService } from "../../evaluation/evaluation-service";
 
@@ -13,10 +18,7 @@ export interface GateResult {
 export class EvaluationGateService {
   private readonly regressionThreshold = -0.1;
 
-  async evaluatePrompt(
-    promptId: number,
-    version: number,
-  ): Promise<GateResult> {
+  async evaluatePrompt(promptId: number, version: number): Promise<GateResult> {
     const [prompt] = await db
       .select()
       .from(promptsTable)
@@ -53,19 +55,29 @@ export class EvaluationGateService {
       .orderBy(desc(aiEvaluationRunsTable.createdAt))
       .limit(5);
 
-    const baselineScore = recentRuns.length > 0
-      ? Number(recentRuns[0].overallScore ?? 1)
-      : 1;
+    const baselineScore =
+      recentRuns.length > 0 ? Number(recentRuns[0].score ?? 1) : 1;
 
     let totalScore = 0;
     let sampleCount = 0;
     const failedGates: string[] = [];
 
     for (const dataset of datasets) {
-      const samples = (dataset.samples as Array<{ input: string; expected?: string }>) ?? [];
+      // Drizzle types jsonb as `Record<string, unknown>` by default. The
+      // `samples` field is stored inside `metadata` (the schema has no
+      // dedicated `samples` column on `ai_evaluation_datasets`). Cast
+      // defensively to read it.
+      const samples =
+        (dataset.metadata?.samples as Array<{
+          input: string;
+          expected?: string;
+        }>) ?? [];
 
       for (const sample of samples) {
-        const evalResult = evaluationService.evaluate(sample.input, sample.expected);
+        const evalResult = evaluationService.evaluate(
+          sample.input,
+          sample.expected,
+        );
         totalScore += evalResult.score;
         sampleCount++;
 
@@ -93,14 +105,14 @@ export class EvaluationGateService {
       .where(
         and(
           eq(aiEvaluationRunsTable.promptId, promptId),
-          eq(aiEvaluationRunsTable.promptVersionId, baselineVersion),
+          eq(aiEvaluationRunsTable.promptVersion, baselineVersion),
           eq(aiEvaluationRunsTable.status, "completed"),
         ),
       )
       .orderBy(desc(aiEvaluationRunsTable.createdAt))
       .limit(1);
 
-    const baselineScore = baselineRun ? Number(baselineRun.overallScore ?? 1) : 1;
+    const baselineScore = baselineRun ? Number(baselineRun.score ?? 1) : 1;
 
     const [candidateRun] = await db
       .select()
@@ -108,14 +120,14 @@ export class EvaluationGateService {
       .where(
         and(
           eq(aiEvaluationRunsTable.promptId, promptId),
-          eq(aiEvaluationRunsTable.promptVersionId, candidateVersion),
+          eq(aiEvaluationRunsTable.promptVersion, candidateVersion),
           eq(aiEvaluationRunsTable.status, "completed"),
         ),
       )
       .orderBy(desc(aiEvaluationRunsTable.createdAt))
       .limit(1);
 
-    const score = candidateRun ? Number(candidateRun.overallScore ?? 1) : 1;
+    const score = candidateRun ? Number(candidateRun.score ?? 1) : 1;
     const diff = score - baselineScore;
     const passed = diff >= this.regressionThreshold;
 

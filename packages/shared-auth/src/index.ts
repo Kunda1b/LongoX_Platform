@@ -1,5 +1,11 @@
 import jwt from "jsonwebtoken";
 
+// We import `Request` from express for the `TenantContext.fromRequest` /
+// `TenantContext.optional` static methods below. Express is a transitive
+// dependency through downstream services; to avoid adding a direct dep
+// here, we use a type-only import that gets erased at compile time.
+import type { Request as ExpressRequest } from "express";
+
 export interface AuthUser {
   id: number;
   email: string;
@@ -59,7 +65,7 @@ export function decodeToken(token: string): TokenPayload | null {
 export class TenantContext {
   constructor(public readonly tenantId: number) {}
 
-  static fromRequest(req: express.Request): TenantContext {
+  static fromRequest(req: ExpressRequest): TenantContext {
     const tenantId = req.user?.tenantId;
     if (!tenantId) {
       throw new Error("Tenant context not available - authentication required");
@@ -67,7 +73,7 @@ export class TenantContext {
     return new TenantContext(tenantId);
   }
 
-  static optional(req: express.Request): TenantContext | null {
+  static optional(req: ExpressRequest): TenantContext | null {
     const tenantId = req.user?.tenantId;
     return tenantId ? new TenantContext(tenantId) : null;
   }
@@ -88,7 +94,9 @@ export function tenantContextMiddleware(
 }
 
 export class ForbiddenError extends Error {
-  constructor(message = "Access denied: insufficient permissions for this tenant") {
+  constructor(
+    message = "Access denied: insufficient permissions for this tenant",
+  ) {
     super(message);
     this.name = "ForbiddenError";
   }

@@ -22,12 +22,7 @@ export {
   DialogTitle,
   DialogDescription,
 } from "./dialog";
-export {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "./tabs";
+export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
 export {
   Tooltip,
   TooltipTrigger,
@@ -86,11 +81,7 @@ export {
   AccordionTrigger,
   AccordionContent,
 } from "./accordion";
-export {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "./popover";
+export { Popover, PopoverTrigger, PopoverContent } from "./popover";
 export {
   Command,
   CommandDialog,
@@ -135,16 +126,15 @@ export {
   ContextMenuSubTrigger,
   ContextMenuRadioGroup,
 } from "./context-menu";
-export {
-  Avatar,
-  AvatarImage,
-  AvatarFallback,
-} from "./avatar";
+export { Avatar, AvatarImage, AvatarFallback } from "./avatar";
 export { Progress } from "./progress";
 export { Slider } from "./slider";
 export { Separator } from "./separator";
 export { Checkbox } from "./checkbox";
-export {
-  RadioGroup,
-  RadioGroupItem,
-} from "./radio-group";
+export { RadioGroup, RadioGroupItem } from "./radio-group";
+export { AppShell } from "./app-shell";
+export type {
+  AppShellProps,
+  AppShellNavItem,
+  AppShellUserMenu,
+} from "./app-shell";

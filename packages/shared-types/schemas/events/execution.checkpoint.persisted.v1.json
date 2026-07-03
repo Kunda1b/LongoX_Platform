@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.longox.com/events/execution.checkpoint.persisted.v1.json",
+  "title": "execution.checkpoint.persisted v1",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_type",
+    "event_version",
+    "occurred_at",
+    "tenant_id",
+    "correlation_id",
+    "aggregate_id",
+    "actor_id",
+    "payload",
+    "schema_url"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "pattern": "^evt_"
+    },
+    "event_type": {
+      "const": "execution.checkpoint.persisted"
+    },
+    "event_version": {
+      "const": 1
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tenant_id": {
+      "type": ["string", "null"]
+    },
+    "correlation_id": {
+      "type": ["string", "null"]
+    },
+    "aggregate_id": {
+      "type": "string",
+      "pattern": "^exec_"
+    },
+    "actor_id": {
+      "type": ["string", "null"]
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "execution_id": {
+          "type": "string"
+        },
+        "node_id": {
+          "type": "string"
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "state": {
+          "type": "string",
+          "enum": ["pending", "running", "completed", "failed", "skipped"]
+        },
+        "inputs": {
+          "type": "object"
+        },
+        "outputs": {
+          "type": "object"
+        },
+        "idempotency_key": {
+          "type": "string"
+        }
+      },
+      "required": ["execution_id", "node_id", "attempt", "state"]
+    },
+    "schema_url": {
+      "type": "string",
+      "format": "uri"
+    }
+  }
+}

@@ -115,11 +115,14 @@ export function detectCycles(edges: WorkflowEdge[]): string[][] {
   return cycles;
 }
 
-export function getDownstreamNodes(graph: WorkflowGraph, nodeId: string): string[] {
+export function getDownstreamNodes(
+  graph: WorkflowGraph,
+  nodeId: string,
+): string[] {
   const adj = new Map<string, string[]>();
   for (const e of graph.edges) {
-    if (!adj.has(e.sourceNodeId)) adj.set(e.sourceNodeId, []);
-    adj.get(e.sourceNodeId)!.push(e.targetNodeId);
+    if (!adj.has(e.source)) adj.set(e.source, []);
+    adj.get(e.source)!.push(e.target);
   }
   const result: string[] = [];
   const visited = new Set<string>();
@@ -136,11 +139,14 @@ export function getDownstreamNodes(graph: WorkflowGraph, nodeId: string): string
   return result;
 }
 
-export function getUpstreamNodes(graph: WorkflowGraph, nodeId: string): string[] {
+export function getUpstreamNodes(
+  graph: WorkflowGraph,
+  nodeId: string,
+): string[] {
   const revAdj = new Map<string, string[]>();
   for (const e of graph.edges) {
-    if (!revAdj.has(e.targetNodeId)) revAdj.set(e.targetNodeId, []);
-    revAdj.get(e.targetNodeId)!.push(e.sourceNodeId);
+    if (!revAdj.has(e.target)) revAdj.set(e.target, []);
+    revAdj.get(e.target)!.push(e.source);
   }
   const result: string[] = [];
   const visited = new Set<string>();

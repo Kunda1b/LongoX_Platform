@@ -1,13 +1,41 @@
-export { TokenAccountingService, BudgetExceededError as TokenBudgetExceededError, tokenAccountingService } from "./token-accounting.service";
-export { PromptVersioningService, promptVersioningService } from "./prompt-versioning.service";
-export type { CreateVersionInput, VersionDiff } from "./prompt-versioning.service";
-export { EvaluationGateService, evaluationGateService } from "./evaluation-gate.service";
+export {
+  TokenAccountingService,
+  BudgetExceededError as TokenBudgetExceededError,
+  tokenAccountingService,
+} from "./token-accounting.service";
+export {
+  PromptVersioningService,
+  promptVersioningService,
+} from "./prompt-versioning.service";
+export type {
+  CreateVersionInput,
+  VersionDiff,
+} from "./prompt-versioning.service";
+export {
+  EvaluationGateService,
+  evaluationGateService,
+} from "./evaluation-gate.service";
 export type { GateResult } from "./evaluation-gate.service";
-export { CostBudgetService, BudgetExceededError, costBudgetService } from "./cost-budget.service";
+export {
+  withEvaluationGate,
+  EvaluationGateBlockedError,
+} from "./evaluation/evaluation-gate-middleware";
+export {
+  CostBudgetService,
+  BudgetExceededError,
+  costBudgetService,
+} from "./cost-budget.service";
 export type { BudgetUsage } from "./cost-budget.service";
 export { ModerationService, moderationService } from "./moderation.service";
-export type { ModerationViolation, ModerationResult, PiiMode } from "./moderation.service";
+export type {
+  ModerationViolation,
+  ModerationResult,
+  PiiMode,
+} from "./moderation.service";
 export { AiAuditService, aiAuditService } from "./ai-audit.service";
 export type { AiAuditEventType, AiAuditDetail } from "./ai-audit.service";
-export { AiRunLifecycleService, aiRunLifecycleService } from "./ai-run-lifecycle.service";
+export {
+  AiRunLifecycleService,
+  aiRunLifecycleService,
+} from "./ai-run-lifecycle.service";
 export type { AiRunInput, AiRunResult } from "./ai-run-lifecycle.service";

@@ -138,7 +138,12 @@ router.post(
   authorize({ resource: "environments", action: "write" }),
   async (req: Request, res: Response): Promise<void> => {
     // Request validation is defined in lib/api-spec/openapi.yaml — the single source of truth
-    const { workflowId, fromEnvironment, toEnvironment, notes, approvalRequired } = req.body as Record<string, unknown>;
+    const body = req.body as Record<string, unknown>;
+    const workflowId = body.workflowId as number;
+    const fromEnvironment = body.fromEnvironment as string;
+    const toEnvironment = body.toEnvironment as string;
+    const notes = body.notes as string | undefined;
+    const approvalRequired = body.approvalRequired as boolean | undefined;
     if (!workflowId || typeof workflowId !== "number") { res.status(400).json({ error: "workflowId is required and must be a number" }); return; }
     if (!fromEnvironment || typeof fromEnvironment !== "string") { res.status(400).json({ error: "fromEnvironment is required" }); return; }
     if (!toEnvironment || typeof toEnvironment !== "string") { res.status(400).json({ error: "toEnvironment is required" }); return; }

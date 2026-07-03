@@ -40,8 +40,12 @@ export default function DashboardDetailPage({
     layout: { columns: 12, rows: 0, gap: 16, breakpoints: {} },
     widgets: (dashboard.widgets ?? []) as any,
     theme: {},
-    permissions: { visibility: "private" as const, allowedRoles: [], widgetOverrides: {} },
+    permissions: {
+      visibility: "private" as const,
+      allowedRoles: [],
+      widgetOverrides: {},
+    },
   };
 
-  return <DashboardBuilder existingDashboard={existingDashboard} />;
+  return <DashboardBuilder existingDashboard={existingDashboard as any} />;
 }

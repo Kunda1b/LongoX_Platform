@@ -45,7 +45,8 @@ async function queryParquetFromS3(
     return [];
   }
 
-  const tmpPath = `${executionsTable.name}_cold_${Date.now()}.parquet`;
+  // Use a literal table name — Drizzle tables don't expose `.name` directly.
+  const tmpPath = `executions_cold_${Date.now()}.parquet`;
   const { promises: fs } = await import("node:fs");
   await fs.writeFile(tmpPath, buffer);
 

@@ -4,9 +4,16 @@
   "title": "workflow.published v2",
   "type": "object",
   "required": [
-    "event_id", "event_type", "event_version", "occurred_at",
-    "tenant_id", "correlation_id", "aggregate_id", "actor_id",
-    "payload", "schema_url"
+    "event_id",
+    "event_type",
+    "event_version",
+    "occurred_at",
+    "tenant_id",
+    "correlation_id",
+    "aggregate_id",
+    "actor_id",
+    "payload",
+    "schema_url"
   ],
   "properties": {
     "event_id": { "type": "string", "pattern": "^evt_" },

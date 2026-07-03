@@ -9,6 +9,7 @@
   "dependencies": {
     "@longox/db": "workspace:*",
     "@longox/shared-events": "workspace:*",
+    "@longox/shared-rbac": "workspace:*",
     "drizzle-orm": "catalog:",
     "express": "^5.2.1"
   },

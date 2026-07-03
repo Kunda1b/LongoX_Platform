@@ -168,7 +168,13 @@ function applyOp(graph: WorkflowGraph, op: PatchOp): WorkflowGraph {
         ...graph,
         nodes: nodes.map((n) => {
           if (n.id !== nodeId) return n;
-          return applyFieldOp(n, field, op.op === "replace" || op.op === "add" ? (op as any).value : undefined) as WorkflowNode;
+          return applyFieldOp(
+            n,
+            field,
+            op.op === "replace" || op.op === "add"
+              ? (op as any).value
+              : undefined,
+          ) as unknown as WorkflowNode;
         }),
       };
     }
@@ -179,7 +185,7 @@ function applyOp(graph: WorkflowGraph, op: PatchOp): WorkflowGraph {
           if (n.id !== nodeId) return n;
           const copy = { ...n } as Record<string, unknown>;
           delete copy[field];
-          return copy as WorkflowNode;
+          return copy as unknown as WorkflowNode;
         }),
       };
     }
@@ -201,7 +207,11 @@ function applyOp(graph: WorkflowGraph, op: PatchOp): WorkflowGraph {
         ...graph,
         edges: edges.map((e) => {
           if (e.id !== edgeId) return e;
-          return applyFieldOp(e, field, (op as any).value) as WorkflowEdge;
+          return applyFieldOp(
+            e,
+            field,
+            (op as any).value,
+          ) as unknown as WorkflowEdge;
         }),
       };
     }
@@ -223,7 +233,11 @@ function applyFieldOp(
   const [head, ...rest] = parts;
   return {
     ...obj,
-    [head]: applyFieldOp((obj[head] ?? {}) as Record<string, unknown>, rest.join("/"), value),
+    [head]: applyFieldOp(
+      (obj[head] ?? {}) as Record<string, unknown>,
+      rest.join("/"),
+      value,
+    ),
   };
 }
 
@@ -264,8 +278,12 @@ export function classifyPatch(
   // ── Node changes ─────────────────────────────────────────────────────────
 
   for (const [nodeId, ops] of nodeOps) {
-    const isAdd = ops.some((o) => o.op === "add" && o.path === `/nodes/${nodeId}`);
-    const isRemove = ops.some((o) => o.op === "remove" && o.path === `/nodes/${nodeId}`);
+    const isAdd = ops.some(
+      (o) => o.op === "add" && o.path === `/nodes/${nodeId}`,
+    );
+    const isRemove = ops.some(
+      (o) => o.op === "remove" && o.path === `/nodes/${nodeId}`,
+    );
 
     if (isAdd) {
       const node = toNodeMap.get(nodeId);
@@ -347,8 +365,12 @@ export function classifyPatch(
   // ── Edge changes ─────────────────────────────────────────────────────────
 
   for (const [edgeId, ops] of edgeOps) {
-    const isAdd = ops.some((o) => o.op === "add" && o.path === `/edges/${edgeId}`);
-    const isRemove = ops.some((o) => o.op === "remove" && o.path === `/edges/${edgeId}`);
+    const isAdd = ops.some(
+      (o) => o.op === "add" && o.path === `/edges/${edgeId}`,
+    );
+    const isRemove = ops.some(
+      (o) => o.op === "remove" && o.path === `/edges/${edgeId}`,
+    );
     const fromEdge = fromEdgeMap.get(edgeId);
     const toEdge = toEdgeMap.get(edgeId);
 
@@ -442,10 +464,18 @@ function diffNodeFields(
       const tp = toVal as { x: number; y: number } | undefined;
       if (fp && tp) {
         if (fp.x !== tp.x) {
-          ops.push({ op: "replace", path: `/nodes/${nodeId}/position/x`, value: tp.x });
+          ops.push({
+            op: "replace",
+            path: `/nodes/${nodeId}/position/x`,
+            value: tp.x,
+          });
         }
         if (fp.y !== tp.y) {
-          ops.push({ op: "replace", path: `/nodes/${nodeId}/position/y`, value: tp.y });
+          ops.push({
+            op: "replace",
+            path: `/nodes/${nodeId}/position/y`,
+            value: tp.y,
+          });
         }
       } else if (!fp && tp) {
         ops.push({ op: "add", path: `/nodes/${nodeId}/position`, value: tp });
@@ -467,11 +497,19 @@ function diffNodeFields(
     const toJson = JSON.stringify(toVal ?? null);
     if (fromJson !== toJson) {
       if (fromVal === undefined) {
-        ops.push({ op: "add", path: `/nodes/${nodeId}/${field}`, value: toVal });
+        ops.push({
+          op: "add",
+          path: `/nodes/${nodeId}/${field}`,
+          value: toVal,
+        });
       } else if (toVal === undefined) {
         ops.push({ op: "remove", path: `/nodes/${nodeId}/${field}` });
       } else {
-        ops.push({ op: "replace", path: `/nodes/${nodeId}/${field}`, value: toVal });
+        ops.push({
+          op: "replace",
+          path: `/nodes/${nodeId}/${field}`,
+          value: toVal,
+        });
       }
     }
   }
@@ -502,11 +540,19 @@ function diffEdgeFields(
     const toJson = JSON.stringify(toVal ?? null);
     if (fromJson !== toJson) {
       if (fromVal === undefined) {
-        ops.push({ op: "add", path: `/edges/${edgeId}/${field}`, value: toVal });
+        ops.push({
+          op: "add",
+          path: `/edges/${edgeId}/${field}`,
+          value: toVal,
+        });
       } else if (toVal === undefined) {
         ops.push({ op: "remove", path: `/edges/${edgeId}/${field}` });
       } else {
-        ops.push({ op: "replace", path: `/edges/${edgeId}/${field}`, value: toVal });
+        ops.push({
+          op: "replace",
+          path: `/edges/${edgeId}/${field}`,
+          value: toVal,
+        });
       }
     }
   }

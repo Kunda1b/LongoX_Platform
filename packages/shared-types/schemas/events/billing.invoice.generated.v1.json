@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.longox.com/events/billing.invoice.generated.v1.json",
+  "title": "billing.invoice.generated v1",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_type",
+    "event_version",
+    "occurred_at",
+    "tenant_id",
+    "correlation_id",
+    "aggregate_id",
+    "actor_id",
+    "payload",
+    "schema_url"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "pattern": "^evt_"
+    },
+    "event_type": {
+      "const": "billing.invoice.generated"
+    },
+    "event_version": {
+      "const": 1
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tenant_id": {
+      "type": ["string", "null"]
+    },
+    "correlation_id": {
+      "type": ["string", "null"]
+    },
+    "aggregate_id": {
+      "type": "string",
+      "pattern": "^inv_"
+    },
+    "actor_id": {
+      "type": ["string", "null"]
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "invoice_id": {
+          "type": "string"
+        },
+        "tenant_id": {
+          "type": "string"
+        },
+        "billing_account_id": {
+          "type": "string"
+        },
+        "invoice_number": {
+          "type": "string"
+        },
+        "period_start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "period_end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "total_amount": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "invoice_id",
+        "tenant_id",
+        "billing_account_id",
+        "period_start",
+        "period_end"
+      ]
+    },
+    "schema_url": {
+      "type": "string",
+      "format": "uri"
+    }
+  }
+}

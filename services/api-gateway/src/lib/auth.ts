@@ -4,6 +4,14 @@ import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
 import { db, usersTable } from "@longox/db";
+import type { AuthUser } from "@longox/shared-auth";
+
+// Re-export AuthUser so existing `import { AuthUser } from "../lib/auth"` calls
+// keep working. The canonical declaration lives in `@longox/shared-auth` so
+// that all services share the same `Request.user` shape (avoids TS2717
+// "subsequent property declarations must have the same type" when multiple
+// packages augment Express.Request).
+export type { AuthUser };
 
 const JWT_SECRET =
   process.env["JWT_SECRET"] ??
@@ -12,20 +20,15 @@ const JWT_EXPIRY = "24h";
 
 const revokedTokens = new Map<string, number>();
 
-// ─── Shared types ─────────────────────────────────────────────────────────────
-
-export interface AuthUser {
-  id: number;
-  email: string;
-  name: string;
-  tenantId: number | null;
-  role: string;
-}
-
+// NOTE: We deliberately do NOT re-declare `Express.Request.user` here.
+// `packages/shared-auth/src/index.ts` is the canonical declaration site
+// for `Request.user?: AuthUser`. Re-declaring it here with the same shape
+// would still trigger TS2717 because TypeScript merges global declarations
+// and rejects duplicate property declarations even when identical.
+// We only add `correlationId` here; `user` is inherited from shared-auth.
 declare global {
   namespace Express {
     interface Request {
-      user?: AuthUser;
       correlationId?: string;
     }
   }

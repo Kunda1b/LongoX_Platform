@@ -4,6 +4,7 @@ export * from "./queries/get-current-billing.query";
 export * from "./queries/list-invoices.query";
 export * from "./services/metering.service";
 export * from "./services/usage-rollup.service";
+export * from "./services/reconciliation.service";
 export * from "./services/stripe.service";
 export * from "./services/entitlement.service";
 export * from "./services/overage.service";

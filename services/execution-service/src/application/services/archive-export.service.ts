@@ -30,7 +30,7 @@ async function uploadToS3(
       "Content-Type": contentType,
       "Content-Length": String(body.length),
     },
-    body,
+    body: body as unknown as BodyInit,
   });
 
   if (!res.ok) {

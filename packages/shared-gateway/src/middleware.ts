@@ -1,4 +1,9 @@
 import type { Request, Response, NextFunction } from "express";
+// Side-effect import: pulls in the `declare global { namespace Express }`
+// augmentation from shared-rbac so that `req.user` is typed on every
+// Request in this package. Without this import, TypeScript doesn't see
+// the global augmentation and `req.user` errors as TS2339.
+import "@longox/shared-rbac";
 import { ServiceMeshClient } from "./mesh-client";
 import {
   createDefaultMeshConfig,
@@ -11,7 +16,11 @@ export function createServiceMeshMiddleware(
   const meshConfig = config ?? createDefaultMeshConfig();
   const client = new ServiceMeshClient(meshConfig);
 
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  return async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     const serviceName = client.resolveService(req.path);
 
     if (!serviceName) {

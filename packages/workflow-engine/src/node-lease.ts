@@ -29,7 +29,12 @@ export class InMemoryLeaseStore implements LeaseStore {
 
   constructor(opts: { workerId?: string; defaultTtlMs?: number } = {}) {
     this.workerId = opts.workerId ?? generateWorkerId();
-    this.defaultTtlMs = opts.defaultTtlMs ?? 30_000; // 30 s default TTL
+    // ADR-009 / architecture.md §9.3: 5-minute default lease TTL.
+    // Workers renew every 60s; if a worker dies the lease expires after 5 min
+    // and the scheduler requeues the execution with a 'recover' marker.
+    // Operators may override via WORKER_LEASE_TTL_SECONDS env var (consumed
+    // by services/execution-service/src/config/runtime.ts).
+    this.defaultTtlMs = opts.defaultTtlMs ?? 300_000; // 5 minutes
   }
 
   async acquire(
@@ -42,7 +47,11 @@ export class InMemoryLeaseStore implements LeaseStore {
     const ttl = ttlMs ?? this.defaultTtlMs;
 
     const existing = this.leases.get(key);
-    if (existing && existing.expiresAt > now && existing.workerId !== this.workerId) {
+    if (
+      existing &&
+      existing.expiresAt > now &&
+      existing.workerId !== this.workerId
+    ) {
       // Another worker holds the lease and it has not expired
       return null;
     }
@@ -96,7 +105,8 @@ export class RedisLeaseStore implements LeaseStore {
     opts: { workerId?: string; defaultTtlMs?: number } = {},
   ) {
     this.workerId = opts.workerId ?? generateWorkerId();
-    this.defaultTtlMs = opts.defaultTtlMs ?? 30_000;
+    // ADR-009 / architecture.md §9.3: 5-minute default lease TTL.
+    this.defaultTtlMs = opts.defaultTtlMs ?? 300_000;
   }
 
   async acquire(

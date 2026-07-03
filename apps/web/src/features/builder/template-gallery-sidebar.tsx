@@ -35,13 +35,18 @@ function templateNodesToFlow(nodes: WorkflowNode[]): Node[] {
     type: "flowNode",
     position: { x: 100 + (i % 3) * 220, y: 80 + Math.floor(i / 3) * 160 },
     data: {
-      label: n.label ?? n.nodeTypeName ?? "",
+      // WorkflowNode (per OpenAPI) has: id, type, name, nodeTypeId, connectorId, config, position.
+      // The original code referenced fields that don't exist on the type
+      // (label, nodeTypeName, category, description, inputs, outputs) —
+      // likely from an older schema. We map the available fields and
+      // derive sensible defaults for the rest.
+      label: n.name ?? "",
       nodeTypeId: n.nodeTypeId ?? "",
-      category: n.category ?? "action",
-      description: n.description ?? "",
-      nodeTypeName: n.nodeTypeName ?? n.label ?? "",
-      inputs: n.inputs ?? [],
-      outputs: n.outputs ?? [],
+      category: n.type ?? "action",
+      description: "",
+      nodeTypeName: n.name ?? n.type ?? "",
+      inputs: [],
+      outputs: [],
       config: n.config ?? {},
     },
   }));
@@ -61,7 +66,9 @@ export function TemplateGallerySidebar({
   const { data: templates = [], isLoading } = useListTemplates({ search });
 
   const { data: selectedTemplate, isFetching: templateLoading } =
-    useGetTemplate(confirmId!, { query: { enabled: confirmId !== null } });
+    useGetTemplate(confirmId!, {
+      query: { enabled: confirmId !== null },
+    } as any);
 
   if (!open) return null;
 
@@ -132,7 +139,10 @@ export function TemplateGallerySidebar({
                     <span className="text-xs font-semibold leading-tight line-clamp-2 flex-1">
                       {t.name}
                     </span>
-                    <Badge variant="secondary" className="shrink-0 text-[10px] px-1.5 py-0">
+                    <Badge
+                      variant="secondary"
+                      className="shrink-0 text-[10px] px-1.5 py-0"
+                    >
                       {t.category}
                     </Badge>
                   </div>
@@ -155,7 +165,10 @@ export function TemplateGallerySidebar({
       </div>
 
       {/* Confirm apply dialog */}
-      <Dialog open={confirmId !== null} onOpenChange={(o) => !o && setConfirmId(null)}>
+      <Dialog
+        open={confirmId !== null}
+        onOpenChange={(o) => !o && setConfirmId(null)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -163,7 +176,8 @@ export function TemplateGallerySidebar({
               Apply Template
             </DialogTitle>
             <DialogDescription>
-              This will replace your current workflow with the template&apos;s nodes.
+              This will replace your current workflow with the template&apos;s
+              nodes.
             </DialogDescription>
           </DialogHeader>
 
@@ -193,15 +207,19 @@ export function TemplateGallerySidebar({
               <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 border border-amber-500/20 p-3">
                 <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-600/90 dark:text-amber-400/90">
-                  Applying this template will replace all existing nodes and edges
-                  in your current workflow. This action cannot be undone.
+                  Applying this template will replace all existing nodes and
+                  edges in your current workflow. This action cannot be undone.
                 </p>
               </div>
             </div>
           ) : null}
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" size="sm" onClick={() => setConfirmId(null)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmId(null)}
+            >
               Cancel
             </Button>
             <Button

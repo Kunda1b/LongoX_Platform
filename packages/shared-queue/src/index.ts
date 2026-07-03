@@ -7,6 +7,8 @@ export interface WorkflowJobData {
   nodes: unknown[];
   triggerPayload: Record<string, unknown>;
   triggerType: string;
+  /** Optional parent execution id for child-workflow orchestration (§9.6). */
+  parentExecutionId?: number | null;
 }
 
 export interface WebhookJobData {

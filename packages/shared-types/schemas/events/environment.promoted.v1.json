@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.longox.com/events/environment.promoted.v1.json",
+  "title": "environment.promoted v1",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_type",
+    "event_version",
+    "occurred_at",
+    "tenant_id",
+    "correlation_id",
+    "aggregate_id",
+    "actor_id",
+    "payload",
+    "schema_url"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "pattern": "^evt_"
+    },
+    "event_type": {
+      "const": "environment.promoted"
+    },
+    "event_version": {
+      "const": 1
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tenant_id": {
+      "type": ["string", "null"]
+    },
+    "correlation_id": {
+      "type": ["string", "null"]
+    },
+    "aggregate_id": {
+      "type": "string",
+      "pattern": "^env_"
+    },
+    "actor_id": {
+      "type": ["string", "null"]
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "environment_id": {
+          "type": "string"
+        },
+        "workflow_id": {
+          "type": "string"
+        },
+        "version_id": {
+          "type": "string"
+        },
+        "target_environment": {
+          "type": "string",
+          "enum": ["dev", "staging", "prod"]
+        },
+        "promoted_by": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "environment_id",
+        "workflow_id",
+        "version_id",
+        "target_environment"
+      ]
+    },
+    "schema_url": {
+      "type": "string",
+      "format": "uri"
+    }
+  }
+}

@@ -273,7 +273,7 @@ export class BackupRestoreService {
                   VALUES (${sql.raw(placeholders.join(", "))})
                 `);
               }
-            } catch {
+            } catch (err: unknown) {
               warnings.push(`Failed to restore row in "${s}": ${(err as Error)?.message ?? "unknown error"}`);
             }
           }

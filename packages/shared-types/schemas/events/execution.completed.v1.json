@@ -4,9 +4,16 @@
   "title": "execution.completed v1",
   "type": "object",
   "required": [
-    "event_id", "event_type", "event_version", "occurred_at",
-    "tenant_id", "correlation_id", "aggregate_id", "actor_id",
-    "payload", "schema_url"
+    "event_id",
+    "event_type",
+    "event_version",
+    "occurred_at",
+    "tenant_id",
+    "correlation_id",
+    "aggregate_id",
+    "actor_id",
+    "payload",
+    "schema_url"
   ],
   "properties": {
     "event_id": { "type": "string", "pattern": "^evt_" },
@@ -25,7 +32,10 @@
         "workflow_id": { "type": "string" },
         "duration_ms": { "type": "integer" },
         "total_nodes": { "type": "integer" },
-        "status": { "type": "string", "enum": ["success", "failed", "cancelled", "timeout"] },
+        "status": {
+          "type": "string",
+          "enum": ["success", "failed", "cancelled", "timeout"]
+        },
         "output_size": { "type": "integer" }
       }
     },

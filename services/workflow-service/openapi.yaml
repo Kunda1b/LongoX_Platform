@@ -1,0 +1,311 @@
+openapi: 3.1.0
+info:
+  title: LongoX Workflow Service API
+  description: |
+    Workflow authoring, versioning, and publish API for the LongoX platform.
+
+    Implements the workflow endpoints defined in the platform-wide OpenAPI spec
+    at `services/api-gateway/openapi/openapi.yaml`. This service-level spec is
+    the authoritative contract for the workflow-service REST surface and is
+    consumed by the gateway for route aggregation and by `packages/shared-types`
+    for client codegen.
+
+    Per ADR-005, every publish creates an immutable `workflow_versions` row and
+    a `workflow_diffs` row storing the JSON Patch (RFC 6902) from the prior
+    published version.
+  version: 1.0.0
+  contact:
+    name: LongoX Platform Architecture Team
+    url: https://longox.com
+servers:
+  - url: http://workflow-service:3003
+    description: Internal service URL (fronted by Kong at /api/v1/workflows)
+tags:
+  - name: Workflows
+    description: Workflow CRUD, publish, clone
+  - name: Workflow Versions
+    description: Immutable version history and JSON Patch diffs
+  - name: Workflow Executions
+    description: Trigger and inspect workflow runs
+
+paths:
+  /workflows:
+    get:
+      tags: [Workflows]
+      summary: List workflows
+      operationId: listWorkflows
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - in: query
+          name: status
+          schema: { type: string, enum: [draft, active, archived] }
+        - in: query
+          name: search
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50, maximum: 200 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: Workflow list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workflows:
+                    type: array
+                    items: { $ref: "#/components/schemas/Workflow" }
+                  total: { type: integer }
+    post:
+      tags: [Workflows]
+      summary: Create a workflow draft
+      operationId: createWorkflow
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateWorkflowRequest" }
+      responses:
+        "201":
+          description: Workflow created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workflow" }
+
+  /workflows/{id}:
+    get:
+      tags: [Workflows]
+      summary: Get a workflow by id
+      operationId: getWorkflow
+      parameters:
+        - $ref: "#/components/parameters/WorkflowId"
+      responses:
+        "200":
+          description: Workflow detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workflow" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Workflows]
+      summary: Update a workflow draft
+      operationId: updateWorkflow
+      parameters:
+        - $ref: "#/components/parameters/WorkflowId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateWorkflowRequest" }
+      responses:
+        "200":
+          description: Updated workflow
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workflow" }
+    delete:
+      tags: [Workflows]
+      summary: Delete a workflow
+      operationId: deleteWorkflow
+      parameters:
+        - $ref: "#/components/parameters/WorkflowId"
+      responses:
+        "204": { description: Deleted }
+
+  /workflows/{id}/publish:
+    post:
+      tags: [Workflows]
+      summary: Publish an immutable workflow version
+      description: |
+        Per ADR-005, publishing computes a JSON Patch (RFC 6902) diff from the
+        prior published version's `graph_json` and stores it in `workflow_diffs`.
+        The new version row in `workflow_versions` is immutable.
+      operationId: publishWorkflow
+      parameters:
+        - $ref: "#/components/parameters/WorkflowId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "201":
+          description: Published version
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorkflowVersion" }
+        "409":
+          description: Version already published / optimistic concurrency conflict
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /workflows/{id}/clone:
+    post:
+      tags: [Workflows]
+      summary: Clone a workflow
+      operationId: cloneWorkflow
+      parameters:
+        - $ref: "#/components/parameters/WorkflowId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "201":
+          description: Cloned workflow
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workflow" }
+
+  /workflows/{id}/versions:
+    get:
+      tags: [Workflow Versions]
+      summary: List versions for a workflow
+      operationId: listWorkflowVersions
+      parameters:
+        - $ref: "#/components/parameters/WorkflowId"
+      responses:
+        "200":
+          description: Version list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/WorkflowVersion" }
+
+  /workflows/{id}/diffs:
+    get:
+      tags: [Workflow Versions]
+      summary: List JSON Patch diffs between versions
+      description: |
+        Returns the `workflow_diffs` rows for this workflow, oldest first. Each
+        row contains a `patch_json` field with an RFC 6902 JSON Patch that, when
+        applied to the `from_version` graph, produces the `to_version` graph.
+      operationId: listWorkflowDiffs
+      parameters:
+        - $ref: "#/components/parameters/WorkflowId"
+      responses:
+        "200":
+          description: Diff list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/WorkflowDiff" }
+
+  /workflows/{id}/run:
+    post:
+      tags: [Workflow Executions]
+      summary: Trigger a workflow execution
+      operationId: runWorkflow
+      parameters:
+        - $ref: "#/components/parameters/WorkflowId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                trigger:
+                  type: object
+                  description: Trigger payload (webhook/schedule/manual)
+                inputs:
+                  type: object
+                  description: Initial workflow inputs
+      responses:
+        "202":
+          description: Execution accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  executionId: { type: string }
+
+components:
+  parameters:
+    TenantId:
+      in: header
+      name: x-tenant-id
+      schema: { type: string }
+      description: Tenant context (extracted by gateway from JWT)
+    IdempotencyKey:
+      in: header
+      name: x-idempotency-key
+      required: true
+      schema: { type: string, format: uuid }
+      description: UUID for replay protection (24h TTL per §26.8)
+    WorkflowId:
+      in: path
+      name: id
+      required: true
+      schema: { type: string }
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Workflow:
+      type: object
+      properties:
+        id: { type: string }
+        tenantId: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        status: { type: string, enum: [draft, active, archived] }
+        currentVersionId: { type: string, nullable: true }
+        nodes: { type: array, items: { type: object } }
+        edges: { type: array, items: { type: object } }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    WorkflowVersion:
+      type: object
+      properties:
+        id: { type: string }
+        workflowId: { type: string }
+        versionNumber: { type: integer }
+        graphJson: { type: object }
+        checksum: { type: string }
+        publishedAt: { type: string, format: date-time }
+    WorkflowDiff:
+      type: object
+      properties:
+        id: { type: string }
+        fromVersionId: { type: string }
+        toVersionId: { type: string }
+        patchJson: { type: array, items: { type: object } }
+        description: RFC 6902 JSON Patch operations
+    CreateWorkflowRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        nodes: { type: array, items: { type: object } }
+        edges: { type: array, items: { type: object } }
+    UpdateWorkflowRequest:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        nodes: { type: array, items: { type: object } }
+        edges: { type: array, items: { type: object } }
+        status: { type: string, enum: [draft, active, archived] }
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            correlation_id: { type: string }
+            retry_after_seconds: { type: integer, nullable: true }
+            documentation_url: { type: string }

@@ -1,0 +1,193 @@
+# LongoX Workflow Service — GraphQL Schema
+#
+# Per architecture.md §14.2 and §24.2, every service that owns a domain
+# (workflow-service, dashboard-service, connector-service, marketplace-service)
+# exposes a GraphQL surface alongside its REST surface. This SDL is consumed
+# by the gateway for schema stitching and by `packages/shared-types` for
+# graphql-codegen.
+#
+# Conventions:
+#  - All mutations accept `x-idempotency-key` (UUID) as a custom header —
+#    declared in the codegen config, not in the SDL.
+#  - All queries are tenant-scoped via the gateway-injected `x-tenant-id`
+#    header; the `Tenant` type is read-only from this service.
+#  - Persisted queries only in production (per ADR-004 §26.5).
+
+scalar DateTime
+scalar JSON
+scalar JSONPatch
+
+# ─── Types ─────────────────────────────────────────────────────────────────────
+
+type Workflow {
+  id: ID!
+  tenantId: ID!
+  name: String!
+  description: String
+  status: WorkflowStatus!
+  currentVersionId: ID
+  nodes: [GraphNode!]!
+  edges: [GraphEdge!]!
+  versions(first: Int = 20, after: String): WorkflowVersionConnection!
+  diffs: [WorkflowDiff!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum WorkflowStatus {
+  draft
+  active
+  archived
+}
+
+type GraphNode {
+  id: ID!
+  type: NodeType!
+  label: String!
+  config: JSON
+  position: Position!
+}
+
+type GraphEdge {
+  id: ID!
+  source: ID!
+  target: ID!
+  label: String
+}
+
+type Position {
+  x: Float!
+  y: Float!
+}
+
+enum NodeType {
+  trigger
+  action
+  condition
+  transform
+  approval
+  ai
+  loop
+  subworkflow
+  boundary
+}
+
+type WorkflowVersion {
+  id: ID!
+  workflowId: ID!
+  versionNumber: Int!
+  graphJson: JSON!
+  checksum: String!
+  publishedAt: DateTime!
+  publishedBy: ID!
+}
+
+type WorkflowDiff {
+  id: ID!
+  fromVersionId: ID!
+  toVersionId: ID!
+  patchJson: JSONPatch!
+  createdAt: DateTime!
+}
+
+type WorkflowVersionConnection {
+  edges: [WorkflowVersionEdge!]!
+  pageInfo: PageInfo!
+}
+
+type WorkflowVersionEdge {
+  node: WorkflowVersion!
+  cursor: String!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  endCursor: String
+}
+
+# ─── Inputs ────────────────────────────────────────────────────────────────────
+
+input CreateWorkflowInput {
+  name: String!
+  description: String
+  nodes: [GraphNodeInput!]
+  edges: [GraphEdgeInput!]
+}
+
+input UpdateWorkflowInput {
+  name: String
+  description: String
+  nodes: [GraphNodeInput!]
+  edges: [GraphEdgeInput!]
+  status: WorkflowStatus
+}
+
+input GraphNodeInput {
+  id: ID!
+  type: NodeType!
+  label: String!
+  config: JSON
+  position: PositionInput!
+}
+
+input GraphEdgeInput {
+  id: ID!
+  source: ID!
+  target: ID!
+  label: String
+}
+
+input PositionInput {
+  x: Float!
+  y: Float!
+}
+
+# ─── Queries ───────────────────────────────────────────────────────────────────
+
+type Query {
+  workflows(
+    status: WorkflowStatus
+    search: String
+    limit: Int = 50
+    offset: Int = 0
+  ): [Workflow!]!
+
+  workflow(id: ID!): Workflow
+
+  workflowVersion(id: ID!): WorkflowVersion
+
+  workflowDiff(fromVersionId: ID!, toVersionId: ID!): WorkflowDiff
+}
+
+# ─── Mutations ─────────────────────────────────────────────────────────────────
+
+type Mutation {
+  createWorkflow(input: CreateWorkflowInput!): Workflow!
+  updateWorkflow(id: ID!, input: UpdateWorkflowInput!): Workflow!
+  deleteWorkflow(id: ID!): Boolean!
+
+  """
+  Publish an immutable workflow version. Per ADR-005, this computes a JSON
+  Patch (RFC 6902) diff from the prior published version's graph_json and
+  stores it in workflow_diffs. Returns the new immutable version.
+  """
+  publishWorkflow(workflowId: ID!): WorkflowVersion!
+
+  """
+  Promote a workflow version to a target environment (dev/staging/prod).
+  Requires `version.promote` permission per §15 RBAC.
+  """
+  promoteEnvironment(
+    workflowId: ID!
+    versionId: ID!
+    targetEnvironment: String!
+  ): WorkflowVersion!
+
+  cloneWorkflow(workflowId: ID!, newName: String!): Workflow!
+}
+
+# ─── Subscriptions ─────────────────────────────────────────────────────────────
+# Per ADR-008, realtime is via SSE — not GraphQL subscriptions over WebSocket.
+# Realtime updates for workflow executions are published on the SSE channel at
+# /api/v1/executions/{id}/stream, multiplexed with notifications and dashboard
+# refresh events.

@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.longox.com/events/connector.installed.v1.json",
+  "title": "connector.installed v1",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_type",
+    "event_version",
+    "occurred_at",
+    "tenant_id",
+    "correlation_id",
+    "aggregate_id",
+    "actor_id",
+    "payload",
+    "schema_url"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "pattern": "^evt_"
+    },
+    "event_type": {
+      "const": "connector.installed"
+    },
+    "event_version": {
+      "const": 1
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tenant_id": {
+      "type": ["string", "null"]
+    },
+    "correlation_id": {
+      "type": ["string", "null"]
+    },
+    "aggregate_id": {
+      "type": "string",
+      "pattern": "^conn_"
+    },
+    "actor_id": {
+      "type": ["string", "null"]
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "connector_id": {
+          "type": "string"
+        },
+        "connector_version_id": {
+          "type": "string"
+        },
+        "tenant_id": {
+          "type": "string"
+        },
+        "trust_level": {
+          "type": "string",
+          "enum": ["first-party", "partner", "community"]
+        },
+        "installed_by": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "connector_id",
+        "connector_version_id",
+        "tenant_id",
+        "trust_level"
+      ]
+    },
+    "schema_url": {
+      "type": "string",
+      "format": "uri"
+    }
+  }
+}

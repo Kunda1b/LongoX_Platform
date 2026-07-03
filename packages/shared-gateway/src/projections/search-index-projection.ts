@@ -82,10 +82,7 @@ export class SearchIndexProjection {
 
   private async indexDashboard(event: PlatformEvent): Promise<void> {
     const title = (event.payload.name as string) ?? "Untitled Dashboard";
-    const content = [
-      title,
-      (event.payload.description as string) ?? "",
-    ]
+    const content = [title, (event.payload.description as string) ?? ""]
       .filter(Boolean)
       .join(" ");
 
@@ -166,10 +163,11 @@ export class SearchIndexProjection {
     metadata: Record<string, unknown>;
   }): Promise<void> {
     try {
+      const compositeId = `${doc.documentType}-${doc.documentId}`;
       const [existing] = await db
         .select()
         .from(searchIndexTable)
-        .where(eq(searchIndexTable.documentId, doc.documentId))
+        .where(eq(searchIndexTable.resourceId, compositeId))
         .limit(1);
 
       if (existing) {
@@ -184,8 +182,8 @@ export class SearchIndexProjection {
           .where(eq(searchIndexTable.id, existing.id));
       } else {
         await db.insert(searchIndexTable).values({
-          documentId: doc.documentId,
-          documentType: doc.documentType,
+          resourceType: doc.documentType,
+          resourceId: compositeId,
           tenantId: doc.tenantId,
           title: doc.title,
           content: doc.content,
@@ -202,11 +200,10 @@ export class SearchIndexProjection {
     documentId: string,
   ): Promise<void> {
     try {
+      const compositeId = `${documentType}-${documentId}`;
       await db
         .delete(searchIndexTable)
-        .where(
-          eq(searchIndexTable.documentId, `${documentType}-${documentId}`),
-        );
+        .where(eq(searchIndexTable.resourceId, compositeId));
     } catch (err) {
       console.error("[SearchIndexProjection] Failed to remove document:", err);
     }
