@@ -196,6 +196,14 @@ export interface ChildWorkflowConfig {
 
 // ─── Node lease ───────────────────────────────────────────────────────────────
 
+export interface LeaseStore {
+  acquire(
+    executionId: number,
+    nodeId: string,
+    ttlMs?: number,
+  ): Promise<NodeLease | null>;
+}
+
 export interface NodeLease {
   executionId: number;
   nodeId: string;
@@ -294,4 +302,6 @@ export interface DAGRunnerOptions {
   spawnChildWorkflow?: (config: ChildWorkflowConfig, input: Record<string, unknown>, context: ExecutionContext) => Promise<number>;
   /** Approval gate writer */
   writeApprovalGate?: (opts: { executionId: number; nodeId: string; config: ApprovalGateConfig; input: Record<string, unknown> }) => Promise<number>;
+  /** Node lease store for multi-worker safety */
+  leaseStore?: LeaseStore;
 }

@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./isolate": "./src/isolate.ts",
+    "./deno-bridge": "./src/deno-bridge.ts",
     "./policy": "./src/policy.ts",
     "./audit": "./src/audit.ts"
   },

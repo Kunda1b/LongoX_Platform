@@ -31,7 +31,9 @@ import {
   DEFAULT_RETRY_POLICY,
   TRIGGER_RETRY_POLICY,
   computeBackoffDelay,
+  type LeaseStore,
 } from "./types";
+import { NoOpLeaseStore } from "./node-lease";
 
 // ─── DAGRunner ────────────────────────────────────────────────────────────────
 
@@ -61,6 +63,7 @@ export class DAGRunner {
       checkpointStore,
       idempotencyStore,
       enableSaga = true,
+      leaseStore = new NoOpLeaseStore(),
     } = options;
 
     const emit = (event: DAGEvent) => onEvent?.(event);
@@ -132,6 +135,14 @@ export class DAGRunner {
 
         inFlight.add(node.id);
 
+        // ── Acquire node lease ──────────────────────────────────────────────
+        const lease = await leaseStore.acquire(context.executionId, node.id, 300_000);
+        if (!lease) {
+          // Another worker holds the lease — skip (will be picked up on expiry)
+          inFlight.delete(node.id);
+          return;
+        }
+
         // ── Skip already-completed (checkpoint resume) ──────────────────────
         if (completedNodes.has(node.id)) {
           const savedOutput = completedNodes.get(node.id)!;
@@ -146,6 +157,7 @@ export class DAGRunner {
             attemptNumber: 0,
           });
           unlockDownstream(node.id, localInDegree, adjacencyMap, readyQueue, graph, failed);
+          await lease.release();
           inFlight.delete(node.id);
           return;
         }
@@ -172,6 +184,7 @@ export class DAGRunner {
               attemptNumber: 0,
             });
             unlockDownstream(node.id, localInDegree, adjacencyMap, readyQueue, graph, failed);
+            await lease.release();
             inFlight.delete(node.id);
             return;
           }
@@ -190,6 +203,7 @@ export class DAGRunner {
         if (result.status === "paused") {
           // Human approval gate — pause the whole run; resume externally.
           // We don't unlock downstream — the run stops here for this branch.
+          await lease.release();
           inFlight.delete(node.id);
           return;
         }
@@ -203,6 +217,7 @@ export class DAGRunner {
             nodeId: node.id,
             error: failureError,
           });
+          await lease.release();
           inFlight.delete(node.id);
           return;
         }
@@ -231,6 +246,7 @@ export class DAGRunner {
 
         // ── Unlock downstream nodes ─────────────────────────────────────────
         unlockDownstream(node.id, localInDegree, adjacencyMap, readyQueue, graph, failed);
+        await lease.release();
         inFlight.delete(node.id);
       };
 

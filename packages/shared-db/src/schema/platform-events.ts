@@ -9,11 +9,13 @@ import {
 export const platformEventsTable = pgTable("platform_events", {
   id: serial("id").primaryKey(),
   eventType: text("event_type").notNull(),
+  eventVersion: integer("event_version").notNull().default(1),
   aggregateId: text("aggregate_id").notNull(),
   aggregateType: text("aggregate_type").notNull(),
   payloadJson: jsonb("payload_json").notNull().default({}),
   actorId: text("actor_id"),
   correlationId: text("correlation_id"),
+  schemaUrl: text("schema_url"),
   occurredAt: timestamp("occurred_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

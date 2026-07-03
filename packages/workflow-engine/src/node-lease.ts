@@ -13,21 +13,7 @@
  *   - RedisLeaseStore     — for production (requires ioredis)
  */
 
-import type { NodeLease } from "./types";
-
-// ─── Lease Store interface ─────────────────────────────────────────────────────
-
-export interface LeaseStore {
-  /**
-   * Attempt to acquire an exclusive lease for (executionId, nodeId).
-   * Returns null if another worker already holds a valid lease.
-   */
-  acquire(
-    executionId: number,
-    nodeId: string,
-    ttlMs?: number,
-  ): Promise<NodeLease | null>;
-}
+import type { NodeLease, LeaseStore } from "./types";
 
 // ─── In-memory lease store (single-process) ────────────────────────────────────
 

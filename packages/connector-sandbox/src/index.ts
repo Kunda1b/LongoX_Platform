@@ -1,4 +1,6 @@
 export { DenoIsolate } from "./isolate";
+export { DenoBridge } from "./deno-bridge";
+export type { DenoRuntimeConfig } from "./deno-bridge";
 export type { IsolateContext, IsolateResult, IsolateMetrics } from "./isolate";
 export type { SandboxPolicy, PermissionOp } from "./policy";
 export {

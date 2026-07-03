@@ -1,9 +1,11 @@
 import type { GraphChecksum } from "./graph-checksum";
+import { EVENT_REGISTRY } from "./event-registry";
 
 export interface EventEnvelope {
   id: string;
   specVersion: string;
   type: EventType;
+  eventVersion: number;
   source: string;
   subject: string;
   time: string;
@@ -21,6 +23,7 @@ export interface EventEnvelope {
   };
   data: Record<string, unknown>;
   dataSchema?: string;
+  schemaUrl?: string;
   priority: "low" | "normal" | "high" | "critical";
   partitionKey?: string;
   classification: "internal" | "confidential" | "pii" | "public";
@@ -30,23 +33,29 @@ export interface EventEnvelope {
 
 export type EventType =
   | "workflow.created" | "workflow.updated" | "workflow.deleted"
-  | "workflow.published" | "workflow.version.created" | "workflow.promoted"
-  | "workflow.rolled_back"
+  | "workflow.published" | "workflow.activated" | "workflow.version.created"
+  | "workflow.promoted" | "workflow.rolled_back"
   | "execution.started" | "execution.completed" | "execution.failed"
   | "execution.cancelled" | "execution.timeout"
+  | "execution.checkpoint.persisted"
   | "execution.node.started" | "execution.node.completed" | "execution.node.failed"
   | "execution.node.paused" | "execution.node.resumed"
   | "execution.approval.required" | "execution.approval.granted" | "execution.approval.rejected"
-  | "connector.installed" | "connector.uninstalled" | "connector.configured"
-  | "connector.upgraded" | "connector.rolled_back"
+  | "connector.installed" | "connector.revoked" | "connector.uninstalled"
+  | "connector.configured" | "connector.upgraded" | "connector.rolled_back"
   | "connector.execution.started" | "connector.execution.completed" | "connector.execution.failed"
   | "connector.webhook.received" | "connector.test.completed"
+  | "template.published" | "template.deprecated"
   | "ai.run.started" | "ai.run.completed" | "ai.run.failed" | "ai.run.blocked"
-  | "ai.guardrail.hit" | "ai.budget.exceeded" | "ai.evaluation.passed" | "ai.evaluation.failed"
+  | "ai.run.guardrail.violation" | "ai.guardrail.hit"
+  | "ai.budget.exceeded" | "ai.evaluation.passed" | "ai.evaluation.failed"
   | "ai.prompt.created" | "ai.prompt.promoted"
-  | "billing.invoice.created" | "billing.invoice.paid" | "billing.invoice.failed"
-  | "billing.subscription.created" | "billing.subscription.updated" | "billing.subscription.cancelled"
+  | "environment.promoted" | "environment.rolled_back"
+  | "billing.invoice.created" | "billing.invoice.generated" | "billing.invoice.paid"
+  | "billing.invoice.failed" | "billing.subscription.created"
+  | "billing.subscription.updated" | "billing.subscription.cancelled"
   | "billing.plan.entitlement.exceeded" | "billing.overage.incurred"
+  | "usage.recorded"
   | "audit.action.executed" | "audit.export.created"
   | "search.index.updated" | "search.reindex.started" | "search.reindex.completed"
   | "platform.tenant.created" | "platform.tenant.updated" | "platform.tenant.deleted"
@@ -325,12 +334,19 @@ export function createEventEnvelope(
   type: EventType,
   data: Record<string, unknown>,
   context?: Partial<EventEnvelope["context"]>,
+  eventVersion?: number,
 ): EventEnvelope {
   const id = crypto.randomUUID();
+  const registryEntry = EVENT_REGISTRY[type];
+  const resolvedVersion = eventVersion ?? registryEntry?.eventVersion ?? 1;
+  const resolvedSchemaUrl = registryEntry?.schemaUrl
+    ? registryEntry.schemaUrl.replace(/\.v(\d+)\.json$/, `.v${resolvedVersion}.json`)
+    : undefined;
   return {
     id,
     specVersion: "1.0",
     type,
+    eventVersion: resolvedVersion,
     source: "/api/v1/workflows",
     subject: `${type}.${id}`,
     time: new Date().toISOString(),
@@ -342,6 +358,7 @@ export function createEventEnvelope(
       spanId: context?.spanId,
     },
     data,
+    schemaUrl: resolvedSchemaUrl,
     priority: "normal",
     classification: "internal",
   };
@@ -353,6 +370,7 @@ export function validateEventEnvelope(event: unknown): event is EventEnvelope {
   if (typeof e.id !== "string") return false;
   if (typeof e.specVersion !== "string") return false;
   if (typeof e.type !== "string") return false;
+  if (typeof e.eventVersion !== "number") return false;
   if (typeof e.source !== "string") return false;
   if (typeof e.subject !== "string") return false;
   if (typeof e.time !== "string") return false;

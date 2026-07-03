@@ -48,7 +48,7 @@ async function uniqueTenantSlug(base: string): Promise<string> {
   return `${slug}-${Date.now()}`;
 }
 
-router.post(["/auth/register", "/api/auth/register"], async (req, res): Promise<void> => {
+router.post(["/auth/register", "/api/auth/register", "/api/v1/auth/register"], async (req, res): Promise<void> => {
   // Ensure system roles are seeded before first registration
   await seedRoles();
 
@@ -190,7 +190,7 @@ router.post(["/auth/register", "/api/auth/register"], async (req, res): Promise<
   }
 });
 
-router.post(["/auth/login", "/api/auth/login"], async (req, res): Promise<void> => {
+router.post(["/auth/login", "/api/auth/login", "/api/v1/auth/login"], async (req, res): Promise<void> => {
   const { email, password } = req.body as { email?: string; password?: string };
   if (!email?.trim() || !password?.trim()) {
     res.status(400).json({ error: "Email and password are required" });
@@ -285,13 +285,13 @@ router.post(["/auth/login", "/api/auth/login"], async (req, res): Promise<void> 
   });
 });
 
-router.post(["/auth/logout", "/api/auth/logout"], authMiddleware, (req, res): void => {
+router.post(["/auth/logout", "/api/auth/logout", "/api/v1/auth/logout"], authMiddleware, (req, res): void => {
   const token = getBearerToken(req);
   if (token) revokeToken(token);
   res.json({ message: "Logged out successfully" });
 });
 
-router.get(["/auth/me", "/api/auth/me"], authMiddleware, async (req, res): Promise<void> => {
+router.get(["/auth/me", "/api/auth/me", "/api/v1/auth/me"], authMiddleware, async (req, res): Promise<void> => {
   const [user] = await db
     .select({
       id: usersTable.id,
@@ -318,7 +318,7 @@ router.get(["/auth/me", "/api/auth/me"], authMiddleware, async (req, res): Promi
 
 // GET /api/auth/verify-email?token=...  (public)
 router.get(
-  ["/auth/verify-email", "/api/auth/verify-email"],
+  ["/auth/verify-email", "/api/auth/verify-email", "/api/v1/auth/verify-email"],
   async (req, res): Promise<void> => {
     const token = req.query.token as string | undefined;
     if (!token) {
@@ -353,7 +353,7 @@ router.get(
 
 // POST /api/auth/resend-verification  (authenticated)
 router.post(
-  ["/auth/resend-verification", "/api/auth/resend-verification"],
+  ["/auth/resend-verification", "/api/auth/resend-verification", "/api/v1/auth/resend-verification"],
   authMiddleware,
   async (req, res): Promise<void> => {
     const [user] = await db
@@ -393,7 +393,7 @@ router.post(
 
 // POST /api/auth/forgot-password  (public)
 router.post(
-  ["/auth/forgot-password", "/api/auth/forgot-password"],
+  ["/auth/forgot-password", "/api/auth/forgot-password", "/api/v1/auth/forgot-password"],
   async (req, res): Promise<void> => {
     const { email } = req.body as { email?: string };
     if (!email?.trim()) {
@@ -431,7 +431,7 @@ router.post(
 
 // POST /api/auth/reset-password  (public)
 router.post(
-  ["/auth/reset-password", "/api/auth/reset-password"],
+  ["/auth/reset-password", "/api/auth/reset-password", "/api/v1/auth/reset-password"],
   async (req, res): Promise<void> => {
     const { token, password } = req.body as { token?: string; password?: string };
 
@@ -479,7 +479,7 @@ router.post(
 
 // PATCH /api/auth/profile  (authenticated)
 router.patch(
-  ["/auth/profile", "/api/auth/profile"],
+  ["/auth/profile", "/api/auth/profile", "/api/v1/auth/profile"],
   authMiddleware,
   async (req, res): Promise<void> => {
     const { name } = req.body as { name?: string };
@@ -519,7 +519,7 @@ router.patch(
 
 // POST /api/auth/avatar  (authenticated) — stores base64 data-URL avatar
 router.post(
-  ["/auth/avatar", "/api/auth/avatar"],
+  ["/auth/avatar", "/api/auth/avatar", "/api/v1/auth/avatar"],
   authMiddleware,
   async (req, res): Promise<void> => {
     const { avatar } = req.body as { avatar?: string };
@@ -560,7 +560,7 @@ router.post(
 
 // DELETE /api/auth/avatar  (authenticated) — removes avatar
 router.delete(
-  ["/auth/avatar", "/api/auth/avatar"],
+  ["/auth/avatar", "/api/auth/avatar", "/api/v1/auth/avatar"],
   authMiddleware,
   async (req, res): Promise<void> => {
     await db
@@ -574,7 +574,7 @@ router.delete(
 
 // PATCH /api/auth/password  (authenticated)
 router.patch(
-  ["/auth/password", "/api/auth/password"],
+  ["/auth/password", "/api/auth/password", "/api/v1/auth/password"],
   authMiddleware,
   async (req, res): Promise<void> => {
     const { currentPassword, newPassword } = req.body as {
@@ -621,7 +621,7 @@ router.patch(
 
 // GET /api/auth/notification-preferences  (authenticated)
 router.get(
-  ["/auth/notification-preferences", "/api/auth/notification-preferences"],
+  ["/auth/notification-preferences", "/api/auth/notification-preferences", "/api/v1/auth/notification-preferences"],
   authMiddleware,
   async (req, res): Promise<void> => {
     const [user] = await db
@@ -651,7 +651,7 @@ router.get(
 
 // PATCH /api/auth/notification-preferences  (authenticated)
 router.patch(
-  ["/auth/notification-preferences", "/api/auth/notification-preferences"],
+  ["/auth/notification-preferences", "/api/auth/notification-preferences", "/api/v1/auth/notification-preferences"],
   authMiddleware,
   async (req, res): Promise<void> => {
     const incoming = req.body as Record<string, boolean>;

@@ -3,6 +3,8 @@ import type { EventType } from "./events";
 export interface EventRegistryEntry {
   specVersion: string;
   dataSchema: string;
+  eventVersion: number;
+  schemaUrl: string;
   description: string;
   category: "workflow" | "execution" | "connector" | "ai" | "billing" | "audit" | "search" | "platform";
   critical: boolean;
@@ -13,6 +15,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "workflow.created": {
     specVersion: "1.0",
     dataSchema: "workflow.created.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/workflow.created.v1.json",
     description: "A workflow was created",
     category: "workflow",
     critical: false,
@@ -21,6 +25,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "workflow.updated": {
     specVersion: "1.0",
     dataSchema: "workflow.updated.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/workflow.updated.v1.json",
     description: "A workflow was updated",
     category: "workflow",
     critical: false,
@@ -29,6 +35,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "workflow.deleted": {
     specVersion: "1.0",
     dataSchema: "workflow.deleted.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/workflow.deleted.v1.json",
     description: "A workflow was deleted",
     category: "workflow",
     critical: false,
@@ -36,7 +44,9 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   },
   "workflow.published": {
     specVersion: "1.0",
-    dataSchema: "workflow.published.v1",
+    dataSchema: "workflow.published.v2",
+    eventVersion: 2,
+    schemaUrl: "https://schemas.longox.com/events/workflow.published.v2.json",
     description: "A workflow version was published to an environment",
     category: "workflow",
     critical: true,
@@ -45,6 +55,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "workflow.version.created": {
     specVersion: "1.0",
     dataSchema: "workflow.version.created.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/workflow.version.created.v1.json",
     description: "A new workflow version was created",
     category: "workflow",
     critical: false,
@@ -53,6 +65,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "workflow.promoted": {
     specVersion: "1.0",
     dataSchema: "workflow.promoted.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/workflow.promoted.v1.json",
     description: "A workflow was promoted between environments",
     category: "workflow",
     critical: true,
@@ -61,6 +75,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "workflow.rolled_back": {
     specVersion: "1.0",
     dataSchema: "workflow.rolled_back.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/workflow.rolled_back.v1.json",
     description: "A workflow was rolled back to a previous version",
     category: "workflow",
     critical: true,
@@ -69,6 +85,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "execution.started": {
     specVersion: "1.0",
     dataSchema: "execution.started.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/execution.started.v1.json",
     description: "A workflow execution started",
     category: "execution",
     critical: true,
@@ -77,6 +95,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "execution.completed": {
     specVersion: "1.0",
     dataSchema: "execution.completed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/execution.completed.v1.json",
     description: "A workflow execution completed successfully",
     category: "execution",
     critical: false,
@@ -85,6 +105,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "execution.failed": {
     specVersion: "1.0",
     dataSchema: "execution.failed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/execution.failed.v1.json",
     description: "A workflow execution failed",
     category: "execution",
     critical: true,
@@ -93,6 +115,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "execution.cancelled": {
     specVersion: "1.0",
     dataSchema: "execution.cancelled.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/execution.cancelled.v1.json",
     description: "A workflow execution was cancelled",
     category: "execution",
     critical: false,
@@ -101,6 +125,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "execution.timeout": {
     specVersion: "1.0",
     dataSchema: "execution.timeout.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/execution.timeout.v1.json",
     description: "A workflow execution timed out",
     category: "execution",
     critical: true,
@@ -109,6 +135,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "execution.node.started": {
     specVersion: "1.0",
     dataSchema: "execution.node.started.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/execution.node.started.v1.json",
     description: "A workflow node started execution",
     category: "execution",
     critical: false,
@@ -117,6 +145,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "execution.node.completed": {
     specVersion: "1.0",
     dataSchema: "execution.node.completed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/execution.node.completed.v1.json",
     description: "A workflow node completed execution",
     category: "execution",
     critical: false,
@@ -125,6 +155,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "execution.node.failed": {
     specVersion: "1.0",
     dataSchema: "execution.node.failed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/execution.node.failed.v1.json",
     description: "A workflow node failed execution",
     category: "execution",
     critical: true,
@@ -133,6 +165,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "execution.node.paused": {
     specVersion: "1.0",
     dataSchema: "execution.node.paused.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/execution.node.paused.v1.json",
     description: "A workflow node was paused for approval",
     category: "execution",
     critical: false,
@@ -141,6 +175,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "execution.node.resumed": {
     specVersion: "1.0",
     dataSchema: "execution.node.resumed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/execution.node.resumed.v1.json",
     description: "A paused workflow node was resumed",
     category: "execution",
     critical: false,
@@ -149,6 +185,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "execution.approval.required": {
     specVersion: "1.0",
     dataSchema: "execution.approval.required.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/execution.approval.required.v1.json",
     description: "Human approval is required to proceed",
     category: "execution",
     critical: true,
@@ -157,6 +195,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "execution.approval.granted": {
     specVersion: "1.0",
     dataSchema: "execution.approval.granted.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/execution.approval.granted.v1.json",
     description: "An approval request was granted",
     category: "execution",
     critical: false,
@@ -165,6 +205,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "execution.approval.rejected": {
     specVersion: "1.0",
     dataSchema: "execution.approval.rejected.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/execution.approval.rejected.v1.json",
     description: "An approval request was rejected",
     category: "execution",
     critical: false,
@@ -173,6 +215,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "connector.installed": {
     specVersion: "1.0",
     dataSchema: "connector.installed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/connector.installed.v1.json",
     description: "A connector was installed",
     category: "connector",
     critical: true,
@@ -181,6 +225,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "connector.uninstalled": {
     specVersion: "1.0",
     dataSchema: "connector.uninstalled.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/connector.uninstalled.v1.json",
     description: "A connector was uninstalled",
     category: "connector",
     critical: false,
@@ -189,6 +235,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "connector.configured": {
     specVersion: "1.0",
     dataSchema: "connector.configured.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/connector.configured.v1.json",
     description: "A connector configuration was updated",
     category: "connector",
     critical: false,
@@ -197,6 +245,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "connector.upgraded": {
     specVersion: "1.0",
     dataSchema: "connector.upgraded.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/connector.upgraded.v1.json",
     description: "A connector was upgraded to a new version",
     category: "connector",
     critical: false,
@@ -205,6 +255,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "connector.rolled_back": {
     specVersion: "1.0",
     dataSchema: "connector.rolled_back.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/connector.rolled_back.v1.json",
     description: "A connector was rolled back to a previous version",
     category: "connector",
     critical: true,
@@ -213,6 +265,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "connector.execution.started": {
     specVersion: "1.0",
     dataSchema: "connector.execution.started.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/connector.execution.started.v1.json",
     description: "A connector action execution started",
     category: "connector",
     critical: false,
@@ -221,6 +275,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "connector.execution.completed": {
     specVersion: "1.0",
     dataSchema: "connector.execution.completed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/connector.execution.completed.v1.json",
     description: "A connector action execution completed",
     category: "connector",
     critical: false,
@@ -229,6 +285,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "connector.execution.failed": {
     specVersion: "1.0",
     dataSchema: "connector.execution.failed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/connector.execution.failed.v1.json",
     description: "A connector action execution failed",
     category: "connector",
     critical: true,
@@ -237,6 +295,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "connector.webhook.received": {
     specVersion: "1.0",
     dataSchema: "connector.webhook.received.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/connector.webhook.received.v1.json",
     description: "A webhook was received from a connector",
     category: "connector",
     critical: false,
@@ -245,6 +305,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "connector.test.completed": {
     specVersion: "1.0",
     dataSchema: "connector.test.completed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/connector.test.completed.v1.json",
     description: "A connector test execution completed",
     category: "connector",
     critical: false,
@@ -253,6 +315,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "ai.run.started": {
     specVersion: "1.0",
     dataSchema: "ai.run.started.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/ai.run.started.v1.json",
     description: "An AI model run started",
     category: "ai",
     critical: false,
@@ -261,6 +325,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "ai.run.completed": {
     specVersion: "1.0",
     dataSchema: "ai.run.completed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/ai.run.completed.v1.json",
     description: "An AI model run completed",
     category: "ai",
     critical: false,
@@ -269,6 +335,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "ai.run.failed": {
     specVersion: "1.0",
     dataSchema: "ai.run.failed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/ai.run.failed.v1.json",
     description: "An AI model run failed",
     category: "ai",
     critical: false,
@@ -277,6 +345,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "ai.run.blocked": {
     specVersion: "1.0",
     dataSchema: "ai.run.blocked.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/ai.run.blocked.v1.json",
     description: "An AI model run was blocked by guardrails",
     category: "ai",
     critical: true,
@@ -285,6 +355,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "ai.guardrail.hit": {
     specVersion: "1.0",
     dataSchema: "ai.guardrail.hit.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/ai.guardrail.hit.v1.json",
     description: "An AI guardrail was triggered",
     category: "ai",
     critical: false,
@@ -293,6 +365,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "ai.budget.exceeded": {
     specVersion: "1.0",
     dataSchema: "ai.budget.exceeded.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/ai.budget.exceeded.v1.json",
     description: "AI budget threshold was exceeded",
     category: "ai",
     critical: true,
@@ -301,6 +375,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "ai.evaluation.passed": {
     specVersion: "1.0",
     dataSchema: "ai.evaluation.passed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/ai.evaluation.passed.v1.json",
     description: "An AI evaluation passed",
     category: "ai",
     critical: false,
@@ -309,6 +385,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "ai.evaluation.failed": {
     specVersion: "1.0",
     dataSchema: "ai.evaluation.failed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/ai.evaluation.failed.v1.json",
     description: "An AI evaluation failed",
     category: "ai",
     critical: false,
@@ -317,6 +395,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "ai.prompt.created": {
     specVersion: "1.0",
     dataSchema: "ai.prompt.created.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/ai.prompt.created.v1.json",
     description: "An AI prompt was created",
     category: "ai",
     critical: false,
@@ -325,6 +405,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "ai.prompt.promoted": {
     specVersion: "1.0",
     dataSchema: "ai.prompt.promoted.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/ai.prompt.promoted.v1.json",
     description: "An AI prompt was promoted to production",
     category: "ai",
     critical: true,
@@ -333,6 +415,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "billing.invoice.created": {
     specVersion: "1.0",
     dataSchema: "billing.invoice.created.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/billing.invoice.created.v1.json",
     description: "A billing invoice was created",
     category: "billing",
     critical: true,
@@ -341,6 +425,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "billing.invoice.paid": {
     specVersion: "1.0",
     dataSchema: "billing.invoice.paid.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/billing.invoice.paid.v1.json",
     description: "A billing invoice was paid",
     category: "billing",
     critical: true,
@@ -349,6 +435,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "billing.invoice.failed": {
     specVersion: "1.0",
     dataSchema: "billing.invoice.failed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/billing.invoice.failed.v1.json",
     description: "A billing invoice payment failed",
     category: "billing",
     critical: true,
@@ -357,6 +445,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "billing.subscription.created": {
     specVersion: "1.0",
     dataSchema: "billing.subscription.created.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/billing.subscription.created.v1.json",
     description: "A billing subscription was created",
     category: "billing",
     critical: true,
@@ -365,6 +455,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "billing.subscription.updated": {
     specVersion: "1.0",
     dataSchema: "billing.subscription.updated.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/billing.subscription.updated.v1.json",
     description: "A billing subscription was updated",
     category: "billing",
     critical: true,
@@ -373,6 +465,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "billing.subscription.cancelled": {
     specVersion: "1.0",
     dataSchema: "billing.subscription.cancelled.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/billing.subscription.cancelled.v1.json",
     description: "A billing subscription was cancelled",
     category: "billing",
     critical: true,
@@ -381,6 +475,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "billing.plan.entitlement.exceeded": {
     specVersion: "1.0",
     dataSchema: "billing.plan.entitlement.exceeded.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/billing.plan.entitlement.exceeded.v1.json",
     description: "A plan entitlement limit was exceeded",
     category: "billing",
     critical: false,
@@ -389,6 +485,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "billing.overage.incurred": {
     specVersion: "1.0",
     dataSchema: "billing.overage.incurred.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/billing.overage.incurred.v1.json",
     description: "Usage overage was incurred",
     category: "billing",
     critical: false,
@@ -397,6 +495,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "audit.action.executed": {
     specVersion: "1.0",
     dataSchema: "audit.action.executed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/audit.action.executed.v1.json",
     description: "An auditable action was executed",
     category: "audit",
     critical: true,
@@ -405,6 +505,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "audit.export.created": {
     specVersion: "1.0",
     dataSchema: "audit.export.created.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/audit.export.created.v1.json",
     description: "An audit log export was created",
     category: "audit",
     critical: false,
@@ -413,6 +515,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "search.index.updated": {
     specVersion: "1.0",
     dataSchema: "search.index.updated.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/search.index.updated.v1.json",
     description: "A search index was updated",
     category: "search",
     critical: false,
@@ -421,6 +525,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "search.reindex.started": {
     specVersion: "1.0",
     dataSchema: "search.reindex.started.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/search.reindex.started.v1.json",
     description: "A full search reindex started",
     category: "search",
     critical: false,
@@ -429,6 +535,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "search.reindex.completed": {
     specVersion: "1.0",
     dataSchema: "search.reindex.completed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/search.reindex.completed.v1.json",
     description: "A full search reindex completed",
     category: "search",
     critical: false,
@@ -437,6 +545,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "platform.tenant.created": {
     specVersion: "1.0",
     dataSchema: "platform.tenant.created.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/platform.tenant.created.v1.json",
     description: "A new tenant was created on the platform",
     category: "platform",
     critical: true,
@@ -445,6 +555,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "platform.tenant.updated": {
     specVersion: "1.0",
     dataSchema: "platform.tenant.updated.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/platform.tenant.updated.v1.json",
     description: "A tenant configuration was updated",
     category: "platform",
     critical: false,
@@ -453,6 +565,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "platform.tenant.deleted": {
     specVersion: "1.0",
     dataSchema: "platform.tenant.deleted.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/platform.tenant.deleted.v1.json",
     description: "A tenant was deleted from the platform",
     category: "platform",
     critical: true,
@@ -461,6 +575,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "platform.user.invited": {
     specVersion: "1.0",
     dataSchema: "platform.user.invited.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/platform.user.invited.v1.json",
     description: "A user was invited to the platform",
     category: "platform",
     critical: false,
@@ -469,6 +585,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "platform.user.joined": {
     specVersion: "1.0",
     dataSchema: "platform.user.joined.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/platform.user.joined.v1.json",
     description: "A user joined the platform",
     category: "platform",
     critical: false,
@@ -477,6 +595,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "platform.user.removed": {
     specVersion: "1.0",
     dataSchema: "platform.user.removed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/platform.user.removed.v1.json",
     description: "A user was removed from the platform",
     category: "platform",
     critical: false,
@@ -485,6 +605,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "platform.region.health.changed": {
     specVersion: "1.0",
     dataSchema: "platform.region.health.changed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/platform.region.health.changed.v1.json",
     description: "A platform region health status changed",
     category: "platform",
     critical: true,
@@ -493,6 +615,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "platform.backup.completed": {
     specVersion: "1.0",
     dataSchema: "platform.backup.completed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/platform.backup.completed.v1.json",
     description: "A platform backup completed",
     category: "platform",
     critical: true,
@@ -501,6 +625,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "platform.backup.failed": {
     specVersion: "1.0",
     dataSchema: "platform.backup.failed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/platform.backup.failed.v1.json",
     description: "A platform backup failed",
     category: "platform",
     critical: true,
@@ -509,6 +635,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "platform.restore.completed": {
     specVersion: "1.0",
     dataSchema: "platform.restore.completed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/platform.restore.completed.v1.json",
     description: "A platform restore completed",
     category: "platform",
     critical: true,
@@ -517,6 +645,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "platform.restore.failed": {
     specVersion: "1.0",
     dataSchema: "platform.restore.failed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/platform.restore.failed.v1.json",
     description: "A platform restore failed",
     category: "platform",
     critical: true,
@@ -525,6 +655,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "platform.rollback.completed": {
     specVersion: "1.0",
     dataSchema: "platform.rollback.completed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/platform.rollback.completed.v1.json",
     description: "A platform rollback completed",
     category: "platform",
     critical: true,
@@ -533,6 +665,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "platform.migration.started": {
     specVersion: "1.0",
     dataSchema: "platform.migration.started.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/platform.migration.started.v1.json",
     description: "A platform tenant migration started",
     category: "platform",
     critical: true,
@@ -541,6 +675,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "platform.migration.completed": {
     specVersion: "1.0",
     dataSchema: "platform.migration.completed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/platform.migration.completed.v1.json",
     description: "A platform tenant migration completed",
     category: "platform",
     critical: true,
@@ -549,6 +685,8 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "platform.migration.failed": {
     specVersion: "1.0",
     dataSchema: "platform.migration.failed.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/platform.migration.failed.v1.json",
     description: "A platform tenant migration failed",
     category: "platform",
     critical: true,
@@ -557,9 +695,111 @@ export const EVENT_REGISTRY: Record<EventType, EventRegistryEntry> = {
   "platform.certificate.expiring": {
     specVersion: "1.0",
     dataSchema: "platform.certificate.expiring.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/platform.certificate.expiring.v1.json",
     description: "A platform certificate is nearing expiration",
     category: "platform",
     critical: true,
     retentionDays: 90,
+  },
+  "workflow.activated": {
+    specVersion: "1.0",
+    dataSchema: "workflow.activated.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/workflow.activated.v1.json",
+    description: "Live alias moved to version",
+    category: "workflow",
+    critical: true,
+    retentionDays: 365,
+  },
+  "execution.checkpoint.persisted": {
+    specVersion: "1.0",
+    dataSchema: "execution.checkpoint.persisted.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/execution.checkpoint.persisted.v1.json",
+    description: "Node-level checkpoint saved",
+    category: "execution",
+    critical: false,
+    retentionDays: 30,
+  },
+  "connector.revoked": {
+    specVersion: "1.0",
+    dataSchema: "connector.revoked.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/connector.revoked.v1.json",
+    description: "Connector install or version no longer allowed",
+    category: "connector",
+    critical: true,
+    retentionDays: 365,
+  },
+  "template.published": {
+    specVersion: "1.0",
+    dataSchema: "template.published.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/template.published.v1.json",
+    description: "Template available for install",
+    category: "platform",
+    critical: false,
+    retentionDays: 365,
+  },
+  "template.deprecated": {
+    specVersion: "1.0",
+    dataSchema: "template.deprecated.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/template.deprecated.v1.json",
+    description: "Template marked as deprecated",
+    category: "platform",
+    critical: false,
+    retentionDays: 365,
+  },
+  "usage.recorded": {
+    specVersion: "1.0",
+    dataSchema: "usage.recorded.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/usage.recorded.v1.json",
+    description: "Atomic billable event emitted",
+    category: "billing",
+    critical: true,
+    retentionDays: 730,
+  },
+  "ai.run.guardrail.violation": {
+    specVersion: "1.0",
+    dataSchema: "ai.run.guardrail.violation.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/ai.run.guardrail.violation.v1.json",
+    description: "Guardrail blocked input or output",
+    category: "ai",
+    critical: true,
+    retentionDays: 90,
+  },
+  "environment.promoted": {
+    specVersion: "1.0",
+    dataSchema: "environment.promoted.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/environment.promoted.v1.json",
+    description: "Version promoted to environment",
+    category: "platform",
+    critical: true,
+    retentionDays: 365,
+  },
+  "environment.rolled_back": {
+    specVersion: "1.0",
+    dataSchema: "environment.rolled_back.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/environment.rolled_back.v1.json",
+    description: "Live alias reverted",
+    category: "platform",
+    critical: true,
+    retentionDays: 365,
+  },
+  "billing.invoice.generated": {
+    specVersion: "1.0",
+    dataSchema: "billing.invoice.generated.v1",
+    eventVersion: 1,
+    schemaUrl: "https://schemas.longox.com/events/billing.invoice.generated.v1.json",
+    description: "Invoice created",
+    category: "billing",
+    critical: true,
+    retentionDays: 730,
   },
 };

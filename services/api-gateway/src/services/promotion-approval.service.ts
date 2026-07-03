@@ -236,7 +236,7 @@ export class PromotionApprovalService {
     }
 
     await writeAuditLog(
-      null,
+      workflow.tenantId,
       promotedBy,
       "environment.promotion.requested",
       "environment_promotion",
@@ -338,7 +338,7 @@ export class PromotionApprovalService {
       .limit(1);
 
     await writeAuditLog(
-      null,
+      workflow.tenantId,
       approvedBy,
       "environment.promotion.approved",
       "environment_promotion",
@@ -370,6 +370,12 @@ export class PromotionApprovalService {
     if (!promotion) throw new Error("Promotion not found");
     if (promotion.status !== "pending")
       throw new Error("Promotion is not in pending status");
+
+    const [workflow] = await db
+      .select()
+      .from(workflowsTable)
+      .where(eq(workflowsTable.id, promotion.workflowId))
+      .limit(1);
 
     const now = new Date();
 
@@ -413,7 +419,7 @@ export class PromotionApprovalService {
       .limit(1);
 
     await writeAuditLog(
-      null,
+      workflow?.tenantId ?? null,
       rejectedBy,
       "environment.promotion.rejected",
       "environment_promotion",
@@ -441,6 +447,12 @@ export class PromotionApprovalService {
       .limit(1);
 
     if (!promotion) throw new Error("Promotion not found");
+
+    const [workflow] = await db
+      .select()
+      .from(workflowsTable)
+      .where(eq(workflowsTable.id, promotion.workflowId))
+      .limit(1);
 
     const now = new Date();
 
@@ -477,7 +489,7 @@ export class PromotionApprovalService {
       .limit(1);
 
     await writeAuditLog(
-      null,
+      workflow?.tenantId ?? null,
       rolledBackBy,
       "environment.promotion.rolled_back",
       "environment_promotion",

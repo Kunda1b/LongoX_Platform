@@ -57,7 +57,7 @@ export type Scope =
   | "environment"
   | "resource"
   | "read-only";
-export type Action = "read" | "write" | "run" | "delete" | "admin" | "install";
+export type Action = "read" | "write" | "run" | "delete" | "admin" | "install" | "promote";
 
 export const RESOURCE_ACTIONS: Record<string, Action[]> = {
   workflows: ["read", "write", "run", "delete"],

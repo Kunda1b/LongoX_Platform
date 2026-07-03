@@ -1,0 +1,221 @@
+import type { SandboxPolicy } from "./policy";
+import type { AuditLogger } from "./audit";
+import { auditLogger } from "./audit";
+import type { IsolateContext, IsolateResult } from "./isolate";
+
+export interface DenoRuntimeConfig {
+  denoPath?: string;
+  cacheDir?: string;
+  enableCache?: boolean;
+  v8Flags?: string[];
+}
+
+const DEFAULT_CONFIG: DenoRuntimeConfig = {
+  denoPath: "deno",
+  cacheDir: ".deno-cache",
+  enableCache: true,
+  v8Flags: ["--max-old-space-size=128"],
+};
+
+/**
+ * Deno Bridge — provides a path to true Deno isolate execution.
+ *
+ * ADR-009 specifies Deno isolates (V8 isolates running the Deno runtime).
+ * The current implementation (DenoIsolate in isolate.ts) uses Node.js `vm`
+ * module as an interim step. This bridge sets up the integration point
+ * for `deno_core` or native Deno subprocess execution.
+ *
+ * To migrate to true Deno isolation:
+ * 1. Add `deno_core` npm package or use `deno` CLI subprocess
+ * 2. Implement executeInDeno() using Deno's worker API or subprocess
+ * 3. Replace DenoIsolate with this class
+ */
+export class DenoBridge {
+  private config: DenoRuntimeConfig;
+  private policy: SandboxPolicy;
+  private audit: AuditLogger;
+
+  constructor(
+    policy: SandboxPolicy,
+    config?: Partial<DenoRuntimeConfig>,
+    audit?: AuditLogger,
+  ) {
+    this.config = { ...DEFAULT_CONFIG, ...config };
+    this.policy = policy;
+    this.audit = audit ?? auditLogger;
+  }
+
+  async execute(context: IsolateContext): Promise<IsolateResult> {
+    const startTime = Date.now();
+
+    try {
+      const imported = await this.tryImportDenoCore();
+      if (imported) {
+        return await imported.executeScript(context, this.policy, this.audit);
+      }
+    } catch {
+      /* deno_core not available, try subprocess */
+    }
+
+    try {
+      return await this.executeAsSubprocess(context, startTime);
+    } catch (err) {
+      const durationMs = Date.now() - startTime;
+      return {
+        success: false,
+        data: {},
+        error: err instanceof Error ? err.message : String(err),
+        durationMs,
+        networkRequests: 0,
+        peakMemoryMb: 0,
+        cpuUsedMs: 0,
+      };
+    }
+  }
+
+  private async tryImportDenoCore(): Promise<{
+    executeScript: (
+      ctx: IsolateContext,
+      policy: SandboxPolicy,
+      audit: AuditLogger,
+    ) => Promise<IsolateResult>;
+  } | null> {
+    try {
+      const denoCore = await import("deno_core");
+      return {
+        executeScript: async (
+          ctx: IsolateContext,
+          policy: SandboxPolicy,
+          _audit: AuditLogger,
+        ) => {
+          const startTime = Date.now();
+
+          const isolate = new denoCore.Isolate({
+            moduleMap: new denoCore.ModuleMap(),
+            requestPermissions: (op: number) => {
+              const allowedOps = new Set([1, 2, 3]); // net allow, read allow, write allow
+              return allowedOps.has(op);
+            },
+          });
+
+          const result = await isolate.executeModule(
+            `file:///${ctx.connectorName}.js`,
+            ctx.code,
+          );
+
+          const durationMs = Date.now() - startTime;
+          return {
+            success: true,
+            data: { output: result ?? {} },
+            error: null,
+            durationMs,
+            networkRequests: 0,
+            peakMemoryMb: 0,
+            cpuUsedMs: 0,
+          };
+        },
+      };
+    } catch {
+      console.warn("[deno-bridge] deno_core not available, falling back to subprocess");
+      return null;
+    }
+  }
+
+  private async executeAsSubprocess(
+    context: IsolateContext,
+    startTime: number,
+  ): Promise<IsolateResult> {
+    const { execFile } = await import("node:child_process");
+    const { writeFile, unlink, mkdtemp, rm } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    const { tmpdir } = await import("node:os");
+
+    const tmpDir = await mkdtemp(join(tmpdir(), "deno-sandbox-"));
+    const scriptPath = join(tmpDir, "sandbox.ts");
+    const entryPoint = join(tmpDir, "main.ts");
+
+    function safeStringify(obj: unknown, fallback: string = "null"): string {
+      try {
+        return JSON.stringify(obj);
+      } catch {
+        return fallback;
+      }
+    }
+
+    const wrappedCode = `
+const auth = ${safeStringify(context.auth)};
+const input = ${safeStringify(context.input)};
+const config = ${safeStringify(context.config)};
+
+${context.code}
+`;
+
+    await writeFile(scriptPath, context.code);
+    await writeFile(entryPoint, wrappedCode);
+
+    return new Promise<IsolateResult>((resolve) => {
+      const proc = execFile(
+        this.config.denoPath!,
+        [
+          "run",
+          "--no-prompt",
+          `--allow-net=${this.policy.allowedDomains.join(",")}`,
+          "--deny-read",
+          "--deny-write",
+          "--deny-env",
+          `--v8-flags=${this.config.v8Flags!.join(",")}`,
+          "--quiet",
+          entryPoint,
+        ],
+        {
+          timeout: this.policy.timeoutMs,
+          maxBuffer: 1024 * 1024,
+          env: { SANDBOX_TENANT_ID: String(context.tenantId) },
+        },
+        (err, stdout, stderr) => {
+          const durationMs = Date.now() - startTime;
+          rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+
+          if (err) {
+            resolve({
+              success: false,
+              data: {},
+              error: stderr || err.message,
+              durationMs,
+              networkRequests: 0,
+              peakMemoryMb: 0,
+              cpuUsedMs: 0,
+            });
+          } else {
+            try {
+              const data = JSON.parse(stdout);
+              resolve({
+                success: true,
+                data: data as Record<string, unknown>,
+                error: null,
+                durationMs,
+                networkRequests: 0,
+                peakMemoryMb: 0,
+                cpuUsedMs: 0,
+              });
+            } catch {
+              resolve({
+                success: true,
+                data: { output: stdout },
+                error: null,
+                durationMs,
+                networkRequests: 0,
+                peakMemoryMb: 0,
+                cpuUsedMs: 0,
+              });
+            }
+          }
+        },
+      );
+    });
+  }
+
+  getConfig(): DenoRuntimeConfig {
+    return { ...this.config };
+  }
+}
