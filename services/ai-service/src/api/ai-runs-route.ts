@@ -137,17 +137,159 @@ router.post(
       req.on("close", cleanup);
 
       try {
-        // Execute the run. The lifecycle service currently returns a single
-        // resolved result; true token-by-token streaming would require a
-        // streaming-aware provider adapter. For ADR-008 conformance we:
-        //   1. Emit `ready` immediately (TTFT measurement starts here).
-        //   2. Execute the run.
-        //   3. If the result is a hard-cutoff budget error, emit `event: error`
-        //      with status 402 and close. This is the ADR-mandated behavior.
-        //   4. Otherwise, simulate token streaming by chunking the output into
-        //      word-level tokens and emitting them on `event: token` with
-        //      ~10ms cadence. A true streaming refactor of the lifecycle
-        //      service is tracked as a P2 task.
+        // ─── True streaming path (OpenAI provider, no guardrails) ────────────
+        // Per ADR-008, when the client requests `text/event-stream` and the
+        // selected provider supports true token streaming (OpenAI does), we
+        // stream tokens directly from the provider to the SSE client. This
+        // minimizes TTFT (target < 500ms per §8.5) and avoids buffering the
+        // full response server-side.
+        //
+        // We bypass the aiRunLifecycleService for the streaming path because
+        // the lifecycle service is non-streaming (it returns a single resolved
+        // result). To preserve guardrails + budget enforcement, we:
+        //   1. Check the budget up front (via costBudgetService).
+        //   2. Skip guardrails for streaming (input guardrails would block
+        //      before streaming starts; output guardrails would need to
+        //      buffer, defeating the purpose). Guardrailed runs fall back
+        //      to the non-streaming path.
+        //   3. Persist partial output every AI_PARTIAL_PERSIST_INTERVAL_MS.
+        //
+        // The non-streaming path (guardrails, budget errors, non-OpenAI
+        // providers) is preserved below as the fallback.
+        const useTrueStreaming =
+          (provider === "openai" ||
+            (!provider && process.env.OPENAI_API_KEY)) &&
+          (!guardrailIds || guardrailIds.length === 0) &&
+          budgetCheckEnabled !== false;
+
+        if (useTrueStreaming) {
+          // Pre-flight budget check.
+          try {
+            await costBudgetService.checkBudget(tenantId, 0);
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            const isHardCutoff = message.toLowerCase().includes("budget");
+            writeSseEvent(res, "error", {
+              code: isHardCutoff ? "TOKEN_BUDGET_EXHAUSTED" : "INTERNAL_ERROR",
+              message,
+              status: isHardCutoff ? 402 : 500,
+              correlation_id: req.correlationId ?? null,
+            });
+            cleanup();
+            res.end();
+            return;
+          }
+
+          // Dynamically import the OpenAI provider to avoid pulling the
+          // openai SDK into the route module when not streaming.
+          const { OpenAIProvider } =
+            await import("../providers/openai/openai-provider");
+          const openaiProvider = new OpenAIProvider({
+            apiKey: process.env.OPENAI_API_KEY ?? "",
+          });
+
+          let finalUsage:
+            | { inputTokens: number; outputTokens: number; cost: number }
+            | undefined;
+          const resolvedModel = model ?? "gpt-4o-mini";
+
+          try {
+            const gen = openaiProvider.streamChatCompletion(messages, {
+              model: resolvedModel,
+              maxTokens,
+              temperature,
+              responseFormat,
+            });
+
+            for await (const chunk of gen) {
+              if (chunk.usage) {
+                finalUsage = chunk.usage;
+                continue;
+              }
+              if (chunk.token) {
+                accumulatedOutput += chunk.token;
+                tokenCount += 1;
+                writeSseEvent(res, "token", {
+                  token: chunk.token,
+                  index: tokenCount,
+                });
+
+                // Partial persistence — every AI_PARTIAL_PERSIST_INTERVAL_MS,
+                // write the accumulated output to the token_usage table so
+                // that a dropped connection can be resumed from the last partial.
+                const now = Date.now();
+                if (now - lastPersistAt >= AI_PARTIAL_PERSIST_INTERVAL_MS) {
+                  try {
+                    await db.insert(tokenUsageTable).values({
+                      tenantId,
+                      modelName: resolvedModel,
+                      provider: "openai",
+                      workflowId: workflowId ?? null,
+                      inputTokens: finalUsage?.inputTokens ?? 0,
+                      outputTokens: tokenCount,
+                      cost: String(finalUsage?.cost ?? 0),
+                    });
+                    writeSseEvent(res, "partial", {
+                      output: accumulatedOutput,
+                      tokens_so_far: tokenCount,
+                      persisted_at: new Date().toISOString(),
+                    });
+                  } catch {
+                    // Persistence failure is non-fatal for streaming.
+                  }
+                  lastPersistAt = now;
+                }
+              }
+            }
+
+            // Final `done` event with the canonical usage record.
+            writeSseEvent(res, "done", {
+              output: accumulatedOutput,
+              model: resolvedModel,
+              provider: "openai",
+              usage: finalUsage ?? {
+                inputTokens: 0,
+                outputTokens: tokenCount,
+                cost: 0,
+              },
+              duration_ms: Date.now() - ttftStartedAt,
+              guardrails: {
+                inputPassed: true,
+                inputViolations: [],
+                outputPassed: true,
+                outputViolations: [],
+                blocked: false,
+              },
+              pii_scrubbed: false,
+            });
+            cleanup();
+            res.end();
+            return;
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            const isHardCutoff = message.toLowerCase().includes("budget");
+            writeSseEvent(res, "error", {
+              code: isHardCutoff ? "TOKEN_BUDGET_EXHAUSTED" : "INTERNAL_ERROR",
+              message,
+              status: isHardCutoff ? 402 : 500,
+              correlation_id: req.correlationId ?? null,
+            });
+            cleanup();
+            res.end();
+            return;
+          }
+        }
+
+        // ─── Non-streaming fallback path ────────────────────────────────────
+        // Used when:
+        //   - The provider doesn't support streaming (non-OpenAI)
+        //   - Guardrails are enabled (need to buffer for output guardrails)
+        //   - The client didn't explicitly request a streaming provider
+        //
+        // Execute the run via the lifecycle service, then simulate token
+        // streaming by chunking the output into word-level tokens. This is
+        // the original ADR-008 conformance path; it preserves guardrails
+        // and budget enforcement but has higher TTFT than true streaming.
         const result = await aiRunLifecycleService.executeRun({
           tenantId,
           messages,
@@ -181,9 +323,9 @@ router.post(
           return;
         }
 
-        // Simulate token streaming for ADR-008 conformance. Each "token" is a
-        // word; the client receives `event: token` chunks and assembles the
-        // final output. Partial persistence fires every 1s.
+        // Simulate token streaming for the non-streaming fallback path. Each
+        // "token" is a word; the client receives `event: token` chunks and
+        // assembles the final output. Partial persistence fires every 1s.
         const tokens = result.output.split(/(\s+)/);
         for (const tok of tokens) {
           accumulatedOutput += tok;

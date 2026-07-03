@@ -1111,6 +1111,9 @@ importers:
       '@longox/db':
         specifier: workspace:*
         version: link:../../packages/shared-db
+      '@longox/shared-auth':
+        specifier: workspace:*
+        version: link:../../packages/shared-auth
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
