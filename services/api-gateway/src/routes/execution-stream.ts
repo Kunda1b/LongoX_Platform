@@ -30,22 +30,18 @@ function removeClient(executionId: number, client: SSEClient): void {
   if (clients.get(executionId)?.size === 0) clients.delete(executionId);
 }
 
+/**
+ * Broadcasts an execution event via the shared Redis-backed execution bus so
+ * it fans out to SSE clients connected to ANY gateway instance, not just this
+ * process. Local subscription (see the /stream route below) delivers it to
+ * clients on this instance via sseExecutionBus.onExecutionEvent.
+ */
 export function broadcastExecutionEvent(
   executionId: number,
   eventType: string,
   payload: Record<string, unknown>,
 ): void {
-  const group = clients.get(executionId);
-  if (!group || group.size === 0) return;
-
-  for (const client of group) {
-    client.seq++;
-    sendSSEEvent(client.res, {
-      id: `${executionId}/${client.seq}`,
-      event: eventType,
-      data: payload,
-    });
-  }
+  sseExecutionBus.broadcast({ executionId, eventType, data: payload });
 }
 
 function sendSSEEvent(

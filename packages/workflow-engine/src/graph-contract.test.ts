@@ -15,11 +15,11 @@ function makeValidGraph(overrides?: Partial<WorkflowGraph>): WorkflowGraph {
     checksum: { algorithm: "sha-256", value: "abc", computedAt: new Date().toISOString() },
     nodes: [
       {
-        id: "n1", type: "trigger", label: "Start", category: "trigger",
+        id: "n1", type: "trigger", label: "Start", description: "", category: "trigger",
         position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [],
       },
       {
-        id: "n2", type: "action", label: "Process", category: "action",
+        id: "n2", type: "action", label: "Process", description: "", category: "action",
         position: { x: 100, y: 0 }, config: {}, inputs: [], outputs: [],
       },
     ],
@@ -77,8 +77,8 @@ describe("validateGraphContract", () => {
   it("rejects duplicate node ids", () => {
     const errors = validateGraphContract(makeValidGraph({
       nodes: [
-        { id: "n1", type: "trigger", label: "A", category: "trigger", position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [] },
-        { id: "n1", type: "action", label: "B", category: "action", position: { x: 100, y: 0 }, config: {}, inputs: [], outputs: [] },
+        { id: "n1", type: "trigger", label: "A", description: "", category: "trigger", position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [] },
+        { id: "n1", type: "action", label: "B", description: "", category: "action", position: { x: 100, y: 0 }, config: {}, inputs: [], outputs: [] },
       ],
     }));
     expect(errors).toContain('nodes[1].id "n1" is duplicate');
@@ -87,8 +87,8 @@ describe("validateGraphContract", () => {
   it("rejects node without type", () => {
     const errors = validateGraphContract(makeValidGraph({
       nodes: [
-        { id: "n1", label: "A", category: "trigger", position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [] },
-      ] as WorkflowNodeContract[],
+        { id: "n1", label: "A", description: "", category: "trigger", position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [] },
+      ] as unknown as WorkflowNodeContract[],
       edges: [],
     }));
     expect(errors).toContain("nodes[0].type is required");
@@ -97,7 +97,7 @@ describe("validateGraphContract", () => {
   it("rejects node without label", () => {
     const errors = validateGraphContract(makeValidGraph({
       nodes: [
-        { id: "n1", type: "trigger", label: "", category: "trigger", position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [] },
+        { id: "n1", type: "trigger", label: "", description: "", category: "trigger", position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [] },
       ],
       edges: [],
     }));
@@ -107,7 +107,7 @@ describe("validateGraphContract", () => {
   it("rejects node without position", () => {
     const errors = validateGraphContract(makeValidGraph({
       nodes: [
-        { id: "n1", type: "trigger", label: "A", category: "trigger", position: undefined as unknown as { x: number; y: number }, config: {}, inputs: [], outputs: [] },
+        { id: "n1", type: "trigger", label: "A", description: "", category: "trigger", position: undefined as unknown as { x: number; y: number }, config: {}, inputs: [], outputs: [] },
       ],
       edges: [],
     }));
@@ -118,7 +118,7 @@ describe("validateGraphContract", () => {
     const errors = validateGraphContract(makeValidGraph({
       nodes: [
         {
-          id: "n1", type: "action", label: "Retry", category: "action",
+          id: "n1", type: "action", label: "Retry", description: "", category: "action",
           position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [],
           retryPolicy: { maxAttempts: 0, initialDelayMs: -1, maxDelayMs: 100, backoffMultiplier: 0.5, retryableErrors: [], jitter: false },
         },
@@ -134,7 +134,7 @@ describe("validateGraphContract", () => {
     const errors = validateGraphContract(makeValidGraph({
       nodes: [
         {
-          id: "n1", type: "action", label: "Retry", category: "action",
+          id: "n1", type: "action", label: "Retry", description: "", category: "action",
           position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [],
           retryPolicy: { maxAttempts: 3, initialDelayMs: 5000, maxDelayMs: 1000, backoffMultiplier: 2, retryableErrors: [], jitter: true },
         },
@@ -148,7 +148,7 @@ describe("validateGraphContract", () => {
     const errors = validateGraphContract(makeValidGraph({
       nodes: [
         {
-          id: "n1", type: "approval", label: "Approve", category: "approval",
+          id: "n1", type: "approval", label: "Approve", description: "", category: "approval",
           position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [],
           approvalGate: { requiredApprovers: 0, approverRoles: [], timeoutMs: -1, message: "" },
         },
@@ -161,7 +161,7 @@ describe("validateGraphContract", () => {
 
   it("rejects edges referencing missing nodes", () => {
     const errors = validateGraphContract(makeValidGraph({
-      nodes: [{ id: "n1", type: "trigger", label: "A", category: "trigger", position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [] }],
+      nodes: [{ id: "n1", type: "trigger", label: "A", description: "", category: "trigger", position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [] }],
       edges: [{ source: "n1", target: "nonexistent" }],
     }));
     expect(errors).toContain('edges[0].target "nonexistent" not found in nodes');
@@ -193,7 +193,7 @@ describe("computeDiff", () => {
     const from = makeValidGraph();
     const to = makeValidGraph({
       nodes: [...makeValidGraph().nodes, {
-        id: "n3", type: "action", label: "New", category: "action",
+        id: "n3", type: "action", label: "New", description: "", category: "action",
         position: { x: 200, y: 0 }, config: {}, inputs: [], outputs: [],
       }],
     });

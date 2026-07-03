@@ -38,21 +38,21 @@ export function normalizeGraph(
 ): NormalizedGraph {
   const nodes: CanonicalNode[] = graph.nodes.map((n) => ({
     id: n.id,
-    type: n.type,
-    label: n.label,
-    category: (n as any).category ?? "action",
+    type: n.type ?? n.nodeTypeId ?? "action",
+    label: n.name,
+    category: n.category ?? "action",
     position: { ...n.position },
     config: { ...(n.config ?? {}) },
-    inputs: [...(n.inputs ?? [])],
-    outputs: [...(n.outputs ?? [])],
+    inputs: [...(n.inputHandles ?? [])],
+    outputs: [...(n.outputHandles ?? [])],
   }));
 
   const edges: CanonicalEdge[] = graph.edges.map((e) => ({
     id: e.id,
-    source: e.sourceNodeId,
-    target: e.targetNodeId,
-    sourceHandle: (e as any).sourceHandle,
-    targetHandle: (e as any).targetHandle,
+    source: e.source,
+    target: e.target,
+    sourceHandle: e.sourceHandle,
+    targetHandle: e.targetHandle,
     label: e.label,
   }));
 

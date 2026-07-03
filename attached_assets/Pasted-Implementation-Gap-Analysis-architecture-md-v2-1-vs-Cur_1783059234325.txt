@@ -1,0 +1,88 @@
+Implementation Gap Analysis: architecture.md v2.1 vs Current Implementation
+Critical Gaps (Must Fix — Architecture Requirement Not Met)
+#	Area	Architecture Requirement	Current State
+1	Bounded loops (9.2)	Static unrolling with max-iteration (default 100, hard cap 10K)	Not implemented
+2	Node leases (9.3)	5-min lease, 60s renewal, expiration → worker reassignment	Not implemented — no execution_leases table usage
+3	Saga compensation (9.4)	Compensation handlers invoked in reverse order on downstream failure	Not implemented — no compensation_status flow
+4	Child workflows (9.6)	Subworkflow nodes, parent-child correlation, max nesting 5	Not implemented
+5	Workflow diffs — JSON Patch (ADR-005/011)	JSON Patch computed at publish time, stored in workflow_diffs	Not implemented — code exists in packages/workflow-canvas/diff.ts but not integrated
+6	WorkOS SSO/MFA (ADR-007)	AuthKit self-serve, SAML/OIDC SSO, SCIM sync, MFA (TOTP + WebAuthn + SMS)	WorkOS SDK fully wired in backend (routes, SCIM sync, Admin Portal, MFA), but AuthKit frontend components not connected; WebAuthn/SMS MFA absent
+7	Kong API Gateway (ADR-006)	Kong with JWT, rate-limiting, correlation-id, OpenTelemetry, request-transformer plugins	Kong declarative config exists (YAML + Terraform + Helm) but: no CI/CD pipeline, request-transformer not configured, opentelemetry plugin missing; Express-based gateway still primary
+8	RAG — pgvector (ADR-003, 8.6)	pgvector extension, vector_embeddings table with HNSW index, chunking, embedding, retrieval	Not implemented — vector search service exists but no pgvector schema or actual RAG pipeline
+9	Deno sandbox (ADR-009)	Deno V8 isolates with sub-ms cold-start, resource caps	Still on Node.js vm module — deno_core not installed; DenoIsolate class uses vm.Script/vm.runInNewContext (misleading name); new Function() also present in sandbox-runtime
+10	PostgreSQL FTS (ADR-010)	Generated tsvector columns, GIN indexes on domain tables, SearchService abstraction	FTS implemented in search-service + api-gateway (websearch_to_tsquery, ts_rank) BUT uses Typesense instead of the architecture's documented OpenSearch escape path; SQL injection risk in raw FTS queries; no generated tsvector columns
+11	Data retention (ADR-012)	13M hot + 7Y cold, tenant-configurable (24M/36M), monthly partitioning, Parquet archive	Retention pipeline mostly implemented (partition mgmt, scheduler, archive service, cold query stub, retention UI) BUT: Parquet format = NDJSON placeholder, S3 upload = placeholder-bucket, cold query returns null/[]
+12	Multi-tenancy tiers (ADR-002, §6)	tenants.tier (1/2/3) enforced at K8s/DB/Redis/Vault layers	Schema + Terraform provisioning exist but no runtime enforcement — no DB connection routing per tier, no Redis index selection, no Vault path prefix selection; Helm charts not tier-aware
+13	Tenant tier enforcement (§6.5)	K8s deployment selectors, DB connection routing, Redis DB index, Vault path prefix based on tier	No code found for any of these
+14	WorkOS session authority (ADR-007)	"Platform remains the session authority" — sessions issued by platform after WorkOS auth	Correctly implemented — JWT signed by platform, WorkOS used only for auth verification
+15	SCIM role mapping (ADR-007)	SCIM directory sync → role assignment	SCIM webhook handler exists but does not map group membership to local roles
+16	RBAC — Environment & Resource scopes (§15.1)	Environment-scoped roles (Release manager) and Resource-scoped grants (Connector owner)	Not implemented — only tenant-level and platform-level roles exist
+17	RBAC — role taxonomy mismatch (§15.2)	5 predefined roles: Workspace Admin, Editor, Operator, Billing Admin, Viewer	Implemented roles: owner, admin, builder, viewer, platform_admin, support, finance — no "Operator" or "Billing Admin"
+18	API versioning — v1 deprecation (§12.1)	v(n) returns Deprecation/Sunset headers during sunset window	v1 config has deprecated: false with sunset: "2026-06-01" — no headers emitted
+19	API versioning — behavioral split (§12.1)	v(n) and v(n+1) dual-run with different handler logic	All versions serve identical code; version is syntactic only
+20	Dashboard builder (§7.5)	12-column grid, drag-and-drop layout, schema-driven widgets, environment-aware preview	Dashboard builder exists (apps/web + packages/dashboard-renderer + dashboard-widgets) BUT: no proper grid library, no drag-to-grid, /builder/ route redirects to /workflows (broken)
+21	Design system (§7.3)	4 layers: Tokens, Primitives, Composition, Builder visuals in shared packages	packages/design-system/ has only 3 components (Button, Card, Badge) + colors/spacing tokens; full Radix suite exists only in apps/web — not shared
+22	SSE — multi-instance fanout (ADR-008)	Scalable SSE for 50M daily executions	SSE hub uses in-memory EventEmitter only — no Redis pub/sub, no cross-instance event distribution
+23	AI evaluation framework (§8.8)	ai_eval_datasets, ai_eval_runs tables; CI eval gate; golden datasets; LLM-as-judge	Tables not created in schema; no eval gate in CI; framework code exists but datasets/runs tables missing
+24	Compliance — GDPR export/delete (§20.2)	RTBF workflow, data export, DPA available	Not implemented
+25	Compliance — audit export (§20.2)	Audit log export for compliance inquiries	Not implemented
+26	Human approval pause/resume (§9.5)	Approval nodes pause execution, release lease, resume on external decision	Approval node type exists in execution-service but pause/resume not fully tested/verified
+27	Connector signature (§17.2)	Sigstore-signed manifests verified at install time and runtime	Local SHA-256 hash only — no Sigstore integration; no signature verification at runtime
+28	Parquet archive (ADR-012)	Archived to Parquet in object storage	NDJSON placeholder, no actual S3 upload
+29	Cross-region DR infrastructure (§23)	WAL streaming to standby region, cross-region RDS read replicas	Terraform provisions single-region Aurora only; no secondary-region infrastructure; no WAL streaming config
+30	CI/CD — metric-driven canary (§21.3)	Canary analysis with error rate/latency comparison against stable	Canary deployment is timeout-based only — no automated metric comparison
+31	Workflow canvas — integration gap (§7.4)	packages/workflow-canvas normalized entities, JSON Patch, collaboration used by apps/web	workflow-canvas package is fully built (graph normalizer, JSON Patch, diff, collaboration, viewport) but zero imports in apps/web — apps/web uses React Flow directly
+32	Environment-scoped promotion approval (§18.2/25.6)	Multi-approver (2-of-2), environment parity, policy checks	Boolean approvalRequired only — no configurable threshold, no parity measurement, no multi-approver
+33	Tenant migration workflow (§6.5)	Tier upgrades via logical replication, cutover, verification, decommission	Schema for tenant_migrations exists but no migration workflow implementation
+34	Tier 3 — dedicated control plane (§6.3)	Single-tenant VPC, dedicated control plane + execution plane (shared only IDP + marketplace mirror)	Not implemented; no dedicated cluster provisioning at runtime
+35	Loki deployment config (§22)	Loki/Grafana for log aggregation	Prometheus + Grafana configured but no Loki config exists in observability stack
+Partial or Non-Critical Gaps
+#	Area	Status	Detail
+36	Kong CI/CD pipeline	Missing	Terraform/Helm defined but no automated deployment workflow
+37	WebAuthn/SMS MFA	Missing	Only TOTP implemented (both WorkOS and local fallback)
+38	opentelemetry Kong plugin	Missing	Not in kong.yaml
+39	RBAC downstream service enforcement	Not verified	api-gateway uses authorize() but downstream service routers not audited
+40	Template signing	Missing	No Sigstore for template artifacts
+41	Environment parity measurement	Missing	Not implemented
+42	Template FTS search	Missing	Template service uses LIKE only
+43	WorkOS frontend AuthKit integration	Missing	Backend routes exist but no frontend components wired
+44	Dashboard data fetching pipeline	Partial	UI allows config but no actual data fetching connected
+Already Compliant (Fully Implemented)
+#	Area	Evidence
+1	BullMQ + Redis queue topology	9 queues defined with correct priority/persistence; AOF per-queue config
+2	PostgreSQL schema catalog	50+ tables covering all domains listed in §10.1
+3	DAG execution + retry + checkpoint	Topological sort, executors, retry with backoff, checkpointing all production-ready
+4	Dead-letter queue	DLQ management implemented
+5	AI multi-provider routing	7 providers, AI router with strategies, fallback chains
+6	Prompt registry	Versioned prompts with publish flow
+7	Guardrails & moderation (AI)	Input/output guardrails with PII detection, injection detection, tool allow-lists
+8	Token accounting & cost metering	Token tracking, budgets, 50/80/100% thresholds
+9	Stripe billing integration	Checkout, subscriptions, webhooks, invoices
+10	Usage metering pipeline	Append-only events, hourly rollup, daily reconciliation
+11	Terraform modules	Vault, Redis, Postgres, EKS, networking, monitoring
+12	K8s manifests	All 19 services have base manifests
+13	CI pipeline	lint, typecheck, test, security scan, architecture verification all in CI
+14	CD pipeline	Staging canary, staging rollout, production canary, production rollout, rollback
+15	Shared observability (OTel)	Instrumentation, exporters, metrics, tracing in all services
+16	Kong declarative config	18 services/routes, global plugins, dev docker-compose
+17	WorkOS SDK + backend	AuthKit routes, SCIM webhook, Admin Portal, SSO routes, MFA, Terraform secrets
+18	RBAC engine	14 resources, 35+ permissions, authorize() middleware, caching, tests
+19	Connector marketplace lifecycle	Install, configure, upgrade, remove all implemented
+20	Connector SDK & manifest	Full manifest schema (auth, actions, triggers, permissions, capabilities, sandbox policy)
+21	PostgreSQL FTS (api-gateway)	FtsSearchService with websearch_to_tsquery, ts_rank, search_index table with GIN
+Summary Statistics
+- Total architecture requirements audited: ~60
+- Fully compliant: ~21 (35%)
+- Partially implemented: ~15 (25%)
+- Missing/not started: ~24 (40%)
+Top 10 Remediation Priorities
+ 1. Deno sandbox migration — Replace vm module with deno_core V8 isolates (security critical)
+ 2. SSE multi-instance fanout — Add Redis pub/sub to RealtimeHub
+ 3. Workflow engine gaps — Implement bounded loops, node leases, saga compensation, child workflows
+ 4. JSON Patch diff integration — Wire packages/workflow-canvas/diff.ts into publish flow
+ 5. RAG pgvector pipeline — Create vector tables, implement chunking/embedding/retrieval
+ 6. Multi-tenancy runtime enforcement — Wire tier to K8s selectors, DB routing, Redis, Vault
+ 7. API versioning fix — Set deprecated: true for v1; implement behavioral split
+ 8. Parquet archive + S3 upload — Replace NDJSON placeholder with actual Parquet export
+ 9. AI eval framework tables — Create ai_eval_datasets and ai_eval_runs in schema
+10. GDPR export/delete + audit export — Implement compliance data flows
