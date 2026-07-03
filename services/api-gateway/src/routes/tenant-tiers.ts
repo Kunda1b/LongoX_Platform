@@ -2,39 +2,10 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, desc } from "drizzle-orm";
 import { db, tenantTiersTable, tenantTierAssignmentsTable, tenantPlacementTable, tenantSettingsTable } from "@longox/db";
 import { authorize } from "@longox/shared-rbac";
-import { z } from "zod";
 import { tenantPlacementService } from "../services/tenant-placement.service";
 import { tenantMigrationService } from "../services/tenant-migration.service";
 
 const router: IRouter = Router();
-
-const createTierSchema = z.object({
-  name: z.enum(["free", "pro", "enterprise", "enterprise-plus"]),
-  infrastructureLevel: z.enum(["shared", "dedicated-namespace", "dedicated-cluster"]),
-  maxWorkflows: z.number().int(),
-  maxConnectors: z.number().int(),
-  maxEnvironments: z.number().int(),
-  maxMembers: z.number().int(),
-  maxStorageGb: z.number().int(),
-  maxAiTokensMonthly: z.number().int(),
-  maxRagQueriesMonthly: z.number().int(),
-  includeAuditLogging: z.boolean().optional(),
-  includeSso: z.boolean().optional(),
-  includeSla: z.string().optional(),
-  hotRetentionDays: z.number().int(),
-  coldRetentionDays: z.number().int(),
-  regionsAllowed: z.array(z.string()).optional(),
-  supportLevel: z.enum(["community", "standard", "priority", "dedicated"]).optional(),
-  monthlyPriceCents: z.number().int().optional(),
-  sortOrder: z.number().int().optional(),
-});
-
-const updateTierSchema = createTierSchema.partial();
-
-const changeTierSchema = z.object({
-  tierId: z.number().int(),
-  reason: z.string().optional(),
-});
 
 router.get(
   "/tenants/tiers",
@@ -117,14 +88,11 @@ router.post(
   "/tenants/tiers",
   authorize({ resource: "tenants", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const parsed = createTierSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: parsed.error.flatten() });
-      return;
-    }
+    // Request validation defined in lib/api-spec/openapi.yaml — single source of truth
+    const body = req.body as Record<string, unknown>;
     const [tier] = await db
       .insert(tenantTiersTable)
-      .values(parsed.data)
+      .values(body)
       .returning();
     res.status(201).json({
       id: tier.id,
@@ -157,14 +125,10 @@ router.put(
   authorize({ resource: "tenants", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
     const id = Number(req.params.id);
-    const parsed = updateTierSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: parsed.error.flatten() });
-      return;
-    }
+    const body = req.body as Record<string, unknown>;
     const [tier] = await db
       .update(tenantTiersTable)
-      .set(parsed.data)
+      .set(body)
       .where(eq(tenantTiersTable.id, id))
       .returning();
     if (!tier) {
@@ -276,13 +240,7 @@ router.put(
       return;
     }
 
-    const parsed = changeTierSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: parsed.error.flatten() });
-      return;
-    }
-
-    const { tierId, reason } = parsed.data;
+    const { tierId, reason } = req.body as { tierId?: number; reason?: string };
 
     const [targetTier] = await db
       .select()

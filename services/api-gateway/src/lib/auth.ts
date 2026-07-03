@@ -1,13 +1,4 @@
-/**
- * Authentication middleware.
- *
- * In dev (no WORKOS_API_KEY): validates local JWTs signed with JWT_SECRET.
- * In prod (WORKOS_API_KEY set): also accepts local JWTs that wrap WorkOS
- * session data. WorkOS access tokens are exchanged at login time; the gateway
- * issues its own short-lived JWT so downstream services remain stateless.
- *
- * The authMiddleware is applied globally in app.ts after public routes.
- */
+// DEV-ONLY: Kong handles JWT validation in production per ADR-006
 
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";

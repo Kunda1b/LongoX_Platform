@@ -4,7 +4,7 @@ import type {
   ExecutionContext,
   NodeExecutionResult,
 } from "@longox/workflow-engine";
-import * as vm from "node:vm";
+import { DenoIsolate, UNTRUSTED_CONNECTOR_POLICY } from "@longox/connector-sandbox";
 
 export class CodeExecutor implements NodeExecutor {
   canHandle(nodeTypeId: string): boolean {
@@ -13,7 +13,7 @@ export class CodeExecutor implements NodeExecutor {
 
   async execute(
     node: WorkflowNode,
-    _context: ExecutionContext,
+    context: ExecutionContext,
     input: Record<string, unknown>,
   ): Promise<NodeExecutionResult> {
     const startTime = Date.now();
@@ -33,36 +33,53 @@ export class CodeExecutor implements NodeExecutor {
       };
     }
 
+    const wrappedCode = `
+try {
+  const __result = (function(input) {
+    ${code}
+  })(input);
+  console.log(JSON.stringify({ result: __result }));
+} catch (__err) {
+  console.log(JSON.stringify({ error: __err.message }));
+}
+`;
+
     try {
-      const sandbox = {
+      const isolate = new DenoIsolate(UNTRUSTED_CONNECTOR_POLICY);
+      const result = await isolate.execute({
+        connectorName: "code-executor",
+        actionId: node.id,
+        executionId: (context as any).executionId ?? "unknown",
+        tenantId: (context as any).tenantId ?? 0,
+        auth: {},
         input,
-        output: {},
-        console: { log: (...args: unknown[]) => args },
-      };
-      const context = vm.createContext(sandbox);
-      const wrappedCode = `
-        try {
-          const result = (function(input) {
-            ${code}
-          })(input);
-          output.result = result;
-        } catch (err) {
-          output.error = err.message;
+        config: {},
+        secrets: {},
+        code: wrappedCode,
+      });
+
+      if (result.success) {
+        const output = result.data as Record<string, unknown>;
+        if (output.error) {
+          return {
+            nodeId: node.id,
+            nodeName: node.name,
+            nodeType: "action.run_code",
+            status: "failed",
+            output: {},
+            error: String(output.error),
+            durationMs: result.durationMs,
+            attemptNumber: 1,
+          };
         }
-      `;
-      vm.runInContext(wrappedCode, context, { timeout: 5000 });
-
-      const result = sandbox.output as { result?: unknown; error?: string };
-
-      if (result.error) {
         return {
           nodeId: node.id,
           nodeName: node.name,
           nodeType: "action.run_code",
-          status: "failed",
-          output: {},
-          error: result.error,
-          durationMs: Date.now() - startTime,
+          status: "success",
+          output: { result: output.result },
+          error: null,
+          durationMs: result.durationMs,
           attemptNumber: 1,
         };
       }
@@ -71,10 +88,10 @@ export class CodeExecutor implements NodeExecutor {
         nodeId: node.id,
         nodeName: node.name,
         nodeType: "action.run_code",
-        status: "success",
-        output: { result: result.result },
-        error: null,
-        durationMs: Date.now() - startTime,
+        status: "failed",
+        output: {},
+        error: result.error ?? "Sandbox execution failed",
+        durationMs: result.durationMs,
         attemptNumber: 1,
       };
     } catch (err) {

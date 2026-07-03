@@ -1,3 +1,10 @@
+// ─── DEV-ONLY: Express gateway ─────────────────────────────────────────
+// In production, Kong Gateway handles auth, rate-limiting, routing,
+// tenant extraction, and observability per ADR-006. This Express app
+// is a development stand-in until Kong is deployed in CI/CD.
+// Do NOT add new middleware here — add it to infrastructure/kong/kong.yaml.
+// ───────────────────────────────────────────────────────────────────────
+
 import express, { type ErrorRequestHandler } from "express";
 import pino from "pino-http";
 import cors from "cors";

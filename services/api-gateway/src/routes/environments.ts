@@ -2,7 +2,6 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { db, environmentsTable, environmentReleasesTable, workflowPromotionsTable, workflowVersionsTable, workflowsTable } from "@longox/db";
 import { authorize } from "@longox/shared-rbac";
-import { z } from "zod";
 import { promotionApprovalService } from "../services/promotion-approval.service";
 import { registerVersionedRoutes, buildVersionedPaths } from "../lib/api-versioning";
 
@@ -11,19 +10,6 @@ const router: IRouter = Router();
 registerVersionedRoutes(router, [
   { path: "/api/v1/environments", handler: (_req, _res, next) => next(), deprecatedSince: "2026-01-01", sunsetDate: "2026-07-03" },
 ]);
-
-const promoteSchema = z.object({
-  workflowId: z.number(),
-  fromEnvironment: z.string(),
-  toEnvironment: z.string(),
-  notes: z.string().optional(),
-  approvalRequired: z.boolean().optional(),
-  approverEmails: z.array(z.string()).optional(),
-});
-
-const rollbackSchema = z.object({
-  promotionId: z.number(),
-});
 
 const DIFF_KEY = "environment_diff";
 
@@ -151,12 +137,11 @@ router.post(
   "/environments/promote",
   authorize({ resource: "environments", action: "write" }),
   async (req: Request, res: Response): Promise<void> => {
-    const parsed = promoteSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: parsed.error.flatten() });
-      return;
-    }
-    const { workflowId, fromEnvironment, toEnvironment, notes, approvalRequired } = parsed.data;
+    // Request validation is defined in lib/api-spec/openapi.yaml — the single source of truth
+    const { workflowId, fromEnvironment, toEnvironment, notes, approvalRequired } = req.body as Record<string, unknown>;
+    if (!workflowId || typeof workflowId !== "number") { res.status(400).json({ error: "workflowId is required and must be a number" }); return; }
+    if (!fromEnvironment || typeof fromEnvironment !== "string") { res.status(400).json({ error: "fromEnvironment is required" }); return; }
+    if (!toEnvironment || typeof toEnvironment !== "string") { res.status(400).json({ error: "toEnvironment is required" }); return; }
     const promotedBy = req.user?.email ?? "system";
 
     try {
@@ -185,12 +170,9 @@ router.post(
   "/environments/rollback",
   authorize({ resource: "environments", action: "write" }),
   async (req: Request, res: Response): Promise<void> => {
-    const parsed = rollbackSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: parsed.error.flatten() });
-      return;
-    }
-    const { promotionId } = parsed.data;
+    // Request validation is defined in lib/api-spec/openapi.yaml — the single source of truth
+    const { promotionId } = req.body as Record<string, unknown>;
+    if (!promotionId || typeof promotionId !== "number") { res.status(400).json({ error: "promotionId is required and must be a number" }); return; }
     const rolledBackBy = req.user?.email ?? "system";
 
     try {

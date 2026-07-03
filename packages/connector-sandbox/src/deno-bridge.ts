@@ -17,19 +17,6 @@ const DEFAULT_CONFIG: DenoRuntimeConfig = {
   v8Flags: ["--max-old-space-size=128"],
 };
 
-/**
- * Deno Bridge — provides a path to true Deno isolate execution.
- *
- * ADR-009 specifies Deno isolates (V8 isolates running the Deno runtime).
- * The current implementation (DenoIsolate in isolate.ts) uses Node.js `vm`
- * module as an interim step. This bridge sets up the integration point
- * for `deno_core` or native Deno subprocess execution.
- *
- * To migrate to true Deno isolation:
- * 1. Add `deno_core` npm package or use `deno` CLI subprocess
- * 2. Implement executeInDeno() using Deno's worker API or subprocess
- * 3. Replace DenoIsolate with this class
- */
 export class DenoBridge {
   private config: DenoRuntimeConfig;
   private policy: SandboxPolicy;
@@ -47,16 +34,6 @@ export class DenoBridge {
 
   async execute(context: IsolateContext): Promise<IsolateResult> {
     const startTime = Date.now();
-
-    try {
-      const imported = await this.tryImportDenoCore();
-      if (imported) {
-        return await imported.executeScript(context, this.policy, this.audit);
-      }
-    } catch {
-      /* deno_core not available, try subprocess */
-    }
-
     try {
       return await this.executeAsSubprocess(context, startTime);
     } catch (err) {
@@ -73,60 +50,12 @@ export class DenoBridge {
     }
   }
 
-  private async tryImportDenoCore(): Promise<{
-    executeScript: (
-      ctx: IsolateContext,
-      policy: SandboxPolicy,
-      audit: AuditLogger,
-    ) => Promise<IsolateResult>;
-  } | null> {
-    try {
-      const denoCore = await import("deno_core");
-      return {
-        executeScript: async (
-          ctx: IsolateContext,
-          policy: SandboxPolicy,
-          _audit: AuditLogger,
-        ) => {
-          const startTime = Date.now();
-
-          const isolate = new denoCore.Isolate({
-            moduleMap: new denoCore.ModuleMap(),
-            requestPermissions: (op: number) => {
-              const allowedOps = new Set([1, 2, 3]); // net allow, read allow, write allow
-              return allowedOps.has(op);
-            },
-          });
-
-          const result = await isolate.executeModule(
-            `file:///${ctx.connectorName}.js`,
-            ctx.code,
-          );
-
-          const durationMs = Date.now() - startTime;
-          return {
-            success: true,
-            data: { output: result ?? {} },
-            error: null,
-            durationMs,
-            networkRequests: 0,
-            peakMemoryMb: 0,
-            cpuUsedMs: 0,
-          };
-        },
-      };
-    } catch {
-      console.warn("[deno-bridge] deno_core not available, falling back to subprocess");
-      return null;
-    }
-  }
-
   private async executeAsSubprocess(
     context: IsolateContext,
     startTime: number,
   ): Promise<IsolateResult> {
     const { execFile } = await import("node:child_process");
-    const { writeFile, unlink, mkdtemp, rm } = await import("node:fs/promises");
+    const { writeFile, mkdtemp, rm } = await import("node:fs/promises");
     const { join } = await import("node:path");
     const { tmpdir } = await import("node:os");
 
@@ -154,19 +83,29 @@ ${context.code}
     await writeFile(entryPoint, wrappedCode);
 
     return new Promise<IsolateResult>((resolve) => {
+      const denoArgs = [
+        "run",
+        "--no-prompt",
+        "--deny-read",
+        "--deny-write",
+        "--deny-env",
+        "--deny-run",
+        `--v8-flags=${this.config.v8Flags!.join(",")}`,
+        "--quiet",
+      ];
+
+      if (
+        this.policy.allowedDomains.length > 0 &&
+        this.policy.allowedDomains[0] !== "*"
+      ) {
+        denoArgs.push(`--allow-net=${this.policy.allowedDomains.join(",")}`);
+      }
+
+      denoArgs.push(entryPoint);
+
       const proc = execFile(
         this.config.denoPath!,
-        [
-          "run",
-          "--no-prompt",
-          `--allow-net=${this.policy.allowedDomains.join(",")}`,
-          "--deny-read",
-          "--deny-write",
-          "--deny-env",
-          `--v8-flags=${this.config.v8Flags!.join(",")}`,
-          "--quiet",
-          entryPoint,
-        ],
+        denoArgs,
         {
           timeout: this.policy.timeoutMs,
           maxBuffer: 1024 * 1024,

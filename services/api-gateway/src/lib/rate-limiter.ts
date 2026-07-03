@@ -1,3 +1,4 @@
+// DEV-ONLY: Kong handles rate limiting in production per ADR-006
 import type { Request, Response, NextFunction } from "express";
 
 interface RateLimitEntry {
