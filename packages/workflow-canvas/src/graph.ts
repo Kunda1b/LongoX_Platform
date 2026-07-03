@@ -24,11 +24,48 @@ export interface CanvasSelection {
   nodeIds: string[];
   edgeIds: string[];
 }
-export interface WorkflowGraph {
-  nodes: CanvasNode[];
-  edges: CanvasEdge[];
-  viewport: CanvasViewport;
+
+// ─── Workflow (DAG-engine-compatible) node/edge shapes ────────────────────────
+// These mirror @longox/workflow-engine's persisted node/edge shape (as stored
+// in workflow_versions.nodes / .edges jsonb columns) and are used by the
+// diffing/normalization pipeline (json-patch.ts, normalizer.ts, diff.ts).
+// They intentionally differ from CanvasNode/CanvasEdge above, which describe
+// the canvas rendering model (label-only, sourceNodeId/targetNodeId ports).
+
+export interface WorkflowNode {
+  id: string;
+  name: string;
+  type?: string;
+  nodeTypeId?: string;
+  category?: string;
+  position: { x: number; y: number };
+  config: Record<string, unknown>;
+  inputHandles?: string[];
+  outputHandles?: string[];
+  retryPolicy?: Record<string, unknown>;
+  compensation?: Record<string, unknown>;
+  approvalGate?: Record<string, unknown>;
+  loop?: Record<string, unknown>;
+  childWorkflow?: Record<string, unknown>;
 }
+
+export interface WorkflowEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string;
+  targetHandle?: string;
+  type?: string;
+  label?: string;
+  condition?: string;
+}
+
+export interface WorkflowGraph {
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+  viewport?: CanvasViewport;
+}
+
 export interface CanvasState {
   graph: WorkflowGraph;
   selection: CanvasSelection;
@@ -37,21 +74,24 @@ export interface CanvasState {
   history: WorkflowGraph[];
   historyIndex: number;
 }
+
 export function createEmptyGraph(): WorkflowGraph {
   return { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } };
 }
+
 export function normalizeGraph(graph: WorkflowGraph): WorkflowGraph {
   return {
     nodes: [...graph.nodes].sort((a, b) => a.id.localeCompare(b.id)),
     edges: [...graph.edges].sort((a, b) => a.id.localeCompare(b.id)),
-    viewport: { ...graph.viewport },
+    viewport: graph.viewport ? { ...graph.viewport } : undefined,
   };
 }
-export function detectCycles(edges: CanvasEdge[]): string[][] {
+
+export function detectCycles(edges: WorkflowEdge[]): string[][] {
   const adj = new Map<string, string[]>();
   for (const e of edges) {
-    if (!adj.has(e.sourceNodeId)) adj.set(e.sourceNodeId, []);
-    adj.get(e.sourceNodeId)!.push(e.targetNodeId);
+    if (!adj.has(e.source)) adj.set(e.source, []);
+    adj.get(e.source)!.push(e.target);
   }
   const visited = new Set<string>();
   const recStack = new Set<string>();

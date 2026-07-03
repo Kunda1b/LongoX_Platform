@@ -25,8 +25,11 @@ import {
   dlqEntriesTable,
   approvalTasksTable,
 } from "@longox/db";
+import IORedis from "ioredis";
 import {
   DAGRunner,
+  InMemoryLeaseStore,
+  RedisLeaseStore,
   type CheckpointStore,
   type IdempotencyStore,
   type DAGEvent,
@@ -34,10 +37,29 @@ import {
   type ChildWorkflowConfig,
   type ApprovalGateConfig,
   type WorkflowGraph,
+  type LeaseStore,
 } from "@longox/workflow-engine";
 import { createExecutors } from "../executors/registry";
 import { sseExecutionBus } from "@longox/shared-realtime";
 import { writeAudit } from "../queue/bullmq-queue";
+
+// ─── Node lease store ──────────────────────────────────────────────────────
+// Redis-backed when REDIS_URL is set (multi-worker safety — prevents two
+// BullMQ workers from double-executing the same node); falls back to an
+// in-memory store for single-process dev setups.
+function createLeaseStore(): LeaseStore {
+  const redisUrl = process.env["REDIS_URL"];
+  if (!redisUrl) return new InMemoryLeaseStore();
+
+  const client = new IORedis(redisUrl, { maxRetriesPerRequest: null, enableReadyCheck: false });
+  return new RedisLeaseStore({
+    set: (key, value, option, ms, cond) => client.set(key, value, option, ms, cond),
+    del: (key) => client.del(key),
+    get: (key) => client.get(key),
+  });
+}
+
+const leaseStore = createLeaseStore();
 
 // ─── Checkpoint store (DB-backed) ─────────────────────────────────────────────
 
@@ -327,6 +349,7 @@ export async function runWorkflowDAG(opts: {
     await runner.run(graph, context, {
       checkpointStore,
       idempotencyStore,
+      leaseStore,
       enableSaga: true,
       onEvent: handleEvent,
       timeoutMs: graph.timeoutMs ?? 30 * 60 * 1000, // 30 min default

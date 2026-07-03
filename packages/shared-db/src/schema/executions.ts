@@ -28,6 +28,7 @@ export const executionsTable = pgTable("executions", {
   region: text("region"),
   executedInRegion: text("executed_in_region"),
   isReplicated: integer("is_replicated").notNull().default(0),
+  parentExecutionId: integer("parent_execution_id"),
 });
 
 export const insertExecutionSchema = createInsertSchema(executionsTable).omit({

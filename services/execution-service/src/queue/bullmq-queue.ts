@@ -497,3 +497,62 @@ async function addWorkflowJob(
     triggerPayload,
   );
 }
+
+// ─── Enqueue helper for child workflows (spawned mid-DAG-run) ────────────────
+// Looks up the target workflow's latest published nodes/edges and enqueues a
+// new execution job, tagging it with parentExecutionId so the runner can link
+// child -> parent executions (used by dag-worker.ts's spawnChildWorkflow).
+export async function enqueueWorkflow(opts: {
+  workflowId: number;
+  triggerPayload?: Record<string, unknown>;
+  triggerType?: "manual" | "webhook" | "schedule" | "api" | "recovery" | "child_workflow";
+  parentExecutionId?: number;
+}): Promise<number> {
+  const { workflowId, triggerPayload = {}, parentExecutionId } = opts;
+
+  const [workflow] = await db
+    .select()
+    .from(workflowsTable)
+    .where(eq(workflowsTable.id, workflowId))
+    .limit(1);
+
+  if (!workflow) {
+    throw new Error(`enqueueWorkflow: workflow ${workflowId} not found`);
+  }
+
+  const [execution] = await db
+    .insert(executionsTable)
+    .values({
+      workflowId,
+      workflowName: workflow.name,
+      status: "pending",
+      startedAt: new Date(),
+      steps: [],
+      parentExecutionId: parentExecutionId ?? null,
+    } as any)
+    .returning();
+
+  await writeAudit(
+    "execution.started",
+    "workflow",
+    String(workflowId),
+    { executionId: execution.id, parentExecutionId, workflowName: workflow.name },
+    "system",
+  );
+
+  await jobQueue.addJob(
+    "workflow-execution",
+    {
+      executionId: execution.id,
+      workflowId,
+      workflowName: workflow.name,
+      nodes: (workflow as any).nodes ?? [],
+      triggerPayload,
+      triggerType: "child_workflow",
+      parentExecutionId,
+    },
+    3,
+  );
+
+  return execution.id;
+}

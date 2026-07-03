@@ -15,7 +15,6 @@
     "codegen": "pnpm --filter @longox/api-spec run codegen && pnpm --filter @longox/api-gateway run codegen && pnpm --filter @longox/shared-types run codegen"
   },
   "private": true,
-  "packageManager": "pnpm@11.6.0",
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "prettier": "^3.8.3",
