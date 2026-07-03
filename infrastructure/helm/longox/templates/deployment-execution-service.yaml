@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.executionService.name }}
+  labels:
+    app: {{ .Values.executionService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ .Values.executionService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.executionService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.executionService.name }}
+    spec:
+      containers:
+        - name: {{ .Values.executionService.name }}
+          image: "{{ .Values.executionService.image.repository }}:{{ .Values.executionService.image.tag }}"
+          imagePullPolicy: {{ .Values.executionService.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.executionService.service.targetPort }}
+          env:
+            {{- range $key, $value := .Values.executionService.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: database_url
+          resources:
+            {{- toYaml .Values.executionService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.executionService.service.targetPort }}
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.executionService.service.targetPort }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.executionService.name }}
+  labels:
+    app: {{ .Values.executionService.name }}
+spec:
+  type: {{ .Values.executionService.service.type }}
+  ports:
+    - port: {{ .Values.executionService.service.port }}
+      targetPort: {{ .Values.executionService.service.targetPort }}
+      protocol: TCP
+  selector:
+    app: {{ .Values.executionService.name }}

@@ -449,3 +449,18 @@ plugins:
       header_name: x-kong-request-id
       echo_downstream: true
       generator: uuid
+
+  # OpenTelemetry tracing — exports traces to OTLP collector
+  - name: opentelemetry
+    config:
+      endpoint: http://otel-collector:4318/v1/traces
+      resource_attributes: service.name=longox-kong
+      headers:
+        x-tenant-id: "$(consumer.custom_id)"
+      propagation:
+        extract: ["w3c", "baggage"]
+        inject: ["w3c", "baggage"]
+      queue:
+        max_batch_size: 200
+        max_coalescing_delay: 1
+      sampling_rate: 0.1

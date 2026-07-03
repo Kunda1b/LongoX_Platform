@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.searchService.name }}
+  labels:
+    app: {{ .Values.searchService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ .Values.searchService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.searchService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.searchService.name }}
+    spec:
+      containers:
+        - name: {{ .Values.searchService.name }}
+          image: "{{ .Values.searchService.image.repository }}:{{ .Values.searchService.image.tag }}"
+          imagePullPolicy: {{ .Values.searchService.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.searchService.service.targetPort }}
+          env:
+            {{- range $key, $value := .Values.searchService.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: database_url
+          resources:
+            {{- toYaml .Values.searchService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.searchService.service.targetPort }}
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.searchService.service.targetPort }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.searchService.name }}
+  labels:
+    app: {{ .Values.searchService.name }}
+spec:
+  type: {{ .Values.searchService.service.type }}
+  ports:
+    - port: {{ .Values.searchService.service.port }}
+      targetPort: {{ .Values.searchService.service.targetPort }}
+      protocol: TCP
+  selector:
+    app: {{ .Values.searchService.name }}

@@ -72,30 +72,43 @@ function sendHeartbeat(res: Response): void {
 }
 
 router.get(
-  ["/api/executions/:id/stream", "/api/v1/executions/:id/stream"],
+  ["/api/executions/stream", "/api/v1/executions/stream",
+   "/api/executions/:id/stream", "/api/v1/executions/:id/stream"],
   authorize("executions:read"),
   async (req: Request, res: Response): Promise<void> => {
-    const executionId = parseInt(req.params["id"] ?? "0", 10);
-    if (isNaN(executionId) || executionId <= 0) {
-      res.status(400).json({ error: "Invalid execution ID" });
+    const executionIds = req.query["executionIds"]
+      ? String(req.query["executionIds"]).split(",").map(Number).filter((n) => !isNaN(n) && n > 0)
+      : [];
+
+    const paramId = parseInt(req.params["id"] ?? "0", 10);
+    if (!isNaN(paramId) && paramId > 0) executionIds.push(paramId);
+
+    if (executionIds.length === 0) {
+      res.status(400).json({ error: "At least one execution ID is required" });
       return;
     }
 
-    const [execution] = await db
-      .select()
-      .from(executionsTable)
-      .where(eq(executionsTable.id, executionId))
-      .limit(1);
+    const eventFilters = req.query["events"]
+      ? String(req.query["events"]).split(",")
+      : [];
 
-    if (!execution) {
-      res.status(404).json({ error: "Execution not found" });
-      return;
-    }
+    for (const executionId of executionIds) {
+      const [execution] = await db
+        .select()
+        .from(executionsTable)
+        .where(eq(executionsTable.id, executionId))
+        .limit(1);
 
-    const tenantId = req.user?.tenantId;
-    if (tenantId && execution.tenantId && execution.tenantId !== tenantId) {
-      res.status(403).json({ error: "Forbidden" });
-      return;
+      if (!execution) {
+        res.status(404).json({ error: `Execution ${executionId} not found` });
+        return;
+      }
+
+      const tenantId = req.user?.tenantId;
+      if (tenantId && execution.tenantId && execution.tenantId !== tenantId) {
+        res.status(403).json({ error: `Forbidden for execution ${executionId}` });
+        return;
+      }
     }
 
     res.setHeader("Content-Type", "text/event-stream");
@@ -105,47 +118,30 @@ router.get(
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.flushHeaders();
 
-    const client: SSEClient = { res, seq: 0, executionId };
-    addClient(executionId, client);
+    const clientId = `sse_multi_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    res.write(`event: connected\ndata: ${JSON.stringify({ clientId, executionIds })}\n\n`);
 
-    const lastEventId = req.headers["last-event-id"];
-    const lastSeq = lastEventId
-      ? parseInt(String(lastEventId).split("/")[1] ?? "0", 10)
-      : 0;
+    const clients: SSEClient[] = executionIds.map((executionId) => {
+      const c: SSEClient = { res, seq: 0, executionId };
+      addClient(executionId, c);
+      return c;
+    });
 
-    if (lastSeq === 0) {
-      await sendInitialState(executionId, res, client);
-    } else {
-      client.seq++;
-      sendSSEEvent(res, {
-        id: `${executionId}/${client.seq}`,
-        event: "execution",
-        data: {
-          executionId,
-          status: execution.status,
-          startedAt: execution.startedAt?.toISOString(),
-          finishedAt: execution.finishedAt?.toISOString(),
-          durationMs: execution.durationMs,
-          errorMessage: execution.errorMessage,
-          reconnected: true,
-        },
-      });
-    }
-
-    const unsubscribe = sseExecutionBus.onExecutionEvent(
-      executionId,
-      (payload) => {
+    const subscriptions = executionIds.map((executionId) =>
+      sseExecutionBus.onExecutionEvent(executionId, (payload) => {
         if (res.writableEnded) {
-          unsubscribe();
           return;
         }
+        if (eventFilters.length > 0 && !eventFilters.includes(payload.eventType)) return;
+        const client = clients.find((c) => c.executionId === executionId);
+        if (!client) return;
         client.seq++;
         sendSSEEvent(res, {
           id: `${executionId}/${client.seq}`,
           event: payload.eventType,
-          data: payload.data,
+          data: { ...payload.data, executionId },
         });
-      },
+      }),
     );
 
     const heartbeatInterval = setInterval(() => {
@@ -158,15 +154,15 @@ router.get(
 
     req.on("close", () => {
       clearInterval(heartbeatInterval);
-      unsubscribe();
-      removeClient(executionId, client);
+      subscriptions.forEach((u) => u());
+      clients.forEach((c) => removeClient(c.executionId, c));
       if (!res.writableEnded) res.end();
     });
 
     req.on("error", () => {
       clearInterval(heartbeatInterval);
-      unsubscribe();
-      removeClient(executionId, client);
+      subscriptions.forEach((u) => u());
+      clients.forEach((c) => removeClient(c.executionId, c));
     });
   },
 );

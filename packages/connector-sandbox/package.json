@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@longox/shared-types": "workspace:*",
-    "@longox/shared-logger": "workspace:*"
+    "@longox/shared-logger": "workspace:*",
+    "deno_core": "^0.300.0"
   },
   "devDependencies": {
     "@types/node": "catalog:"

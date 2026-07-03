@@ -15,6 +15,7 @@ import tenantsRouter from "./routes/tenants";
 import tenantTiersRouter from "./routes/tenant-tiers";
 import environmentsRouter from "./routes/environments";
 import complianceRouter from "./routes/compliance";
+import auditExportRouter from "./routes/audit-export";
 import workosAuthRouter from "./routes/workos-auth";
 import scimRouter from "./routes/scim";
 import executionStreamRouter from "./routes/execution-stream";
@@ -25,6 +26,7 @@ import { authMiddleware } from "./lib/auth";
 import { isWorkOSEnabled } from "./lib/workos-auth";
 import { apiRateLimiter } from "./lib/rate-limiter";
 import { apiVersioningMiddleware } from "./lib/api-versioning";
+import { tierEnforcementMiddleware } from "./middleware/tier-enforcement.middleware";
 import { auditLogRouter } from "@longox/audit-service";
 import { yoga } from "./graphql/index";
 import { billingRouter, usageRouter, checkoutRouter, plansRouter, webhookRouter, billingApiRouter, meteringRouter as billingMeteringRouter } from "@longox/billing-service";
@@ -115,6 +117,9 @@ app.use(apiRateLimiter.middleware());
 // API versioning: emit Deprecation/Sunset headers on deprecated versions
 app.use(apiVersioningMiddleware);
 
+// Tier enforcement: set x-tenant-tier header and tier routing context
+app.use(tierEnforcementMiddleware);
+
 // ─── Public routes ────────────────────────────────────────────────────────────
 
 app.use(authRouter);
@@ -176,6 +181,9 @@ app.use(environmentsRouter);
 
 // Compliance & GDPR
 app.use(complianceRouter);
+
+// Audit export
+app.use(auditExportRouter);
 
 // Audit log: admin only
 app.use(auditLogRouter);

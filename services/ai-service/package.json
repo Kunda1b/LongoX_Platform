@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "tsx watch src/dev-server.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "eval-gate": "tsx scripts/run-eval-gate.ts"
   },
   "dependencies": {
     "@longox/db": "workspace:*",

@@ -74,3 +74,45 @@ export function detectCycles(edges: CanvasEdge[]): string[][] {
   for (const node of adj.keys()) dfs(node);
   return cycles;
 }
+
+export function getDownstreamNodes(graph: WorkflowGraph, nodeId: string): string[] {
+  const adj = new Map<string, string[]>();
+  for (const e of graph.edges) {
+    if (!adj.has(e.sourceNodeId)) adj.set(e.sourceNodeId, []);
+    adj.get(e.sourceNodeId)!.push(e.targetNodeId);
+  }
+  const result: string[] = [];
+  const visited = new Set<string>();
+  function dfs(id: string) {
+    for (const neighbor of adj.get(id) ?? []) {
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        result.push(neighbor);
+        dfs(neighbor);
+      }
+    }
+  }
+  dfs(nodeId);
+  return result;
+}
+
+export function getUpstreamNodes(graph: WorkflowGraph, nodeId: string): string[] {
+  const revAdj = new Map<string, string[]>();
+  for (const e of graph.edges) {
+    if (!revAdj.has(e.targetNodeId)) revAdj.set(e.targetNodeId, []);
+    revAdj.get(e.targetNodeId)!.push(e.sourceNodeId);
+  }
+  const result: string[] = [];
+  const visited = new Set<string>();
+  function dfs(id: string) {
+    for (const neighbor of revAdj.get(id) ?? []) {
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        result.push(neighbor);
+        dfs(neighbor);
+      }
+    }
+  }
+  dfs(nodeId);
+  return result;
+}

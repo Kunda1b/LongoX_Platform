@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.meteringService.name }}
+  labels:
+    app: {{ .Values.meteringService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ .Values.meteringService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.meteringService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.meteringService.name }}
+    spec:
+      containers:
+        - name: {{ .Values.meteringService.name }}
+          image: "{{ .Values.meteringService.image.repository }}:{{ .Values.meteringService.image.tag }}"
+          imagePullPolicy: {{ .Values.meteringService.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.meteringService.service.targetPort }}
+          env:
+            {{- range $key, $value := .Values.meteringService.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: database_url
+          resources:
+            {{- toYaml .Values.meteringService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.meteringService.service.targetPort }}
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.meteringService.service.targetPort }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.meteringService.name }}
+  labels:
+    app: {{ .Values.meteringService.name }}
+spec:
+  type: {{ .Values.meteringService.service.type }}
+  ports:
+    - port: {{ .Values.meteringService.service.port }}
+      targetPort: {{ .Values.meteringService.service.targetPort }}
+      protocol: TCP
+  selector:
+    app: {{ .Values.meteringService.name }}

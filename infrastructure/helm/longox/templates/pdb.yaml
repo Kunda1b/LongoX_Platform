@@ -1,0 +1,134 @@
+{{- if .Values.apiGateway.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.apiGateway.name }}-pdb
+  labels:
+    app: {{ .Values.apiGateway.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.apiGateway.pdb.minAvailable | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Values.apiGateway.name }}
+---
+{{- end }}
+{{- if .Values.executionService.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.executionService.name }}-pdb
+  labels:
+    app: {{ .Values.executionService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.executionService.pdb.minAvailable | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Values.executionService.name }}
+---
+{{- end }}
+{{- if .Values.authService.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.authService.name }}-pdb
+  labels:
+    app: {{ .Values.authService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.authService.pdb.minAvailable | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Values.authService.name }}
+---
+{{- end }}
+{{- if .Values.workflowService.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.workflowService.name }}-pdb
+  labels:
+    app: {{ .Values.workflowService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.workflowService.pdb.minAvailable | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Values.workflowService.name }}
+---
+{{- end }}
+{{- if .Values.connectorService.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.connectorService.name }}-pdb
+  labels:
+    app: {{ .Values.connectorService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.connectorService.pdb.minAvailable | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Values.connectorService.name }}
+---
+{{- end }}
+{{- if .Values.billingService.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.billingService.name }}-pdb
+  labels:
+    app: {{ .Values.billingService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.billingService.pdb.minAvailable | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Values.billingService.name }}
+---
+{{- end }}
+{{- if .Values.aiService.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.aiService.name }}-pdb
+  labels:
+    app: {{ .Values.aiService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.aiService.pdb.minAvailable | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Values.aiService.name }}
+---
+{{- end }}
+{{- if .Values.schedulerService.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.schedulerService.name }}-pdb
+  labels:
+    app: {{ .Values.schedulerService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.schedulerService.pdb.minAvailable | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Values.schedulerService.name }}
+---
+{{- end }}
+{{- if .Values.searchService.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.searchService.name }}-pdb
+  labels:
+    app: {{ .Values.searchService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.searchService.pdb.minAvailable | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Values.searchService.name }}
+{{- end }}

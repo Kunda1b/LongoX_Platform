@@ -45,9 +45,10 @@ import {
   Plus, Palette, Layout, Eye, Save, Send, Settings2,
   BarChart3, Table2, Kanban, FormInput, Map, FileText,
   BrainCircuit, ListChecks, Activity, GripVertical, X,
-  ChevronRight, ChevronLeft,
+  ChevronRight, ChevronLeft, Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GridLayout, type GridItem } from "./grid-layout";
 
 const WIDGET_CATALOG: { type: WidgetType; label: string; icon: React.ReactNode; description: string }[] = [
   { type: "kpi-card", label: "KPI Card", icon: <BarChart3 className="h-4 w-4" />, description: "Single metric with optional trend" },
@@ -83,6 +84,7 @@ export function DashboardBuilder({ existingDashboard }: DashboardBuilderProps) {
   const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
   const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
   const [publishNotes, setPublishNotes] = useState("");
+  const [environment, setEnvironment] = useState("production");
 
   const createMutation = useCreateDashboard({
     mutation: {
@@ -157,8 +159,8 @@ export function DashboardBuilder({ existingDashboard }: DashboardBuilderProps) {
     dashboard: { id: existingDashboard?.id ?? "", title, layout: defaultLayout, widgets },
     data: {},
     permissions: { visibility: "private" as const, allowedRoles: [], widgetOverrides: {} },
-    environment: "production",
-  }), [existingDashboard?.id, title, widgets]);
+    environment,
+  }), [existingDashboard?.id, title, widgets, environment]);
 
   return (
     <div className="flex h-[calc(100vh-4rem)] gap-0">
@@ -210,6 +212,18 @@ export function DashboardBuilder({ existingDashboard }: DashboardBuilderProps) {
             />
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 rounded-md border px-2 py-1">
+              <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+              <select
+                value={environment}
+                onChange={(e) => setEnvironment(e.target.value)}
+                className="border-0 bg-transparent text-xs font-medium outline-none"
+              >
+                <option value="development">Dev</option>
+                <option value="staging">Staging</option>
+                <option value="production">Production</option>
+              </select>
+            </div>
             <Button
               variant={previewMode ? "default" : "outline"}
               size="sm"
@@ -227,57 +241,74 @@ export function DashboardBuilder({ existingDashboard }: DashboardBuilderProps) {
         </div>
 
         {/* Canvas */}
-        <ScrollArea className="flex-1 p-4">
+        <div className="flex-1 overflow-auto p-4">
           {previewMode ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {widgets.map(widget => (
-                <div key={widget.id} className="relative group">
-                  {renderWidget(widget, renderContext)}
-                </div>
-              ))}
-              {widgets.length === 0 && (
-                <div className="col-span-full flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed p-12 text-center">
-                  <Palette className="h-8 w-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Add widgets from the sidebar to build your dashboard</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {widgets.map(widget => (
-                <div
-                  key={widget.id}
-                  className={cn(
-                    "relative rounded-lg border bg-card transition-all cursor-pointer group",
-                    selectedWidgetId === widget.id && "ring-2 ring-primary",
-                  )}
-                  onClick={() => setSelectedWidgetId(widget.id)}
-                >
-                  <div className="flex items-center justify-between border-b bg-muted/30 px-3 py-1.5">
-                    <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                      <GripVertical className="h-3 w-3" />
-                      {widget.title}
-                    </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => { e.stopPropagation(); removeWidget(widget.id); }}>
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="p-3">
+            <GridLayout
+              items={widgets.map(w => ({ id: w.id, x: w.position.x, y: w.position.y, w: w.position.w, h: w.position.h }))}
+              onLayoutChange={() => {}}
+              isEditing={false}
+              className="min-h-[600px]"
+            >
+              {(item) => {
+                const widget = widgets.find(w => w.id === item.id);
+                return widget ? (
+                  <div className="h-full w-full overflow-hidden rounded-lg border bg-card">
                     {renderWidget(widget, renderContext)}
                   </div>
-                </div>
-              ))}
-              {widgets.length === 0 && (
-                <div className="col-span-full flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed p-12 text-center">
-                  <Layout className="h-8 w-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Add widgets from the sidebar to start building</p>
-                </div>
-              )}
+                ) : null;
+              }}
+            </GridLayout>
+          ) : (
+            <GridLayout
+              items={widgets.map(w => ({ id: w.id, x: w.position.x, y: w.position.y, w: w.position.w, h: w.position.h }))}
+              onLayoutChange={(items) => {
+                setWidgets(prev => prev.map(w => {
+                  const gi = items.find(i => i.id === w.id);
+                  if (gi) {
+                    return { ...w, position: { ...w.position, x: gi.x, y: gi.y, w: gi.w, h: gi.h } };
+                  }
+                  return w;
+                }));
+              }}
+              className="min-h-[600px]"
+            >
+              {(item) => {
+                const widget = widgets.find(w => w.id === item.id);
+                if (!widget) return null;
+                return (
+                  <div
+                    className={cn(
+                      "h-full w-full rounded-lg border bg-card transition-all cursor-pointer group flex flex-col",
+                      selectedWidgetId === widget.id && "ring-2 ring-primary",
+                    )}
+                    onClick={() => setSelectedWidgetId(widget.id)}
+                  >
+                    <div className="flex items-center justify-between border-b bg-muted/30 px-3 py-1.5 shrink-0">
+                      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                        <GripVertical className="h-3 w-3" />
+                        {widget.title}
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => { e.stopPropagation(); removeWidget(widget.id); }}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex-1 overflow-auto p-3">
+                      {renderWidget(widget, renderContext)}
+                    </div>
+                  </div>
+                );
+              }}
+            </GridLayout>
+          )}
+          {widgets.length === 0 && (
+            <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed p-12 text-center">
+              <Layout className="h-8 w-8 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Add widgets from the sidebar to start building</p>
             </div>
           )}
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Widget Config Panel */}

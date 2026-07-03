@@ -37,6 +37,7 @@ import {
   Clock,
   Globe,
   ArrowRight,
+  GitCompare,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { WorkflowBuilder } from "@/features/builder/workflow-builder";
@@ -399,6 +400,12 @@ export function WorkflowDetail() {
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
+            <Button variant="secondary" asChild>
+              <Link href={`/workflows/${workflowId}/versions`} className="gap-2">
+                <GitCompare className="h-4 w-4" />
+                View Diff
+              </Link>
+            </Button>
             <Button
               onClick={handlePublish}
               disabled={publishMutation.isPending}

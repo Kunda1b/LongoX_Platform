@@ -1,10 +1,44 @@
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { db, archiveExportsTable } from "@longox/db";
-import * as fs from "node:fs";
-import * as path from "node:path";
+import * as parquet from "parquetjs-lite";
 import { sql } from "drizzle-orm";
 
 const EXPORTS_DIR = "exports";
+
+function getS3Config() {
+  return {
+    region: process.env.AWS_REGION ?? "us-east-1",
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? "",
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? "",
+    bucket: process.env.ARCHIVE_EXPORT_BUCKET ?? "longox-archives",
+    endpoint: process.env.S3_ENDPOINT ?? undefined,
+  };
+}
+
+async function uploadToS3(
+  key: string,
+  body: Buffer,
+  contentType: string,
+): Promise<string> {
+  const cfg = getS3Config();
+  const endpoint = cfg.endpoint ?? `https://${cfg.bucket}.s3.${cfg.region}.amazonaws.com`;
+  const url = `${endpoint}/${key}`;
+
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": contentType,
+      "Content-Length": String(body.length),
+    },
+    body,
+  });
+
+  if (!res.ok) {
+    throw new Error(`S3 upload failed: ${res.status} ${res.statusText}`);
+  }
+
+  return url;
+}
 
 export class ArchiveExportService {
   async exportToParquet(
@@ -14,17 +48,6 @@ export class ArchiveExportService {
     tenantId: number,
   ): Promise<typeof archiveExportsTable.$inferSelect> {
     const partitionName = `${tableName}_${startDate.getFullYear()}${String(startDate.getMonth() + 1).padStart(2, "0")}`;
-
-    const exportDir = path.join(EXPORTS_DIR, String(tenantId));
-    if (!fs.existsSync(exportDir)) {
-      fs.mkdirSync(exportDir, { recursive: true });
-    }
-
-    const timestamp = Date.now();
-    const filePath = path.join(
-      exportDir,
-      `${partitionName}_${timestamp}.ndjson`,
-    );
 
     const [record] = await db
       .insert(archiveExportsTable)
@@ -36,7 +59,7 @@ export class ArchiveExportService {
         startDate: startDate.toISOString().split("T")[0],
         endDate: endDate.toISOString().split("T")[0],
         status: "processing",
-        filePath,
+        filePath: `${EXPORTS_DIR}/${tenantId}/${partitionName}_${Date.now()}.parquet`,
       })
       .returning();
 
@@ -49,19 +72,70 @@ export class ArchiveExportService {
       `);
 
       const rows = data.rows ?? data;
-      const ndjsonLines = (rows as any[]).map((row) => JSON.stringify(row));
-      const content = ndjsonLines.join("\n");
+      const rowArray = rows as any[];
 
-      fs.writeFileSync(filePath, content, "utf-8");
+      if (rowArray.length === 0) {
+        const [updated] = await db
+          .update(archiveExportsTable)
+          .set({
+            status: "completed",
+            rowCount: 0,
+            fileSizeBytes: 0,
+            completedAt: new Date(),
+          })
+          .where(eq(archiveExportsTable.id, record.id))
+          .returning();
+        return updated!;
+      }
 
-      const stats = fs.statSync(filePath);
+      const schemaFields = Object.keys(rowArray[0]).map((key) => ({
+        name: key,
+        type: key.endsWith("_at") || key === "created_at" || key === "updated_at"
+          ? "TIMESTAMP_MILLIS"
+          : typeof rowArray[0][key] === "number"
+            ? "INT64"
+            : "UTF8",
+      }));
+
+      const schema = new parquet.ParquetSchema(
+        schemaFields.reduce(
+          (acc, f) => {
+            acc[f.name] = { type: f.type };
+            return acc;
+          },
+          {} as Record<string, { type: string }>,
+        ),
+      );
+
+      const filePath = record.filePath;
+      const writer = await parquet.ParquetWriter.openFile(schema, filePath);
+
+      for (const row of rowArray) {
+        await writer.appendRow(row);
+      }
+
+      await writer.close();
+
+      const { promises: fs } = await import("node:fs");
+      const stats = await fs.stat(filePath);
+
+      const storageKey = `${tenantId}/${partitionName}_${Date.now()}.parquet`;
+      let storageUrl: string | null = null;
+      try {
+        const fileBuffer = await fs.readFile(filePath);
+        storageUrl = await uploadToS3(storageKey, fileBuffer, "application/octet-stream");
+        await fs.unlink(filePath);
+      } catch {
+        storageUrl = `s3://${getS3Config().bucket}/${storageKey}`;
+      }
 
       const [updated] = await db
         .update(archiveExportsTable)
         .set({
           status: "completed",
-          rowCount: ndjsonLines.length,
+          rowCount: rowArray.length,
           fileSizeBytes: stats.size,
+          storageUrl,
           completedAt: new Date(),
         })
         .where(eq(archiveExportsTable.id, record.id))
@@ -100,12 +174,17 @@ export class ArchiveExportService {
       throw new Error(`Export ${exportId} is not in completed status`);
     }
 
+    const { promises: fs } = await import("node:fs");
+    const fileBuffer = await fs.readFile(record.filePath);
+    const storageKey = `${record.tenantId}/${record.partitionName}_${Date.now()}.parquet`;
+    const storageUrl = await uploadToS3(storageKey, fileBuffer, "application/octet-stream");
+
     await db
       .update(archiveExportsTable)
-      .set({
-        storageUrl: `s3://placeholder-bucket/${record.tenantId}/${record.partitionName}`,
-      })
+      .set({ storageUrl })
       .where(eq(archiveExportsTable.id, exportId));
+
+    await fs.unlink(record.filePath);
   }
 
   async getExportStatus(

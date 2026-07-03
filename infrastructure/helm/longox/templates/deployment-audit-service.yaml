@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.auditService.name }}
+  labels:
+    app: {{ .Values.auditService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ .Values.auditService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.auditService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.auditService.name }}
+    spec:
+      containers:
+        - name: {{ .Values.auditService.name }}
+          image: "{{ .Values.auditService.image.repository }}:{{ .Values.auditService.image.tag }}"
+          imagePullPolicy: {{ .Values.auditService.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.auditService.service.targetPort }}
+          env:
+            {{- range $key, $value := .Values.auditService.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: database_url
+          resources:
+            {{- toYaml .Values.auditService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.auditService.service.targetPort }}
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.auditService.service.targetPort }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.auditService.name }}
+  labels:
+    app: {{ .Values.auditService.name }}
+spec:
+  type: {{ .Values.auditService.service.type }}
+  ports:
+    - port: {{ .Values.auditService.service.port }}
+      targetPort: {{ .Values.auditService.service.targetPort }}
+      protocol: TCP
+  selector:
+    app: {{ .Values.auditService.name }}

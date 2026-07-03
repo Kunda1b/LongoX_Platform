@@ -10,6 +10,8 @@ export {
   detectCycles,
   normalizeGraph as normalizeWorkflowGraph,
   createEmptyGraph,
+  getDownstreamNodes,
+  getUpstreamNodes,
 } from "./graph";
 export type {
   CanvasNode,

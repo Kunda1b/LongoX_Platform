@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.complianceService.name }}
+  labels:
+    app: {{ .Values.complianceService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ .Values.complianceService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.complianceService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.complianceService.name }}
+    spec:
+      containers:
+        - name: {{ .Values.complianceService.name }}
+          image: "{{ .Values.complianceService.image.repository }}:{{ .Values.complianceService.image.tag }}"
+          imagePullPolicy: {{ .Values.complianceService.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.complianceService.service.targetPort }}
+          env:
+            {{- range $key, $value := .Values.complianceService.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: database_url
+          resources:
+            {{- toYaml .Values.complianceService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.complianceService.service.targetPort }}
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.complianceService.service.targetPort }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.complianceService.name }}
+  labels:
+    app: {{ .Values.complianceService.name }}
+spec:
+  type: {{ .Values.complianceService.service.type }}
+  ports:
+    - port: {{ .Values.complianceService.service.port }}
+      targetPort: {{ .Values.complianceService.service.targetPort }}
+      protocol: TCP
+  selector:
+    app: {{ .Values.complianceService.name }}

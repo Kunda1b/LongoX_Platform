@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { WorkOSAuthKit } from "@/components/auth/workos-authkit";
 
 export default function LoginPage() {
   const { login, isLoading: authLoading } = useAuth();
@@ -83,6 +84,15 @@ export default function LoginPage() {
             >
               {loading ? "Signing in..." : "Sign in"}
             </Button>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+              </div>
+            </div>
+            <WorkOSAuthKit />
             <p className="text-center text-sm text-muted-foreground">
               Don&apos;t have an account?{" "}
               <Link

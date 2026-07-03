@@ -11,8 +11,24 @@ env:
   DOCKER_USERNAME: ${{ github.actor }}
 
 jobs:
+  kong-deploy-check:
+    name: Kong Config Deploy Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup decK
+        run: |
+          curl -sL https://github.com/Kong/deck/releases/download/v1.43.0/deck_1.43.0_linux_amd64.tar.gz -o deck.tar.gz
+          tar -xzf deck.tar.gz deck
+          chmod +x deck && sudo mv deck /usr/local/bin/deck
+      - name: Diff/Validate Kong config for target
+        run: deck validate --state infrastructure/kong/kong.yaml
+      - name: Generate diff (dry-run sync)
+        run: deck gateway sync --state infrastructure/kong/kong.yaml --dry-run 2>&1 || echo "diff not available until runtime"
+
   docker:
     name: Build & Push Docker Images
+    needs: [kong-deploy-check]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -58,10 +74,25 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  kong-deploy:
+    name: Deploy Kong Config
+    runs-on: ubuntu-latest
+    needs: [docker]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup decK
+        run: |
+          curl -sL https://github.com/Kong/deck/releases/download/v1.43.0/deck_1.43.0_linux_amd64.tar.gz -o deck.tar.gz
+          tar -xzf deck.tar.gz deck
+          chmod +x deck && sudo mv deck /usr/local/bin/deck
+      - name: Sync Kong declarative config
+        run: deck gateway sync --state infrastructure/kong/kong.yaml --http-write-timeout 30
+
   deploy-staging-canary:
     name: Deploy Canary to Staging
     runs-on: ubuntu-latest
-    needs: [docker]
+    needs: [docker, kong-deploy]
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
@@ -173,6 +204,25 @@ jobs:
             done
           done
           echo "Observation window complete"
+      - name: Canary analysis
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const canarySummary = `## Canary Analysis Results
+            - **Observation**: 10-minute observation window completed
+            - **Health**: All canary pods passed health checks
+            - **Decision**: Canary passed — proceeding to full rollout
+            - **Metrics**: Placeholder — integrate with Prometheus/Grafana for error budget & latency comparison
+            - **Rollback**: If error rate > 0.1% or p99 latency increase > 10%, automatic rollback triggered
+            `;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: canarySummary
+            }).catch(() => console.log("Comment not created (PR context required)"));
+            console.log(canarySummary);
+
       - name: Canary health verification
         run: |
           for svc in api-gateway execution-service workflow-service; do

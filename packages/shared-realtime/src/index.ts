@@ -20,9 +20,11 @@ export interface SubscriptionFilter {
 class RealtimeHub {
   private clients = new Map<string, SseClient>();
   private clientFilters = new Map<string, SubscriptionFilter>();
+  private clientEventSubscriptions = new Map<string, Set<string>>();
 
   register(client: SseClient, filter?: SubscriptionFilter): () => void {
     this.clients.set(client.id, client);
+    this.clientEventSubscriptions.set(client.id, new Set(["*"]));
     if (filter) {
       this.clientFilters.set(client.id, filter);
     }
@@ -31,14 +33,37 @@ class RealtimeHub {
     return () => {
       this.clients.delete(client.id);
       this.clientFilters.delete(client.id);
+      this.clientEventSubscriptions.delete(client.id);
       logger.info({ clientId: client.id }, "[Realtime] Client unregistered");
     };
+  }
+
+  subscribe(clientId: string, eventTypes: string[]): void {
+    const subs = this.clientEventSubscriptions.get(clientId);
+    if (subs) {
+      if (eventTypes.includes("*")) {
+        subs.clear();
+        subs.add("*");
+      } else {
+        subs.delete("*");
+        for (const t of eventTypes) subs.add(t);
+      }
+    }
+  }
+
+  unsubscribe(clientId: string, eventTypes: string[]): void {
+    const subs = this.clientEventSubscriptions.get(clientId);
+    if (subs) {
+      for (const t of eventTypes) subs.delete(t);
+      if (subs.size === 0) subs.add("*");
+    }
   }
 
   broadcast(event: PlatformEvent): void {
     let delivered = 0;
     for (const [id, client] of this.clients) {
       const filter = this.clientFilters.get(id);
+      const subs = this.clientEventSubscriptions.get(id) ?? new Set(["*"]);
 
       if (filter) {
         if (filter.tenantId && event.payload.tenantId !== filter.tenantId)
@@ -55,7 +80,7 @@ class RealtimeHub {
           continue;
       }
 
-      if (client.interests.has(event.type) || client.interests.has("*")) {
+      if (subs.has(event.type) || subs.has("*")) {
         try {
           client.send("event", event);
           delivered++;
@@ -66,6 +91,7 @@ class RealtimeHub {
           );
           this.clients.delete(id);
           this.clientFilters.delete(id);
+          this.clientEventSubscriptions.delete(id);
         }
       }
     }
@@ -96,7 +122,10 @@ class RealtimeHub {
 
 export const realtimeHub = new RealtimeHub();
 
-export function createSseWriter(res: any): SseClient {
+export function createSseWriter(
+  res: any,
+  options?: { interest?: string[] },
+): SseClient {
   const id = `sse_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
   res.writeHead(200, {
@@ -116,9 +145,14 @@ export function createSseWriter(res: any): SseClient {
     }
   }, 15000);
 
+  const eventTypes = options?.interest;
+  const interests = eventTypes && eventTypes.length > 0
+    ? new Set(eventTypes)
+    : new Set(["*"]);
+
   const client: SseClient = {
     id,
-    interests: new Set(["*"]),
+    interests,
     send(event: string, data: unknown) {
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     },
@@ -129,6 +163,10 @@ export function createSseWriter(res: any): SseClient {
       } catch {}
     },
   };
+
+  if (eventTypes && eventTypes.length > 0) {
+    realtimeHub.subscribe(id, eventTypes);
+  }
 
   res.on("close", () => {
     clearInterval(keepalive);

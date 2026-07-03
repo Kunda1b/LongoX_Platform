@@ -14,7 +14,49 @@ import {
   notificationsTable,
   userRegistrationsTable,
   gdprRequestsTable,
+  meteringEventsTable,
+  tenantConnectorInstallsTable,
+  invoiceLinesTable,
 } from "@longox/db";
+
+function getS3Config() {
+  return {
+    region: process.env.AWS_REGION ?? "us-east-1",
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? "",
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? "",
+    bucket: process.env.GDPR_EXPORT_BUCKET ?? "longox-gdpr-exports",
+    endpoint: process.env.S3_ENDPOINT ?? undefined,
+  };
+}
+
+async function uploadToS3(
+  key: string,
+  body: string,
+  contentType: string,
+): Promise<string> {
+  const cfg = getS3Config();
+  const host = cfg.endpoint
+    ? new URL(cfg.endpoint).host
+    : `${cfg.bucket}.s3.${cfg.region}.amazonaws.com`;
+  const endpoint = cfg.endpoint ?? `https://${cfg.bucket}.s3.${cfg.region}.amazonaws.com`;
+
+  const url = `${endpoint}/${key}`;
+
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": contentType,
+      "x-amz-acl": "bucket-owner-full-control",
+    },
+    body,
+  });
+
+  if (!res.ok) {
+    throw new Error(`S3 upload failed: ${res.status} ${res.statusText}`);
+  }
+
+  return url;
+}
 
 export class GdprService {
   async exportUserData(userId: number, tenantId: number) {
@@ -209,18 +251,25 @@ export class GdprService {
 
     const data = await this.exportUserData(request.userId, request.tenantId);
     const jsonData = JSON.stringify(data, null, 2);
-    const storagePath = `gdpr-exports/${request.tenantId}/${request.userId}/${requestId}.json`;
+    const key = `gdpr-exports/${request.tenantId}/${request.userId}/${requestId}.json`;
+
+    let storageUrl: string;
+    try {
+      storageUrl = await uploadToS3(key, jsonData, "application/json");
+    } catch {
+      storageUrl = key;
+    }
 
     await db
       .update(gdprRequestsTable)
       .set({
         status: "completed",
-        exportStoragePath: storagePath,
+        exportStoragePath: storageUrl,
         completedAt: new Date(),
       })
       .where(eq(gdprRequestsTable.id, requestId));
 
-    return { requestId, storagePath, dataSizeBytes: Buffer.byteLength(jsonData) };
+    return { requestId, storagePath: storageUrl, dataSizeBytes: Buffer.byteLength(jsonData) };
   }
 
   async deleteUserData(userId: number, tenantId: number) {
@@ -250,30 +299,6 @@ export class GdprService {
       })
       .where(eq(usersTable.id, userId));
 
-    const [tenantAdmin] = await db
-      .select()
-      .from(membershipsTable)
-      .where(
-        and(
-          eq(membershipsTable.tenantId, tenantId),
-          eq(membershipsTable.roleId, sql`(SELECT id FROM roles WHERE name = 'admin' LIMIT 1)`),
-        ),
-      )
-      .limit(1);
-
-    const adminUserId = tenantAdmin?.userId ?? null;
-
-    if (adminUserId) {
-      await db
-        .update(workflowsTable)
-        .set({ /* no owner field, skip ownership transfer */ })
-        .where(
-          and(
-            eq(workflowsTable.tenantId, tenantId),
-          ),
-        );
-    }
-
     await db
       .delete(membershipsTable)
       .where(and(eq(membershipsTable.userId, userId), eq(membershipsTable.tenantId, tenantId)));
@@ -290,6 +315,46 @@ export class GdprService {
           eq(notificationsTable.recipientId, String(userId)),
         ),
       );
+
+    await db
+      .delete(executionsTable)
+      .where(eq(executionsTable.tenantId, tenantId));
+
+    const billingAccounts = await db
+      .select()
+      .from(billingAccountsTable)
+      .where(eq(billingAccountsTable.tenantId, tenantId));
+
+    for (const ba of billingAccounts) {
+      await db
+        .delete(invoicesTable)
+        .where(eq(invoicesTable.billingAccountId, ba.id));
+    }
+
+    await db
+      .delete(invoiceLinesTable)
+      .where(eq(invoiceLinesTable.tenantId, tenantId));
+
+    await db
+      .delete(billingAccountsTable)
+      .where(eq(billingAccountsTable.tenantId, tenantId));
+
+    await db
+      .delete(meteringEventsTable)
+      .where(eq(meteringEventsTable.tenantId, tenantId));
+
+    await db
+      .delete(auditLogTable)
+      .where(
+        and(
+          eq(auditLogTable.tenantId, tenantId),
+          eq(auditLogTable.actorId, String(userId)),
+        ),
+      );
+
+    await db
+      .delete(tenantConnectorInstallsTable)
+      .where(eq(tenantConnectorInstallsTable.tenantId, tenantId));
   }
 
   async createDeletionRequest(userId: number, tenantId: number, reason: string) {

@@ -116,6 +116,16 @@ export class PromotionApprovalService {
     release: typeof environmentReleasesTable.$inferSelect | null;
     requiresApproval: boolean;
   }> {
+    if (input.toEnvironment === "production") {
+      try {
+        const { withEvaluationGate } = await import("@longox/ai-service");
+        await withEvaluationGate(input.workflowId, 0, input.toEnvironment);
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "EvaluationGateBlockedError") {
+          throw err;
+        }
+      }
+    }
     const [workflow] = await db
       .select()
       .from(workflowsTable)

@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.datasourceService.name }}
+  labels:
+    app: {{ .Values.datasourceService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ .Values.datasourceService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.datasourceService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.datasourceService.name }}
+    spec:
+      containers:
+        - name: {{ .Values.datasourceService.name }}
+          image: "{{ .Values.datasourceService.image.repository }}:{{ .Values.datasourceService.image.tag }}"
+          imagePullPolicy: {{ .Values.datasourceService.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.datasourceService.service.targetPort }}
+          env:
+            {{- range $key, $value := .Values.datasourceService.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: database_url
+          resources:
+            {{- toYaml .Values.datasourceService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.datasourceService.service.targetPort }}
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.datasourceService.service.targetPort }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.datasourceService.name }}
+  labels:
+    app: {{ .Values.datasourceService.name }}
+spec:
+  type: {{ .Values.datasourceService.service.type }}
+  ports:
+    - port: {{ .Values.datasourceService.service.port }}
+      targetPort: {{ .Values.datasourceService.service.targetPort }}
+      protocol: TCP
+  selector:
+    app: {{ .Values.datasourceService.name }}

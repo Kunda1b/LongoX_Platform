@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.billingService.name }}
+  labels:
+    app: {{ .Values.billingService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ .Values.billingService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.billingService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.billingService.name }}
+    spec:
+      containers:
+        - name: {{ .Values.billingService.name }}
+          image: "{{ .Values.billingService.image.repository }}:{{ .Values.billingService.image.tag }}"
+          imagePullPolicy: {{ .Values.billingService.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.billingService.service.targetPort }}
+          env:
+            {{- range $key, $value := .Values.billingService.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: database_url
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stripe-secret
+                  key: secret
+          resources:
+            {{- toYaml .Values.billingService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.billingService.service.targetPort }}
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.billingService.service.targetPort }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.billingService.name }}
+  labels:
+    app: {{ .Values.billingService.name }}
+spec:
+  type: {{ .Values.billingService.service.type }}
+  ports:
+    - port: {{ .Values.billingService.service.port }}
+      targetPort: {{ .Values.billingService.service.targetPort }}
+      protocol: TCP
+  selector:
+    app: {{ .Values.billingService.name }}

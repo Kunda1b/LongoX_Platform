@@ -4,8 +4,13 @@ import { db, environmentsTable, environmentReleasesTable, workflowPromotionsTabl
 import { authorize } from "@longox/shared-rbac";
 import { z } from "zod";
 import { promotionApprovalService } from "../services/promotion-approval.service";
+import { registerVersionedRoutes, buildVersionedPaths } from "../lib/api-versioning";
 
 const router: IRouter = Router();
+
+registerVersionedRoutes(router, [
+  { path: "/api/v1/environments", handler: (_req, _res, next) => next(), deprecatedSince: "2026-01-01", sunsetDate: "2026-07-03" },
+]);
 
 const promoteSchema = z.object({
   workflowId: z.number(),

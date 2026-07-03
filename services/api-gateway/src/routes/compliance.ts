@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
-import { db, auditLogTable, usersTable, tenantsTable } from "@longox/db";
+import { db, auditLogTable, usersTable, tenantsTable, gdprRequestsTable } from "@longox/db";
 import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
@@ -249,6 +249,129 @@ router.post(
       .where(eq(usersTable.id, userId));
 
     res.json({ success: true, message: "Account anonymized per GDPR request" });
+  },
+);
+
+router.post(
+  "/api/v1/compliance/gdpr/export",
+  authorize({ resource: "compliance", action: "read" }),
+  async (req: Request, res: Response): Promise<void> => {
+    const tenantId = req.tenantId ?? 0;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, userId));
+
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    const [gdprRequest] = await db
+      .insert(gdprRequestsTable)
+      .values({
+        tenantId,
+        userId,
+        requestType: "export",
+        status: "completed",
+        dataScope: { allUserData: true },
+        exportFormat: "json",
+        completedAt: new Date(),
+      })
+      .returning();
+
+    const auditEntries = await db
+      .select()
+      .from(auditLogTable)
+      .where(
+        and(
+          eq(auditLogTable.tenantId, tenantId),
+          eq(auditLogTable.actorId, String(userId)),
+        ),
+      )
+      .orderBy(desc(auditLogTable.createdAt));
+
+    const gdprData = {
+      exportedAt: new Date().toISOString(),
+      exportId: gdprRequest.id,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+        lastLoginAt: user.lastLoginAt,
+      },
+      auditEntries: auditEntries.map((e) => ({
+        action: e.action,
+        resourceType: e.resourceType,
+        resourceId: e.resourceId,
+        createdAt: e.createdAt,
+      })),
+      retentionPolicy: {
+        auditLogRetentionDays: 90,
+        dataAnonymizedAfterDays: 365,
+      },
+    };
+
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Content-Disposition", "attachment; filename=gdpr-data-export.json");
+    res.json(gdprData);
+  },
+);
+
+router.post(
+  "/api/v1/compliance/gdpr/delete",
+  authorize({ resource: "compliance", action: "admin" }),
+  async (req: Request, res: Response): Promise<void> => {
+    const { userId, reason } = req.body as { userId?: number; reason?: string };
+
+    if (!userId) {
+      res.status(400).json({ error: "userId is required" });
+      return;
+    }
+
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, userId));
+
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    const [deletionRequest] = await db
+      .insert(gdprRequestsTable)
+      .values({
+        tenantId: req.tenantId ?? 0,
+        userId,
+        requestType: "deletion",
+        status: "completed",
+        dataScope: { reason: reason ?? "Requested by admin", allUserData: true },
+        completedAt: new Date(),
+      })
+      .returning();
+
+    await db
+      .update(usersTable)
+      .set({
+        isActive: false,
+        email: `deleted-${userId}@anonymized.longox.io`,
+        name: "Deleted User",
+        passwordHash: "ANONYMIZED",
+      })
+      .where(eq(usersTable.id, userId));
+
+    res.json({ success: true, requestId: deletionRequest.id, message: "Account anonymized per GDPR request" });
   },
 );
 

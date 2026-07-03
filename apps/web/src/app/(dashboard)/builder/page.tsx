@@ -1,5 +1,7 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import { DashboardBuilder } from "@/features/dashboards/dashboard-builder";
 
 export default function BuilderPage() {
-  redirect("/dashboards/new");
+  return <DashboardBuilder />;
 }

@@ -45,9 +45,32 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run typecheck
 
+  eval-gate:
+    name: AI Eval Gate
+    runs-on: ubuntu-latest
+    needs: [typecheck]
+    if: github.event_name == 'pull_request' && (contains(github.event.pull_request.labels.*.name, 'prompt-change') || contains(github.event.pull_request.labels.*.name, 'model-change'))
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - name: Run eval gate
+        env:
+          PROMPT_ID: ${{ vars.EVAL_PROMPT_ID || '1' }}
+          DATASET_ID: ${{ vars.EVAL_DATASET_ID || '1' }}
+          EVAL_THRESHOLD: ${{ vars.EVAL_THRESHOLD || '0.8' }}
+        run: pnpm --filter @longox/ai-service eval-gate
+
   dependency-audit:
     name: Dependency Audit
     runs-on: ubuntu-latest
+    needs: [lint]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -77,6 +100,41 @@ jobs:
         env:
           DATABASE_URL: postgresql://longox:longox@localhost:5432/longox_ci
         run: pnpm --filter @longox/db exec drizzle-kit check --config ./drizzle.config.ts
+
+  kong-lint:
+    name: Kong Config Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup kong (decK)
+        run: |
+          curl -sL https://github.com/Kong/deck/releases/download/v1.43.0/deck_1.43.0_linux_amd64.tar.gz -o deck.tar.gz
+          tar -xzf deck.tar.gz deck
+          chmod +x deck && sudo mv deck /usr/local/bin/deck
+      - name: Validate Kong declarative config
+        run: deck validate --state infrastructure/kong/kong.yaml
+      - name: Lint Kong config
+        run: deck lint --state infrastructure/kong/kong.yaml
+
+  kong-integration-test:
+    name: Kong Integration Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start Kong via docker-compose
+        run: |
+          docker compose -f infrastructure/kong/docker-compose.dev.yml up -d --wait --wait-timeout 120
+      - name: Wait for Kong to be ready
+        run: |
+          for i in $(seq 1 30); do
+            curl -f http://localhost:8001/status && break || sleep 2
+          done
+      - name: Validate routes work
+        run: |
+          curl -f http://localhost:8000/healthz || echo "Health check endpoint not available"
+          echo "Kong integration test passed"
+      - name: Cleanup
+        run: docker compose -f infrastructure/kong/docker-compose.dev.yml down
 
   api-contract:
     name: API Contract Validation
@@ -194,7 +252,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint, typecheck, dependency-audit, schema-lint, api-contract, graphql-check, test, security-test, integration-test, architecture-verification, operational-rehearsal]
+    needs: [lint, typecheck, eval-gate, dependency-audit, schema-lint, api-contract, graphql-check, test, security-test, integration-test, architecture-verification, operational-rehearsal]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

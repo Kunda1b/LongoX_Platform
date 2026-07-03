@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.adminFrontend.name }}
+  labels:
+    app: {{ .Values.adminFrontend.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ .Values.adminFrontend.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.adminFrontend.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.adminFrontend.name }}
+    spec:
+      containers:
+        - name: {{ .Values.adminFrontend.name }}
+          image: "{{ .Values.adminFrontend.image.repository }}:{{ .Values.adminFrontend.image.tag }}"
+          imagePullPolicy: {{ .Values.adminFrontend.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.adminFrontend.service.targetPort }}
+          env:
+            {{- range $key, $value := .Values.adminFrontend.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.adminFrontend.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.adminFrontend.service.targetPort }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.adminFrontend.service.targetPort }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.adminFrontend.name }}
+  labels:
+    app: {{ .Values.adminFrontend.name }}
+spec:
+  type: {{ .Values.adminFrontend.service.type }}
+  ports:
+    - port: {{ .Values.adminFrontend.service.port }}
+      targetPort: {{ .Values.adminFrontend.service.targetPort }}
+      protocol: TCP
+  selector:
+    app: {{ .Values.adminFrontend.name }}

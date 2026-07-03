@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.marketplaceService.name }}
+  labels:
+    app: {{ .Values.marketplaceService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ .Values.marketplaceService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.marketplaceService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.marketplaceService.name }}
+    spec:
+      containers:
+        - name: {{ .Values.marketplaceService.name }}
+          image: "{{ .Values.marketplaceService.image.repository }}:{{ .Values.marketplaceService.image.tag }}"
+          imagePullPolicy: {{ .Values.marketplaceService.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.marketplaceService.service.targetPort }}
+          env:
+            {{- range $key, $value := .Values.marketplaceService.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: database_url
+          resources:
+            {{- toYaml .Values.marketplaceService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.marketplaceService.service.targetPort }}
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.marketplaceService.service.targetPort }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.marketplaceService.name }}
+  labels:
+    app: {{ .Values.marketplaceService.name }}
+spec:
+  type: {{ .Values.marketplaceService.service.type }}
+  ports:
+    - port: {{ .Values.marketplaceService.service.port }}
+      targetPort: {{ .Values.marketplaceService.service.targetPort }}
+      protocol: TCP
+  selector:
+    app: {{ .Values.marketplaceService.name }}

@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.apiGateway.name }}-config
+  labels:
+    app: {{ .Values.apiGateway.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.global.environment | quote }}
+  LOG_LEVEL: {{ .Values.apiGateway.env.LOG_LEVEL | default "info" | quote }}
+  API_PREFIX: {{ .Values.apiGateway.env.API_PREFIX | default "/api/v1" | quote }}
+  PORT: {{ .Values.apiGateway.service.targetPort | toString | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.authService.name }}-config
+  labels:
+    app: {{ .Values.authService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.global.environment | quote }}
+  LOG_LEVEL: {{ .Values.authService.env.LOG_LEVEL | default "info" | quote }}
+  PORT: {{ .Values.authService.service.targetPort | toString | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.executionService.name }}-config
+  labels:
+    app: {{ .Values.executionService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.global.environment | quote }}
+  LOG_LEVEL: {{ .Values.executionService.env.LOG_LEVEL | default "info" | quote }}
+  PORT: {{ .Values.executionService.service.targetPort | toString | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.workflowService.name }}-config
+  labels:
+    app: {{ .Values.workflowService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.global.environment | quote }}
+  LOG_LEVEL: {{ .Values.workflowService.env.LOG_LEVEL | default "info" | quote }}
+  PORT: {{ .Values.workflowService.service.targetPort | toString | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.connectorService.name }}-config
+  labels:
+    app: {{ .Values.connectorService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.global.environment | quote }}
+  LOG_LEVEL: {{ .Values.connectorService.env.LOG_LEVEL | default "info" | quote }}
+  PORT: {{ .Values.connectorService.service.targetPort | toString | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.billingService.name }}-config
+  labels:
+    app: {{ .Values.billingService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.global.environment | quote }}
+  LOG_LEVEL: {{ .Values.billingService.env.LOG_LEVEL | default "info" | quote }}
+  PORT: {{ .Values.billingService.service.targetPort | toString | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.aiService.name }}-config
+  labels:
+    app: {{ .Values.aiService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.global.environment | quote }}
+  LOG_LEVEL: {{ .Values.aiService.env.LOG_LEVEL | default "info" | quote }}
+  PORT: {{ .Values.aiService.service.targetPort | toString | quote }}

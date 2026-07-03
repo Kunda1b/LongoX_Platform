@@ -1,0 +1,16 @@
+{{- if .Values.tenantTierNamespaces.enabled }}
+{{- range $tier, $nsConfig := .Values.tenantTierNamespaces.tiers }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $nsConfig.name }}
+  labels:
+    tenant-tier: {{ $tier }}
+    longox.io/managed-by: helm
+    longox.io/environment: {{ $.Values.global.environment }}
+    {{- if $nsConfig.istioInjection }}
+    istio-injection: enabled
+    {{- end }}
+{{- end }}
+{{- end }}

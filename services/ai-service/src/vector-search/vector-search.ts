@@ -1,6 +1,8 @@
+import { db, ragChunksTable } from "@longox/db";
+import { sql, eq, isNotNull } from "drizzle-orm";
 import { embeddingService } from "../embeddings/embedding-service";
 
-interface IndexedDocument {
+export interface IndexedDocument {
   id: string;
   content: string;
   metadata: Record<string, unknown>;
@@ -8,16 +10,18 @@ interface IndexedDocument {
 }
 
 export class VectorSearch {
-  private documents: IndexedDocument[] = [];
-  private dimensions: number = 1536;
-
   async index(
     id: string,
     content: string,
     metadata: Record<string, unknown> = {},
   ): Promise<void> {
     const { vector } = await embeddingService.generateEmbedding(content);
-    this.documents.push({ id, content, metadata, embedding: vector });
+    const vectorLit = `[${vector.join(",")}]`;
+
+    await db.execute(sql`
+      INSERT INTO rag_chunks (document_id, knowledge_base_id, chunk_index, content, embedding, tokens, metadata)
+      VALUES (0, 0, ${sql.raw(id)}, ${content}, ${sql.raw(`'${vectorLit}'::vector`)}, 0, ${sql.raw(JSON.stringify(metadata))}::jsonb)
+    `);
   }
 
   async search(
@@ -35,32 +39,51 @@ export class VectorSearch {
     const { vector: queryVector } =
       await embeddingService.generateEmbedding(query);
 
-    let candidates = this.documents;
+    const vectorLit = `[${queryVector.join(",")}]`;
+
+    const result = await db.execute(sql`
+      SELECT
+        rc.id,
+        rc.content,
+        rc.metadata,
+        1 - (rc.embedding <=> ${sql.raw(`'${vectorLit}'::vector`)}) AS score
+      FROM ${ragChunksTable} rc
+      WHERE rc.embedding IS NOT NULL
+      ORDER BY rc.embedding <=> ${sql.raw(`'${vectorLit}'::vector`)}
+      LIMIT ${topK}
+    `);
+
+    const rows = result.rows ?? [];
+
+    let candidates = rows.map((r: any) => ({
+      id: String(r.id),
+      content: r.content,
+      metadata: r.metadata ?? {},
+      score: r.score,
+    }));
 
     if (filter) {
       candidates = candidates.filter(filter);
     }
 
-    const scored = candidates.map((doc) => ({
-      ...doc,
-      score: embeddingService.cosineSimilarity(queryVector, doc.embedding),
-    }));
-
-    scored.sort((a, b) => b.score - a.score);
-
-    return scored.slice(0, topK).map(({ embedding: _, ...rest }) => rest);
+    return candidates.slice(0, topK);
   }
 
   async delete(id: string): Promise<void> {
-    this.documents = this.documents.filter((d) => d.id !== id);
+    await db
+      .delete(ragChunksTable)
+      .where(eq(ragChunksTable.chunkIndex, sql.raw(id) as any));
   }
 
   async clear(): Promise<void> {
-    this.documents = [];
+    await db.delete(ragChunksTable);
   }
 
-  get size(): number {
-    return this.documents.length;
+  async size(): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(ragChunksTable);
+    return result[0]?.count ?? 0;
   }
 }
 

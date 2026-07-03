@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.aiService.name }}
+  labels:
+    app: {{ .Values.aiService.name }}
+    {{- include "longox.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ .Values.aiService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.aiService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.aiService.name }}
+    spec:
+      containers:
+        - name: {{ .Values.aiService.name }}
+          image: "{{ .Values.aiService.image.repository }}:{{ .Values.aiService.image.tag }}"
+          imagePullPolicy: {{ .Values.aiService.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.aiService.service.targetPort }}
+          env:
+            {{- range $key, $value := .Values.aiService.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: database_url
+          resources:
+            {{- toYaml .Values.aiService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.aiService.service.targetPort }}
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.aiService.service.targetPort }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.aiService.name }}
+  labels:
+    app: {{ .Values.aiService.name }}
+spec:
+  type: {{ .Values.aiService.service.type }}
+  ports:
+    - port: {{ .Values.aiService.service.port }}
+      targetPort: {{ .Values.aiService.service.targetPort }}
+      protocol: TCP
+  selector:
+    app: {{ .Values.aiService.name }}
