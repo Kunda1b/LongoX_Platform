@@ -41,9 +41,18 @@ interface WorkOSCompat {
       refreshToken: string;
       expiresAt: Date;
     }>;
-    enrollAuthFactor(opts: { userId: string; type: "totp" }): Promise<{
-      authenticationFactor: { id: string };
-      authenticationChallenge: { id: string; qrCode: string; secret: string };
+    enrollAuthFactor(opts: {
+      userId: string;
+      type: "totp" | "sms" | "webauthn";
+      phoneNumber?: string;
+    }): Promise<{
+      authenticationFactor: { id: string; type: string };
+      authenticationChallenge: {
+        id: string;
+        qrCode?: string;
+        secret?: string;
+        challenge?: string;
+      };
     }>;
     challengeAuthFactor(opts: {
       authenticationFactorId: string;
@@ -193,23 +202,42 @@ export function mapWorkOSUser(
   };
 }
 
-export async function enrollMfa(workosUserId: string): Promise<{
+export type MfaFactorType = "totp" | "sms" | "webauthn";
+
+export async function enrollMfa(
+  workosUserId: string,
+  type: MfaFactorType = "totp",
+  phoneNumber?: string,
+): Promise<{
   factorId: string;
+  factorType: MfaFactorType;
   challengeId: string;
-  qrCode: string;
-  secret: string;
+  qrCode?: string;
+  secret?: string;
+  challenge?: string;
 }> {
   const wos = getWorkOS();
   const result = await wos.userManagement.enrollAuthFactor({
     userId: workosUserId,
-    type: "totp",
+    type,
+    ...(phoneNumber ? { phoneNumber } : {}),
   });
   return {
     factorId: result.authenticationFactor.id,
+    factorType: type,
     challengeId: result.authenticationChallenge.id,
     qrCode: result.authenticationChallenge.qrCode,
     secret: result.authenticationChallenge.secret,
+    challenge: result.authenticationChallenge.challenge,
   };
+}
+
+export async function enrollWebAuthnMfa(workosUserId: string) {
+  return enrollMfa(workosUserId, "webauthn");
+}
+
+export async function enrollSmsMfa(workosUserId: string, phoneNumber: string) {
+  return enrollMfa(workosUserId, "sms", phoneNumber);
 }
 
 export async function challengeMfa(factorId: string): Promise<string> {

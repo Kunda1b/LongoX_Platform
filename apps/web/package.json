@@ -11,6 +11,7 @@
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@longox/api-client-react": "workspace:*",
+    "@longox/design-system": "workspace:*",
     "@longox/dashboard-renderer": "workspace:*",
     "@longox/dashboard-widgets": "workspace:*",
     "@longox/shared-events": "workspace:*",

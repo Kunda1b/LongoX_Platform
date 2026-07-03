@@ -21,6 +21,9 @@ import {
 } from "../lib/auth";
 import { sendVerificationEmail, sendPasswordResetEmail } from "../lib/email";
 import { seedRoles, getSystemRoleId } from "@longox/shared-rbac";
+import { RegisterUserBody, LoginUserBody } from "@longox/lib-api-zod";
+import { validateRequest } from "../middleware/zod-validation";
+import { buildVersionedPaths } from "../lib/api-versioning";
 
 const router: IRouter = Router();
 
@@ -48,37 +51,23 @@ async function uniqueTenantSlug(base: string): Promise<string> {
   return `${slug}-${Date.now()}`;
 }
 
-router.post(["/auth/register", "/api/auth/register", "/api/v1/auth/register"], async (req, res): Promise<void> => {
-  // Ensure system roles are seeded before first registration
+router.post(
+  buildVersionedPaths("/auth/register"),
+  validateRequest(RegisterUserBody),
+  async (req, res): Promise<void> => {
   await seedRoles();
 
   const { name, email, password, organizationName } = req.body as {
-    name?: string;
-    email?: string;
-    password?: string;
+    name: string;
+    email: string;
+    password: string;
     organizationName?: string;
   };
 
-  const trimmedName = name?.trim();
-  const trimmedEmail = email?.trim().toLowerCase();
-  const trimmedPassword = password?.trim();
+  const trimmedName = name.trim();
+  const trimmedEmail = email.trim().toLowerCase();
+  const trimmedPassword = password.trim();
   const trimmedOrg = organizationName?.trim();
-
-  if (!trimmedName || !trimmedEmail || !trimmedPassword) {
-    res.status(400).json({ error: "Name, email, and password are required" });
-    return;
-  }
-
-  if (trimmedPassword.length < 8) {
-    res.status(400).json({ error: "Password must be at least 8 characters" });
-    return;
-  }
-
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailPattern.test(trimmedEmail)) {
-    res.status(400).json({ error: "Invalid email address" });
-    return;
-  }
 
   const [existingUser] = await db
     .select({ id: usersTable.id })
@@ -190,12 +179,11 @@ router.post(["/auth/register", "/api/auth/register", "/api/v1/auth/register"], a
   }
 });
 
-router.post(["/auth/login", "/api/auth/login", "/api/v1/auth/login"], async (req, res): Promise<void> => {
-  const { email, password } = req.body as { email?: string; password?: string };
-  if (!email?.trim() || !password?.trim()) {
-    res.status(400).json({ error: "Email and password are required" });
-    return;
-  }
+router.post(
+  buildVersionedPaths("/auth/login"),
+  validateRequest(LoginUserBody),
+  async (req, res): Promise<void> => {
+  const { email, password } = req.body as { email: string; password: string };
 
   const [user] = await db
     .select()

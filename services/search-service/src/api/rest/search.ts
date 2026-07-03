@@ -8,7 +8,10 @@ import type { Request } from "express";
 
 const router: IRouter = Router();
 
-const useTypesense = process.env.TYPESENSE_API_KEY && process.env.TYPESENSE_HOST;
+const useTypesense =
+  process.env.SEARCH_BACKEND === "typesense" &&
+  process.env.TYPESENSE_API_KEY &&
+  process.env.TYPESENSE_HOST;
 const repository = useTypesense
   ? new TypesenseSearchRepository()
   : new PostgresSearchRepository();

@@ -31,11 +31,15 @@ import {
   refreshWorkOSToken,
   getAdminPortalLink,
   enrollMfa,
+  enrollWebAuthnMfa,
+  enrollSmsMfa,
   challengeMfa,
   verifyMfa,
   mapWorkOSUser,
   type AdminPortalIntent,
+  type MfaFactorType,
 } from "../lib/workos-auth";
+import { buildVersionedPaths } from "../lib/api-versioning";
 import { authorize } from "@longox/shared-rbac";
 
 const router = Router();
@@ -52,7 +56,7 @@ setInterval(() => {
 // ─── GET /auth/workos/url ─────────────────────────────────────────────────────
 
 router.get(
-  ["/auth/workos/url", "/api/auth/workos/url"],
+  buildVersionedPaths("/auth/workos/url"),
   async (req: Request, res: Response): Promise<void> => {
     const redirectUrl = (req.query["redirect"] as string) ?? "/dashboard";
     const organizationId = req.query["organization_id"] as string | undefined;
@@ -69,7 +73,7 @@ router.get(
 // ─── GET /auth/workos/callback ────────────────────────────────────────────────
 
 router.get(
-  ["/auth/workos/callback", "/api/auth/workos/callback"],
+  buildVersionedPaths("/auth/workos/callback"),
   async (req: Request, res: Response): Promise<void> => {
     const code = req.query["code"] as string | undefined;
     const state = req.query["state"] as string | undefined;
@@ -180,7 +184,7 @@ router.get(
 // ─── POST /auth/workos/refresh ────────────────────────────────────────────────
 
 router.post(
-  ["/auth/workos/refresh", "/api/auth/workos/refresh"],
+  buildVersionedPaths("/auth/workos/refresh"),
   async (req: Request, res: Response): Promise<void> => {
     const { refresh_token } = req.body as { refresh_token?: string };
     if (!refresh_token) {
@@ -206,7 +210,7 @@ router.post(
 // Requires authentication + tenants:admin permission.
 
 router.get(
-  ["/auth/workos/admin-portal", "/api/auth/workos/admin-portal"],
+  buildVersionedPaths("/auth/workos/admin-portal"),
   authMiddleware,
   authorize("tenants:admin"),
   async (req: Request, res: Response): Promise<void> => {
@@ -248,7 +252,41 @@ router.get(
 // ─── MFA: Enroll ──────────────────────────────────────────────────────────────
 
 router.post(
-  ["/auth/workos/mfa/enroll", "/api/auth/workos/mfa/enroll"],
+  buildVersionedPaths("/auth/workos/mfa/enroll"),
+  authMiddleware,
+  async (req: Request, res: Response): Promise<void> => {
+    const { workos_user_id, type } = req.body as {
+      workos_user_id?: string;
+      type?: MfaFactorType;
+    };
+    if (!workos_user_id) {
+      res.status(400).json({ error: "workos_user_id is required" });
+      return;
+    }
+
+    const factorType: MfaFactorType = type ?? "totp";
+
+    try {
+      const result = await enrollMfa(workos_user_id, factorType);
+      res.json({
+        factor_id: result.factorId,
+        factor_type: result.factorType,
+        challenge_id: result.challengeId,
+        qr_code: result.qrCode,
+        secret: result.secret,
+        challenge: result.challenge,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "MFA enroll failed";
+      res.status(500).json({ error: msg });
+    }
+  },
+);
+
+// ─── MFA: WebAuthn Enroll (ADR-007) ───────────────────────────────────────────
+
+router.post(
+  buildVersionedPaths("/auth/workos/mfa/enroll/webauthn"),
   authMiddleware,
   async (req: Request, res: Response): Promise<void> => {
     const { workos_user_id } = req.body as { workos_user_id?: string };
@@ -258,15 +296,44 @@ router.post(
     }
 
     try {
-      const result = await enrollMfa(workos_user_id);
+      const result = await enrollWebAuthnMfa(workos_user_id);
       res.json({
         factor_id: result.factorId,
+        factor_type: "webauthn",
         challenge_id: result.challengeId,
-        qr_code: result.qrCode,
-        secret: result.secret,
+        challenge: result.challenge,
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "MFA enroll failed";
+      const msg = err instanceof Error ? err.message : "WebAuthn enroll failed";
+      res.status(500).json({ error: msg });
+    }
+  },
+);
+
+// ─── MFA: SMS Enroll (ADR-007) ────────────────────────────────────────────────
+
+router.post(
+  buildVersionedPaths("/auth/workos/mfa/enroll/sms"),
+  authMiddleware,
+  async (req: Request, res: Response): Promise<void> => {
+    const { workos_user_id, phone_number } = req.body as {
+      workos_user_id?: string;
+      phone_number?: string;
+    };
+    if (!workos_user_id || !phone_number) {
+      res.status(400).json({ error: "workos_user_id and phone_number are required" });
+      return;
+    }
+
+    try {
+      const result = await enrollSmsMfa(workos_user_id, phone_number);
+      res.json({
+        factor_id: result.factorId,
+        factor_type: "sms",
+        challenge_id: result.challengeId,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "SMS MFA enroll failed";
       res.status(500).json({ error: msg });
     }
   },
@@ -275,7 +342,7 @@ router.post(
 // ─── MFA: Challenge ───────────────────────────────────────────────────────────
 
 router.post(
-  ["/auth/workos/mfa/challenge", "/api/auth/workos/mfa/challenge"],
+  buildVersionedPaths("/auth/workos/mfa/challenge"),
   authMiddleware,
   async (req: Request, res: Response): Promise<void> => {
     const { factor_id } = req.body as { factor_id?: string };
@@ -297,7 +364,7 @@ router.post(
 // ─── MFA: Verify ──────────────────────────────────────────────────────────────
 
 router.post(
-  ["/auth/workos/mfa/verify", "/api/auth/workos/mfa/verify"],
+  buildVersionedPaths("/auth/workos/mfa/verify"),
   authMiddleware,
   async (req: Request, res: Response): Promise<void> => {
     const { code, challenge_id } = req.body as {

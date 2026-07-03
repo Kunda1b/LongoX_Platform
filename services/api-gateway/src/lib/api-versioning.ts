@@ -92,10 +92,16 @@ export function registerVersionedRoutes(
   }
 }
 
+const SUPPORTED_API_VERSIONS = ["v1", "v2"] as const;
+
 export function buildVersionedPaths(
   path: string,
-  version: string = "v1",
+  versions: readonly string[] = SUPPORTED_API_VERSIONS,
 ): string[] {
   const base = path.startsWith("/") ? path : `/${path}`;
-  return [`${base}`, `/api/${base}`, `/api/${version}${base}`];
+  const paths = [base, `/api${base}`];
+  for (const version of versions) {
+    paths.push(`/api/${version}${base}`);
+  }
+  return paths;
 }

@@ -6,6 +6,8 @@ export {
   getWorkOSUser,
   mapWorkOSUser,
   enrollMfa,
+  enrollWebAuthnMfa,
+  enrollSmsMfa,
   challengeMfa,
   verifyMfa,
   getAdminPortalLink,
@@ -20,4 +22,5 @@ export type {
   WorkOSWebhookEvent,
   AuthKitUrlOptions,
   AdminPortalIntent,
+  MfaFactorType,
 } from "@longox/shared-auth/workos";

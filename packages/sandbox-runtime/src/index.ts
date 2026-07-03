@@ -1,3 +1,9 @@
+import {
+  DenoIsolate,
+  UNTRUSTED_CONNECTOR_POLICY,
+  type IsolateContext,
+} from "@longox/connector-sandbox";
+
 export type SandboxPolicy = {
   allowedModules: string[];
   allowedApis: string[];
@@ -6,11 +12,13 @@ export type SandboxPolicy = {
   maxNetworkRequests: number;
   timeoutMs: number;
 };
+
 export interface SandboxConfig {
   policy: SandboxPolicy;
   environment: Record<string, string>;
   workingDirectory?: string;
 }
+
 export interface SandboxResult {
   success: boolean;
   stdout: string;
@@ -19,49 +27,66 @@ export interface SandboxResult {
   durationMs: number;
   error?: string;
 }
+
+/**
+ * ADR-009: Delegates untrusted code execution to Deno isolates via connector-sandbox.
+ * Replaces the prior in-process `new Function()` path which lacked isolate boundaries.
+ */
 export class SandboxRuntime {
   private config: SandboxConfig;
+  private isolate: DenoIsolate;
+
   constructor(config: SandboxConfig) {
     this.config = config;
+    this.isolate = new DenoIsolate({
+      ...UNTRUSTED_CONNECTOR_POLICY,
+      maxCpuMs: config.policy.maxCpuMs,
+      maxMemoryMb: config.policy.maxMemoryMb,
+      maxNetworkRequests: config.policy.maxNetworkRequests,
+      timeoutMs: config.policy.timeoutMs,
+    });
   }
+
   async execute(
     code: string,
     context: Record<string, unknown>,
   ): Promise<SandboxResult> {
-    const startTime = Date.now();
-    try {
-      const sandboxedFn = new Function(...Object.keys(context), code);
-      const result = sandboxedFn(...Object.values(context));
-      return {
-        success: true,
-        stdout: String(result),
-        stderr: "",
-        exitCode: 0,
-        durationMs: Date.now() - startTime,
-      };
-    } catch (err) {
-      return {
-        success: false,
-        stdout: "",
-        stderr: String(err),
-        exitCode: 1,
-        durationMs: Date.now() - startTime,
-        error: err instanceof Error ? err.message : String(err),
-      };
-    }
+    const isolateContext: IsolateContext = {
+      connectorName: "sandbox-runtime",
+      actionId: "execute",
+      executionId: `sandbox-${Date.now()}`,
+      tenantId: Number(context.tenantId ?? 0),
+      auth: (context.auth as Record<string, unknown>) ?? {},
+      input: context,
+      config: { environment: this.config.environment },
+      secrets: (context.secrets as Record<string, string>) ?? {},
+      code,
+    };
+
+    const result = await this.isolate.execute(isolateContext);
+    const stdout =
+      typeof result.data.output === "string"
+        ? result.data.output
+        : JSON.stringify(result.data);
+
+    return {
+      success: result.success,
+      stdout,
+      stderr: result.error ?? "",
+      exitCode: result.success ? 0 : 1,
+      durationMs: result.durationMs,
+      error: result.error ?? undefined,
+    };
   }
+
   async validate(code: string): Promise<{ valid: boolean; errors: string[] }> {
-    try {
-      new Function(code);
-      return { valid: true, errors: [] };
-    } catch (err) {
-      return {
-        valid: false,
-        errors: [err instanceof Error ? err.message : String(err)],
-      };
+    if (!code.trim()) {
+      return { valid: false, errors: ["Code must not be empty"] };
     }
+    return { valid: true, errors: [] };
   }
 }
+
 export function createSandbox(config: SandboxConfig): SandboxRuntime {
   return new SandboxRuntime(config);
 }

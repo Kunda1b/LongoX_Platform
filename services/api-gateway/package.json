@@ -21,7 +21,7 @@
     "@longox/connector-service": "workspace:*",
     "@longox/dashboard-service": "workspace:*",
     "@longox/db": "workspace:*",
-    "@longox/execution-service": "workspace:*",
+    "@longox/lib-api-zod": "workspace:*",
     "@longox/marketplace-service": "workspace:*",
     "@longox/metering-service": "workspace:*",
     "@longox/replication-service": "workspace:*",
