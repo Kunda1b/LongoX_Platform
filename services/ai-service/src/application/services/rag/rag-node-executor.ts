@@ -1,4 +1,7 @@
-import { VectorSearchService, vectorSearchService } from "./vector-search.service";
+import {
+  VectorSearchService,
+  vectorSearchService,
+} from "./vector-search.service";
 
 export interface RagNodeInput {
   query: string;
@@ -30,7 +33,7 @@ export class RagNodeExecutor {
       input.knowledgeBaseId,
       input.query,
       {
-        topK: input.topK ?? 10,
+        topK: input.topK ?? Number(process.env.RAG_DEFAULT_TOP_K ?? 5),
         minScore: input.minScore ?? 0.0,
         filter: input.filter,
       },

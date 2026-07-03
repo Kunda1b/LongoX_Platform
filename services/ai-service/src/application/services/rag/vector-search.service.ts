@@ -28,13 +28,19 @@ export class VectorSearchService {
     query: string,
     options: SearchOptions = {},
   ): Promise<SearchResult[]> {
-    const topK = options.topK ?? 10;
+    const topK = options.topK ?? Number(process.env.RAG_DEFAULT_TOP_K ?? 5);
     const minScore = options.minScore ?? 0.0;
 
     const { vector } = await this.embedding.generateEmbedding(query);
 
     try {
-      return await this.pgvectorSearch(kbId, vector, topK, minScore, options.filter);
+      return await this.pgvectorSearch(
+        kbId,
+        vector,
+        topK,
+        minScore,
+        options.filter,
+      );
     } catch {
       return this.inMemorySearch(kbId, vector, topK, minScore, options.filter);
     }
@@ -100,7 +106,7 @@ export class VectorSearchService {
     minScore: number,
     filter?: Record<string, unknown>,
   ): Promise<SearchResult[]> {
-    const rows = await db
+    const rows = (await db
       .select({
         chunkId: ragChunksTable.id,
         documentId: ragChunksTable.documentId,
@@ -113,15 +119,21 @@ export class VectorSearchService {
         documentSourceType: ragDocumentsTable.sourceType,
       })
       .from(ragChunksTable)
-      .innerJoin(ragDocumentsTable, eq(ragChunksTable.documentId, ragDocumentsTable.id))
-      .where(eq(ragChunksTable.knowledgeBaseId, kbId)) as any;
+      .innerJoin(
+        ragDocumentsTable,
+        eq(ragChunksTable.documentId, ragDocumentsTable.id),
+      )
+      .where(eq(ragChunksTable.knowledgeBaseId, kbId))) as any;
 
     const scored: SearchResult[] = [];
 
     for (const row of rows) {
       const emb = row.embedding;
       if (!emb || !Array.isArray(emb)) continue;
-      const score = this.embedding.cosineSimilarity(queryVector, emb as unknown as number[]);
+      const score = this.embedding.cosineSimilarity(
+        queryVector,
+        emb as unknown as number[],
+      );
       if (score < minScore) continue;
 
       if (filter && Object.keys(filter).length > 0) {
@@ -161,14 +173,20 @@ export class VectorSearchService {
     const ftsWeight = options.ftsWeight ?? 0.3;
     const vectorWeight = options.vectorWeight ?? 0.7;
 
-    const vectorResults = await this.search(kbId, query, { ...options, topK: (options.topK ?? 10) * 2 });
+    const vectorResults = await this.search(kbId, query, {
+      ...options,
+      topK: (options.topK ?? Number(process.env.RAG_DEFAULT_TOP_K ?? 5)) * 2,
+    });
 
     let ftsResults: SearchResult[] = [];
 
-    const ftsQuery = query.replace(/[^\w\s]/g, "").split(/\s+/).filter(Boolean);
+    const ftsQuery = query
+      .replace(/[^\w\s]/g, "")
+      .split(/\s+/)
+      .filter(Boolean);
     if (ftsQuery.length > 0) {
       try {
-        const ftsRows = await db
+        const ftsRows = (await db
           .select({
             chunkId: ragChunksTable.id,
             documentId: ragChunksTable.documentId,
@@ -181,12 +199,19 @@ export class VectorSearchService {
             rank: sql<number>`ts_rank(to_tsvector('english', ${ragChunksTable.content}), plainto_tsquery('english', ${query}))`,
           })
           .from(ragChunksTable)
-          .innerJoin(ragDocumentsTable, eq(ragChunksTable.documentId, ragDocumentsTable.id))
+          .innerJoin(
+            ragDocumentsTable,
+            eq(ragChunksTable.documentId, ragDocumentsTable.id),
+          )
           .where(
             sql`${ragChunksTable.knowledgeBaseId} = ${kbId} AND to_tsvector('english', ${ragChunksTable.content}) @@ plainto_tsquery('english', ${query})`,
           )
-          .orderBy(sql`ts_rank(to_tsvector('english', ${ragChunksTable.content}), plainto_tsquery('english', ${query})) DESC`)
-          .limit((options.topK ?? 10) * 2) as any;
+          .orderBy(
+            sql`ts_rank(to_tsvector('english', ${ragChunksTable.content}), plainto_tsquery('english', ${query})) DESC`,
+          )
+          .limit(
+            (options.topK ?? Number(process.env.RAG_DEFAULT_TOP_K ?? 5)) * 2,
+          )) as any;
 
         ftsResults = ftsRows.map((r: any) => ({
           chunkId: r.chunkId,
@@ -221,7 +246,7 @@ export class VectorSearchService {
 
     return Array.from(combined.values())
       .sort((a, b) => b.score - a.score)
-      .slice(0, options.topK ?? 10);
+      .slice(0, options.topK ?? Number(process.env.RAG_DEFAULT_TOP_K ?? 5));
   }
 }
 

@@ -24,7 +24,7 @@ interface WorkflowListParams {
 export function useWorkflow(workflowId?: number) {
   const queryClient = useQueryClient();
 
-  const query = useQuery<Workflow>({
+  const query = useQuery({
     queryKey: ["workflow", workflowId],
     queryFn: async () => {
       const response = await apiClient.get(`/api/v1/workflows/${workflowId}`);
@@ -33,7 +33,7 @@ export function useWorkflow(workflowId?: number) {
     enabled: !!workflowId,
   });
 
-  const listQuery = useQuery<Workflow[]>({
+  const listQuery = useQuery({
     queryKey: ["workflows"],
     queryFn: async () => {
       const response = await apiClient.get("/api/v1/workflows");

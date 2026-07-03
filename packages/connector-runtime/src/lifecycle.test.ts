@@ -19,7 +19,9 @@ function makeManifest(): ConnectorManifest {
     certificationLevel: "official",
     signature: "sig",
     checksum: "",
-    permissions: [{ scope: "read", description: "Read", required: true, dangerous: false }],
+    permissions: [
+      { scope: "read", description: "Read", required: true, dangerous: false },
+    ],
     capabilities: {
       actions: true,
       triggers: { polling: false, webhooks: false, events: false },
@@ -30,10 +32,22 @@ function makeManifest(): ConnectorManifest {
       realtime: false,
     },
     networkAccess: { requiredDomains: [], allowDynamic: false },
-    auth: [{ type: "api_key", label: "Key", apiKey: { keyName: "key", keyType: "header" } }],
+    auth: [
+      {
+        type: "api_key",
+        label: "Key",
+        apiKey: { keyName: "key", keyType: "header" },
+      },
+    ],
     actions: [],
     triggers: [],
-    runtime: { minMemoryMb: 128, minCpuMs: 500, timeoutMs: 30_000, maxNetworkRequests: 50, requiredOps: [] },
+    runtime: {
+      minMemoryMb: 128,
+      minCpuMs: 500,
+      timeoutMs: 30_000,
+      maxNetworkRequests: 50,
+      requiredOps: [],
+    },
   };
 }
 
@@ -49,7 +63,9 @@ function makeState(overrides?: Partial<LifecycleState>): LifecycleState {
     version: "1.0.0",
     config: {},
     errorMessage: null,
-    eventHistory: [{ event: "installing", timestamp: new Date().toISOString() }],
+    eventHistory: [
+      { event: "installing", timestamp: new Date().toISOString() },
+    ],
     ...overrides,
   };
 }
@@ -68,7 +84,11 @@ describe("LifecycleEngine", () => {
 
   it("transition updates current event and history", async () => {
     const state = makeState();
-    const next = await lifecycleEngine.transition(state, "configured", "Config complete");
+    const next = await lifecycleEngine.transition(
+      state,
+      "configured",
+      "Config complete",
+    );
     expect(next.currentEvent).toBe("configured");
     expect(next.previousEvent).toBe("installing");
     expect(next.eventHistory).toHaveLength(2);
@@ -76,15 +96,22 @@ describe("LifecycleEngine", () => {
   });
 
   it("sets status to active on installed/configured/tested", async () => {
-    for (const event of ["installed", "configured", "tested"] as ConnectorLifecycleEvent[]) {
-      const state = makeState({ currentEvent: "installing", status: "installing" });
+    for (const event of [
+      "installed",
+      "configured",
+      "tested",
+    ] as ConnectorLifecycleEvent[]) {
+      const state = makeState({
+        currentEvent: "installing",
+        status: "installing",
+      });
       const next = await lifecycleEngine.transition(state, event);
       expect(next.status, `event ${event} should set active`).toBe("active");
     }
   });
 
   it("sets status to retired on uninstalled", async () => {
-    const state = makeState({ currentEvent: "active", status: "active" });
+    const state = makeState({ currentEvent: "activated", status: "active" });
     const next = await lifecycleEngine.transition(state, "uninstalled");
     expect(next.status).toBe("retired");
   });
@@ -92,7 +119,9 @@ describe("LifecycleEngine", () => {
   it("sets error state when hooks throw", async () => {
     const state = makeState();
     lifecycleEngine.registerHook(["installing"], {
-      onBefore: async () => { throw new Error("Hook failure"); },
+      onBefore: async () => {
+        throw new Error("Hook failure");
+      },
     });
     const next = await lifecycleEngine.transition(state, "installing");
     expect(next.currentEvent).toBe("error");
@@ -103,8 +132,13 @@ describe("LifecycleEngine", () => {
   it("calls onBefore and onAfter hooks in order", async () => {
     const order: string[] = [];
     lifecycleEngine.registerHook(["configured"], {
-      onBefore: async () => { order.push("before"); },
-      onAfter: async () => { order.push("after"); },
+      onBefore: async (s) => {
+        order.push("before");
+        return s;
+      },
+      onAfter: async () => {
+        order.push("after");
+      },
     });
     await lifecycleEngine.transition(makeState(), "configured");
     expect(order).toEqual(["before", "after"]);
@@ -113,7 +147,9 @@ describe("LifecycleEngine", () => {
   it("calls onError hook when transition fails", async () => {
     const errorHandler = vi.fn();
     lifecycleEngine.registerHook(["installed"], {
-      onBefore: async () => { throw new Error("Fail"); },
+      onBefore: async () => {
+        throw new Error("Fail");
+      },
       onError: errorHandler,
     });
     await lifecycleEngine.transition(makeState(), "installed");

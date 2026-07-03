@@ -141,7 +141,7 @@ router.get(
   "/api/retention/archives/:id",
   authorize({ resource: "executions", action: "read" }),
   async (req, res): Promise<void> => {
-    const exportId = parseInt(req.params.id, 10);
+    const exportId = parseInt(String(req.params.id), 10);
     if (!exportId) {
       res.status(400).json({ error: "Invalid export id" });
       return;

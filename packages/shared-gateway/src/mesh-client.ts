@@ -1,7 +1,4 @@
-import type {
-  ServiceMeshConfig,
-  ServiceEndpoint,
-} from "./service-mesh";
+import type { ServiceMeshConfig, ServiceEndpoint } from "./service-mesh";
 
 export interface ProxyRequest {
   method: string;
@@ -9,7 +6,7 @@ export interface ProxyRequest {
   body?: unknown;
   headers?: Record<string, string>;
   query?: Record<string, string>;
-  user?: { id: number; tenantId: number; role: string };
+  user?: { id: number; tenantId: number | null; role: string };
 }
 
 export interface ProxyResponse {
@@ -30,7 +27,10 @@ export class ServiceMeshClient {
   private setupRoutes(): void {
     const routePatterns: [RegExp, string][] = [
       [/^\/executions/, "execution-service"],
-      [/^\/ai(-models|-runs|-usage|-routing-policies|-playground|-router|-agents)?/, "ai-service"],
+      [
+        /^\/ai(-models|-runs|-usage|-routing-policies|-playground|-router|-agents)?/,
+        "ai-service",
+      ],
       [/^\/prompts/, "ai-service"],
       [/^\/billing/, "billing-service"],
       [/^\/checkout/, "billing-service"],
@@ -100,10 +100,7 @@ export class ServiceMeshClient {
         }
 
         const controller = new AbortController();
-        const timeout = setTimeout(
-          () => controller.abort(),
-          endpoint.timeout,
-        );
+        const timeout = setTimeout(() => controller.abort(), endpoint.timeout);
 
         const res = await fetch(url.toString(), {
           method: request.method,

@@ -44,10 +44,7 @@ function computeChecksum(nodes: unknown): string {
   return Math.abs(hash).toString(16).padStart(16, "0");
 }
 
-function computeDiff(
-  fromNodes: unknown,
-  toNodes: unknown,
-): DiffReview {
+function computeDiff(fromNodes: unknown, toNodes: unknown): DiffReview {
   const fromArr = Array.isArray(fromNodes) ? (fromNodes as any[]) : [];
   const toArr = Array.isArray(toNodes) ? (toNodes as any[]) : [];
 
@@ -109,9 +106,7 @@ async function writeAuditLog(
 }
 
 export class PromotionApprovalService {
-  async requestPromotion(
-    input: RequestPromotionInput,
-  ): Promise<{
+  async requestPromotion(input: RequestPromotionInput): Promise<{
     promotion: typeof workflowPromotionsTable.$inferSelect;
     release: typeof environmentReleasesTable.$inferSelect | null;
     requiresApproval: boolean;
@@ -319,7 +314,9 @@ export class PromotionApprovalService {
       version: (latestVersion?.version ?? 0) + 1,
       name: workflow.name,
       nodes: nodes as Record<string, unknown>[],
-      changeNote: note ?? `Promoted from ${promotion.fromEnvironment} to ${promotion.toEnvironment}`,
+      changeNote:
+        note ??
+        `Promoted from ${promotion.fromEnvironment} to ${promotion.toEnvironment}`,
     });
 
     const [release] = await db

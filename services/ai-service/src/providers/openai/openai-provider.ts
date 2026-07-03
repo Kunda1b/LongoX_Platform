@@ -113,4 +113,68 @@ export class OpenAIProvider {
 
     return response.data[0]?.embedding ?? [];
   }
+
+  /**
+   * Stream a chat completion token-by-token via the OpenAI streaming API.
+   *
+   * Per ADR-008, AI streaming responses use Server-Sent Events with
+   * `text/event-stream`. The SSE route at `/api/v1/ai/runs` consumes
+   * this async generator and emits one `token` SSE event per yielded chunk.
+   *
+   * Yields `{ token, role? }` chunks; the final `done` event includes the
+   * full content + usage. The generator completes when the stream ends.
+   *
+   * Per architecture.md §8.5, partial responses should be persisted every
+   * ~1 second so a dropped connection can resume from the last partial.
+   * The caller (the SSE route) is responsible for the partial persistence
+   * cadence — this method just yields tokens as they arrive from the
+   * provider.
+   */
+  async *streamChatCompletion(
+    messages: ChatMessage[],
+    options: ChatCompletionOptions = {},
+  ): AsyncGenerator<{
+    token: string;
+    role?: string;
+    usage?: { inputTokens: number; outputTokens: number; cost: number };
+  }> {
+    const model = options.model ?? this.defaultModel;
+
+    const stream = await this.client.chat.completions.create({
+      model,
+      messages,
+      max_tokens: options.maxTokens ?? 2048,
+      temperature: options.temperature ?? 0.7,
+      response_format:
+        options.responseFormat === "json" ? { type: "json_object" } : undefined,
+      stream: true,
+      stream_options: { include_usage: true },
+    });
+
+    let inputTokens = 0;
+    let outputTokens = 0;
+    const pricing = MODEL_PRICING[model] ?? {
+      input: 0.000001,
+      output: 0.000002,
+    };
+
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta;
+      if (delta?.content) {
+        yield { token: delta.content, role: delta.role };
+      }
+      // OpenAI sends a final chunk with usage when stream_options.include_usage is true.
+      if (chunk.usage) {
+        inputTokens = chunk.usage.prompt_tokens ?? 0;
+        outputTokens = chunk.usage.completion_tokens ?? 0;
+      }
+    }
+
+    // Yield the final usage so the caller can persist the canonical record.
+    const cost = inputTokens * pricing.input + outputTokens * pricing.output;
+    yield {
+      token: "",
+      usage: { inputTokens, outputTokens, cost },
+    };
+  }
 }

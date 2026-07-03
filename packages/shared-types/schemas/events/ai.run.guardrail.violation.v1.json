@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.longox.com/events/ai.run.guardrail.violation.v1.json",
+  "title": "ai.run.guardrail.violation v1",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_type",
+    "event_version",
+    "occurred_at",
+    "tenant_id",
+    "correlation_id",
+    "aggregate_id",
+    "actor_id",
+    "payload",
+    "schema_url"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "pattern": "^evt_"
+    },
+    "event_type": {
+      "const": "ai.run.guardrail.violation"
+    },
+    "event_version": {
+      "const": 1
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tenant_id": {
+      "type": ["string", "null"]
+    },
+    "correlation_id": {
+      "type": ["string", "null"]
+    },
+    "aggregate_id": {
+      "type": "string",
+      "pattern": "^ai_"
+    },
+    "actor_id": {
+      "type": ["string", "null"]
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "run_id": {
+          "type": "string"
+        },
+        "tenant_id": {
+          "type": "string"
+        },
+        "violation_type": {
+          "type": "string",
+          "enum": [
+            "pii",
+            "injection",
+            "policy",
+            "content",
+            "tool_allowlist",
+            "schema"
+          ]
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["warn", "block"]
+        },
+        "stage": {
+          "type": "string",
+          "enum": ["input", "output"]
+        },
+        "detail": {
+          "type": "string"
+        }
+      },
+      "required": ["run_id", "tenant_id", "violation_type", "severity"]
+    },
+    "schema_url": {
+      "type": "string",
+      "format": "uri"
+    }
+  }
+}

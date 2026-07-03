@@ -23,6 +23,8 @@ export {
   getUpstreamNodes,
 } from "./graph";
 export { normalizeGraph as normalizeCanonicalGraph } from "./normalizer";
+// Alias for backward compatibility — apps/web imports `normalizeWorkflowGraph`.
+export { normalizeGraph as normalizeWorkflowGraph } from "./graph";
 export type {
   CanvasNode,
   CanvasEdge,

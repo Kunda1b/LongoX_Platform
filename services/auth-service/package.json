@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@longox/db": "workspace:*",
+    "@longox/shared-auth": "workspace:*",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "catalog:",
     "express": "^5.2.1",

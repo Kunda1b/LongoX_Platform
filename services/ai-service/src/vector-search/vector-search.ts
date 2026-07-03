@@ -9,6 +9,18 @@ export interface IndexedDocument {
   embedding: number[];
 }
 
+/**
+ * Lightweight document shape returned by search queries. Doesn't include the
+ * embedding vector (search results don't need it — the vector is only used
+ * for similarity computation, which happens in the database).
+ */
+export interface SearchResultDoc {
+  id: string;
+  content: string;
+  metadata: Record<string, unknown>;
+  score: number;
+}
+
 export class VectorSearch {
   async index(
     id: string,
@@ -26,8 +38,8 @@ export class VectorSearch {
 
   async search(
     query: string,
-    topK: number = 10,
-    filter?: (doc: IndexedDocument) => boolean,
+    topK: number = Number(process.env.RAG_DEFAULT_TOP_K ?? 5),
+    filter?: (doc: SearchResultDoc) => boolean,
   ): Promise<
     Array<{
       id: string;

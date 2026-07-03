@@ -1,5 +1,12 @@
 import { eq, desc, and, sql } from "drizzle-orm";
-import { db, tenantTiersTable, tenantMigrationsTable, tenantPlacementTable, tenantTierAssignmentsTable, tenantSettingsTable } from "@longox/db";
+import {
+  db,
+  tenantTiersTable,
+  tenantMigrationsTable,
+  tenantPlacementTable,
+  tenantTierAssignmentsTable,
+  tenantSettingsTable,
+} from "@longox/db";
 import { tenantPlacementService } from "./tenant-placement.service";
 
 interface K8sClusterConfig {
@@ -23,7 +30,9 @@ async function getK8sClient(): Promise<any> {
     };
     return k8sClient;
   } catch {
-    console.warn("[tenant-migration] K8s client not available, using DB-only mode");
+    console.warn(
+      "[tenant-migration] K8s client not available, using DB-only mode",
+    );
     return null;
   }
 }
@@ -77,7 +86,10 @@ interface MigrationStatus {
 }
 
 export class TenantMigrationService {
-  async planMigration(tenantId: number, targetTierId: number): Promise<MigrationPlan> {
+  async planMigration(
+    tenantId: number,
+    targetTierId: number,
+  ): Promise<MigrationPlan> {
     const [targetTier] = await db
       .select()
       .from(tenantTiersTable)
@@ -108,15 +120,28 @@ export class TenantMigrationService {
     let estimatedDowntime = "5 minutes";
     const risks: string[] = [];
 
-    if (fromPlacement === "shared" && targetPlacement === "dedicated-namespace") {
+    if (
+      fromPlacement === "shared" &&
+      targetPlacement === "dedicated-namespace"
+    ) {
       estimatedDowntime = "15 minutes";
-      risks.push("Namespace creation may fail if cluster resources are exhausted");
-      risks.push("Network policy propagation delay may cause transient connectivity issues");
-    } else if (fromPlacement === "dedicated-namespace" && targetPlacement === "dedicated-cluster") {
+      risks.push(
+        "Namespace creation may fail if cluster resources are exhausted",
+      );
+      risks.push(
+        "Network policy propagation delay may cause transient connectivity issues",
+      );
+    } else if (
+      fromPlacement === "dedicated-namespace" &&
+      targetPlacement === "dedicated-cluster"
+    ) {
       estimatedDowntime = "30 minutes";
       risks.push("Cluster provisioning may take longer than expected");
       risks.push("DNS propagation delay after traffic switch");
-    } else if (fromPlacement === "shared" && targetPlacement === "dedicated-cluster") {
+    } else if (
+      fromPlacement === "shared" &&
+      targetPlacement === "dedicated-cluster"
+    ) {
       estimatedDowntime = "45 minutes";
       risks.push("Full cluster provisioning is required");
       risks.push("Data replication across environments may be slow");
@@ -125,12 +150,42 @@ export class TenantMigrationService {
     const toCluster = `eks-target-${targetPlacement}-${tenantId}`;
 
     const steps: MigrationStep[] = [
-      { order: 1, name: "Provision target resources", description: `Provision ${targetPlacement} infrastructure`, estimatedDuration: "10 minutes" },
-      { order: 2, name: "Replicate data", description: "Copy tenant data to target placement", estimatedDuration: "5 minutes" },
-      { order: 3, name: "Sync data with cutover window", description: "Final sync before cutover", estimatedDuration: "2 minutes" },
-      { order: 4, name: "Verify data integrity", description: "Checksum and consistency verification", estimatedDuration: "3 minutes" },
-      { order: 5, name: "Switch traffic", description: "Route traffic to new placement", estimatedDuration: "1 minute" },
-      { order: 6, name: "Clean up old resources", description: "Deprovision old placement resources", estimatedDuration: "5 minutes" },
+      {
+        order: 1,
+        name: "Provision target resources",
+        description: `Provision ${targetPlacement} infrastructure`,
+        estimatedDuration: "10 minutes",
+      },
+      {
+        order: 2,
+        name: "Replicate data",
+        description: "Copy tenant data to target placement",
+        estimatedDuration: "5 minutes",
+      },
+      {
+        order: 3,
+        name: "Sync data with cutover window",
+        description: "Final sync before cutover",
+        estimatedDuration: "2 minutes",
+      },
+      {
+        order: 4,
+        name: "Verify data integrity",
+        description: "Checksum and consistency verification",
+        estimatedDuration: "3 minutes",
+      },
+      {
+        order: 5,
+        name: "Switch traffic",
+        description: "Route traffic to new placement",
+        estimatedDuration: "1 minute",
+      },
+      {
+        order: 6,
+        name: "Clean up old resources",
+        description: "Deprovision old placement resources",
+        estimatedDuration: "5 minutes",
+      },
     ];
 
     return {
@@ -148,11 +203,19 @@ export class TenantMigrationService {
     };
   }
 
-  async executeMigration(tenantId: number, planId: number): Promise<MigrationStatus> {
+  async executeMigration(
+    tenantId: number,
+    planId: number,
+  ): Promise<MigrationStatus> {
     const [migration] = await db
       .select()
       .from(tenantMigrationsTable)
-      .where(and(eq(tenantMigrationsTable.id, planId), eq(tenantMigrationsTable.tenantId, tenantId)))
+      .where(
+        and(
+          eq(tenantMigrationsTable.id, planId),
+          eq(tenantMigrationsTable.tenantId, tenantId),
+        ),
+      )
       .limit(1);
 
     if (!migration) {
@@ -182,7 +245,10 @@ export class TenantMigrationService {
 
       await db
         .update(tenantMigrationsTable)
-        .set({ steps: updatedSteps as unknown as Record<string, unknown>[], updatedAt: new Date() })
+        .set({
+          steps: updatedSteps as unknown as Record<string, unknown>[],
+          updatedAt: new Date(),
+        })
         .where(eq(tenantMigrationsTable.id, planId));
 
       await db
@@ -190,37 +256,62 @@ export class TenantMigrationService {
         .set({ status: "migrating", updatedAt: new Date() })
         .where(eq(tenantPlacementTable.tenantId, tenantId));
 
-      await this.provisionTargetResources(tenantId, migration.toCluster, migration.toPlacement);
+      await this.provisionTargetResources(
+        tenantId,
+        migration.toCluster,
+        migration.toPlacement,
+      );
 
       const provisionedSteps = updatedSteps.map((s) =>
         s.order === 1 ? { ...s, status: "completed" as const } : s,
       );
       await db
         .update(tenantMigrationsTable)
-        .set({ steps: provisionedSteps as unknown as Record<string, unknown>[], updatedAt: new Date() })
+        .set({
+          steps: provisionedSteps as unknown as Record<string, unknown>[],
+          updatedAt: new Date(),
+        })
         .where(eq(tenantMigrationsTable.id, planId));
 
-      await this.replicateData(tenantId, migration.fromCluster, migration.toCluster);
+      await this.replicateData(
+        tenantId,
+        migration.fromCluster,
+        migration.toCluster,
+      );
 
       const replicatedSteps = provisionedSteps.map((s) =>
         s.order === 2 ? { ...s, status: "completed" as const } : s,
       );
       await db
         .update(tenantMigrationsTable)
-        .set({ steps: replicatedSteps as unknown as Record<string, unknown>[], updatedAt: new Date() })
+        .set({
+          steps: replicatedSteps as unknown as Record<string, unknown>[],
+          updatedAt: new Date(),
+        })
         .where(eq(tenantMigrationsTable.id, planId));
 
-      await this.syncDataWithCutover(tenantId, migration.fromCluster, migration.toCluster);
+      await this.syncDataWithCutover(
+        tenantId,
+        migration.fromCluster,
+        migration.toCluster,
+      );
 
       const syncedSteps = replicatedSteps.map((s) =>
         s.order === 3 ? { ...s, status: "completed" as const } : s,
       );
       await db
         .update(tenantMigrationsTable)
-        .set({ steps: syncedSteps as unknown as Record<string, unknown>[], updatedAt: new Date() })
+        .set({
+          steps: syncedSteps as unknown as Record<string, unknown>[],
+          updatedAt: new Date(),
+        })
         .where(eq(tenantMigrationsTable.id, planId));
 
-      const verified = await this.verifyDataIntegrity(tenantId, migration.fromCluster, migration.toCluster);
+      const verified = await this.verifyDataIntegrity(
+        tenantId,
+        migration.fromCluster,
+        migration.toCluster,
+      );
 
       const verifiedSteps = syncedSteps.map((s) =>
         s.order === 4 ? { ...s, status: "completed" as const } : s,
@@ -234,7 +325,11 @@ export class TenantMigrationService {
         })
         .where(eq(tenantMigrationsTable.id, planId));
 
-      await this.switchTraffic(tenantId, migration.toCluster, migration.toPlacement);
+      await this.switchTraffic(
+        tenantId,
+        migration.toCluster,
+        migration.toPlacement,
+      );
 
       const switchedSteps = verifiedSteps.map((s) =>
         s.order === 5 ? { ...s, status: "completed" as const } : s,
@@ -248,7 +343,7 @@ export class TenantMigrationService {
         })
         .where(eq(tenantMigrationsTable.id, planId));
 
-      await this.cleanupOldResources(tenantId, migration.fromCluster);
+      await this.cleanupOldResources(migration.fromCluster);
 
       const finalSteps = switchedSteps.map((s) =>
         s.order === 6 ? { ...s, status: "completed" as const } : s,
@@ -273,7 +368,8 @@ export class TenantMigrationService {
 
       return this.getMigrationStatus(tenantId) as Promise<MigrationStatus>;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Migration failed";
+      const errorMessage =
+        error instanceof Error ? error.message : "Migration failed";
 
       await db
         .update(tenantMigrationsTable)
@@ -293,11 +389,19 @@ export class TenantMigrationService {
     }
   }
 
-  async rollbackMigration(tenantId: number, migrationId: number): Promise<MigrationStatus> {
+  async rollbackMigration(
+    tenantId: number,
+    migrationId: number,
+  ): Promise<MigrationStatus> {
     const [migration] = await db
       .select()
       .from(tenantMigrationsTable)
-      .where(and(eq(tenantMigrationsTable.id, migrationId), eq(tenantMigrationsTable.tenantId, tenantId)))
+      .where(
+        and(
+          eq(tenantMigrationsTable.id, migrationId),
+          eq(tenantMigrationsTable.tenantId, tenantId),
+        ),
+      )
       .limit(1);
 
     if (!migration) {
@@ -305,7 +409,9 @@ export class TenantMigrationService {
     }
 
     if (migration.status !== "failed" && migration.status !== "in_progress") {
-      throw new Error("Only failed or in-progress migrations can be rolled back");
+      throw new Error(
+        "Only failed or in-progress migrations can be rolled back",
+      );
     }
 
     const rolledBackAt = new Date();
@@ -433,7 +539,10 @@ export class TenantMigrationService {
             },
           },
         };
-        await k8s.core.createNamespacedResourceQuota(namespace, nsResourceQuota);
+        await k8s.core.createNamespacedResourceQuota(
+          namespace,
+          nsResourceQuota,
+        );
 
         const networkPolicy = {
           apiVersion: "networking.k8s.io/v1",
@@ -444,12 +553,18 @@ export class TenantMigrationService {
             policyTypes: ["Ingress", "Egress"],
           },
         };
-        await k8s.networking.createNamespacedNetworkPolicy(namespace, networkPolicy);
+        await k8s.networking.createNamespacedNetworkPolicy(
+          namespace,
+          networkPolicy,
+        );
 
         await k8s.apps.createNamespacedDeployment(namespace, {
           metadata: {
             name: getWorkerDeploymentName(tenantId),
-            labels: { app: "execution-worker", "longox.io/tenant-id": String(tenantId) },
+            labels: {
+              app: "execution-worker",
+              "longox.io/tenant-id": String(tenantId),
+            },
           },
           spec: {
             replicas: 2,
@@ -458,18 +573,20 @@ export class TenantMigrationService {
               metadata: { labels: { app: "execution-worker" } },
               spec: {
                 serviceAccountName: "execution-worker",
-                containers: [{
-                  name: "worker",
-                  image: "longox/execution-service:latest",
-                  env: [
-                    { name: "TENANT_ID", value: String(tenantId) },
-                    { name: "WORKER_CONCURRENCY", value: "5" },
-                  ],
-                  resources: {
-                    requests: { cpu: "500m", memory: "512Mi" },
-                    limits: { cpu: "1", memory: "1Gi" },
+                containers: [
+                  {
+                    name: "worker",
+                    image: "longox/execution-service:latest",
+                    env: [
+                      { name: "TENANT_ID", value: String(tenantId) },
+                      { name: "WORKER_CONCURRENCY", value: "5" },
+                    ],
+                    resources: {
+                      requests: { cpu: "500m", memory: "512Mi" },
+                      limits: { cpu: "1", memory: "1Gi" },
+                    },
                   },
-                }],
+                ],
               },
             },
           },
@@ -506,15 +623,19 @@ export class TenantMigrationService {
     if (!settings) return;
 
     const tablesToReplicate = [
-      "workflow_versions", "execution_checkpoints",
-      "audit_log", "metering_events",
+      "workflow_versions",
+      "execution_checkpoints",
+      "audit_log",
+      "metering_events",
     ];
 
     for (const tableName of tablesToReplicate) {
       try {
-        await db.execute(sql.raw(
-          `INSERT INTO ${tableName} SELECT * FROM ${tableName} WHERE tenant_id = ${tenantId}`,
-        ));
+        await db.execute(
+          sql.raw(
+            `INSERT INTO ${tableName} SELECT * FROM ${tableName} WHERE tenant_id = ${tenantId}`,
+          ),
+        );
       } catch {
         /* skip tables that don't exist */
       }
@@ -538,7 +659,9 @@ export class TenantMigrationService {
   ): Promise<boolean> {
     try {
       const result = await db.execute<{ cnt: number }>(
-        sql.raw(`SELECT COUNT(*) as cnt FROM audit_log WHERE tenant_id = ${tenantId}`),
+        sql.raw(
+          `SELECT COUNT(*) as cnt FROM audit_log WHERE tenant_id = ${tenantId}`,
+        ),
       );
       const sourceTotal = Number((result.rows?.[0] as any)?.cnt ?? 0);
       return sourceTotal >= 0;
@@ -587,12 +710,17 @@ export class TenantMigrationService {
     if (!k8s) return;
 
     try {
-      const namespace = fromCluster.replace("eks-", "").replace(/-dedicated.*$/, "");
+      const namespace = fromCluster
+        .replace("eks-", "")
+        .replace(/-dedicated.*$/, "");
       if (namespace.startsWith("tenant-")) {
         const nsName = namespace;
         const deployments = await k8s.apps.listNamespacedDeployment(nsName);
         for (const dep of deployments.body.items || []) {
-          await k8s.apps.deleteNamespacedDeployment(dep.metadata!.name!, nsName);
+          await k8s.apps.deleteNamespacedDeployment(
+            dep.metadata!.name!,
+            nsName,
+          );
         }
         await k8s.core.deleteNamespace(nsName);
       }

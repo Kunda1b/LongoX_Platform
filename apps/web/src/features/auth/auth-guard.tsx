@@ -3,7 +3,7 @@
 import { type ReactNode, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { Spinner } from "@/components/spinner";
+import Spinner from "@/components/spinner";
 
 export default function AuthGuard({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();

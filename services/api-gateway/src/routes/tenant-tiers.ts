@@ -1,6 +1,13 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, desc } from "drizzle-orm";
-import { db, tenantTiersTable, tenantTierAssignmentsTable, tenantPlacementTable, tenantSettingsTable } from "@longox/db";
+import {
+  db,
+  tenantTiersTable,
+  tenantTierAssignmentsTable,
+  tenantPlacementTable,
+  tenantSettingsTable,
+  tenantMigrationsTable,
+} from "@longox/db";
 import { authorize } from "@longox/shared-rbac";
 import { tenantPlacementService } from "../services/tenant-placement.service";
 import { tenantMigrationService } from "../services/tenant-migration.service";
@@ -92,7 +99,7 @@ router.post(
     const body = req.body as Record<string, unknown>;
     const [tier] = await db
       .insert(tenantTiersTable)
-      .values(body)
+      .values(body as typeof tenantTiersTable.$inferInsert)
       .returning();
     res.status(201).json({
       id: tier.id,
@@ -245,7 +252,7 @@ router.put(
     const [targetTier] = await db
       .select()
       .from(tenantTiersTable)
-      .where(eq(tenantTiersTable.id, tierId))
+      .where(eq(tenantTiersTable.id, tierId ?? 0))
       .limit(1);
 
     if (!targetTier) {
@@ -269,7 +276,7 @@ router.put(
       await db
         .update(tenantTierAssignmentsTable)
         .set({
-          tierId,
+          tierId: tierId ?? 0,
           infrastructureLevel: targetTier.infrastructureLevel,
           assignedAt: new Date(),
           assignedBy: req.user?.email ?? "system",
@@ -280,7 +287,7 @@ router.put(
     } else {
       await db.insert(tenantTierAssignmentsTable).values({
         tenantId,
-        tierId,
+        tierId: tierId ?? 0,
         infrastructureLevel: targetTier.infrastructureLevel,
         assignedBy: req.user?.email ?? "system",
         changeReason: reason ?? null,
@@ -304,7 +311,10 @@ router.put(
       });
     }
 
-    const placement = await tenantPlacementService.determinePlacement(tenantId, tierId);
+    const placement = await tenantPlacementService.determinePlacement(
+      tenantId,
+      tierId ?? 0,
+    );
 
     res.json({
       message: "Tier changed successfully",
@@ -367,7 +377,10 @@ router.post(
     }
 
     try {
-      const plan = await tenantMigrationService.planMigration(tenantId, targetTierId);
+      const plan = await tenantMigrationService.planMigration(
+        tenantId,
+        targetTierId,
+      );
 
       const [migration] = await db
         .insert(tenantMigrationsTable)
@@ -389,7 +402,8 @@ router.post(
         plan,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Planning failed";
+      const message =
+        error instanceof Error ? error.message : "Planning failed";
       res.status(400).json({ error: message });
     }
   },
@@ -408,10 +422,14 @@ router.post(
     const planId = Number(req.params.id);
 
     try {
-      const result = await tenantMigrationService.executeMigration(tenantId, planId);
+      const result = await tenantMigrationService.executeMigration(
+        tenantId,
+        planId,
+      );
       res.json(result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Migration failed";
+      const message =
+        error instanceof Error ? error.message : "Migration failed";
       res.status(400).json({ error: message });
     }
   },
@@ -430,10 +448,14 @@ router.post(
     const migrationId = Number(req.params.id);
 
     try {
-      const result = await tenantMigrationService.rollbackMigration(tenantId, migrationId);
+      const result = await tenantMigrationService.rollbackMigration(
+        tenantId,
+        migrationId,
+      );
       res.json(result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Rollback failed";
+      const message =
+        error instanceof Error ? error.message : "Rollback failed";
       res.status(400).json({ error: message });
     }
   },

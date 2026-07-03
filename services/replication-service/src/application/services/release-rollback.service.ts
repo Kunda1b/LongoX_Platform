@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { db, releaseSnapshotsTable } from "@longox/db";
 import * as crypto from "node:crypto";
 import { execSync } from "node:child_process";
@@ -303,9 +303,11 @@ export class ReleaseRollbackService {
 
   private async getCurrentMigrationVersion(service: string): Promise<number> {
     try {
+      // Drizzle's `db.execute` takes a single sql template — parameters are
+      // interpolated via `sql.param()` or `${...}` placeholders. We use a
+      // parameterized query to avoid SQL injection from the `service` argument.
       const result = await db.execute(
-        `SELECT MAX(version) as version FROM _migrations WHERE service = $1`,
-        [service],
+        sql`SELECT MAX(version) as version FROM _migrations WHERE service = ${service}`,
       );
       return Number((result.rows ?? result)[0]?.version ?? 0);
     } catch {

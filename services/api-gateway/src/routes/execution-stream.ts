@@ -55,28 +55,33 @@ function sendSSEEvent(
     res.write(`retry: 3000\n`);
     res.write(`\n`);
     if (typeof (res as any).flush === "function") (res as any).flush();
-  } catch {
-  }
+  } catch {}
 }
 
 function sendHeartbeat(res: Response): void {
   try {
     res.write(`: heartbeat\n\n`);
     if (typeof (res as any).flush === "function") (res as any).flush();
-  } catch {
-  }
+  } catch {}
 }
 
 router.get(
-  ["/api/executions/stream", "/api/v1/executions/stream",
-   "/api/executions/:id/stream", "/api/v1/executions/:id/stream"],
+  [
+    "/api/executions/stream",
+    "/api/v1/executions/stream",
+    "/api/executions/:id/stream",
+    "/api/v1/executions/:id/stream",
+  ],
   authorize("executions:read"),
   async (req: Request, res: Response): Promise<void> => {
     const executionIds = req.query["executionIds"]
-      ? String(req.query["executionIds"]).split(",").map(Number).filter((n) => !isNaN(n) && n > 0)
+      ? String(req.query["executionIds"])
+          .split(",")
+          .map(Number)
+          .filter((n) => !isNaN(n) && n > 0)
       : [];
 
-    const paramId = parseInt(req.params["id"] ?? "0", 10);
+    const paramId = parseInt(String(req.params["id"] ?? "0"), 10);
     if (!isNaN(paramId) && paramId > 0) executionIds.push(paramId);
 
     if (executionIds.length === 0) {
@@ -102,7 +107,9 @@ router.get(
 
       const tenantId = req.user?.tenantId;
       if (tenantId && execution.tenantId && execution.tenantId !== tenantId) {
-        res.status(403).json({ error: `Forbidden for execution ${executionId}` });
+        res
+          .status(403)
+          .json({ error: `Forbidden for execution ${executionId}` });
         return;
       }
     }
@@ -115,7 +122,9 @@ router.get(
     res.flushHeaders();
 
     const clientId = `sse_multi_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-    res.write(`event: connected\ndata: ${JSON.stringify({ clientId, executionIds })}\n\n`);
+    res.write(
+      `event: connected\ndata: ${JSON.stringify({ clientId, executionIds })}\n\n`,
+    );
 
     const clients: SSEClient[] = executionIds.map((executionId) => {
       const c: SSEClient = { res, seq: 0, executionId };
@@ -124,18 +133,25 @@ router.get(
     });
 
     const subscriptions = executionIds.map((executionId) =>
-      sseExecutionBus.onExecutionEvent(executionId, (payload) => {
+      sseExecutionBus.onExecutionEvent(executionId, (payload: unknown) => {
         if (res.writableEnded) {
           return;
         }
-        if (eventFilters.length > 0 && !eventFilters.includes(payload.eventType)) return;
+        if (
+          eventFilters.length > 0 &&
+          !eventFilters.includes((payload as { eventType: string }).eventType)
+        )
+          return;
         const client = clients.find((c) => c.executionId === executionId);
         if (!client) return;
         client.seq++;
         sendSSEEvent(res, {
           id: `${executionId}/${client.seq}`,
-          event: payload.eventType,
-          data: { ...payload.data, executionId },
+          event: (payload as { eventType: string }).eventType,
+          data: {
+            ...(payload as { data?: Record<string, unknown> }).data,
+            executionId,
+          },
         });
       }),
     );
@@ -268,7 +284,7 @@ router.post(
   ["/api/executions/:id/approve", "/api/v1/executions/:id/approve"],
   authorize("executions:run"),
   async (req: Request, res: Response): Promise<void> => {
-    const executionId = parseInt(req.params["id"] ?? "0", 10);
+    const executionId = parseInt(String(req.params["id"] ?? "0"), 10);
     const { task_id, decision, note } = req.body as {
       task_id?: number;
       decision?: "approved" | "rejected";
@@ -281,7 +297,9 @@ router.post(
     }
 
     if (decision !== "approved" && decision !== "rejected") {
-      res.status(400).json({ error: "decision must be 'approved' or 'rejected'" });
+      res
+        .status(400)
+        .json({ error: "decision must be 'approved' or 'rejected'" });
       return;
     }
 
@@ -297,7 +315,9 @@ router.post(
     }
 
     if (task.status !== "pending") {
-      res.status(409).json({ error: `Approval task is already ${task.status}` });
+      res
+        .status(409)
+        .json({ error: `Approval task is already ${task.status}` });
       return;
     }
 

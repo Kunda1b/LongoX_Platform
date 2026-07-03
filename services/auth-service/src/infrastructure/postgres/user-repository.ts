@@ -67,6 +67,24 @@ export class PostgresUserRepository implements UserRepository {
     };
   }
 
+  async findById(id: number): Promise<UserRecord | null> {
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, id))
+      .limit(1);
+    if (!user) return null;
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      tenantId: user.tenantId ?? null,
+      role: user.role,
+      passwordHash: user.passwordHash,
+      isActive: user.isActive,
+    };
+  }
+
   async findProfileById(id: number): Promise<UserProfile | null> {
     const [user] = await db
       .select({

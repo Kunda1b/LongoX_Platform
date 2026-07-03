@@ -8,7 +8,11 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
-function splitByParagraphs(text: string, chunkSize: number, overlap: number): Chunk[] {
+function splitByParagraphs(
+  text: string,
+  chunkSize: number,
+  overlap: number,
+): Chunk[] {
   const paragraphs = text.split(/\n\s*\n/).filter((p) => p.trim().length > 0);
   const chunks: Chunk[] = [];
   let current = "";
@@ -17,14 +21,22 @@ function splitByParagraphs(text: string, chunkSize: number, overlap: number): Ch
   for (const para of paragraphs) {
     const candidate = current ? current + "\n\n" + para : para;
     if (estimateTokens(candidate) > chunkSize && current) {
-      chunks.push({ content: current.trim(), tokens: estimateTokens(current), index: idx++ });
+      chunks.push({
+        content: current.trim(),
+        tokens: estimateTokens(current),
+        index: idx++,
+      });
       current = para;
     } else {
       current = candidate;
     }
   }
   if (current.trim()) {
-    chunks.push({ content: current.trim(), tokens: estimateTokens(current), index: idx++ });
+    chunks.push({
+      content: current.trim(),
+      tokens: estimateTokens(current),
+      index: idx++,
+    });
   }
 
   if (overlap > 0 && chunks.length > 1) {
@@ -34,7 +46,9 @@ function splitByParagraphs(text: string, chunkSize: number, overlap: number): Ch
       if (i > 0 && overlap > 0) {
         const prevContent = chunks[i - 1].content;
         const words = prevContent.split(/\s+/);
-        const overlapWords = words.slice(Math.max(0, words.length - Math.floor(overlap / 4)));
+        const overlapWords = words.slice(
+          Math.max(0, words.length - Math.floor(overlap / 4)),
+        );
         chunk.content = [...overlapWords, chunk.content].join(" ");
       }
       overlapped.push({ ...chunk, tokens: estimateTokens(chunk.content) });
@@ -45,7 +59,11 @@ function splitByParagraphs(text: string, chunkSize: number, overlap: number): Ch
   return chunks;
 }
 
-function splitByFixed(text: string, chunkSize: number, overlap: number): Chunk[] {
+function splitByFixed(
+  text: string,
+  chunkSize: number,
+  overlap: number,
+): Chunk[] {
   const chunks: Chunk[] = [];
   const avgCharsPerToken = 4;
   const charWindow = chunkSize * avgCharsPerToken;
@@ -57,7 +75,11 @@ function splitByFixed(text: string, chunkSize: number, overlap: number): Chunk[]
     const end = Math.min(start + charWindow + overlapChars, text.length);
     const content = text.slice(start, end);
     if (content.trim()) {
-      chunks.push({ content: content.trim(), tokens: estimateTokens(content), index: idx++ });
+      chunks.push({
+        content: content.trim(),
+        tokens: estimateTokens(content),
+        index: idx++,
+      });
     }
     start += charWindow;
   }
@@ -65,8 +87,16 @@ function splitByFixed(text: string, chunkSize: number, overlap: number): Chunk[]
   return chunks;
 }
 
-function splitBySemantic(text: string, chunkSize: number, overlap: number): Chunk[] {
-  const sentences = text.match(/[^.!?\n]+[.!?\n]*/g)?.map((s) => s.trim()).filter(Boolean) ?? [];
+function splitBySemantic(
+  text: string,
+  chunkSize: number,
+  overlap: number,
+): Chunk[] {
+  const sentences =
+    text
+      .match(/[^.!?\n]+[.!?\n]*/g)
+      ?.map((s) => s.trim())
+      .filter(Boolean) ?? [];
   if (sentences.length === 0) {
     return [{ content: text.trim(), tokens: estimateTokens(text), index: 0 }];
   }
@@ -81,7 +111,11 @@ function splitBySemantic(text: string, chunkSize: number, overlap: number): Chun
     if (currentTokens + sentTokens > chunkSize && current.length > 0) {
       const content = current.join(" ");
       if (content.trim()) {
-        chunks.push({ content: content.trim(), tokens: estimateTokens(content), index: idx++ });
+        chunks.push({
+          content: content.trim(),
+          tokens: estimateTokens(content),
+          index: idx++,
+        });
       }
       if (overlap > 0 && current.length > 0) {
         const overlapSents = [];
@@ -107,7 +141,11 @@ function splitBySemantic(text: string, chunkSize: number, overlap: number): Chun
   if (current.length > 0) {
     const content = current.join(" ");
     if (content.trim()) {
-      chunks.push({ content: content.trim(), tokens: estimateTokens(content), index: idx++ });
+      chunks.push({
+        content: content.trim(),
+        tokens: estimateTokens(content),
+        index: idx++,
+      });
     }
   }
 
@@ -115,11 +153,23 @@ function splitBySemantic(text: string, chunkSize: number, overlap: number): Chun
 }
 
 export class ChunkingService {
+  /**
+   * Default chunk size = 800 tokens, chunk overlap = 100 tokens.
+   *
+   * Per architecture.md §8.6 / ADR-003:
+   *   - RAG_CHUNK_SIZE_TOKENS = 800
+   *   - RAG_CHUNK_OVERLAP_TOKENS = 100
+   *   - default embedding model = text-embedding-3-small
+   *
+   * These defaults are overridable via env vars (consumed by
+   * services/ai-service/src/config/runtime.ts) and via the optional
+   * `chunkSize` / `chunkOverlap` arguments.
+   */
   async chunkDocument(
     content: string,
     strategy: string = "recursive",
-    chunkSize: number = 512,
-    chunkOverlap: number = 64,
+    chunkSize: number = Number(process.env.RAG_CHUNK_SIZE_TOKENS ?? 800),
+    chunkOverlap: number = Number(process.env.RAG_CHUNK_OVERLAP_TOKENS ?? 100),
   ): Promise<Chunk[]> {
     if (!content || content.trim().length === 0) {
       return [];

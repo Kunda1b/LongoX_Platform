@@ -1,4 +1,10 @@
-import { db, aiRoutingPoliciesTable, aiGuardrailsTable, aiGuardrailHitsTable, tokenUsageTable } from "@longox/db";
+import {
+  db,
+  aiRoutingPoliciesTable,
+  aiGuardrailsTable,
+  aiGuardrailHitsTable,
+  tokenUsageTable,
+} from "@longox/db";
 import { eq, and } from "drizzle-orm";
 import { aiRouter } from "../../routing/ai-router";
 import type { ChatMessage } from "../../providers";
@@ -59,9 +65,17 @@ export class AiRunLifecycleService {
     const auditEvents: string[] = [];
     const guardrailResult = {
       inputPassed: true,
-      inputViolations: [] as Array<{ type: string; detail: string; severity: string }>,
+      inputViolations: [] as Array<{
+        type: string;
+        detail: string;
+        severity: string;
+      }>,
       outputPassed: true,
-      outputViolations: [] as Array<{ type: string; detail: string; severity: string }>,
+      outputViolations: [] as Array<{
+        type: string;
+        detail: string;
+        severity: string;
+      }>,
       blocked: false,
     };
 
@@ -92,21 +106,43 @@ export class AiRunLifecycleService {
       }
 
       // Step 2: Input guardrails & moderation
+      // `inputModeration` is hoisted out of the `if` block so it can be
+      // referenced later when constructing effective messages. It is
+      // `undefined` when no guardrails are configured.
+      let inputModeration:
+        | {
+            passed: boolean;
+            scrubbedText?: string;
+            violations: Array<{
+              type: string;
+              detail: string;
+              severity: string;
+            }>;
+            blocked: boolean;
+          }
+        | undefined;
       if (input.guardrailIds && input.guardrailIds.length > 0) {
-        const inputModeration = await this.moderation.moderateInput(inputText, input.guardrailIds);
+        inputModeration = await this.moderation.moderateInput(
+          inputText,
+          input.guardrailIds,
+        );
         guardrailResult.inputPassed = inputModeration.passed;
-        guardrailResult.inputViolations = inputModeration.violations.map((v) => ({
-          type: v.type,
-          detail: v.detail,
-          severity: v.severity,
-        }));
+        guardrailResult.inputViolations = inputModeration.violations.map(
+          (v) => ({
+            type: v.type,
+            detail: v.detail,
+            severity: v.severity,
+          }),
+        );
         guardrailResult.blocked = inputModeration.blocked;
 
         if (guardrailResult.blocked) {
           await this.audit.record("ai.run.blocked", {
             blocked: true,
-            guardrailName: guardrailResult.inputViolations[0]?.type ?? "unknown",
-            violationType: guardrailResult.inputViolations[0]?.detail ?? "unknown",
+            guardrailName:
+              guardrailResult.inputViolations[0]?.type ?? "unknown",
+            violationType:
+              guardrailResult.inputViolations[0]?.detail ?? "unknown",
           });
           auditEvents.push("ai.run.blocked");
 
@@ -154,7 +190,7 @@ export class AiRunLifecycleService {
             ...m,
             content:
               m.content === inputText
-                ? inputModeration.scrubbedText
+                ? (inputModeration.scrubbedText ?? m.content)
                 : m.content,
           }))
         : input.messages;
@@ -174,19 +210,29 @@ export class AiRunLifecycleService {
           );
 
         if (policy) {
-          const routingResult = await aiRouter.route(effectiveMessages, {
-            model: resolvedModel,
-            temperature: input.temperature,
-            maxTokens: input.maxTokens,
-            responseFormat: input.responseFormat,
-          }, {
-            strategy: policy.strategy as any,
-            providerPreferences: (policy.providerPreferences ?? []) as any,
-            modelAllowlist: policy.modelAllowlist ?? undefined,
-            modelDenylist: policy.modelDenylist ?? undefined,
-            fallbackEnabled: policy.fallbackEnabled,
-            maxRetries: policy.maxRetries,
-          });
+          const routingResult = await aiRouter.route(
+            effectiveMessages,
+            {
+              model: resolvedModel,
+              temperature: input.temperature,
+              maxTokens: input.maxTokens,
+              responseFormat: input.responseFormat,
+            },
+            {
+              strategy: policy.strategy as any,
+              providerPreferences: (policy.providerPreferences ?? []) as any,
+              // Drizzle types jsonb columns as `unknown` (defaults to `{}`);
+              // cast to `string[] | undefined` to match the route options shape.
+              modelAllowlist:
+                (policy.modelAllowlist as string[] | null | undefined) ??
+                undefined,
+              modelDenylist:
+                (policy.modelDenylist as string[] | null | undefined) ??
+                undefined,
+              fallbackEnabled: policy.fallbackEnabled,
+              maxRetries: policy.maxRetries,
+            },
+          );
 
           resolvedProvider = routingResult.provider;
           resolvedModel = routingResult.result.model;
@@ -194,14 +240,20 @@ export class AiRunLifecycleService {
       }
 
       // Step 4: Execute with AI router
-      const routeResult = await aiRouter.route(effectiveMessages, {
-        model: resolvedModel,
-        temperature: input.temperature,
-        maxTokens: input.maxTokens,
-        responseFormat: input.responseFormat,
-      }, input.provider ? {
-        providerPreferences: [input.provider as any],
-      } : undefined);
+      const routeResult = await aiRouter.route(
+        effectiveMessages,
+        {
+          model: resolvedModel,
+          temperature: input.temperature,
+          maxTokens: input.maxTokens,
+          responseFormat: input.responseFormat,
+        },
+        input.provider
+          ? {
+              providerPreferences: [input.provider as any],
+            }
+          : undefined,
+      );
 
       resolvedProvider = routeResult.provider;
       resolvedModel = routeResult.result.model;
@@ -214,13 +266,18 @@ export class AiRunLifecycleService {
       // Step 5: Output guardrails & moderation
       let finalOutput = outputText;
       if (input.guardrailIds && input.guardrailIds.length > 0) {
-        const outputModeration = await this.moderation.moderateOutput(finalOutput, input.guardrailIds);
+        const outputModeration = await this.moderation.moderateOutput(
+          finalOutput,
+          input.guardrailIds,
+        );
         guardrailResult.outputPassed = outputModeration.passed;
-        guardrailResult.outputViolations = outputModeration.violations.map((v) => ({
-          type: v.type,
-          detail: v.detail,
-          severity: v.severity,
-        }));
+        guardrailResult.outputViolations = outputModeration.violations.map(
+          (v) => ({
+            type: v.type,
+            detail: v.detail,
+            severity: v.severity,
+          }),
+        );
 
         if (outputModeration.blocked) {
           guardrailResult.blocked = true;
@@ -228,8 +285,10 @@ export class AiRunLifecycleService {
 
           await this.audit.record("ai.run.blocked", {
             blocked: true,
-            guardrailName: guardrailResult.outputViolations[0]?.type ?? "unknown",
-            violationType: guardrailResult.outputViolations[0]?.detail ?? "unknown",
+            guardrailName:
+              guardrailResult.outputViolations[0]?.type ?? "unknown",
+            violationType:
+              guardrailResult.outputViolations[0]?.detail ?? "unknown",
           });
           auditEvents.push("ai.run.blocked");
         } else {
@@ -239,8 +298,15 @@ export class AiRunLifecycleService {
 
       // Step 6: Scrub PII
       let piiScrubbed = false;
-      if (input.scrubPii !== false && input.piiModes && input.piiModes.length > 0) {
-        const scrubbed = await this.moderation.scrubPII(finalOutput, input.piiModes as any);
+      if (
+        input.scrubPii !== false &&
+        input.piiModes &&
+        input.piiModes.length > 0
+      ) {
+        const scrubbed = await this.moderation.scrubPII(
+          finalOutput,
+          input.piiModes as any,
+        );
         if (scrubbed !== finalOutput) {
           piiScrubbed = true;
           finalOutput = scrubbed;

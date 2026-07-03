@@ -4,9 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import {
-  useListWorkflowVersions,
-} from "@longox/api-client-react";
+import { useListWorkflowVersions } from "@longox/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,17 +15,26 @@ import { SemanticDiff } from "@/features/workflows/components/semantic-diff";
 export default function WorkflowVersionsPage() {
   const params = useParams<{ id: string }>();
   const workflowId = parseInt(params.id ?? "0", 10);
-  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(
+    null,
+  );
 
   const { data: versions = [], isLoading } = useListWorkflowVersions(
     workflowId,
-    { query: { enabled: !!workflowId } },
+    // The generated hook merges user-provided options with the auto-generated
+    // queryKey. Cast to `any` to bypass the TS2741 "Property 'queryKey' is
+    // missing" error caused by the generated hook's strict UseQueryOptions
+    // typing. The runtime merge in getListWorkflowVersionsQueryOptions
+    // supplies the queryKey automatically.
+    { query: { enabled: !!workflowId } } as any,
   );
 
   const { data: diffData, isLoading: diffLoading } = useQuery({
     queryKey: ["workflow-version-diff", workflowId, selectedVersionId],
     queryFn: () =>
-      fetch(`/api/workflows/${workflowId}/versions/${selectedVersionId}/diff`).then((r) => r.json()),
+      fetch(
+        `/api/workflows/${workflowId}/versions/${selectedVersionId}/diff`,
+      ).then((r) => r.json()),
     enabled: !!selectedVersionId && !!workflowId,
   });
 
@@ -43,7 +50,9 @@ export default function WorkflowVersionsPage() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold">Version History</h1>
-          <p className="text-sm text-muted-foreground">Compare published workflow versions</p>
+          <p className="text-sm text-muted-foreground">
+            Compare published workflow versions
+          </p>
         </div>
       </header>
 
@@ -59,20 +68,27 @@ export default function WorkflowVersionsPage() {
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <History className="mb-3 h-10 w-10 text-muted-foreground" />
               <p className="font-medium">No versions yet</p>
-              <p className="text-sm text-muted-foreground">Publish to create version snapshots.</p>
+              <p className="text-sm text-muted-foreground">
+                Publish to create version snapshots.
+              </p>
             </div>
           ) : (
             <div className="space-y-2">
               {sortedVersions.map((v, idx) => (
                 <button
                   key={v.id}
-                  onClick={() => setSelectedVersionId(v.id)}
+                  onClick={() => setSelectedVersionId(String(v.id))}
                   className={`w-full rounded-lg border p-3 text-left transition-colors hover:border-primary/50 ${
-                    selectedVersionId === v.id ? "border-primary ring-1 ring-primary" : ""
+                    selectedVersionId === String(v.id)
+                      ? "border-primary ring-1 ring-primary"
+                      : ""
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <Badge variant={v.published ? "default" : "secondary"} className="text-xs">
+                    <Badge
+                      variant={v.published ? "default" : "secondary"}
+                      className="text-xs"
+                    >
                       v{v.version}
                     </Badge>
                     {idx === 0 && (
@@ -80,10 +96,14 @@ export default function WorkflowVersionsPage() {
                     )}
                   </div>
                   {v.changeNote && (
-                    <p className="mt-1 text-xs text-muted-foreground truncate">{v.changeNote}</p>
+                    <p className="mt-1 text-xs text-muted-foreground truncate">
+                      {v.changeNote}
+                    </p>
                   )}
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(v.createdAt), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(v.createdAt), {
+                      addSuffix: true,
+                    })}
                   </p>
                 </button>
               ))}

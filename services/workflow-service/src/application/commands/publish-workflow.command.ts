@@ -51,8 +51,14 @@ export interface PublishWorkflowResult {
 export async function publishWorkflow(
   input: PublishWorkflowInput,
 ): Promise<PublishWorkflowResult> {
-  const { workflowId, tenantId, graph, changeNote, publishedBy, expectedDraftVersion } =
-    input;
+  const {
+    workflowId,
+    tenantId,
+    graph,
+    changeNote,
+    publishedBy,
+    expectedDraftVersion,
+  } = input;
 
   // ── 1. Verify workflow ownership ────────────────────────────────────────────
 
@@ -97,7 +103,10 @@ export async function publishWorkflow(
 
   // ── 3. Compute checksum ─────────────────────────────────────────────────────
 
-  const graphJson = JSON.stringify({ nodes: graph.nodes ?? [], edges: graph.edges ?? [] });
+  const graphJson = JSON.stringify({
+    nodes: graph.nodes ?? [],
+    edges: graph.edges ?? [],
+  });
   let hash = 0;
   for (let i = 0; i < graphJson.length; i++) {
     const c = graphJson.charCodeAt(i);
@@ -147,7 +156,12 @@ export async function publishWorkflow(
         : [],
     };
 
-    const diff = computeFullDiff(prevGraph, graph, latestVersion.version, nextVersionNumber);
+    const diff = computeFullDiff(
+      prevGraph,
+      graph,
+      latestVersion.version,
+      nextVersionNumber,
+    );
 
     if (diff.patch.length > 0) {
       const [diffRow] = await db
@@ -169,12 +183,19 @@ export async function publishWorkflow(
             edgesRemoved: diff.summary.edgesRemoved,
             edgesRewired: diff.summary.edgesRewired,
             totalChanges: diff.summary.totalChanges,
-            semanticChanges: diff.semanticChanges.map((c) => ({
-              type: c.type,
-              description: c.description,
-              nodeId: c.nodeId,
-              edgeId: c.edgeId,
-            })),
+            semanticChanges: diff.semanticChanges.map(
+              (c: {
+                type: string;
+                description: string;
+                nodeId?: string;
+                edgeId?: string;
+              }) => ({
+                type: c.type,
+                description: c.description,
+                nodeId: c.nodeId,
+                edgeId: c.edgeId,
+              }),
+            ),
           } as any,
           createdBy: publishedBy ?? null,
         })
@@ -200,6 +221,7 @@ export async function publishWorkflow(
     versionNumber: nextVersionNumber,
     checksum,
     diffId,
-    publishedAt: newVersion.createdAt?.toISOString() ?? new Date().toISOString(),
+    publishedAt:
+      newVersion.createdAt?.toISOString() ?? new Date().toISOString(),
   };
 }

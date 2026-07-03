@@ -5,6 +5,7 @@
     "declarationMap": true,
     "emitDeclarationOnly": true,
     "jsx": "react-jsx",
+    "lib": ["es2022", "dom", "dom.iterable"],
     "outDir": "dist",
     "rootDir": "src",
     "types": ["node"]

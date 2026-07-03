@@ -33,7 +33,7 @@ router.get(
   ["/api/workflows/:id/diffs", "/api/v1/workflows/:id/diffs"],
   authorize("workflows:read"),
   async (req: Request, res: Response): Promise<void> => {
-    const workflowId = parseInt(req.params["id"] ?? "0", 10);
+    const workflowId = parseInt(String(req.params["id"] ?? "0"), 10);
     const tenantId = req.user?.tenantId ?? null;
 
     const [workflow] = await db
@@ -75,12 +75,16 @@ router.get(
       ]),
     ];
 
-    const versions = versionIds.length > 0
-      ? await db
-          .select({ id: workflowVersionsTable.id, version: workflowVersionsTable.version })
-          .from(workflowVersionsTable)
-          .where(eq(workflowVersionsTable.workflowId, workflowId))
-      : [];
+    const versions =
+      versionIds.length > 0
+        ? await db
+            .select({
+              id: workflowVersionsTable.id,
+              version: workflowVersionsTable.version,
+            })
+            .from(workflowVersionsTable)
+            .where(eq(workflowVersionsTable.workflowId, workflowId))
+        : [];
 
     const versionMap = new Map(versions.map((v) => [v.id, v.version]));
 
@@ -110,9 +114,9 @@ router.get(
   ],
   authorize("workflows:read"),
   async (req: Request, res: Response): Promise<void> => {
-    const workflowId = parseInt(req.params["id"] ?? "0", 10);
-    const fromVersion = parseInt(req.params["fromVersion"] ?? "0", 10);
-    const toVersion = parseInt(req.params["toVersion"] ?? "0", 10);
+    const workflowId = parseInt(String(req.params["id"] ?? "0"), 10);
+    const fromVersion = parseInt(String(req.params["fromVersion"] ?? "0"), 10);
+    const toVersion = parseInt(String(req.params["toVersion"] ?? "0"), 10);
     const tenantId = req.user?.tenantId ?? null;
 
     if (fromVersion <= 0 || toVersion <= 0) {
@@ -220,9 +224,9 @@ router.get(
   ],
   authorize("workflows:read"),
   async (req: Request, res: Response): Promise<void> => {
-    const workflowId = parseInt(req.params["id"] ?? "0", 10);
-    const fromVersion = parseInt(req.params["fromVersion"] ?? "0", 10);
-    const toVersion = parseInt(req.params["toVersion"] ?? "0", 10);
+    const workflowId = parseInt(String(req.params["id"] ?? "0"), 10);
+    const fromVersion = parseInt(String(req.params["fromVersion"] ?? "0"), 10);
+    const toVersion = parseInt(String(req.params["toVersion"] ?? "0"), 10);
     const tenantId = req.user?.tenantId ?? null;
 
     const [workflow] = await db
@@ -286,9 +290,13 @@ router.get(
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
-function extractGraph(version: typeof workflowVersionsTable.$inferSelect): WorkflowGraph {
+function extractGraph(
+  version: typeof workflowVersionsTable.$inferSelect,
+): WorkflowGraph {
   const nodes = Array.isArray(version.nodes) ? (version.nodes as any[]) : [];
-  const edges = Array.isArray((version as any).edges) ? (version as any).edges : [];
+  const edges = Array.isArray((version as any).edges)
+    ? (version as any).edges
+    : [];
   return { nodes, edges };
 }
 

@@ -44,7 +44,9 @@ export class ConsoleAuditLogger implements AuditLogger {
     }
   }
 
-  query(filters: Partial<SandboxAuditEntry>): SandboxAuditEntry[] {
+  async query(
+    filters: Partial<SandboxAuditEntry>,
+  ): Promise<SandboxAuditEntry[]> {
     return this.entries.filter((e) =>
       Object.entries(filters).every(([k, v]) => (e as any)[k] === v),
     );

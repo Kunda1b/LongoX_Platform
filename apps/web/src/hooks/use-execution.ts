@@ -36,7 +36,7 @@ export function useExecution(executionId?: number) {
   const [sseStatus, setSseStatus] = useState<SseStatus>("disconnected");
   const eventSourceRef = useRef<EventSource | null>(null);
 
-  const query = useQuery<Execution>({
+  const query = useQuery({
     queryKey: ["execution", executionId],
     queryFn: async () => {
       const response = await apiClient.get(`/api/v1/executions/${executionId}`);
@@ -105,7 +105,7 @@ export function useExecution(executionId?: number) {
 }
 
 export function useExecutions(workflowId?: number) {
-  const query = useQuery<Execution[]>({
+  const query = useQuery({
     queryKey: ["executions", workflowId],
     queryFn: async () => {
       const params = workflowId ? { workflowId } : {};
