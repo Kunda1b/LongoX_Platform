@@ -1,4 +1,14 @@
-import { db, auditLogTable } from "@longox/db";
+/**
+ * Prisma-based audit writer.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.auditLog` delegate with `as any` casts for legacy columns
+ * (`tenantId`, `actorType`, `resourceType`, `resourceId`, `metadata`,
+ * `correlationId`, `createdAt`) that exist on the underlying `audit_log`
+ * table but are not yet reflected on the Prisma model.
+ */
+
+import { prisma } from "@longox/db/prisma";
 
 export interface AuditContext {
   tenantId: string;
@@ -28,16 +38,18 @@ export function actorFromUser(user?: {
 export async function writeAuditEntry(params: WriteAuditParams): Promise<void> {
   const { action, resourceType, resourceId, metadata, context } = params;
 
-  await db.insert(auditLogTable).values({
-    tenantId: context.tenantId,
-    actorType: context.actorType,
-    actorId: context.actorId ?? null,
-    action,
-    resourceType,
-    resourceId,
-    metadata: metadata ?? null,
-    correlationId: context.correlationId ?? null,
-  } as any);
+  await prisma.auditLog.create({
+    data: {
+      tenantId: context.tenantId,
+      actorType: context.actorType,
+      actorId: context.actorId ?? null,
+      action,
+      resourceType,
+      resourceId,
+      metadata: metadata ?? null,
+      correlationId: context.correlationId ?? null,
+    } as any,
+  });
 }
 
 /** @deprecated Use writeAuditEntry with AuditContext instead */

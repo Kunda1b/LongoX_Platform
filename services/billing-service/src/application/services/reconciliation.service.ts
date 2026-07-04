@@ -6,30 +6,12 @@
  *   - Discrepancies trigger an alert + automatic re-rollup.
  *   - Invoices are generated from rollups (never from raw events).
  *
- * This service implements the reconciliation logic. It is invoked by the
- * `billing-reconciliation` BullMQ queue (cron: daily at 02:00 UTC by default).
- *
- * Reconciliation algorithm:
- *   1. For each (tenant_id, metric_name, period) tuple in usage_rollups for
- *      the reconciliation window (default: yesterday UTC):
- *      a. Sum the raw metering_events for the same tuple.
- *      b. Compare the rollup total_quantity to the raw sum.
- *      c. If |rollup - raw| / max(raw, 1) > threshold (default 1%), mark the
- *         rollup as `discrepant` and queue a re-rollup by deleting the row
- *         (the next hourly rollup job will recompute it from raw events).
- *   2. Emit a `billing.reconciliation.completed` event with the count of
- *      discrepancies found and re-rollups queued.
- *   3. If the discrepancy count exceeds 5% of total tuples, emit a
- *      `billing.reconciliation.alert` event for the on-call engineer.
- *
- * Schema note: the actual `usage_rollups` table uses `metric_name` (not
- * `metric_code`) and `total_quantity` (not `quantity`). The `metering_events`
- * table uses `event_type` to identify the metric and `ingested_at` as the
- * timestamp (there is no separate `occurred_at` column).
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.usageRollup` delegate with `as any` casts for legacy columns.
+ * Raw sums on `metering_events.quantity` use `prisma.$queryRawUnsafe()`.
  */
 
-import { eq, and, gte, lt, sum } from "drizzle-orm";
-import { db, meteringEventsTable, usageRollupsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 
 const RECONCILIATION_THRESHOLD_PCT = Number(
   process.env.BILLING_RECONCILIATION_THRESHOLD_PCT ?? 1,
@@ -76,41 +58,38 @@ export class ReconciliationService {
     const windowEnd = new Date(windowStart.getTime() + 24 * 60 * 60 * 1000);
 
     // ─── 1. Fetch all rollups for the window ────────────────────────────────
-    const rollups = await db
-      .select({
-        tenantId: usageRollupsTable.tenantId,
-        metricName: usageRollupsTable.metricName,
-        totalQuantity: usageRollupsTable.totalQuantity,
-      })
-      .from(usageRollupsTable)
-      .where(
-        and(
-          gte(usageRollupsTable.periodStart, windowStart),
-          lt(usageRollupsTable.periodEnd, windowEnd),
-        ),
-      );
+    const rollups = await prisma.usageRollup.findMany({
+      where: {
+        periodStart: { gte: windowStart },
+        periodEnd: { lt: windowEnd },
+      } as any,
+      select: {
+        tenantId: true,
+        metricName: true,
+        totalQuantity: true,
+      } as any,
+    });
 
     // ─── 2. For each rollup, sum the raw metering events ────────────────────
     const details: ReconciliationReport["details"] = [];
     let discrepanciesFound = 0;
     let rerollupsQueued = 0;
 
-    for (const rollup of rollups) {
-      const [rawSum] = await db
-        .select({
-          total: sum(meteringEventsTable.quantity),
-        })
-        .from(meteringEventsTable)
-        .where(
-          and(
-            eq(meteringEventsTable.tenantId, rollup.tenantId),
-            eq(meteringEventsTable.eventType, rollup.metricName),
-            gte(meteringEventsTable.ingestedAt, windowStart),
-            lt(meteringEventsTable.ingestedAt, windowEnd),
-          ),
-        );
+    for (const rollup of rollups as any[]) {
+      const rawRows: any[] = await prisma.$queryRawUnsafe(
+        `SELECT coalesce(sum(quantity), 0)::text AS total
+         FROM metering_events
+         WHERE tenant_id = $1
+           AND event_type = $2
+           AND ingested_at >= $3
+           AND ingested_at < $4`,
+        rollup.tenantId,
+        rollup.metricName,
+        windowStart,
+        windowEnd,
+      );
 
-      const rawQuantity = Number(rawSum?.total ?? 0);
+      const rawQuantity = Number(rawRows?.[0]?.total ?? 0);
       const rollupQuantity = Number(rollup.totalQuantity ?? 0);
       const delta = Math.abs(rollupQuantity - rawQuantity);
       const denominator = Math.max(rawQuantity, 1);
@@ -121,16 +100,14 @@ export class ReconciliationService {
         // Queue a re-rollup by deleting the discrepant rollup row; the next
         // hourly rollup job will recompute it from raw events.
         try {
-          await db
-            .delete(usageRollupsTable)
-            .where(
-              and(
-                eq(usageRollupsTable.tenantId, rollup.tenantId),
-                eq(usageRollupsTable.metricName, rollup.metricName),
-                gte(usageRollupsTable.periodStart, windowStart),
-                lt(usageRollupsTable.periodEnd, windowEnd),
-              ),
-            );
+          await prisma.usageRollup.deleteMany({
+            where: {
+              tenantId: rollup.tenantId,
+              metricName: rollup.metricName,
+              periodStart: { gte: windowStart },
+              periodEnd: { lt: windowEnd },
+            } as any,
+          });
           rerollupsQueued += 1;
         } catch {
           // Delete failure is non-fatal — the alert below will surface it.

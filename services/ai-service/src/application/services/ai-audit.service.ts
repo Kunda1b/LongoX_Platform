@@ -1,4 +1,11 @@
-import { db, auditLogTable } from "@longox/db";
+/**
+ * AI audit service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.auditLog` delegate with `as any` casts for legacy columns.
+ */
+
+import { prisma } from "@longox/db/prisma";
 
 export type AiAuditEventType =
   | "ai.run.started"
@@ -39,21 +46,23 @@ export class AiAuditService {
     metadata?: Record<string, unknown>,
   ): Promise<void> {
     try {
-      await db.insert(auditLogTable).values({
-        actorType: "system",
-        actorId: detail.runId ? String(detail.runId) : null,
-        action: eventType,
-        resourceType: "ai",
-        resourceId: detail.runId
-          ? String(detail.runId)
-          : detail.promptId
-            ? String(detail.promptId)
-            : "unknown",
-        metadata: {
-          ...detail,
-          ...(metadata ?? {}),
-        },
-      } as any);
+      await prisma.auditLog.create({
+        data: {
+          actorType: "system",
+          actorId: detail.runId ? String(detail.runId) : null,
+          action: eventType,
+          resourceType: "ai",
+          resourceId: detail.runId
+            ? String(detail.runId)
+            : detail.promptId
+              ? String(detail.promptId)
+              : "unknown",
+          metadata: {
+            ...detail,
+            ...(metadata ?? {}),
+          },
+        } as any,
+      });
     } catch {
       // non-fatal audit logging
     }

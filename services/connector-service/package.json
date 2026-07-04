@@ -16,7 +16,6 @@
     "@longox/connector-sandbox": "workspace:*",
     "@longox/db": "workspace:*",
     "@longox/shared-rbac": "workspace:*",
-    "drizzle-orm": "catalog:",
     "express": "^5.2.1"
   },
   "devDependencies": {

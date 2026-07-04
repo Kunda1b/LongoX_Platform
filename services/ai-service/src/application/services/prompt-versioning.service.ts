@@ -1,5 +1,12 @@
-import { db, promptsTable, promptVersionsTable } from "@longox/db";
-import { eq, and, desc } from "drizzle-orm";
+/**
+ * Prompt versioning service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.aiPrompt` and `prisma.aiPromptVersion` delegates with `as any`
+ * casts for legacy columns (`content`, `version`, `status`, `notes`).
+ */
+
+import { prisma } from "@longox/db/prisma";
 import { EvaluationGateService } from "./evaluation-gate.service";
 
 export interface VersionDiff {
@@ -19,28 +26,26 @@ export interface CreateVersionInput {
 export class PromptVersioningService {
   private evaluationGate = new EvaluationGateService();
 
-  async createVersion(input: CreateVersionInput): Promise<typeof promptVersionsTable.$inferSelect> {
-    const [currentPrompt] = await db
-      .select()
-      .from(promptsTable)
-      .where(eq(promptsTable.id, input.promptId));
+  async createVersion(input: CreateVersionInput): Promise<any> {
+    const currentPrompt = await prisma.aiPrompt.findUnique({
+      where: { id: input.promptId } as any,
+    });
 
     if (!currentPrompt) {
       throw new Error(`Prompt ${input.promptId} not found`);
     }
 
-    const newVersion = currentPrompt.version + 1;
+    const newVersion = ((currentPrompt as any).version ?? 0) + 1;
 
-    const [row] = await db
-      .insert(promptVersionsTable)
-      .values({
+    const row = await prisma.aiPromptVersion.create({
+      data: {
         promptId: input.promptId,
         content: input.content,
         version: newVersion,
         status: "draft",
         notes: input.changeNote ?? null,
-      })
-      .returning();
+      } as any,
+    });
 
     return row;
   }
@@ -50,15 +55,12 @@ export class PromptVersioningService {
     fromVersion: number,
     toEnvironment: string,
   ): Promise<{ success: boolean; gateResult?: Awaited<ReturnType<EvaluationGateService["checkRegression"]>> }> {
-    const [versionRow] = await db
-      .select()
-      .from(promptVersionsTable)
-      .where(
-        and(
-          eq(promptVersionsTable.promptId, promptId),
-          eq(promptVersionsTable.version, fromVersion),
-        ),
-      );
+    const versionRow = await prisma.aiPromptVersion.findFirst({
+      where: {
+        promptId,
+        version: fromVersion,
+      } as any,
+    });
 
     if (!versionRow) {
       throw new Error(`Version ${fromVersion} of prompt ${promptId} not found`);
@@ -71,37 +73,35 @@ export class PromptVersioningService {
     );
 
     if (!gateResult.passed) {
-      await db
-        .update(promptVersionsTable)
-        .set({ status: "deprecated" })
-        .where(
-          and(
-            eq(promptVersionsTable.promptId, promptId),
-            eq(promptVersionsTable.version, fromVersion),
-          ),
-        );
+      await prisma.aiPromptVersion.updateMany({
+        where: {
+          promptId,
+          version: fromVersion,
+        } as any,
+        data: { status: "deprecated" } as any,
+      });
 
       return { success: false, gateResult };
     }
 
-    await db
-      .update(promptVersionsTable)
-      .set({ status: toEnvironment === "production" ? "promoted" : "active" })
-      .where(
-        and(
-          eq(promptVersionsTable.promptId, promptId),
-          eq(promptVersionsTable.version, fromVersion),
-        ),
-      );
+    await prisma.aiPromptVersion.updateMany({
+      where: {
+        promptId,
+        version: fromVersion,
+      } as any,
+      data: {
+        status: toEnvironment === "production" ? "promoted" : "active",
+      } as any,
+    });
 
-    await db
-      .update(promptsTable)
-      .set({
-        content: versionRow.content,
+    await prisma.aiPrompt.update({
+      where: { id: promptId } as any,
+      data: {
+        content: (versionRow as any).content,
         version: fromVersion,
         status: "approved",
-      })
-      .where(eq(promptsTable.id, promptId));
+      } as any,
+    });
 
     return { success: true, gateResult };
   }
@@ -111,22 +111,19 @@ export class PromptVersioningService {
     v2: number,
     promptId?: string,
   ): Promise<VersionDiff[]> {
-    const conditions1 = [eq(promptVersionsTable.version, v1)];
-    const conditions2 = [eq(promptVersionsTable.version, v2)];
+    const where1: Record<string, unknown> = { version: v1 };
+    const where2: Record<string, unknown> = { version: v2 };
     if (promptId) {
-      conditions1.push(eq(promptVersionsTable.promptId, promptId));
-      conditions2.push(eq(promptVersionsTable.promptId, promptId));
+      where1.promptId = promptId;
+      where2.promptId = promptId;
     }
 
-    const [version1] = await db
-      .select()
-      .from(promptVersionsTable)
-      .where(and(...conditions1));
-
-    const [version2] = await db
-      .select()
-      .from(promptVersionsTable)
-      .where(and(...conditions2));
+    const version1 = await prisma.aiPromptVersion.findFirst({
+      where: where1 as any,
+    });
+    const version2 = await prisma.aiPromptVersion.findFirst({
+      where: where2 as any,
+    });
 
     if (!version1 || !version2) {
       throw new Error(`One or both versions not found (v${v1}, v${v2})`);
@@ -134,14 +131,14 @@ export class PromptVersioningService {
 
     const diffs: VersionDiff[] = [];
 
-    if (version1.content !== version2.content) {
-      diffs.push({ field: "content", from: version1.content, to: version2.content });
+    if ((version1 as any).content !== (version2 as any).content) {
+      diffs.push({ field: "content", from: (version1 as any).content, to: (version2 as any).content });
     }
-    if (version1.status !== version2.status) {
-      diffs.push({ field: "status", from: version1.status, to: version2.status });
+    if ((version1 as any).status !== (version2 as any).status) {
+      diffs.push({ field: "status", from: (version1 as any).status, to: (version2 as any).status });
     }
-    if (version1.notes !== version2.notes) {
-      diffs.push({ field: "notes", from: version1.notes, to: version2.notes });
+    if ((version1 as any).notes !== (version2 as any).notes) {
+      diffs.push({ field: "notes", from: (version1 as any).notes, to: (version2 as any).notes });
     }
 
     return diffs;

@@ -1,11 +1,16 @@
-import {
-  db,
-  enterpriseCommitmentsTable,
-  billingAccountsTable,
-  billingPlansTable,
-  overageEventsTable,
-} from "@longox/db";
-import { eq, and, gte, lte, sql } from "drizzle-orm";
+/**
+ * Enterprise commitment service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.enterpriseCommitment`, `prisma.billingAccount`,
+ * `prisma.billingPlan`, `prisma.overageEvent` delegates with `as any` casts
+ * for legacy columns.
+ *
+ * Raw sums on `overage_events.overage_quantity` use `prisma.$queryRawUnsafe()`
+ * because of the `sum(numeric)::text` casts.
+ */
+
+import { prisma } from "@longox/db/prisma";
 
 export interface EnterpriseCommitment {
   id: string;
@@ -34,35 +39,32 @@ export interface CommitmentOverage {
 
 export class EnterpriseService {
   async getCommitment(tenantId: string): Promise<EnterpriseCommitment | null> {
-    const [commitment] = await db
-      .select()
-      .from(enterpriseCommitmentsTable)
-      .where(
-        and(
-          eq(enterpriseCommitmentsTable.tenantId, tenantId),
-          eq(enterpriseCommitmentsTable.isActive, true),
-        ),
-      )
-      .limit(1);
+    const commitment = await prisma.enterpriseCommitment.findFirst({
+      where: {
+        tenantId,
+        isActive: true,
+      } as any,
+    });
 
     if (!commitment) return null;
+    const c = commitment as any;
 
     return {
-      id: commitment.id,
-      name: commitment.name,
-      commitmentType: commitment.commitmentType,
-      annualAmount: commitment.annualAmount,
-      includedExecutions: commitment.includedExecutions,
-      includedAiTokens: commitment.includedAiTokens,
-      includedRagQueries: commitment.includedRagQueries,
-      includedStorageGb: commitment.includedStorageGb,
-      maxWorkflows: commitment.maxWorkflows,
-      maxMembers: commitment.maxMembers,
-      maxConnectors: commitment.maxConnectors,
-      maxDashboards: commitment.maxDashboards,
-      startDate: commitment.startDate,
-      endDate: commitment.endDate,
-      isActive: commitment.isActive,
+      id: c.id,
+      name: c.name,
+      commitmentType: c.commitmentType,
+      annualAmount: String(c.annualAmount),
+      includedExecutions: c.includedExecutions,
+      includedAiTokens: c.includedAiTokens,
+      includedRagQueries: c.includedRagQueries,
+      includedStorageGb: c.includedStorageGb,
+      maxWorkflows: c.maxWorkflows,
+      maxMembers: c.maxMembers,
+      maxConnectors: c.maxConnectors,
+      maxDashboards: c.maxDashboards,
+      startDate: c.startDate,
+      endDate: c.endDate,
+      isActive: c.isActive,
     };
   }
 
@@ -77,38 +79,35 @@ export class EnterpriseService {
     const periodStart = new Date(now.getFullYear(), 0, 1);
     const periodEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
 
-    const [existing] = await db
-      .select()
-      .from(overageEventsTable)
-      .where(
-        and(
-          eq(overageEventsTable.tenantId, tenantId),
-          eq(overageEventsTable.resource, usage.resource),
-          gte(overageEventsTable.periodStart, periodStart),
-          lte(overageEventsTable.periodEnd, periodEnd),
-        ),
-      )
-      .limit(1);
-
-    if (existing) {
-      await db
-        .update(overageEventsTable)
-        .set({
-          overageQuantity: String(
-            Number(existing.overageQuantity) + usage.quantity,
-          ),
-        })
-        .where(eq(overageEventsTable.id, existing.id));
-    } else {
-      await db.insert(overageEventsTable).values({
+    const existing = await prisma.overageEvent.findFirst({
+      where: {
         tenantId,
         resource: usage.resource,
-        overageQuantity: String(usage.quantity),
-        rate: "0",
-        amount: "0",
-        periodStart,
-        periodEnd,
-        metadata: { commitmentTracked: true },
+        periodStart: { gte: periodStart },
+        periodEnd: { lte: periodEnd },
+      } as any,
+    });
+
+    if (existing) {
+      const e = existing as any;
+      await prisma.overageEvent.update({
+        where: { id: e.id },
+        data: {
+          overageQuantity: Number(e.overageQuantity) + usage.quantity,
+        } as any,
+      });
+    } else {
+      await prisma.overageEvent.create({
+        data: {
+          tenantId,
+          resource: usage.resource,
+          overageQuantity: usage.quantity,
+          rate: 0,
+          amount: 0,
+          periodStart,
+          periodEnd,
+          metadata: { commitmentTracked: true },
+        } as any,
       });
     }
   }
@@ -163,21 +162,20 @@ export class EnterpriseService {
     const yearStart = new Date(now.getFullYear(), 0, 1);
     const yearEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
 
-    const [row] = await db
-      .select({
-        total: sql<string>`coalesce(sum(${overageEventsTable.overageQuantity}::numeric), '0')`,
-      })
-      .from(overageEventsTable)
-      .where(
-        and(
-          eq(overageEventsTable.tenantId, tenantId),
-          eq(overageEventsTable.resource, resource),
-          gte(overageEventsTable.periodStart, yearStart),
-          lte(overageEventsTable.periodEnd, yearEnd),
-        ),
-      );
+    const rows: any[] = await prisma.$queryRawUnsafe(
+      `SELECT coalesce(sum(overage_quantity::numeric), '0')::text AS total
+       FROM overage_events
+       WHERE tenant_id = $1
+         AND resource = $2
+         AND period_start >= $3
+         AND period_end <= $4`,
+      tenantId,
+      resource,
+      yearStart,
+      yearEnd,
+    );
 
-    return Number(row?.total ?? "0");
+    return Number(rows?.[0]?.total ?? "0");
   }
 
   private getCommitmentLimit(

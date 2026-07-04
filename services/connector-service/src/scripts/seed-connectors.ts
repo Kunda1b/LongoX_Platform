@@ -1,20 +1,20 @@
-import {
-  db,
-  connectorsTable,
-  connectorActionsTable,
-  connectorTriggersTable,
-  connectorVersionsTable,
-} from "@longox/db";
-import { eq } from "drizzle-orm";
+/**
+ * Connector seed script.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.connector`, `prisma.connectorAction`, `prisma.connectorTrigger`,
+ * and `prisma.connectorVersion` delegates with `as any` casts for legacy
+ * columns not reflected on the Prisma models.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import { PHASE2_CONNECTORS } from "./connector-manifests";
 
 async function seedConnectors(): Promise<void> {
   for (const manifest of PHASE2_CONNECTORS) {
-    const [existing] = await db
-      .select()
-      .from(connectorsTable)
-      .where(eq(connectorsTable.name, manifest.name))
-      .limit(1);
+    const existing = await prisma.connector.findFirst({
+      where: { name: manifest.name } as any,
+    });
 
     let connectorId: string;
 
@@ -48,43 +48,41 @@ async function seedConnectors(): Promise<void> {
     };
 
     if (existing) {
-      const [updated] = await db
-        .update(connectorsTable)
-        .set({ ...connectorData, updatedAt: new Date() })
-        .where(eq(connectorsTable.id, existing.id))
-        .returning();
+      const updated = await prisma.connector.update({
+        where: { id: existing.id },
+        data: { ...connectorData, updatedAt: new Date() } as any,
+      });
       connectorId = updated.id;
 
-      await db
-        .delete(connectorActionsTable)
-        .where(eq(connectorActionsTable.connectorId, connectorId));
-      await db
-        .delete(connectorTriggersTable)
-        .where(eq(connectorTriggersTable.connectorId, connectorId));
+      await prisma.connectorAction.deleteMany({
+        where: { connectorId } as any,
+      });
+      await prisma.connectorTrigger.deleteMany({
+        where: { connectorId } as any,
+      });
     } else {
-      const [inserted] = await db
-        .insert(connectorsTable)
-        .values(connectorData)
-        .returning();
+      const inserted = await prisma.connector.create({
+        data: connectorData as any,
+      });
       connectorId = inserted.id;
     }
 
     if (manifest.actions.length > 0) {
-      await db.insert(connectorActionsTable).values(
-        manifest.actions.map((action) => ({
+      await prisma.connectorAction.createMany({
+        data: manifest.actions.map((action) => ({
           connectorId,
           actionId: action.actionId,
           name: action.name,
           description: action.description,
           inputSchema: action.inputSchema ?? {},
           outputSchema: action.outputSchema ?? {},
-        })),
-      );
+        })) as any,
+      });
     }
 
     if (manifest.triggers.length > 0) {
-      await db.insert(connectorTriggersTable).values(
-        manifest.triggers.map((trigger) => ({
+      await prisma.connectorTrigger.createMany({
+        data: manifest.triggers.map((trigger) => ({
           connectorId,
           triggerId: trigger.triggerId,
           triggerType: trigger.triggerType,
@@ -92,21 +90,21 @@ async function seedConnectors(): Promise<void> {
           description: trigger.description,
           config: trigger.config ?? {},
           pollingInterval: trigger.pollingInterval ?? null,
-        })),
-      );
+        })) as any,
+      });
     }
 
-    const [version] = await db
-      .select()
-      .from(connectorVersionsTable)
-      .where(eq(connectorVersionsTable.connectorId, connectorId))
-      .limit(1);
+    const version = await prisma.connectorVersion.findFirst({
+      where: { connectorId } as any,
+    });
 
     if (!version) {
-      await db.insert(connectorVersionsTable).values({
-        connectorId,
-        semver: "1.0.0",
-        manifestJson: manifest,
+      await prisma.connectorVersion.create({
+        data: {
+          connectorId,
+          semver: "1.0.0",
+          manifestJson: manifest as any,
+        } as any,
       });
     }
   }

@@ -1,10 +1,22 @@
+/**
+ * Template REST routes.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.template` and `prisma.templateVersion` delegates.
+ *
+ * NOTE: The underlying `templates`/`template_versions` tables still carry
+ * legacy columns (tags, nodes, uses, complexity, is_custom, template_type,
+ * metadata, version, change_note, etc.) that are not yet reflected on the
+ * Prisma model. We use `as any` casts so Prisma does not type-check those
+ * fields while still persisting them.
+ */
+
 import { Router, type IRouter } from "express";
-import { eq, like, and as andOp, or, desc, sql } from "drizzle-orm";
-import { db, templatesTable, templateVersionsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 
 const router: IRouter = Router();
 
-function serialize(t: typeof templatesTable.$inferSelect) {
+function serialize(t: any) {
   return {
     id: t.id,
     name: t.name,
@@ -25,27 +37,25 @@ function serialize(t: typeof templatesTable.$inferSelect) {
 }
 
 router.get("/templates", async (req, res): Promise<void> => {
-  const conditions = [];
   const { category, search, type } = req.query as Record<
     string,
     string | undefined
   >;
 
-  if (category) conditions.push(eq(templatesTable.category, category));
-  if (search)
-    conditions.push(
-      or(
-        like(templatesTable.name, `%${search}%`),
-        like(templatesTable.description, `%${search}%`),
-      ),
-    );
-  if (type) conditions.push(eq(templatesTable.templateType, type));
+  const where: Record<string, unknown> = {};
+  if (category) where.category = category;
+  if (type) where.templateType = type;
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+    ];
+  }
 
-  const rows = await db
-    .select()
-    .from(templatesTable)
-    .where(conditions.length ? andOp(...conditions) : undefined)
-    .orderBy(desc(templatesTable.uses));
+  const rows = await prisma.template.findMany({
+    where: where as any,
+    orderBy: { uses: "desc" } as any,
+  });
 
   res.json(rows.map(serialize));
 });
@@ -57,11 +67,7 @@ router.get("/templates/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [row] = await db
-    .select()
-    .from(templatesTable)
-    .where(eq(templatesTable.id, id))
-    .limit(1);
+  const row = await prisma.template.findUnique({ where: { id } });
   if (!row) {
     res.status(404).json({ error: "Template not found" });
     return;
@@ -88,9 +94,8 @@ router.post("/templates", async (req, res): Promise<void> => {
     return;
   }
 
-  const [row] = await db
-    .insert(templatesTable)
-    .values({
+  const row = await prisma.template.create({
+    data: {
       name: String(name),
       description: description ? String(description) : "",
       category: String(category ?? "general"),
@@ -102,8 +107,8 @@ router.post("/templates", async (req, res): Promise<void> => {
       nodeCount: Array.isArray(nodes) ? nodes.length : 0,
       isCustom: true,
       metadata: (metadata ?? {}) as Record<string, unknown>,
-    })
-    .returning();
+    } as any,
+  });
 
   res.status(201).json(serialize(row));
 });
@@ -115,12 +120,13 @@ router.post("/templates/:id/use", async (req, res): Promise<void> => {
     return;
   }
 
-  const [row] = await db
-    .update(templatesTable)
-    .set({ uses: sql`${templatesTable.uses} + 1` })
-    .where(eq(templatesTable.id, id))
-    .returning();
+  // Atomic increment of legacy `uses` column.
+  await prisma.$executeRawUnsafe(
+    `UPDATE templates SET uses = uses + 1 WHERE id = $1`,
+    id,
+  );
 
+  const row = await prisma.template.findUnique({ where: { id } });
   if (!row) {
     res.status(404).json({ error: "Template not found" });
     return;
@@ -135,11 +141,10 @@ router.get("/templates/:id/versions", async (req, res): Promise<void> => {
     return;
   }
 
-  const versions = await db
-    .select()
-    .from(templateVersionsTable)
-    .where(eq(templateVersionsTable.templateId, id))
-    .orderBy(desc(templateVersionsTable.version));
+  const versions = await prisma.templateVersion.findMany({
+    where: { templateId: id },
+    orderBy: { version: "desc" } as any,
+  });
 
   res.json(versions);
 });
@@ -151,32 +156,28 @@ router.post("/templates/:id/fork", async (req, res): Promise<void> => {
     return;
   }
 
-  const [original] = await db
-    .select()
-    .from(templatesTable)
-    .where(eq(templatesTable.id, id))
-    .limit(1);
+  const original = await prisma.template.findUnique({ where: { id } });
   if (!original) {
     res.status(404).json({ error: "Template not found" });
     return;
   }
 
-  const [forked] = await db
-    .insert(templatesTable)
-    .values({
-      name: `${original.name} (Fork)`,
-      description: original.description,
-      category: original.category,
-      tags: original.tags,
-      nodes: original.nodes as any[],
-      templateType: original.templateType,
-      complexity: original.complexity,
-      triggerType: original.triggerType,
-      nodeCount: original.nodeCount,
+  const o = original as any;
+  const forked = await prisma.template.create({
+    data: {
+      name: `${o.name} (Fork)`,
+      description: o.description,
+      category: o.category,
+      tags: o.tags,
+      nodes: o.nodes as any[],
+      templateType: o.templateType,
+      complexity: o.complexity,
+      triggerType: o.triggerType,
+      nodeCount: o.nodeCount,
       isCustom: true,
-      metadata: { ...((original.metadata as any) ?? {}), forkedFrom: id },
-    })
-    .returning();
+      metadata: { ...((o.metadata as any) ?? {}), forkedFrom: id },
+    } as any,
+  });
 
   res.status(201).json(serialize(forked));
 });

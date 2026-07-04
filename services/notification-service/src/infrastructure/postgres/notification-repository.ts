@@ -1,5 +1,11 @@
-import { eq, and } from "drizzle-orm";
-import { db, notificationsTable } from "@longox/db";
+/**
+ * Prisma-based notification repository.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.notification` delegate.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import type { NotificationRepository } from "../../domain/notification/notification-repository";
 import type {
   Notification,
@@ -8,9 +14,7 @@ import type {
 } from "../../domain/notification/notification.entity";
 import { ensureNotificationSeed } from "./seed";
 
-function toDomain(
-  row: typeof notificationsTable.$inferSelect,
-): Notification {
+function toDomain(row: any): Notification {
   return {
     id: row.id,
     type: row.type,
@@ -30,25 +34,21 @@ export class PostgresNotificationRepository
   async list(filter: ListNotificationsFilter): Promise<Notification[]> {
     await ensureNotificationSeed();
     const limit = Math.min(filter.limit ?? 50, 200);
-    const conditions = [];
-    if (filter.recipientId)
-      conditions.push(eq(notificationsTable.recipientId, filter.recipientId));
-    if (filter.status)
-      conditions.push(eq(notificationsTable.status, filter.status));
+    const where: Record<string, unknown> = {};
+    if (filter.recipientId) where.recipientId = filter.recipientId;
+    if (filter.status) where.status = filter.status;
 
-    const rows = await db
-      .select()
-      .from(notificationsTable)
-      .where(conditions.length ? and(...conditions) : undefined)
-      .orderBy(notificationsTable.id)
-      .limit(limit);
+    const rows = await prisma.notification.findMany({
+      where: where as any,
+      orderBy: { id: "asc" },
+      take: limit,
+    });
     return rows.map(toDomain);
   }
 
   async create(input: CreateNotificationInput): Promise<Notification> {
-    const [row] = await db
-      .insert(notificationsTable)
-      .values({
+    const row = await prisma.notification.create({
+      data: {
         type: input.type ?? "info",
         title: input.title.trim(),
         body: input.body,
@@ -56,17 +56,20 @@ export class PostgresNotificationRepository
         status: "unread",
         recipientId: input.recipientId,
         metadata: input.metadata,
-      } as any)
-      .returning();
+      } as any,
+    });
     return toDomain(row);
   }
 
   async markRead(id: string): Promise<Notification | null> {
-    const [row] = await db
-      .update(notificationsTable)
-      .set({ status: "read" })
-      .where(eq(notificationsTable.id, id))
-      .returning();
-    return row ? toDomain(row) : null;
+    try {
+      const row = await prisma.notification.update({
+        where: { id },
+        data: { status: "read" } as any,
+      });
+      return toDomain(row);
+    } catch {
+      return null;
+    }
   }
 }

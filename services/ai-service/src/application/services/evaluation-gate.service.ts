@@ -1,10 +1,12 @@
-import {
-  db,
-  aiEvaluationDatasetsTable,
-  aiEvaluationRunsTable,
-  promptsTable,
-} from "@longox/db";
-import { eq, and, gte, desc } from "drizzle-orm";
+/**
+ * Evaluation gate service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.aiPrompt`, `prisma.aiEvalDataset`, and `prisma.aiEvalRun`
+ * delegates with `as any` casts for legacy columns.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import { evaluationService } from "../../evaluation/evaluation-service";
 
 export interface GateResult {
@@ -19,19 +21,17 @@ export class EvaluationGateService {
   private readonly regressionThreshold = -0.1;
 
   async evaluatePrompt(promptId: string, version: number): Promise<GateResult> {
-    const [prompt] = await db
-      .select()
-      .from(promptsTable)
-      .where(eq(promptsTable.id, promptId));
+    const prompt = await prisma.aiPrompt.findUnique({
+      where: { id: promptId } as any,
+    });
 
     if (!prompt) {
       throw new Error(`Prompt ${promptId} not found`);
     }
 
-    const datasets = await db
-      .select()
-      .from(aiEvaluationDatasetsTable)
-      .where(eq(aiEvaluationDatasetsTable.promptId, promptId));
+    const datasets = await prisma.aiEvalDataset.findMany({
+      where: { promptId } as any,
+    });
 
     if (datasets.length === 0) {
       return {
@@ -43,30 +43,25 @@ export class EvaluationGateService {
       };
     }
 
-    const recentRuns = await db
-      .select()
-      .from(aiEvaluationRunsTable)
-      .where(
-        and(
-          eq(aiEvaluationRunsTable.promptId, promptId),
-          eq(aiEvaluationRunsTable.status, "completed"),
-        ),
-      )
-      .orderBy(desc(aiEvaluationRunsTable.createdAt))
-      .limit(5);
+    const recentRuns = await prisma.aiEvalRun.findMany({
+      where: {
+        promptId,
+        status: "completed",
+      } as any,
+      orderBy: { createdAt: "desc" } as any,
+      take: 5,
+    });
 
     const baselineScore =
-      recentRuns.length > 0 ? Number(recentRuns[0].score ?? 1) : 1;
+      recentRuns.length > 0 ? Number((recentRuns[0] as any).score ?? 1) : 1;
 
     let totalScore = 0;
     let sampleCount = 0;
     const failedGates: string[] = [];
 
-    for (const dataset of datasets) {
-      // Drizzle types jsonb as `Record<string, unknown>` by default. The
-      // `samples` field is stored inside `metadata` (the schema has no
-      // dedicated `samples` column on `ai_evaluation_datasets`). Cast
-      // defensively to read it.
+    for (const dataset of datasets as any[]) {
+      // The `samples` field is stored inside `metadata` (the schema has no
+      // dedicated `samples` column). Cast defensively to read it.
       const samples =
         (dataset.metadata?.samples as Array<{
           input: string;
@@ -99,35 +94,27 @@ export class EvaluationGateService {
     candidateVersion: number,
     baselineVersion: number,
   ): Promise<GateResult> {
-    const [baselineRun] = await db
-      .select()
-      .from(aiEvaluationRunsTable)
-      .where(
-        and(
-          eq(aiEvaluationRunsTable.promptId, promptId),
-          eq(aiEvaluationRunsTable.promptVersion, baselineVersion),
-          eq(aiEvaluationRunsTable.status, "completed"),
-        ),
-      )
-      .orderBy(desc(aiEvaluationRunsTable.createdAt))
-      .limit(1);
+    const baselineRun = await prisma.aiEvalRun.findFirst({
+      where: {
+        promptId,
+        promptVersion: baselineVersion,
+        status: "completed",
+      } as any,
+      orderBy: { createdAt: "desc" } as any,
+    });
 
-    const baselineScore = baselineRun ? Number(baselineRun.score ?? 1) : 1;
+    const baselineScore = baselineRun ? Number((baselineRun as any).score ?? 1) : 1;
 
-    const [candidateRun] = await db
-      .select()
-      .from(aiEvaluationRunsTable)
-      .where(
-        and(
-          eq(aiEvaluationRunsTable.promptId, promptId),
-          eq(aiEvaluationRunsTable.promptVersion, candidateVersion),
-          eq(aiEvaluationRunsTable.status, "completed"),
-        ),
-      )
-      .orderBy(desc(aiEvaluationRunsTable.createdAt))
-      .limit(1);
+    const candidateRun = await prisma.aiEvalRun.findFirst({
+      where: {
+        promptId,
+        promptVersion: candidateVersion,
+        status: "completed",
+      } as any,
+      orderBy: { createdAt: "desc" } as any,
+    });
 
-    const score = candidateRun ? Number(candidateRun.score ?? 1) : 1;
+    const score = candidateRun ? Number((candidateRun as any).score ?? 1) : 1;
     const diff = score - baselineScore;
     const passed = diff >= this.regressionThreshold;
 

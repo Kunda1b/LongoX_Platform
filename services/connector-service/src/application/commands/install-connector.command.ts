@@ -1,4 +1,12 @@
-import { db, tenantConnectorInstallsTable } from "@longox/db";
+/**
+ * Install connector command.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.tenantConnectorInstall` delegate with `as any` casts for
+ * legacy columns (`connectorId`, `installedBy`, `status` values).
+ */
+
+import { prisma } from "@longox/db/prisma";
 import type { ConnectorRepository } from "../../domain";
 import { ConnectorInstallation } from "../../domain";
 import {
@@ -92,29 +100,28 @@ export class InstallConnectorCommand {
       throw new ConnectorSignatureValidationError(verification);
     }
 
-    const [row] = await db
-      .insert(tenantConnectorInstallsTable)
-      .values({
+    const row = await prisma.tenantConnectorInstall.create({
+      data: {
         tenantId: input.tenantId,
         connectorId: input.connectorId,
         connectorVersionId: input.connectorVersionId ?? null,
         status: "active",
         config: input.config,
         installedBy: input.installedBy,
-      } as any)
-      .returning();
+      } as any,
+    });
 
     return new ConnectorInstallation({
       id: row.id,
-      tenantId: row.tenantId,
-      connectorId: row.connectorId,
+      tenantId: (row as any).tenantId,
+      connectorId: (row as any).connectorId,
       connectorName: connector.displayName ?? connector.name,
       environmentId: undefined,
-      status: row.status as "installing" | "active" | "error" | "removed",
-      config: (row.config ?? {}) as Record<string, unknown>,
-      installedBy: String(row.installedBy ?? input.installedBy ?? ""),
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
+      status: (row as any).status as "installing" | "active" | "error" | "removed",
+      config: ((row as any).config ?? {}) as Record<string, unknown>,
+      installedBy: String((row as any).installedBy ?? input.installedBy ?? ""),
+      createdAt: (row as any).createdAt,
+      updatedAt: (row as any).updatedAt,
     });
   }
 }

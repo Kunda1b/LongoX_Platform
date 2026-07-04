@@ -1,5 +1,12 @@
-import { aiGuardrailsTable, aiGuardrailHitsTable, db } from "@longox/db";
-import { eq, and } from "drizzle-orm";
+/**
+ * Moderation service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.aiGuardrail` and `prisma.aiGuardrailHit` delegates with
+ * `as any` casts for legacy columns.
+ */
+
+import { prisma } from "@longox/db/prisma";
 
 export interface ModerationViolation {
   guardrailId?: string;
@@ -87,23 +94,18 @@ export class ModerationService {
   private async loadGuardrails(guardrailIds: string[]) {
     if (guardrailIds.length === 0) return [];
 
-    const guardrails = await db
-      .select()
-      .from(aiGuardrailsTable)
-      .where(
-        and(
-          eq(aiGuardrailsTable.enabled, true),
-          ...(guardrailIds.length > 0
-            ? guardrailIds.map((id) => eq(aiGuardrailsTable.id, id))
-            : []),
-        ),
-      );
+    const guardrails = await prisma.aiGuardrail.findMany({
+      where: {
+        enabled: true,
+        id: { in: guardrailIds },
+      } as any,
+    });
 
     return guardrails;
   }
 
   private async applyGuardrail(
-    guardrail: typeof aiGuardrailsTable.$inferSelect,
+    guardrail: any,
     text: string,
   ): Promise<{ violations: ModerationViolation[]; scrubbedText: string }> {
     const violations: ModerationViolation[] = [];

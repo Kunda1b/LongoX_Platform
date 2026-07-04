@@ -1,5 +1,12 @@
-import { db, tokenUsageTable, usageRollupsTable, tokenBudgetsTable } from "@longox/db";
-import { eq, sql, and, gte, lte } from "drizzle-orm";
+/**
+ * Token accounting service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.tokenUsage` and `prisma.usageRollup` delegates with `as any`
+ * casts for legacy columns.
+ */
+
+import { prisma } from "@longox/db/prisma";
 
 export class BudgetExceededError extends Error {
   constructor(
@@ -36,31 +43,32 @@ export interface UsageSummary {
 
 export class TokenAccountingService {
   async recordUsage(record: UsageRecord): Promise<void> {
-    await db.insert(tokenUsageTable).values({
-      tenantId: record.tenantId ?? null,
-      modelId: record.modelId ?? null,
-      modelName: record.modelName,
-      provider: record.provider,
-      promptId: record.promptId ?? null,
-      workflowId: record.workflowId ?? null,
-      inputTokens: record.inputTokens,
-      outputTokens: record.outputTokens,
-      cost: String(record.cost),
-    } as any);
+    await prisma.tokenUsage.create({
+      data: {
+        tenantId: record.tenantId ?? null,
+        modelId: record.modelId ?? null,
+        modelName: record.modelName,
+        provider: record.provider,
+        promptId: record.promptId ?? null,
+        workflowId: record.workflowId ?? null,
+        inputTokens: record.inputTokens,
+        outputTokens: record.outputTokens,
+        cost: record.cost,
+      } as any,
+    });
   }
 
   async getUsageSummary(runId: string): Promise<UsageSummary> {
-    const rows = await db
-      .select()
-      .from(tokenUsageTable)
-      .where(eq(tokenUsageTable.id, runId));
+    const rows = await prisma.tokenUsage.findMany({
+      where: { id: Number(runId) } as any,
+    });
 
     const byModel: Record<string, { inputTokens: number; outputTokens: number; cost: number }> = {};
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let totalCost = 0;
 
-    for (const row of rows) {
+    for (const row of rows as any[]) {
       totalInputTokens += row.inputTokens;
       totalOutputTokens += row.outputTokens;
       totalCost += Number(row.cost ?? 0);
@@ -87,23 +95,21 @@ export class TokenAccountingService {
     tenantId: string,
     period?: { start: Date; end: Date },
   ): Promise<UsageSummary> {
-    const conditions = [eq(tokenUsageTable.tenantId, tenantId)];
+    const where: Record<string, unknown> = { tenantId };
     if (period) {
-      conditions.push(gte(tokenUsageTable.createdAt, period.start));
-      conditions.push(lte(tokenUsageTable.createdAt, period.end));
+      where.createdAt = { gte: period.start, lte: period.end };
     }
 
-    const rows = await db
-      .select()
-      .from(tokenUsageTable)
-      .where(and(...conditions));
+    const rows = await prisma.tokenUsage.findMany({
+      where: where as any,
+    });
 
     const byModel: Record<string, { inputTokens: number; outputTokens: number; cost: number }> = {};
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let totalCost = 0;
 
-    for (const row of rows) {
+    for (const row of rows as any[]) {
       totalInputTokens += row.inputTokens;
       totalOutputTokens += row.outputTokens;
       totalCost += Number(row.cost ?? 0);
@@ -146,42 +152,41 @@ export class TokenAccountingService {
         ? new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
         : now;
 
-    const existing = await db
-      .select()
-      .from(usageRollupsTable)
-      .where(
-        and(
-          eq(usageRollupsTable.tenantId, tenantId),
-          eq(usageRollupsTable.rollupType, "ai"),
-          eq(usageRollupsTable.period, period),
-          eq(usageRollupsTable.metricName, metricName),
-        ),
-      );
-
-    if (existing.length > 0) {
-      const current = existing[0];
-      await db
-        .update(usageRollupsTable)
-        .set({
-          totalQuantity: String(Number(current.totalQuantity) + quantity),
-          cost: String(Number(current.cost) + cost),
-          sourceCount: current.sourceCount + 1,
-        } as any)
-        .where(eq(usageRollupsTable.id, current.id));
-    } else {
-      await db.insert(usageRollupsTable).values({
+    const existing = await prisma.usageRollup.findMany({
+      where: {
         tenantId,
         rollupType: "ai",
         period,
-        periodStart,
-        periodEnd,
         metricName,
-        metricUnit: "tokens",
-        totalQuantity: String(quantity),
-        billableQuantity: String(quantity),
-        cost: String(cost),
-        sourceCount: 1,
-      } as any);
+      } as any,
+    });
+
+    if (existing.length > 0) {
+      const current = existing[0] as any;
+      await prisma.usageRollup.update({
+        where: { id: current.id },
+        data: {
+          totalQuantity: String(Number(current.totalQuantity) + quantity),
+          cost: String(Number(current.cost) + cost),
+          sourceCount: current.sourceCount + 1,
+        } as any,
+      });
+    } else {
+      await prisma.usageRollup.create({
+        data: {
+          tenantId,
+          rollupType: "ai",
+          period,
+          periodStart,
+          periodEnd,
+          metricName,
+          metricUnit: "tokens",
+          totalQuantity: String(quantity),
+          billableQuantity: String(quantity),
+          cost: String(cost),
+          sourceCount: 1,
+        } as any,
+      });
     }
   }
 }

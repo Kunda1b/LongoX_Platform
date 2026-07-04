@@ -9,6 +9,10 @@
  * so existing frontend code keeps working during the migration. It will be
  * removed in a future API version.
  *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3 — FTS queries use
+ * `prisma.$queryRawUnsafe()` while structured lookups use `prisma.auditLog`
+ * and `prisma.searchIndex` delegates.
+ *
  * Endpoints:
  *   GET /audit           — search audit entries (FTS via SearchService)
  *   GET /audit-log       — legacy alias for /audit (deprecated)
@@ -16,8 +20,7 @@
  */
 
 import { Router, type IRouter, type Request, type Response } from "express";
-import { eq, and, sql } from "drizzle-orm";
-import { db, auditLogTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 // Side-effect import: pulls in the `declare global { namespace Express }`
 // augmentation from shared-rbac so that `req.user` and `req.correlationId`
 // are typed on every Request in this module.
@@ -63,62 +66,76 @@ async function searchAuditEntries(params: {
     // FTS path — uses the search_index table (the SearchService abstraction's
     // backing store). We filter by resourceType="audit_log" to scope results.
     const ftsQuery = params.query.trim();
-    const conditions = [
-      sql`resource_type = 'audit_log'`,
-      sql`tsv @@ websearch_to_tsquery('english', ${ftsQuery})`,
+    const conditions: string[] = [
+      `resource_type = 'audit_log'`,
+      `tsv @@ websearch_to_tsquery('english', $1)`,
     ];
+    const sqlParams: any[] = [ftsQuery];
+    let paramIdx = 2;
     if (params.tenantId !== undefined && params.tenantId !== null) {
-      conditions.push(
-        sql`(tenant_id = ${params.tenantId} OR tenant_id IS NULL)`,
-      );
+      conditions.push(`(tenant_id = $${paramIdx} OR tenant_id IS NULL)`);
+      sqlParams.push(params.tenantId);
+      paramIdx++;
     }
     if (params.action) {
-      conditions.push(sql`(metadata->>'action' = ${params.action})`);
+      conditions.push(`(metadata->>'action' = $${paramIdx})`);
+      sqlParams.push(params.action);
+      paramIdx++;
     }
     if (params.actorId) {
-      conditions.push(sql`(metadata->>'actor_id' = ${params.actorId})`);
+      conditions.push(`(metadata->>'actor_id' = $${paramIdx})`);
+      sqlParams.push(params.actorId);
+      paramIdx++;
     }
     if (params.resourceType) {
-      conditions.push(
-        sql`(metadata->>'resource_type' = ${params.resourceType})`,
-      );
+      conditions.push(`(metadata->>'resource_type' = $${paramIdx})`);
+      sqlParams.push(params.resourceType);
+      paramIdx++;
     }
     if (params.resourceId) {
-      conditions.push(sql`(metadata->>'resource_id' = ${params.resourceId})`);
+      conditions.push(`(metadata->>'resource_id' = $${paramIdx})`);
+      sqlParams.push(params.resourceId);
+      paramIdx++;
     }
+    const whereClause = conditions.join(" AND ");
 
-    const whereClause = and(...conditions);
-    const rows = await db.execute(sql`
+    const rowsSql = `
       SELECT
         resource_id AS id,
         title,
         content,
         metadata,
-        ts_rank(tsv, websearch_to_tsquery('english', ${ftsQuery})) AS rank
+        ts_rank(tsv, websearch_to_tsquery('english', $1)) AS rank
       FROM search_index
       WHERE ${whereClause}
       ORDER BY rank DESC, updated_at DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `);
-    const countResult = await db.execute(sql`
+      LIMIT $${paramIdx} OFFSET $${paramIdx + 1}
+    `;
+    sqlParams.push(limit);
+    sqlParams.push(offset);
+    const rows: any[] = await prisma.$queryRawUnsafe(rowsSql, ...sqlParams);
+
+    const countSql = `
       SELECT count(*)::int AS total
       FROM search_index
       WHERE ${whereClause}
-    `);
+    `;
+    // countSql uses only the first `paramIdx - 1` params (those used in WHERE).
+    const countParams = sqlParams.slice(0, paramIdx - 1);
+    const countResult: any[] = await prisma.$queryRawUnsafe(
+      countSql,
+      ...countParams,
+    );
     const total = Number(
-      (countResult.rows?.[0] as { total?: number })?.total ?? 0,
+      (countResult?.[0] as { total?: number })?.total ?? 0,
     );
     return {
-      entries: (rows.rows ?? []) as unknown[],
+      entries: rows ?? [],
       total,
     };
   }
 
   // Structured query path — direct query on audit_logs (no FTS).
-  const conditions = [];
-  if (params.tenantId !== undefined && params.tenantId !== null) {
-    conditions.push(eq(auditLogTable.actorId, String(params.actorId ?? "")));
-  }
   // Use the existing ListAuditEntriesQuery for the structured path.
   const entries = await listAuditEntries.execute({
     resourceType: params.resourceType,
@@ -195,11 +212,9 @@ router.get("/audit/:id", async (req: Request, res: Response): Promise<void> => {
     });
     return;
   }
-  const [entry] = await db
-    .select()
-    .from(auditLogTable)
-    .where(eq(auditLogTable.id, String(id)))
-    .limit(1);
+  const entry = await prisma.auditLog.findUnique({
+    where: { id: String(id) } as any,
+  });
   if (!entry) {
     res.status(404).json({
       error: {

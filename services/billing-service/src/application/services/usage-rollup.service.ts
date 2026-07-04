@@ -1,6 +1,16 @@
-import { db, usageRollupsTable, meteringEventsTable, billingPlansTable, billingAccountsTable } from "@longox/db";
-import { eq, and, gte, lte, sql } from "drizzle-orm";
-import type { InsertUsageRollup } from "@longox/db";
+/**
+ * Usage rollup service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.usageRollup`, `prisma.billingAccount`, `prisma.billingPlan`
+ * delegates with `as any` casts for legacy columns.
+ *
+ * Raw aggregations on `metering_events` and `usage_rollups` use
+ * `prisma.$queryRawUnsafe()` because the numeric-to-string casts cannot be
+ * expressed via Prisma's groupBy.
+ */
+
+import { prisma } from "@longox/db/prisma";
 
 export class UsageRollupService {
   async rollupDaily(tenantId: string, date: Date): Promise<void> {
@@ -9,26 +19,22 @@ export class UsageRollupService {
     const dayEnd = new Date(date);
     dayEnd.setHours(23, 59, 59, 999);
 
-    const rows = await db
-      .select({
-        eventType: meteringEventsTable.eventType,
-        unit: meteringEventsTable.unit,
-        totalQuantity: sql<string>`sum(${meteringEventsTable.quantity})`,
-        count: sql<number>`count(*)::int`,
-      })
-      .from(meteringEventsTable)
-      .where(
-        and(
-          eq(meteringEventsTable.tenantId, tenantId),
-          gte(meteringEventsTable.timestamp, dayStart),
-          lte(meteringEventsTable.timestamp, dayEnd),
-        ),
-      )
-      .groupBy(meteringEventsTable.eventType, meteringEventsTable.unit);
+    const rows: any[] = await prisma.$queryRawUnsafe(
+      `SELECT event_type AS "eventType",
+              unit,
+              sum(quantity)::text AS "totalQuantity",
+              count(*)::int AS count
+       FROM metering_events
+       WHERE tenant_id = $1 AND timestamp >= $2 AND timestamp <= $3
+       GROUP BY event_type, unit`,
+      tenantId,
+      dayStart,
+      dayEnd,
+    );
 
     const breakdown: Record<string, { total: string; unit: string; count: number }> = {};
     let meteredTotal = 0;
-    let billableTotal = 0;
+    const billableTotal = 0;
 
     for (const row of rows) {
       breakdown[row.eventType] = {
@@ -39,24 +45,19 @@ export class UsageRollupService {
       meteredTotal += Number(row.totalQuantity);
     }
 
-    const [account] = await db
-      .select()
-      .from(billingAccountsTable)
-      .where(eq(billingAccountsTable.tenantId, tenantId))
-      .limit(1);
+    const account = await prisma.billingAccount.findFirst({
+      where: { tenantId } as any,
+    });
 
-    let plan = null;
-    if (account?.planId) {
-      const [planRecord] = await db
-        .select()
-        .from(billingPlansTable)
-        .where(eq(billingPlansTable.id, account.planId))
-        .limit(1);
-      plan = planRecord;
+    let plan: any = null;
+    if ((account as any)?.planId) {
+      plan = await prisma.billingPlan.findUnique({
+        where: { id: (account as any).planId },
+      });
     }
 
     for (const [eventType, data] of Object.entries(breakdown)) {
-      const value: InsertUsageRollup = {
+      const value: any = {
         tenantId,
         rollupType: "daily",
         period: "daily",
@@ -75,31 +76,23 @@ export class UsageRollupService {
         sourceCount: data.count,
       };
 
-      const existingRollupType = "daily";
-      const existingPeriodStart = dayStart;
-      const existingMetricName = eventType;
-
-      const [existing] = await db
-        .select()
-        .from(usageRollupsTable)
-        .where(
-          and(
-            eq(usageRollupsTable.tenantId, tenantId),
-            eq(usageRollupsTable.rollupType, existingRollupType),
-            eq(usageRollupsTable.period, "daily"),
-            eq(usageRollupsTable.periodStart, existingPeriodStart),
-            eq(usageRollupsTable.metricName, existingMetricName),
-          ),
-        )
-        .limit(1);
+      const existing = await prisma.usageRollup.findFirst({
+        where: {
+          tenantId,
+          rollupType: "daily",
+          period: "daily",
+          periodStart: dayStart,
+          metricName: eventType,
+        } as any,
+      });
 
       if (existing) {
-        await db
-          .update(usageRollupsTable)
-          .set(value)
-          .where(eq(usageRollupsTable.id, existing.id));
+        await prisma.usageRollup.update({
+          where: { id: existing.id },
+          data: value as any,
+        });
       } else {
-        await db.insert(usageRollupsTable).values(value);
+        await prisma.usageRollup.create({ data: value as any });
       }
     }
   }
@@ -108,46 +101,37 @@ export class UsageRollupService {
     const monthStart = new Date(year, month - 1, 1);
     const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
 
-    const dailyRollups = await db
-      .select({
-        metricName: usageRollupsTable.metricName,
-        metricUnit: usageRollupsTable.metricUnit,
-        totalQuantity: sql<string>`sum(${usageRollupsTable.totalQuantity}::numeric)`,
-        billableQuantity: sql<string>`sum(${usageRollupsTable.billableQuantity}::numeric)`,
-        meteredTotal: sql<string>`sum(${usageRollupsTable.meteredTotal}::numeric)`,
-        billableTotal: sql<string>`sum(${usageRollupsTable.billableTotal}::numeric)`,
-        sourceCount: sql<number>`sum(${usageRollupsTable.sourceCount})::int`,
-      })
-      .from(usageRollupsTable)
-      .where(
-        and(
-          eq(usageRollupsTable.tenantId, tenantId),
-          eq(usageRollupsTable.period, "daily"),
-          gte(usageRollupsTable.periodStart, monthStart),
-          lte(usageRollupsTable.periodStart, monthEnd),
-        ),
-      )
-      .groupBy(usageRollupsTable.metricName, usageRollupsTable.metricUnit);
+    const dailyRollups: any[] = await prisma.$queryRawUnsafe(
+      `SELECT metric_name AS "metricName",
+              metric_unit AS "metricUnit",
+              sum(total_quantity::numeric)::text AS "totalQuantity",
+              sum(billable_quantity::numeric)::text AS "billableQuantity",
+              sum(metered_total::numeric)::text AS "meteredTotal",
+              sum(billable_total::numeric)::text AS "billableTotal",
+              sum(source_count)::int AS "sourceCount"
+       FROM usage_rollups
+       WHERE tenant_id = $1 AND period = 'daily'
+         AND period_start >= $2 AND period_start <= $3
+       GROUP BY metric_name, metric_unit`,
+      tenantId,
+      monthStart,
+      monthEnd,
+    );
 
-    const [account] = await db
-      .select()
-      .from(billingAccountsTable)
-      .where(eq(billingAccountsTable.tenantId, tenantId))
-      .limit(1);
+    const account = await prisma.billingAccount.findFirst({
+      where: { tenantId } as any,
+    });
 
-    let plan = null;
-    if (account?.planId) {
-      const [planRecord] = await db
-        .select()
-        .from(billingPlansTable)
-        .where(eq(billingPlansTable.id, account.planId))
-        .limit(1);
-      plan = planRecord;
+    let plan: any = null;
+    if ((account as any)?.planId) {
+      plan = await prisma.billingPlan.findUnique({
+        where: { id: (account as any).planId },
+      });
     }
 
     for (const row of dailyRollups) {
       const breakdown: Record<string, unknown> = {};
-      const value: InsertUsageRollup = {
+      const value: any = {
         tenantId,
         rollupType: "monthly",
         period: "monthly",
@@ -166,27 +150,23 @@ export class UsageRollupService {
         sourceCount: row.sourceCount,
       };
 
-      const [existing] = await db
-        .select()
-        .from(usageRollupsTable)
-        .where(
-          and(
-            eq(usageRollupsTable.tenantId, tenantId),
-            eq(usageRollupsTable.rollupType, "monthly"),
-            eq(usageRollupsTable.period, "monthly"),
-            eq(usageRollupsTable.periodStart, monthStart),
-            eq(usageRollupsTable.metricName, row.metricName),
-          ),
-        )
-        .limit(1);
+      const existing = await prisma.usageRollup.findFirst({
+        where: {
+          tenantId,
+          rollupType: "monthly",
+          period: "monthly",
+          periodStart: monthStart,
+          metricName: row.metricName,
+        } as any,
+      });
 
       if (existing) {
-        await db
-          .update(usageRollupsTable)
-          .set(value)
-          .where(eq(usageRollupsTable.id, existing.id));
+        await prisma.usageRollup.update({
+          where: { id: existing.id },
+          data: value as any,
+        });
       } else {
-        await db.insert(usageRollupsTable).values(value);
+        await prisma.usageRollup.create({ data: value as any });
       }
     }
   }
