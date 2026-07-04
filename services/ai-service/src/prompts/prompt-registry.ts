@@ -1,5 +1,11 @@
-import { db, promptsTable, templateVersionsTable } from "@longox/db";
-import { eq, and, desc } from "drizzle-orm";
+/**
+ * Prompt registry.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.aiPrompt` delegate with `as any` casts for legacy columns.
+ */
+
+import { prisma } from "@longox/db/prisma";
 
 export interface PromptDefinition {
   id: string;
@@ -17,38 +23,36 @@ export interface PromptDefinition {
 
 export class PromptRegistry {
   async getPrompt(id: string): Promise<PromptDefinition | null> {
-    const [prompt] = await db
-      .select()
-      .from(promptsTable)
-      .where(eq(promptsTable.id, id))
-      .limit(1);
+    const prompt = await prisma.aiPrompt.findUnique({
+      where: { id } as any,
+    });
     if (!prompt) return null;
 
+    const p = prompt as any;
     return {
-      id: prompt.id,
-      name: prompt.name,
-      description: prompt.description,
-      systemPrompt: prompt.systemPrompt,
-      userTemplate: prompt.userTemplate,
-      model: prompt.model,
-      provider: prompt.provider,
-      maxTokens: prompt.maxTokens,
-      temperature: prompt.temperature,
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      systemPrompt: p.systemPrompt,
+      userTemplate: p.userTemplate,
+      model: p.model,
+      provider: p.provider,
+      maxTokens: p.maxTokens,
+      temperature: p.temperature,
       variables:
-        typeof prompt.variables === "string"
-          ? JSON.parse(prompt.variables)
+        typeof p.variables === "string"
+          ? JSON.parse(p.variables)
           : [],
-      version: this.getVersionNumber(prompt.createdAt),
+      version: this.getVersionNumber(p.createdAt),
     };
   }
 
   async listPrompts(limit: number = 50): Promise<PromptDefinition[]> {
-    const rows = await db
-      .select()
-      .from(promptsTable)
-      .orderBy(promptsTable.id)
-      .limit(limit);
-    return rows.map((p) => ({
+    const rows = await prisma.aiPrompt.findMany({
+      orderBy: { id: "asc" } as any,
+      take: limit,
+    });
+    return rows.map((p: any) => ({
       id: p.id,
       name: p.name,
       description: p.description,
@@ -66,9 +70,8 @@ export class PromptRegistry {
   async createPrompt(
     data: Omit<PromptDefinition, "id" | "version">,
   ): Promise<PromptDefinition> {
-    const [inserted] = await db
-      .insert(promptsTable)
-      .values({
+    const inserted = await prisma.aiPrompt.create({
+      data: {
         name: data.name,
         description: data.description,
         systemPrompt: data.systemPrompt,
@@ -78,10 +81,10 @@ export class PromptRegistry {
         maxTokens: data.maxTokens,
         temperature: data.temperature,
         variables: JSON.stringify(data.variables),
-      })
-      .returning();
+      } as any,
+    });
 
-    return { ...data, id: inserted.id, version: 1 };
+    return { ...data, id: (inserted as any).id, version: 1 };
   }
 
   async updatePrompt(
@@ -102,11 +105,10 @@ export class PromptRegistry {
     if (data.variables !== undefined)
       updates.variables = JSON.stringify(data.variables);
 
-    const [updated] = await db
-      .update(promptsTable)
-      .set(updates)
-      .where(eq(promptsTable.id, id))
-      .returning();
+    const updated = await prisma.aiPrompt.update({
+      where: { id } as any,
+      data: updates as any,
+    }).catch(() => null);
     if (!updated) return null;
 
     return this.getPrompt(id);

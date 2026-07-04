@@ -1,6 +1,12 @@
+/**
+ * Agent routes.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.agentMemory` delegate with `as any` casts for legacy columns.
+ */
+
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
-import { db, agentMemoryTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { randomUUID } from "node:crypto";
 import { authorize } from "@longox/shared-rbac";
 
@@ -89,17 +95,14 @@ router.get("/agents/memory", authorize("ai:read"), async (req, res): Promise<voi
   const agentId = req.query.agentId as string;
   const memoryType = req.query.memoryType as string;
 
-  const conditions = [eq(agentMemoryTable.tenantId, tenantId)];
-  if (agentId) conditions.push(eq(agentMemoryTable.agentId, agentId));
-  if (memoryType) conditions.push(eq(agentMemoryTable.memoryType, memoryType));
+  const where: Record<string, unknown> = { tenantId };
+  if (agentId) where.agentId = agentId;
+  if (memoryType) where.memoryType = memoryType;
 
-  const rows = await db
-    .select()
-    .from(agentMemoryTable)
-    .where(and(...conditions));
+  const rows = await prisma.agentMemory.findMany({ where: where as any });
 
   res.json(
-    rows.map((r) => ({
+    rows.map((r: any) => ({
       id: r.id,
       agentId: r.agentId,
       workflowId: r.workflowId,
@@ -117,14 +120,12 @@ router.get("/agents/memory", authorize("ai:read"), async (req, res): Promise<voi
 
 router.delete("/agents/memory/:id", authorize("ai:write"), async (req, res): Promise<void> => {
   const tenantId = req.tenantId ?? "";
-  await db
-    .delete(agentMemoryTable)
-    .where(
-      and(
-        eq(agentMemoryTable.id, String(req.params.id)),
-        eq(agentMemoryTable.tenantId, tenantId),
-      ),
-    );
+  await prisma.agentMemory.deleteMany({
+    where: {
+      id: String(req.params.id),
+      tenantId,
+    } as any,
+  });
   res.status(204).end();
 });
 

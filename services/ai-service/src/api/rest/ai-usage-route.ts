@@ -1,19 +1,25 @@
+/**
+ * AI usage REST routes.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.tokenUsage` delegate with `as any` casts for legacy columns,
+ * and `prisma.$queryRaw` for aggregate rollups.
+ */
+
 import { Router, type IRouter } from "express";
-import { sql } from "drizzle-orm";
-import { db, tokenUsageTable, aiModelsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
 router.get("/ai/usage", authorize("ai:read"), async (req, res): Promise<void> => {
   const limit = Math.min(Number(req.query.limit ?? 50), 200);
-  const rows = await db
-    .select()
-    .from(tokenUsageTable)
-    .orderBy(tokenUsageTable.createdAt)
-    .limit(limit);
+  const rows = await prisma.tokenUsage.findMany({
+    orderBy: { createdAt: "asc" } as any,
+    take: limit,
+  });
   res.json(
-    rows.map((r) => ({
+    rows.map((r: any) => ({
       id: r.id,
       modelId: r.modelId ?? null,
       modelName: r.modelName ?? null,
@@ -29,37 +35,37 @@ router.get("/ai/usage", authorize("ai:read"), async (req, res): Promise<void> =>
 });
 
 router.get("/ai/usage/summary", authorize("ai:read"), async (_req, res): Promise<void> => {
-  const totals = await db
-    .select({
-      totalInputTokens: sql<number>`coalesce(sum(input_tokens), 0)::int`,
-      totalOutputTokens: sql<number>`coalesce(sum(output_tokens), 0)::int`,
-      totalCost: sql<number>`coalesce(sum(cost), 0)::float`,
-      totalRequests: sql<number>`count(*)::int`,
-    })
-    .from(tokenUsageTable);
+  const totals = await prisma.$queryRawUnsafe(
+    `SELECT
+       coalesce(sum(input_tokens), 0)::int AS "totalInputTokens",
+       coalesce(sum(output_tokens), 0)::int AS "totalOutputTokens",
+       coalesce(sum(cost), 0)::float AS "totalCost",
+       count(*)::int AS "totalRequests"
+     FROM token_usage`,
+  ) as any[];
 
-  const byProviderRaw = await db
-    .select({
-      provider: tokenUsageTable.provider,
-      inputTokens: sql<number>`sum(input_tokens)::int`,
-      outputTokens: sql<number>`sum(output_tokens)::int`,
-      cost: sql<number>`sum(cost)::float`,
-      requests: sql<number>`count(*)::int`,
-    })
-    .from(tokenUsageTable)
-    .groupBy(tokenUsageTable.provider);
+  const byProviderRaw = await prisma.$queryRawUnsafe(
+    `SELECT
+       provider,
+       sum(input_tokens)::int AS "inputTokens",
+       sum(output_tokens)::int AS "outputTokens",
+       sum(cost)::float AS cost,
+       count(*)::int AS requests
+     FROM token_usage
+     GROUP BY provider`,
+  ) as any[];
 
-  const byModelRaw = await db
-    .select({
-      modelName: tokenUsageTable.modelName,
-      provider: tokenUsageTable.provider,
-      inputTokens: sql<number>`sum(input_tokens)::int`,
-      outputTokens: sql<number>`sum(output_tokens)::int`,
-      cost: sql<number>`sum(cost)::float`,
-      requests: sql<number>`count(*)::int`,
-    })
-    .from(tokenUsageTable)
-    .groupBy(tokenUsageTable.modelName, tokenUsageTable.provider);
+  const byModelRaw = await prisma.$queryRawUnsafe(
+    `SELECT
+       model_name AS "modelName",
+       provider,
+       sum(input_tokens)::int AS "inputTokens",
+       sum(output_tokens)::int AS "outputTokens",
+       sum(cost)::float AS cost,
+       count(*)::int AS requests
+     FROM token_usage
+     GROUP BY model_name, provider`,
+  ) as any[];
 
   const t = totals[0];
   res.json({

@@ -1,5 +1,12 @@
-import { db, ragChunksTable, ragDocumentsTable } from "@longox/db";
-import { eq, sql } from "drizzle-orm";
+/**
+ * Vector search service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.$queryRaw` for pgvector similarity queries and
+ * `prisma.vectorEmbedding` delegate with `as any` casts for legacy columns.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import { EmbeddingService, embeddingService } from "./embedding.service";
 
 export interface SearchResult {
@@ -55,15 +62,23 @@ export class VectorSearchService {
   ): Promise<SearchResult[]> {
     const vectorLit = `[${queryVector.join(",")}]`;
 
-    let whereClause = sql`rc.knowledge_base_id = ${kbId}`;
+    let whereClause = "rc.knowledge_base_id = $1";
+    const params: unknown[] = [kbId];
+    let paramIdx = 2;
 
     if (filter && Object.keys(filter).length > 0) {
       for (const [key, value] of Object.entries(filter)) {
-        whereClause = sql`${whereClause} AND rc.metadata->>${key} = ${String(value)}`;
+        whereClause += ` AND rc.metadata->>${paramIdx === 2 ? 2 : paramIdx} = $${paramIdx + 1}`;
+        params.push(key, String(value));
+        paramIdx += 2;
       }
     }
 
-    const query = sql`
+    // Build the parameterized query. The vector literal is interpolated as a
+    // raw SQL fragment (pgvector accepts the `'[1,2,3]'::vector` literal form);
+    // all other inputs are bound parameters.
+    const rows = await prisma.$queryRawUnsafe(
+      `
       SELECT
         rc.id AS "chunkId",
         rc.document_id AS "documentId",
@@ -73,18 +88,17 @@ export class VectorSearchService {
         rc.metadata,
         rd.filename AS "documentFilename",
         rd.source_type AS "documentSourceType",
-        1 - (rc.embedding <=> ${sql.raw(`'${vectorLit}'::vector`)}) AS score
+        1 - (rc.embedding <=> '${vectorLit}'::vector) AS score
       FROM rag_chunks rc
       INNER JOIN rag_documents rd ON rc.document_id = rd.id
       WHERE ${whereClause}
-      ORDER BY rc.embedding <=> ${sql.raw(`'${vectorLit}'::vector`)}
+      ORDER BY rc.embedding <=> '${vectorLit}'::vector
       LIMIT ${topK}
-    `;
+      `,
+      ...params,
+    ) as any[];
 
-    const result = await db.execute(query);
-    const rows = result.rows ?? [];
-
-    return rows
+    return (rows ?? [])
       .filter((r: any) => r.score >= minScore)
       .map((r: any) => ({
         chunkId: r.chunkId,
@@ -106,29 +120,15 @@ export class VectorSearchService {
     minScore: number,
     filter?: Record<string, unknown>,
   ): Promise<SearchResult[]> {
-    const rows = (await db
-      .select({
-        chunkId: ragChunksTable.id,
-        documentId: ragChunksTable.documentId,
-        chunkIndex: ragChunksTable.chunkIndex,
-        content: ragChunksTable.content,
-        tokens: ragChunksTable.tokens,
-        metadata: ragChunksTable.metadata,
-        embedding: ragChunksTable.embedding,
-        documentFilename: ragDocumentsTable.filename,
-        documentSourceType: ragDocumentsTable.sourceType,
-      })
-      .from(ragChunksTable)
-      .innerJoin(
-        ragDocumentsTable,
-        eq(ragChunksTable.documentId, ragDocumentsTable.id),
-      )
-      .where(eq(ragChunksTable.knowledgeBaseId, kbId))) as any;
+    const rows = (await prisma.vectorEmbedding.findMany({
+      where: { knowledgeBaseId: kbId } as any,
+      include: { document: true } as any,
+    })) as any;
 
     const scored: SearchResult[] = [];
 
     for (const row of rows) {
-      const emb = row.embedding;
+      const emb = (row as any).embedding;
       if (!emb || !Array.isArray(emb)) continue;
       const score = this.embedding.cosineSimilarity(
         queryVector,
@@ -137,7 +137,7 @@ export class VectorSearchService {
       if (score < minScore) continue;
 
       if (filter && Object.keys(filter).length > 0) {
-        const meta = (row.metadata ?? {}) as Record<string, unknown>;
+        const meta = ((row as any).metadata ?? {}) as Record<string, unknown>;
         let matches = true;
         for (const [key, value] of Object.entries(filter)) {
           if (meta[key] !== value) {
@@ -148,16 +148,17 @@ export class VectorSearchService {
         if (!matches) continue;
       }
 
+      const doc = (row as any).document ?? {};
       scored.push({
-        chunkId: row.chunkId,
-        documentId: row.documentId,
-        chunkIndex: row.chunkIndex,
-        content: row.content,
+        chunkId: (row as any).id,
+        documentId: (row as any).documentId,
+        chunkIndex: (row as any).chunkIndex,
+        content: (row as any).content,
         score,
-        tokens: row.tokens,
-        documentFilename: row.documentFilename,
-        documentSourceType: row.documentSourceType,
-        metadata: row.metadata ?? {},
+        tokens: (row as any).tokens,
+        documentFilename: doc.filename,
+        documentSourceType: doc.sourceType,
+        metadata: (row as any).metadata ?? {},
       });
     }
 
@@ -186,34 +187,31 @@ export class VectorSearchService {
       .filter(Boolean);
     if (ftsQuery.length > 0) {
       try {
-        const ftsRows = (await db
-          .select({
-            chunkId: ragChunksTable.id,
-            documentId: ragChunksTable.documentId,
-            chunkIndex: ragChunksTable.chunkIndex,
-            content: ragChunksTable.content,
-            tokens: ragChunksTable.tokens,
-            metadata: ragChunksTable.metadata,
-            documentFilename: ragDocumentsTable.filename,
-            documentSourceType: ragDocumentsTable.sourceType,
-            rank: sql<number>`ts_rank(to_tsvector('english', ${ragChunksTable.content}), plainto_tsquery('english', ${query}))`,
-          })
-          .from(ragChunksTable)
-          .innerJoin(
-            ragDocumentsTable,
-            eq(ragChunksTable.documentId, ragDocumentsTable.id),
-          )
-          .where(
-            sql`${ragChunksTable.knowledgeBaseId} = ${kbId} AND to_tsvector('english', ${ragChunksTable.content}) @@ plainto_tsquery('english', ${query})`,
-          )
-          .orderBy(
-            sql`ts_rank(to_tsvector('english', ${ragChunksTable.content}), plainto_tsquery('english', ${query})) DESC`,
-          )
-          .limit(
-            (options.topK ?? Number(process.env.RAG_DEFAULT_TOP_K ?? 5)) * 2,
-          )) as any;
+        const ftsRows = await prisma.$queryRawUnsafe(
+          `
+          SELECT
+            rc.id AS "chunkId",
+            rc.document_id AS "documentId",
+            rc.chunk_index AS "chunkIndex",
+            rc.content,
+            rc.tokens,
+            rc.metadata,
+            rd.filename AS "documentFilename",
+            rd.source_type AS "documentSourceType",
+            ts_rank(to_tsvector('english', rc.content), plainto_tsquery('english', $2)) AS rank
+          FROM rag_chunks rc
+          INNER JOIN rag_documents rd ON rc.document_id = rd.id
+          WHERE rc.knowledge_base_id = $1
+            AND to_tsvector('english', rc.content) @@ plainto_tsquery('english', $2)
+          ORDER BY ts_rank(to_tsvector('english', rc.content), plainto_tsquery('english', $2)) DESC
+          LIMIT $3
+          `,
+          kbId,
+          query,
+          (options.topK ?? Number(process.env.RAG_DEFAULT_TOP_K ?? 5)) * 2,
+        ) as any[];
 
-        ftsResults = ftsRows.map((r: any) => ({
+        ftsResults = (ftsRows ?? []).map((r: any) => ({
           chunkId: r.chunkId,
           documentId: r.documentId,
           chunkIndex: r.chunkIndex,

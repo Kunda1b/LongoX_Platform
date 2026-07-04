@@ -1,11 +1,13 @@
+/**
+ * AI runs route (primary /api).
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.tokenUsage`, `prisma.aiGuardrail`, `prisma.aiGuardrailHit`
+ * delegates with `as any` casts for legacy columns.
+ */
+
 import { Router, type IRouter, type Response } from "express";
-import { eq, sql } from "drizzle-orm";
-import {
-  db,
-  aiGuardrailsTable,
-  aiGuardrailHitsTable,
-  tokenUsageTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authorize } from "@longox/shared-rbac";
 import { aiRunLifecycleService } from "../application/services/ai-run-lifecycle.service";
 import { costBudgetService } from "../application/services/cost-budget.service";
@@ -220,14 +222,16 @@ router.post(
                 const now = Date.now();
                 if (now - lastPersistAt >= AI_PARTIAL_PERSIST_INTERVAL_MS) {
                   try {
-                    await db.insert(tokenUsageTable).values({
-                      tenantId,
-                      modelName: resolvedModel,
-                      provider: "openai",
-                      workflowId: workflowId ?? null,
-                      inputTokens: finalUsage?.inputTokens ?? 0,
-                      outputTokens: tokenCount,
-                      cost: String(finalUsage?.cost ?? 0),
+                    await prisma.tokenUsage.create({
+                      data: {
+                        tenantId,
+                        modelName: resolvedModel,
+                        provider: "openai",
+                        workflowId: workflowId ?? null,
+                        inputTokens: finalUsage?.inputTokens ?? 0,
+                        outputTokens: tokenCount,
+                        cost: String(finalUsage?.cost ?? 0),
+                      } as any,
                     });
                     writeSseEvent(res, "partial", {
                       output: accumulatedOutput,
@@ -338,16 +342,18 @@ router.post(
           const now = Date.now();
           if (now - lastPersistAt >= AI_PARTIAL_PERSIST_INTERVAL_MS) {
             try {
-              await db.insert(tokenUsageTable).values({
-                tenantId,
-                modelName: result.model,
-                provider: result.provider,
-                workflowId: workflowId ?? null,
-                inputTokens: result.usage.inputTokens,
-                outputTokens: tokenCount,
-                // Drizzle types `numeric` columns as strings to preserve
-                // precision; convert the number cost to a string.
-                cost: String(result.usage.cost),
+              await prisma.tokenUsage.create({
+                data: {
+                  tenantId,
+                  modelName: result.model,
+                  provider: result.provider,
+                  workflowId: workflowId ?? null,
+                  inputTokens: result.usage.inputTokens,
+                  outputTokens: tokenCount,
+                  // Prisma types `Decimal` columns as Decimal.js objects;
+                  // convert the number cost to a string for legacy compatibility.
+                  cost: String(result.usage.cost),
+                } as any,
               });
               writeSseEvent(res, "partial", {
                 output: accumulatedOutput,
@@ -424,14 +430,13 @@ router.get(
   authorize("ai:read"),
   async (req, res): Promise<void> => {
     const limit = Math.min(Number(req.query.limit ?? 20), 100);
-    const rows = await db
-      .select()
-      .from(tokenUsageTable)
-      .orderBy(tokenUsageTable.createdAt)
-      .limit(limit);
+    const rows = await prisma.tokenUsage.findMany({
+      orderBy: { createdAt: "asc" } as any,
+      take: limit,
+    });
 
     res.json(
-      rows.map((r) => ({
+      rows.map((r: any) => ({
         id: r.id,
         modelName: r.modelName,
         provider: r.provider,
@@ -449,25 +454,25 @@ router.get(
   "/ai/runs/:id",
   authorize("ai:read"),
   async (req, res): Promise<void> => {
-    const [row] = await db
-      .select()
-      .from(tokenUsageTable)
-      .where(eq(tokenUsageTable.id, String(req.params.id)));
+    const row = await prisma.tokenUsage.findUnique({
+      where: { id: Number(req.params.id) } as any,
+    });
 
     if (!row) {
       res.status(404).json({ error: "Not found" });
       return;
     }
 
+    const r = row as any;
     res.json({
-      id: row.id,
-      modelName: row.modelName,
-      provider: row.provider,
-      workflowId: row.workflowId,
-      inputTokens: row.inputTokens,
-      outputTokens: row.outputTokens,
-      cost: Number(row.cost),
-      createdAt: row.createdAt.toISOString(),
+      id: r.id,
+      modelName: r.modelName,
+      provider: r.provider,
+      workflowId: r.workflowId,
+      inputTokens: r.inputTokens,
+      outputTokens: r.outputTokens,
+      cost: Number(r.cost),
+      createdAt: r.createdAt.toISOString(),
     });
   },
 );
@@ -489,14 +494,13 @@ router.get(
   authorize("ai:read"),
   async (req, res): Promise<void> => {
     const tenantId = req.tenantId ?? "";
-    const rows = await db
-      .select()
-      .from(aiGuardrailsTable)
-      .where(eq(aiGuardrailsTable.tenantId, tenantId))
-      .orderBy(aiGuardrailsTable.createdAt);
+    const rows = await prisma.aiGuardrail.findMany({
+      where: { tenantId } as any,
+      orderBy: { createdAt: "asc" } as any,
+    });
 
     res.json(
-      rows.map((r) => ({
+      rows.map((r: any) => ({
         id: r.id,
         name: r.name,
         type: r.type,
@@ -540,28 +544,27 @@ router.post(
       return;
     }
 
-    const [row] = await db
-      .insert(aiGuardrailsTable)
-      .values({
+    const row = await prisma.aiGuardrail.create({
+      data: {
         name: name.trim(),
         type,
         config,
         enabled,
         severity,
         tenantId,
-      })
-      .returning();
+      } as any,
+    });
 
     res.status(201).json({
-      id: row.id,
-      name: row.name,
-      type: row.type,
-      config: row.config,
-      enabled: row.enabled,
-      severity: row.severity,
-      tenantId: row.tenantId,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
+      id: (row as any).id,
+      name: (row as any).name,
+      type: (row as any).type,
+      config: (row as any).config,
+      enabled: (row as any).enabled,
+      severity: (row as any).severity,
+      tenantId: (row as any).tenantId,
+      createdAt: (row as any).createdAt.toISOString(),
+      updatedAt: (row as any).updatedAt.toISOString(),
     });
   },
 );
@@ -570,11 +573,9 @@ router.get(
   "/ai/guardrails/:id",
   authorize("ai:read"),
   async (req, res): Promise<void> => {
-    const tenantId = req.tenantId ?? "";
-    const [row] = await db
-      .select()
-      .from(aiGuardrailsTable)
-      .where(eq(aiGuardrailsTable.id, String(req.params.id)));
+    const row = await prisma.aiGuardrail.findUnique({
+      where: { id: String(req.params.id) } as any,
+    });
 
     if (!row) {
       res.status(404).json({ error: "Not found" });
@@ -582,15 +583,15 @@ router.get(
     }
 
     res.json({
-      id: row.id,
-      name: row.name,
-      type: row.type,
-      config: row.config,
-      enabled: row.enabled,
-      severity: row.severity,
-      tenantId: row.tenantId,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
+      id: (row as any).id,
+      name: (row as any).name,
+      type: (row as any).type,
+      config: (row as any).config,
+      enabled: (row as any).enabled,
+      severity: (row as any).severity,
+      tenantId: (row as any).tenantId,
+      createdAt: (row as any).createdAt.toISOString(),
+      updatedAt: (row as any).updatedAt.toISOString(),
     });
   },
 );
@@ -615,11 +616,10 @@ router.patch(
     if (b.enabled !== undefined) updates.enabled = b.enabled;
     if (b.severity !== undefined) updates.severity = b.severity;
 
-    const [row] = await db
-      .update(aiGuardrailsTable)
-      .set(updates as any)
-      .where(eq(aiGuardrailsTable.id, id))
-      .returning();
+    const row = await prisma.aiGuardrail.update({
+      where: { id } as any,
+      data: updates as any,
+    }).catch(() => null);
 
     if (!row) {
       res.status(404).json({ error: "Not found" });
@@ -627,15 +627,15 @@ router.patch(
     }
 
     res.json({
-      id: row.id,
-      name: row.name,
-      type: row.type,
-      config: row.config,
-      enabled: row.enabled,
-      severity: row.severity,
-      tenantId: row.tenantId,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
+      id: (row as any).id,
+      name: (row as any).name,
+      type: (row as any).type,
+      config: (row as any).config,
+      enabled: (row as any).enabled,
+      severity: (row as any).severity,
+      tenantId: (row as any).tenantId,
+      createdAt: (row as any).createdAt.toISOString(),
+      updatedAt: (row as any).updatedAt.toISOString(),
     });
   },
 );
@@ -644,9 +644,9 @@ router.delete(
   "/ai/guardrails/:id",
   authorize("ai:delete"),
   async (req, res): Promise<void> => {
-    await db
-      .delete(aiGuardrailsTable)
-      .where(eq(aiGuardrailsTable.id, String(req.params.id)));
+    await prisma.aiGuardrail.delete({
+      where: { id: String(req.params.id) } as any,
+    }).catch(() => undefined);
     res.status(204).end();
   },
 );
@@ -655,14 +655,13 @@ router.get(
   "/ai/guardrails/:id/hits",
   authorize("ai:read"),
   async (req, res): Promise<void> => {
-    const rows = await db
-      .select()
-      .from(aiGuardrailHitsTable)
-      .where(eq(aiGuardrailHitsTable.guardrailId, String(req.params.id)))
-      .orderBy(aiGuardrailHitsTable.createdAt);
+    const rows = await prisma.aiGuardrailHit.findMany({
+      where: { guardrailId: String(req.params.id) } as any,
+      orderBy: { createdAt: "asc" } as any,
+    });
 
     res.json(
-      rows.map((r) => ({
+      rows.map((r: any) => ({
         id: r.id,
         guardrailId: r.guardrailId,
         runId: r.runId,

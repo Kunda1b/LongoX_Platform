@@ -1,11 +1,17 @@
+/**
+ * AI routing policy routes.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.aiRoutingPolicy` delegate with `as any` casts for legacy columns.
+ */
+
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
-import { db, aiRoutingPoliciesTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
-function fmt(row: typeof aiRoutingPoliciesTable.$inferSelect) {
+function fmt(row: any) {
   return {
     id: row.id,
     tenantId: row.tenantId,
@@ -30,25 +36,21 @@ router.get("/ai-routing-policies", authorize("ai:read"), async (req, res): Promi
     res.status(400).json({ error: "Tenant context required" });
     return;
   }
-  const rows = await db
-    .select()
-    .from(aiRoutingPoliciesTable)
-    .where(eq(aiRoutingPoliciesTable.tenantId, tenantId))
-    .orderBy(aiRoutingPoliciesTable.createdAt);
+  const rows = await prisma.aiRoutingPolicy.findMany({
+    where: { tenantId } as any,
+    orderBy: { createdAt: "asc" } as any,
+  });
   res.json(rows.map(fmt));
 });
 
 router.get("/ai-routing-policies/:id", authorize("ai:read"), async (req, res): Promise<void> => {
   const tenantId = req.tenantId ?? "";
-  const [row] = await db
-    .select()
-    .from(aiRoutingPoliciesTable)
-    .where(
-      and(
-        eq(aiRoutingPoliciesTable.id, String(req.params.id)),
-        eq(aiRoutingPoliciesTable.tenantId, tenantId),
-      ),
-    );
+  const row = await prisma.aiRoutingPolicy.findFirst({
+    where: {
+      id: String(req.params.id),
+      tenantId,
+    } as any,
+  });
   if (!row) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -87,9 +89,8 @@ router.post("/ai-routing-policies", authorize("ai:write"), async (req, res): Pro
     res.status(400).json({ error: "name required" });
     return;
   }
-  const [row] = await db
-    .insert(aiRoutingPoliciesTable)
-    .values({
+  const row = await prisma.aiRoutingPolicy.create({
+    data: {
       tenantId,
       name: name.trim(),
       description,
@@ -100,8 +101,8 @@ router.post("/ai-routing-policies", authorize("ai:write"), async (req, res): Pro
       fallbackEnabled,
       maxRetries,
       config,
-    } as any)
-    .returning();
+    } as any,
+  });
   res.status(201).json(fmt(row));
 });
 
@@ -132,17 +133,12 @@ router.patch("/ai-routing-policies/:id", authorize("ai:write"), async (req, res)
   if (b.config !== undefined) updates.config = b.config;
   if (b.isEnabled !== undefined) updates.isEnabled = b.isEnabled;
 
-  const [row] = await db
-    .update(aiRoutingPoliciesTable)
-    .set(updates as any)
-    .where(
-      and(
-        eq(aiRoutingPoliciesTable.id, id),
-        eq(aiRoutingPoliciesTable.tenantId, tenantId),
-      ),
-    )
-    .returning();
-  if (!row) {
+  const row = await prisma.aiRoutingPolicy.update({
+    where: { id } as any,
+    data: updates as any,
+  }).catch(() => null);
+
+  if (!row || (row as any).tenantId !== tenantId) {
     res.status(404).json({ error: "Not found" });
     return;
   }
@@ -151,14 +147,12 @@ router.patch("/ai-routing-policies/:id", authorize("ai:write"), async (req, res)
 
 router.delete("/ai-routing-policies/:id", authorize("ai:delete"), async (req, res): Promise<void> => {
   const tenantId = req.tenantId ?? "";
-  await db
-    .delete(aiRoutingPoliciesTable)
-    .where(
-      and(
-        eq(aiRoutingPoliciesTable.id, String(req.params.id)),
-        eq(aiRoutingPoliciesTable.tenantId, tenantId),
-      ),
-    );
+  await prisma.aiRoutingPolicy.deleteMany({
+    where: {
+      id: String(req.params.id),
+      tenantId,
+    } as any,
+  });
   res.status(204).end();
 });
 
