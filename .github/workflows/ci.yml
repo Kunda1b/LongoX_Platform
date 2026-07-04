@@ -96,8 +96,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - name: Validate Prisma schema
-        run: pnpm --filter @longox/db exec prisma validate --schema ./prisma/schema.prisma
+      - name: Validate Drizzle schema
+        env:
+          DATABASE_URL: postgresql://longox:longox@localhost:5432/longox_ci
+        run: pnpm --filter @longox/db exec drizzle-kit check --config ./drizzle.config.ts
 
   kong-lint:
     name: Kong Config Validation
