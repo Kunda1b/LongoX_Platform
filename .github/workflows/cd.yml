@@ -74,19 +74,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # ─── ADR §21.3: Sign artifacts with Sigstore (cosign) ──────────────────
-      - name: Install cosign
-        uses: sigstore/cosign-installer@v3
-        with:
-          cosign-release: "v2.2.4"
-
-      - name: Sign image with cosign
-        run: |
-          cosign sign --yes \
-            ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
-        env:
-          COSIGN_EXPERIMENTAL: 1
-
   kong-deploy:
     name: Deploy Kong Config
     runs-on: ubuntu-latest
