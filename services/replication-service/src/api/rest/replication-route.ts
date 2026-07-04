@@ -133,7 +133,7 @@ router.put(
   "/replication/configs/:id",
   authorize({ resource: "admin", action: "write" }),
   async (req, res): Promise<void> => {
-    const id = req.params.id;
+    const id = String(req.params.id);
     if (!id) {
       res.status(400).json({ error: "id is required" });
       return;

@@ -1,5 +1,4 @@
-import { db, analyticsEventsTable, analyticsMetricsTable, workflowAnalyticsTable, aiAnalyticsTable } from "@longox/db";
-import { eq, and, sql } from "drizzle-orm";
+import { prisma } from "@longox/db/prisma";
 import type { PlatformEvent } from "@longox/shared-events";
 
 export class AnalyticsProjection {
@@ -12,15 +11,25 @@ export class AnalyticsProjection {
 
   private async recordEvent(event: PlatformEvent): Promise<void> {
     try {
-      await db.insert(analyticsEventsTable).values({
-        eventType: event.type,
-        aggregateId: event.aggregateId,
-        aggregateType: event.aggregateType,
-        tenantId: event.metadata.tenantId as number | undefined,
-        userId: event.metadata.userId as number | undefined,
-        payload: event.payload,
-        metadata: event.metadata,
-        timestamp: new Date(event.timestamp),
+      // Migrated per ADR-013 Phase 3: Drizzle insert into `analytics_events`
+      // collapsed into the generic `prisma.analyticsReadModel` delegate.
+      // `modelType: "event"` distinguishes event rows from metric / workflow /
+      // ai rows. All event fields are persisted in the JSON `data` column.
+      await prisma.analyticsReadModel.create({
+        data: {
+          tenantId: String((event.metadata.tenantId as string | number | undefined) ?? ""),
+          modelType: "event",
+          data: {
+            eventType: event.type,
+            aggregateId: event.aggregateId,
+            aggregateType: event.aggregateType,
+            userId: event.metadata.userId,
+            payload: event.payload,
+            metadata: event.metadata,
+            timestamp: event.timestamp,
+          } as any,
+          period: this.getPeriod(new Date(event.timestamp)),
+        } as any,
       } as any);
     } catch (err) {
       console.error("[AnalyticsProjection] Failed to record event:", err);
@@ -59,20 +68,50 @@ export class AnalyticsProjection {
     period: string,
     event: PlatformEvent,
   ): Promise<void> {
-    const tenantId = event.metadata.tenantId as number | undefined;
+    // Migrated per ADR-013 Phase 3: Drizzle insert into `analytics_metrics`
+    // collapsed into `prisma.analyticsReadModel`. `modelType: "metric:{name}"`
+    // encodes the metric name so we can findFirst by (tenantId, modelType,
+    // period) and accumulate. The numeric `metricValue` is stored as a string
+    // in the JSON `data` column to preserve the legacy numeric-as-string
+    // semantics of `analytics_metrics.metric_value`.
+    const tenantId = String((event.metadata.tenantId as string | number | undefined) ?? "");
+    const modelType = `metric:${name}`;
     const dimensions = {
       eventType: event.type,
       aggregateType: event.aggregateType,
     };
 
-    await db.insert(analyticsMetricsTable).values({
-      metricName: name,
-      metricValue: String(value),
-      dimensions,
-      tenantId,
-      period,
-      recordedAt: new Date(event.timestamp),
-    } as any);
+    const existing = (await prisma.analyticsReadModel.findFirst({
+      where: { tenantId, modelType, period } as any,
+    } as any)) as any;
+
+    if (existing) {
+      const currentValue = Number(existing.data?.value ?? 0) || 0;
+      await prisma.analyticsReadModel.update({
+        where: { id: existing.id },
+        data: {
+          data: {
+            name,
+            value: String(currentValue + value),
+            dimensions,
+          } as any,
+        } as any,
+      } as any);
+    } else {
+      await prisma.analyticsReadModel.create({
+        data: {
+          tenantId,
+          modelType,
+          data: {
+            name,
+            value: String(value),
+            dimensions,
+            recordedAt: event.timestamp,
+          } as any,
+          period,
+        } as any,
+      } as any);
+    }
   }
 
   private async updateWorkflowAnalytics(event: PlatformEvent): Promise<void> {
@@ -81,52 +120,73 @@ export class AnalyticsProjection {
     const workflowId = Number(event.payload.workflowId);
     if (!workflowId) return;
 
-    const tenantId = (event.metadata.tenantId as number) ?? 0;
+    const tenantId = String((event.metadata.tenantId as string | number | undefined) ?? "");
     const period = this.getPeriod(new Date(event.timestamp));
 
     try {
-      const [existing] = await db
-        .select()
-        .from(workflowAnalyticsTable)
-        .where(
-          and(
-            eq(workflowAnalyticsTable.workflowId, String(workflowId)),
-            eq(workflowAnalyticsTable.period, period),
-          ),
-        )
-        .limit(1);
+      // Migrated per ADR-013 Phase 3: Drizzle upsert on `workflow_analytics`
+      // collapsed into `prisma.analyticsReadModel`. `modelType:
+      // "workflow:{workflowId}"` encodes the workflowId so we can findFirst by
+      // (tenantId, modelType, period) and accumulate counters. Numeric
+      // counters (`executionCount`, `successCount`, `failureCount`) and the
+      // decimal `totalCost` are stored in the JSON `data` column.
+      const modelType = `workflow:${workflowId}`;
+      const existing = (await prisma.analyticsReadModel.findFirst({
+        where: { tenantId, modelType, period } as any,
+      } as any)) as any;
+
+      const data = (existing?.data ?? {}) as Record<string, unknown>;
+      const executionCount = Number(data.executionCount ?? 0);
+      const successCount = Number(data.successCount ?? 0);
+      const failureCount = Number(data.failureCount ?? 0);
+      const totalCost = Number(data.totalCost ?? 0);
+
+      if (event.type === "execution.completed") {
+        data.executionCount = executionCount + 1;
+        data.successCount = successCount + 1;
+      } else if (event.type === "execution.failed") {
+        data.executionCount = executionCount + 1;
+        data.failureCount = failureCount + 1;
+      }
+
+      if (event.type === "ai.run.completed") {
+        const cost = (event.payload.cost as number) ?? 0;
+        data.totalCost = String(totalCost + cost);
+      }
+
+      data.workflowId = workflowId;
+      data.tenantId = tenantId;
+      data.period = period;
+      data.recordedAt = event.timestamp;
 
       if (existing) {
-        const updates: Record<string, unknown> = {};
-
-        if (event.type === "execution.completed") {
-          updates.executionCount = (existing.executionCount ?? 0) + 1;
-          updates.successCount = (existing.successCount ?? 0) + 1;
-        } else if (event.type === "execution.failed") {
-          updates.executionCount = (existing.executionCount ?? 0) + 1;
-          updates.failureCount = (existing.failureCount ?? 0) + 1;
-        }
-
-        if (event.type === "ai.run.completed") {
-          const cost = (event.payload.cost as number) ?? 0;
-          updates.totalCost = String(
-            Number(existing.totalCost ?? 0) + cost,
-          );
-        }
-
-        await db
-          .update(workflowAnalyticsTable)
-          .set(updates)
-          .where(eq(workflowAnalyticsTable.id, String(existing.id)));
+        await prisma.analyticsReadModel.update({
+          where: { id: existing.id },
+          data: { data: data as any } as any,
+        } as any);
       } else {
-        await db.insert(workflowAnalyticsTable).values({
+        // Initialise counters for the first event of the period.
+        const initData: Record<string, unknown> = {
           workflowId,
           tenantId,
           executionCount: 1,
           successCount: event.type === "execution.completed" ? 1 : 0,
           failureCount: event.type === "execution.failed" ? 1 : 0,
+          totalCost: String(
+            event.type === "ai.run.completed"
+              ? (event.payload.cost as number) ?? 0
+              : 0,
+          ),
           period,
-          recordedAt: new Date(event.timestamp),
+          recordedAt: event.timestamp,
+        };
+        await prisma.analyticsReadModel.create({
+          data: {
+            tenantId,
+            modelType,
+            data: initData as any,
+            period,
+          } as any,
         } as any);
       }
     } catch (err) {
@@ -139,49 +199,55 @@ export class AnalyticsProjection {
 
     const provider = (event.payload.provider as string) ?? "unknown";
     const model = (event.payload.model as string) ?? "unknown";
-    const tenantId = (event.metadata.tenantId as number) ?? 0;
+    const tenantId = String((event.metadata.tenantId as string | number | undefined) ?? "");
     const period = this.getPeriod(new Date(event.timestamp));
 
     try {
-      const [existing] = await db
-        .select()
-        .from(aiAnalyticsTable)
-        .where(
-          and(
-            eq(aiAnalyticsTable.provider, provider),
-            eq(aiAnalyticsTable.model, model),
-            eq(aiAnalyticsTable.period, period),
-          ),
-        )
-        .limit(1);
+      // Migrated per ADR-013 Phase 3: Drizzle upsert on `ai_analytics`
+      // collapsed into `prisma.analyticsReadModel`. `modelType:
+      // "ai:{provider}:{model}"` encodes the (provider, model) tuple so we
+      // can findFirst by (tenantId, modelType, period) and accumulate
+      // counters. Numeric counters and decimal `totalCost`/`avgLatencyMs`
+      // are stored in the JSON `data` column.
+      const modelType = `ai:${provider}:${model}`;
+      const existing = (await prisma.analyticsReadModel.findFirst({
+        where: { tenantId, modelType, period } as any,
+      } as any)) as any;
 
       if (existing) {
+        const data = (existing.data ?? {}) as Record<string, unknown>;
         const inputTokens = (event.payload.inputTokens as number) ?? 0;
         const outputTokens = (event.payload.outputTokens as number) ?? 0;
         const cost = (event.payload.cost as number) ?? 0;
-        const latency = (event.payload.latencyMs as number) ?? 0;
 
-        await db
-          .update(aiAnalyticsTable)
-          .set({
-            requestCount: (existing.requestCount ?? 0) + 1,
-            inputTokens: (existing.inputTokens ?? 0) + inputTokens,
-            outputTokens: (existing.outputTokens ?? 0) + outputTokens,
-            totalCost: String(Number(existing.totalCost ?? 0) + cost),
-          })
-          .where(eq(aiAnalyticsTable.id, String(existing.id)));
+        data.requestCount = Number(data.requestCount ?? 0) + 1;
+        data.inputTokens = Number(data.inputTokens ?? 0) + inputTokens;
+        data.outputTokens = Number(data.outputTokens ?? 0) + outputTokens;
+        data.totalCost = String(Number(data.totalCost ?? 0) + cost);
+
+        await prisma.analyticsReadModel.update({
+          where: { id: existing.id },
+          data: { data: data as any } as any,
+        } as any);
       } else {
-        await db.insert(aiAnalyticsTable).values({
-          tenantId,
-          provider,
-          model,
-          requestCount: 1,
-          inputTokens: (event.payload.inputTokens as number) ?? 0,
-          outputTokens: (event.payload.outputTokens as number) ?? 0,
-          totalCost: String((event.payload.cost as number) ?? 0),
-          avgLatencyMs: String((event.payload.latencyMs as number) ?? 0),
-          period,
-          recordedAt: new Date(event.timestamp),
+        await prisma.analyticsReadModel.create({
+          data: {
+            tenantId,
+            modelType,
+            data: {
+              tenantId,
+              provider,
+              model,
+              requestCount: 1,
+              inputTokens: (event.payload.inputTokens as number) ?? 0,
+              outputTokens: (event.payload.outputTokens as number) ?? 0,
+              totalCost: String((event.payload.cost as number) ?? 0),
+              avgLatencyMs: String((event.payload.latencyMs as number) ?? 0),
+              period,
+              recordedAt: event.timestamp,
+            } as any,
+            period,
+          } as any,
         } as any);
       }
     } catch (err) {

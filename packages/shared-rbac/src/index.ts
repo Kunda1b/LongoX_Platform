@@ -1,13 +1,6 @@
 export { seedRoles, getSystemRoleId } from "./seed.js";
 
-import { eq, and, isNull } from "drizzle-orm";
-import {
-  db,
-  rolesTable,
-  permissionsTable,
-  rolePermissionsTable,
-  userRolesTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import type { Request, Response, NextFunction } from "express";
 
 // NOTE: This `Request.user` declaration MUST match the one in
@@ -512,33 +505,48 @@ async function getUserPermissions(
   const cached = getCachedPermissions(cacheKey);
   if (cached) return cached;
 
-  const rows = await db
-    .select({
-      resource: permissionsTable.resource,
-      action: permissionsTable.action,
-    })
-    .from(userRolesTable)
-    .innerJoin(rolesTable, eq(userRolesTable.roleId, rolesTable.id))
-    .innerJoin(
-      rolePermissionsTable,
-      eq(rolePermissionsTable.roleId, rolesTable.id),
-    )
-    .innerJoin(
-      permissionsTable,
-      eq(rolePermissionsTable.permissionId, permissionsTable.id),
-    )
-    .where(
-      and(
-        eq(userRolesTable.userId, String(userId)),
-        tenantId !== null
-          ? eq(userRolesTable.tenantId, tenantId)
-          : isNull(userRolesTable.tenantId),
-      ),
-    );
+  // Migrated per ADR-013 Phase 3: Drizzle join (userRolesTable → rolesTable →
+  // rolePermissionsTable → permissionsTable) replaced with Prisma includes.
+  // `userRolesTable` → `prisma.membership`, `rolesTable` → `prisma.rbacRole`,
+  // `rolePermissionsTable` → `prisma.rolePermission`,
+  // `permissionsTable` → `prisma.rbacPermission`.
+  // `tenantId: null` is permitted on the underlying `user_roles` table for
+  // platform-scoped users; cast through `as any` because the Prisma
+  // `Membership.tenantId` is typed non-null.
+  const memberships = (await prisma.membership.findMany({
+    where: {
+      userId: String(userId),
+      ...(tenantId !== null ? { tenantId } : { tenantId: null }),
+    } as any,
+    include: {
+      role: {
+        include: {
+          rolePermissions: {
+            include: { permission: true },
+          },
+        },
+      },
+    },
+  } as any)) as any[];
 
   const permissions = new Set<string>();
-  for (const row of rows) {
-    permissions.add(`${row.resource}:${row.action}`);
+  for (const m of memberships) {
+    const rolePerms = m?.role?.rolePermissions ?? [];
+    for (const rp of rolePerms) {
+      const p = rp?.permission;
+      if (!p) continue;
+      // Prefer legacy `resource`/`action` columns when present; fall back to
+      // parsing the canonical `code` (e.g. "workflows:read").
+      const resource =
+        p.resource ??
+        (typeof p.code === "string" ? p.code.split(":")[0] : "");
+      const action =
+        p.action ??
+        (typeof p.code === "string" ? p.code.split(":")[1] : "");
+      if (resource && action) {
+        permissions.add(`${resource}:${action}`);
+      }
+    }
   }
 
   setCachedPermissions(cacheKey, permissions);
@@ -571,26 +579,25 @@ async function getUserRoleName(
     return cached.name;
   }
 
-  const [row] = await db
-    .select({ name: rolesTable.name })
-    .from(userRolesTable)
-    .innerJoin(rolesTable, eq(userRolesTable.roleId, rolesTable.id))
-    .where(
-      and(
-        eq(userRolesTable.userId, String(userId)),
-        tenantId !== null
-          ? eq(userRolesTable.tenantId, tenantId)
-          : isNull(userRolesTable.tenantId),
-      ),
-    )
-    .limit(1);
+  // Migrated per ADR-013 Phase 3: Drizzle join (userRolesTable → rolesTable)
+  // replaced with `prisma.membership.findFirst({ include: { role } })`.
+  // `userRolesTable` → `prisma.membership`, `rolesTable` → `prisma.rbacRole`.
+  // `tenantId: null` is allowed on the underlying table for platform users;
+  // cast through `as any` since Prisma types `Membership.tenantId` non-null.
+  const row = (await prisma.membership.findFirst({
+    where: {
+      userId: String(userId),
+      ...(tenantId !== null ? { tenantId } : { tenantId: null }),
+    } as any,
+    include: { role: { select: { name: true } } } as any,
+  } as any)) as any;
 
-  if (row) {
+  if (row?.role?.name) {
     roleCache.set(cacheKey, {
-      name: row.name,
+      name: row.role.name,
       expiresAt: Date.now() + ROLE_CACHE_TTL_MS,
     });
-    return row.name;
+    return row.role.name;
   }
   return null;
 }

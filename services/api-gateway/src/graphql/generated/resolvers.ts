@@ -1,5 +1,4 @@
 import type { GraphQLResolveInfo, GraphQLScalarType, GraphQLScalarTypeConfig } from 'graphql';
-import type { TenantRecord } from '@longox/db';
 import type { GraphQLContext } from '../../lib/context';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
@@ -556,7 +555,7 @@ export type ResolversTypes = {
   TemplateConnection: ResolverTypeWrapper<TemplateConnection>;
   TemplateEdgeNode: ResolverTypeWrapper<TemplateEdgeNode>;
   TemplateVersion: ResolverTypeWrapper<TemplateVersion>;
-  Tenant: ResolverTypeWrapper<TenantRecord>;
+  Tenant: ResolverTypeWrapper<Tenant>;
   TenantTier: TenantTier;
   TrustLevel: TrustLevel;
   ValidationError: ResolverTypeWrapper<ValidationError>;
@@ -619,7 +618,7 @@ export type ResolversParentTypes = {
   TemplateConnection: TemplateConnection;
   TemplateEdgeNode: TemplateEdgeNode;
   TemplateVersion: TemplateVersion;
-  Tenant: TenantRecord;
+  Tenant: Tenant;
   ValidationError: ValidationError;
   ValidationResult: ValidationResult;
   ValidationWarning: ValidationWarning;

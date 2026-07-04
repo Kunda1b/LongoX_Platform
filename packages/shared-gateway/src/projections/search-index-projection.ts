@@ -1,5 +1,4 @@
-import { db, searchIndexTable } from "@longox/db";
-import { eq, and, sql } from "drizzle-orm";
+import { prisma } from "@longox/db/prisma";
 import type { PlatformEvent } from "@longox/shared-events";
 
 export class SearchIndexProjection {
@@ -163,31 +162,36 @@ export class SearchIndexProjection {
     metadata: Record<string, unknown>;
   }): Promise<void> {
     try {
+      // Migrated per ADR-013 Phase 3: Drizzle upsert on `search_index`
+      // replaced with `prisma.searchIndex` findFirst + update/create. There is
+      // no composite unique on (resourceType, resourceId) on the Prisma model,
+      // so we lookup by `resourceId` (which is already composite-keyed by the
+      // caller as `${doc.documentType}-${doc.documentId}`).
       const compositeId = `${doc.documentType}-${doc.documentId}`;
-      const [existing] = await db
-        .select()
-        .from(searchIndexTable)
-        .where(eq(searchIndexTable.resourceId, compositeId))
-        .limit(1);
+      const existing = (await prisma.searchIndex.findFirst({
+        where: { resourceId: compositeId } as any,
+      } as any)) as any;
 
       if (existing) {
-        await db
-          .update(searchIndexTable)
-          .set({
+        await prisma.searchIndex.update({
+          where: { id: existing.id },
+          data: {
             title: doc.title,
             content: doc.content,
-            metadata: doc.metadata,
+            metadata: doc.metadata as any,
             updatedAt: new Date(),
-          })
-          .where(eq(searchIndexTable.id, existing.id));
+          } as any,
+        } as any);
       } else {
-        await db.insert(searchIndexTable).values({
-          resourceType: doc.documentType,
-          resourceId: compositeId,
-          tenantId: doc.tenantId,
-          title: doc.title,
-          content: doc.content,
-          metadata: doc.metadata,
+        await prisma.searchIndex.create({
+          data: {
+            resourceType: doc.documentType,
+            resourceId: compositeId,
+            tenantId: doc.tenantId ?? null,
+            title: doc.title,
+            content: doc.content,
+            metadata: doc.metadata as any,
+          } as any,
         } as any);
       }
     } catch (err) {
@@ -200,10 +204,13 @@ export class SearchIndexProjection {
     documentId: string,
   ): Promise<void> {
     try {
+      // Migrated per ADR-013 Phase 3: Drizzle `delete` →
+      // `prisma.searchIndex.deleteMany`. `deleteMany` is used because there is
+      // no unique constraint on `resourceId` exposed via the Prisma model.
       const compositeId = `${documentType}-${documentId}`;
-      await db
-        .delete(searchIndexTable)
-        .where(eq(searchIndexTable.resourceId, compositeId));
+      await prisma.searchIndex.deleteMany({
+        where: { resourceId: compositeId } as any,
+      } as any);
     } catch (err) {
       console.error("[SearchIndexProjection] Failed to remove document:", err);
     }

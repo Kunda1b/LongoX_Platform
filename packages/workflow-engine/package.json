@@ -14,8 +14,7 @@
     "@longox/shared-types": "workspace:*",
     "@longox/shared-logger": "workspace:*",
     "@longox/shared-events": "workspace:*",
-    "@longox/db": "workspace:*",
-    "drizzle-orm": "catalog:"
+    "@longox/db": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:"

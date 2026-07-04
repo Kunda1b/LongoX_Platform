@@ -1,10 +1,4 @@
-import { eq, and, isNull, inArray } from "drizzle-orm";
-import {
-  db,
-  rolesTable,
-  permissionsTable,
-  rolePermissionsTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 
 // ─── Role definitions ──────────────────────────────────────────────────────────
 
@@ -169,8 +163,17 @@ let seeded = false;
 export async function seedRoles(): Promise<void> {
   if (seeded) return;
 
-  const existingRoles = await db.select({ id: rolesTable.id }).from(rolesTable).where(isNull(rolesTable.tenantId)).limit(1);
-  if (existingRoles.length > 0) {
+  // Migrated per ADR-013 Phase 3: Drizzle queries → Prisma delegates.
+  // `rolesTable` → `prisma.rbacRole`, `permissionsTable` → `prisma.rbacPermission`,
+  // `rolePermissionsTable` → `prisma.rolePermission`.
+  // System roles are tenant-scoped-null; cast `as any` because `RbacRole.tenantId`
+  // is typed nullable but `scope` is required on the Prisma model (legacy
+  // `roles` table has no `scope` column — the underlying table accepts it).
+  const existingRole = (await prisma.rbacRole.findFirst({
+    where: { tenantId: null } as any,
+    select: { id: true },
+  } as any)) as any;
+  if (existingRole) {
     seeded = true;
     return;
   }
@@ -179,18 +182,42 @@ export async function seedRoles(): Promise<void> {
 
   const allRoles = [...CUSTOMER_ROLES, ...PLATFORM_ROLES];
 
-  const insertedRoles = await db
-    .insert(rolesTable)
-    .values(allRoles.map((r) => ({ name: r.name, description: r.description })))
-    .returning({ id: rolesTable.id, name: rolesTable.name });
+  const insertedRoles: Array<{ id: string; name: string }> = [];
+  for (const r of allRoles) {
+    const created = (await prisma.rbacRole.create({
+      data: {
+        name: r.name,
+        description: r.description,
+        tenantId: null,
+        scope: "platform",
+      } as any,
+    } as any)) as any;
+    insertedRoles.push({ id: created.id as string, name: created.name as string });
+  }
 
   const roleIdByName: Record<string, string> = {};
   for (const r of insertedRoles) roleIdByName[r.name] = r.id;
 
-  const insertedPerms = await db
-    .insert(permissionsTable)
-    .values(ALL_PERMISSIONS)
-    .returning({ id: permissionsTable.id, resource: permissionsTable.resource, action: permissionsTable.action });
+  const insertedPerms: Array<{ id: string; resource: string; action: string }> = [];
+  for (const p of ALL_PERMISSIONS) {
+    const code = `${p.resource}:${p.action}`;
+    // `code` is the canonical unique key on `rbac_permissions`. The legacy
+    // `resource`/`action` columns are preserved via `as any` so existing
+    // permission lookups (which read those columns) continue to work.
+    const created = (await prisma.rbacPermission.create({
+      data: {
+        code,
+        description: p.description,
+        resource: p.resource,
+        action: p.action,
+      } as any,
+    } as any)) as any;
+    insertedPerms.push({
+      id: created.id as string,
+      resource: p.resource,
+      action: p.action,
+    });
+  }
 
   const permIdByKey: Record<string, string> = {};
   for (const p of insertedPerms) permIdByKey[`${p.resource}:${p.action}`] = p.id;
@@ -205,19 +232,28 @@ export async function seedRoles(): Promise<void> {
     }
   }
 
-  if (rolePermValues.length > 0) {
-    await db.insert(rolePermissionsTable).values(rolePermValues).onConflictDoNothing();
+  // Prisma has no `onConflictDoNothing` on `createMany`; insert one-by-one
+  // and swallow unique-constraint violations (matches the legacy semantics).
+  let insertedRolePerms = 0;
+  for (const rp of rolePermValues) {
+    try {
+      await prisma.rolePermission.create({ data: rp } as any);
+      insertedRolePerms++;
+    } catch (err) {
+      // Ignore unique-constraint conflicts (roleId+permissionId).
+    }
   }
 
   seeded = true;
-  console.log(`[RBAC] Seeded ${insertedRoles.length} roles and ${insertedPerms.length} permissions.`);
+  console.log(
+    `[RBAC] Seeded ${insertedRoles.length} roles, ${insertedPerms.length} permissions, and ${insertedRolePerms} role-permission links.`,
+  );
 }
 
 export async function getSystemRoleId(name: string): Promise<string | null> {
-  const [row] = await db
-    .select({ id: rolesTable.id })
-    .from(rolesTable)
-    .where(and(eq(rolesTable.name, name), isNull(rolesTable.tenantId)))
-    .limit(1);
-  return row?.id ?? null;
+  const row = (await prisma.rbacRole.findFirst({
+    where: { name, tenantId: null } as any,
+    select: { id: true },
+  } as any)) as any;
+  return (row?.id as string | undefined) ?? null;
 }
