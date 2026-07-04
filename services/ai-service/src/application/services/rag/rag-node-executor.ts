@@ -14,7 +14,7 @@ export interface RagNodeInput {
 export interface RagNodeResult {
   query: string;
   results: Array<{
-    chunkId: number;
+    chunkId: string;
     documentId: string;
     content: string;
     score: number;

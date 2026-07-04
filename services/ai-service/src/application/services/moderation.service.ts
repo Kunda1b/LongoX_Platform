@@ -2,7 +2,7 @@ import { aiGuardrailsTable, aiGuardrailHitsTable, db } from "@longox/db";
 import { eq, and } from "drizzle-orm";
 
 export interface ModerationViolation {
-  guardrailId?: number;
+  guardrailId?: string;
   guardrailName?: string;
   type: string;
   detail: string;
@@ -27,7 +27,7 @@ const IP_ADDRESS_REGEX = /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g;
 export class ModerationService {
   async moderateInput(
     text: string,
-    guardrailIds: number[] = [],
+    guardrailIds: string[] = [],
   ): Promise<ModerationResult> {
     const guardrails = await this.loadGuardrails(guardrailIds);
     const violations: ModerationViolation[] = [];
@@ -53,7 +53,7 @@ export class ModerationService {
 
   async moderateOutput(
     text: string,
-    guardrailIds: number[] = [],
+    guardrailIds: string[] = [],
   ): Promise<ModerationResult> {
     return this.moderateInput(text, guardrailIds);
   }
@@ -84,7 +84,7 @@ export class ModerationService {
     return scrubbed;
   }
 
-  private async loadGuardrails(guardrailIds: number[]) {
+  private async loadGuardrails(guardrailIds: string[]) {
     if (guardrailIds.length === 0) return [];
 
     const guardrails = await db

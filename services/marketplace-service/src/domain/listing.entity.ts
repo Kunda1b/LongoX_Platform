@@ -13,7 +13,7 @@ export interface ListingProps {
   category: string;
   tags: string[];
   author: string;
-  authorId: number;
+  authorId: string;
   version: string;
   icon?: string;
   screenshots?: string[];

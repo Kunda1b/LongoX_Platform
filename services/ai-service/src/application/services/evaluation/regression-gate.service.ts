@@ -166,7 +166,7 @@ export class RegressionGateService {
 
   private async getStoredBaselineScore(
     promptId: string,
-  ): Promise<string | null> {
+  ): Promise<number | null> {
     const [lastRun] = await db
       .select()
       .from(aiEvaluationRunsTable)

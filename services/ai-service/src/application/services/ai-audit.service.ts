@@ -20,10 +20,10 @@ export interface AiAuditDetail {
   inputTokens?: number;
   outputTokens?: number;
   cost?: number;
-  guardrailId?: number;
+  guardrailId?: string;
   guardrailName?: string;
   violationType?: string;
-  budgetId?: number;
+  budgetId?: string;
   budgetName?: string;
   evaluationScore?: number;
   evaluationDiff?: number;

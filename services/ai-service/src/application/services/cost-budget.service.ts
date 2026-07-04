@@ -3,7 +3,7 @@ import { eq, and, sql, gte, lte } from "drizzle-orm";
 
 export class BudgetExceededError extends Error {
   constructor(
-    public budgetId: number,
+    public budgetId: string,
     public budgetName: string,
     public currentCost: number,
     public maxCost: number,
@@ -14,7 +14,7 @@ export class BudgetExceededError extends Error {
 }
 
 export interface BudgetUsage {
-  budgetId: number;
+  budgetId: string;
   budgetName: string;
   maxCost: number;
   currentCost: number;

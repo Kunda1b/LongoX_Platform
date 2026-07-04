@@ -22,7 +22,7 @@ export class DocumentIngestionService {
     private embedding: EmbeddingService = embeddingService,
   ) {}
 
-  async ingestDocument(kbId: number, data: DocumentInput): Promise<DocumentResult> {
+  async ingestDocument(kbId: string, data: DocumentInput): Promise<DocumentResult> {
     const contentHash = this.hashContent(data.content);
 
     const [doc] = await db.insert(ragDocumentsTable).values({
@@ -104,7 +104,7 @@ export class DocumentIngestionService {
     }
   }
 
-  async deleteDocument(docId: number): Promise<void> {
+  async deleteDocument(docId: string): Promise<void> {
     const doc = await db
       .select({ knowledgeBaseId: ragDocumentsTable.knowledgeBaseId })
       .from(ragDocumentsTable)
@@ -127,7 +127,7 @@ export class DocumentIngestionService {
       .where(eq(ragKnowledgeBasesTable.id, doc.knowledgeBaseId));
   }
 
-  async reindexDocument(docId: number): Promise<DocumentResult> {
+  async reindexDocument(docId: string): Promise<DocumentResult> {
     const doc = await db
       .select({
         id: ragDocumentsTable.id,

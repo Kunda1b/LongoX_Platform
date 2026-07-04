@@ -23,8 +23,8 @@ export interface AiRunInput {
   responseFormat?: "text" | "json";
   promptId?: string;
   workflowId?: string;
-  guardrailIds?: number[];
-  routingPolicyId?: number;
+  guardrailIds?: string[];
+  routingPolicyId?: string;
   scrubPii?: boolean;
   piiModes?: string[];
   budgetCheckEnabled?: boolean;

@@ -44,7 +44,7 @@ router.post(
   "/ai/runs",
   authorize("ai:run"),
   async (req, res): Promise<void> => {
-    const tenantId = req.tenantId ?? 0;
+    const tenantId = req.tenantId ?? "";
     if (!tenantId) {
       res.status(400).json({ error: "Tenant context required" });
       return;
@@ -73,8 +73,8 @@ router.post(
       responseFormat?: "text" | "json";
       promptId?: string;
       workflowId?: string;
-      guardrailIds?: number[];
-      routingPolicyId?: number;
+      guardrailIds?: string[];
+      routingPolicyId?: string;
       scrubPii?: boolean;
       piiModes?: string[];
       budgetCheckEnabled?: boolean;
@@ -488,7 +488,7 @@ router.get(
   "/ai/guardrails",
   authorize("ai:read"),
   async (req, res): Promise<void> => {
-    const tenantId = req.tenantId ?? 0;
+    const tenantId = req.tenantId ?? "";
     const rows = await db
       .select()
       .from(aiGuardrailsTable)
@@ -515,7 +515,7 @@ router.post(
   "/ai/guardrails",
   authorize("ai:write"),
   async (req, res): Promise<void> => {
-    const tenantId = req.tenantId ?? 0;
+    const tenantId = req.tenantId ?? "";
     if (!tenantId) {
       res.status(400).json({ error: "Tenant context required" });
       return;
@@ -570,7 +570,7 @@ router.get(
   "/ai/guardrails/:id",
   authorize("ai:read"),
   async (req, res): Promise<void> => {
-    const tenantId = req.tenantId ?? 0;
+    const tenantId = req.tenantId ?? "";
     const [row] = await db
       .select()
       .from(aiGuardrailsTable)
@@ -680,7 +680,7 @@ router.get(
   "/ai/budget",
   authorize("ai:read"),
   async (req, res): Promise<void> => {
-    const tenantId = req.tenantId ?? 0;
+    const tenantId = req.tenantId ?? "";
     if (!tenantId) {
       res.status(400).json({ error: "Tenant context required" });
       return;
