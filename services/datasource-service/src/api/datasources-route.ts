@@ -91,7 +91,7 @@ router.post("/datasources", async (req, res): Promise<void> => {
 
   try {
     const ds = await createDs.execute({
-      tenantId: Number(tenantId),
+      tenantId: String(tenantId),
       name: String(name),
       description: description ? String(description) : undefined,
       kind: String(kind) as any,

@@ -15,5 +15,5 @@ export interface DataSourceRepository {
   ): Promise<DataSource>;
   update(id: string, data: Partial<DataSourceProps>): Promise<DataSource>;
   delete(id: string): Promise<void>;
-  countByTenantId(tenantId: string): Promise<string>;
+  countByTenantId(tenantId: string): Promise<number>;
 }

@@ -33,7 +33,7 @@ export interface DataSourceProps {
   status: DataSourceStatus;
   lastTestedAt?: Date;
   lastTestError?: string;
-  createdBy: number;
+  createdBy: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -68,7 +68,7 @@ export class DataSource {
   get lastTestError(): string | undefined {
     return this.props.lastTestError;
   }
-  get createdBy(): number {
+  get createdBy(): string {
     return this.props.createdBy;
   }
 

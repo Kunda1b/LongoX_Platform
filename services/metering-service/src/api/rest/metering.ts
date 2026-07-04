@@ -31,8 +31,8 @@ router.post(
         metadata: (metadata ?? {}) as Record<string, unknown>,
         source: String(source),
         sourceId: sourceId ? String(sourceId) : undefined,
-        workflowId: workflowId ? Number(workflowId) : undefined,
-        executionId: executionId ? Number(executionId) : undefined,
+        workflowId: workflowId ? String(workflowId) : undefined,
+        executionId: executionId ? String(executionId) : undefined,
       });
       res.status(201).json(event.toJSON());
     } catch (err) {

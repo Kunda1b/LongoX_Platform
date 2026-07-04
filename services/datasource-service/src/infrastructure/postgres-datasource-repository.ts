@@ -11,7 +11,7 @@ export class PostgresDataSourceRepository implements DataSourceRepository {
   private toDomain(row: typeof dataSourcesTable.$inferSelect): DataSource {
     return new DataSource({
       id: row.id,
-      tenantId: row.tenantId ?? 0,
+      tenantId: row.tenantId ?? "",
       name: row.name,
       description: row.description ?? undefined,
       kind: row.kind as DataSourceKind,
@@ -19,7 +19,7 @@ export class PostgresDataSourceRepository implements DataSourceRepository {
       status: row.status as DataSourceProps["status"],
       lastTestedAt: row.lastTestedAt ?? undefined,
       lastTestError: row.lastTestError ?? undefined,
-      createdBy: row.createdBy ?? 0,
+      createdBy: row.createdBy ?? "",
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     });
@@ -72,7 +72,7 @@ export class PostgresDataSourceRepository implements DataSourceRepository {
   ): Promise<DataSource> {
     const [row] = await db
       .update(dataSourcesTable)
-      .set({ ...data, updatedAt: new Date() })
+      .set({ ...data, updatedAt: new Date() } as any)
       .where(eq(dataSourcesTable.id, id))
       .returning();
     return this.toDomain(row);

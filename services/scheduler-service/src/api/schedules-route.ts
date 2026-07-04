@@ -113,8 +113,8 @@ router.post("/schedules", async (req, res): Promise<void> => {
 
   try {
     const schedule = await createSchedule.execute({
-      tenantId: Number(tenantId),
-      workflowId: Number(workflowId),
+      tenantId: String(tenantId),
+      workflowId: String(workflowId),
       name: String(name),
       description: description ? String(description) : undefined,
       interval: String(interval) as any,
