@@ -4,9 +4,11 @@ import { prisma } from "@longox/db/prisma";
 
 const CUSTOMER_ROLES = [
   { name: "owner", description: "Workspace owner — full control over the workspace, billing, and users" },
-  { name: "admin", description: "Workspace admin — manages users, workflows, and integrations" },
-  { name: "builder", description: "Power user — creates workflows, dashboards, and AI agents" },
-  { name: "viewer", description: "Read-only access to dashboards, analytics, and workflow history" },
+  { name: "admin", description: "Workspace Admin — manages users, workflows, and integrations" },
+  { name: "editor", description: "Editor — creates and edits workflows, dashboards, and AI agents" },
+  { name: "operator", description: "Operator — runs and monitors workflows, manages executions" },
+  { name: "billing_admin", description: "Billing Admin — manages billing, subscriptions, and usage" },
+  { name: "viewer", description: "Viewer — read-only access to dashboards, analytics, and workflow history" },
 ] as const;
 
 const PLATFORM_ROLES = [
@@ -113,6 +115,34 @@ const ROLE_PERMISSIONS: Record<string, Array<[string, string]>> = {
     ["dashboards", "read"], ["dashboards", "write"], ["dashboards", "delete"],
     ["ai", "read"], ["ai", "write"], ["ai", "run"],
     ["executions", "read"], ["executions", "run"],
+  ],
+  editor: [
+    ["workflows", "read"], ["workflows", "write"], ["workflows", "run"],
+    ["environments", "read"], ["environments", "promote"],
+    ["connectors", "read"], ["connectors", "install"],
+    ["credentials", "read"], ["credentials", "write"],
+    ["apps", "read"], ["apps", "write"],
+    ["analytics", "read"],
+    ["templates", "read"], ["templates", "write"],
+    ["dashboards", "read"], ["dashboards", "write"],
+    ["ai", "read"], ["ai", "write"], ["ai", "run"],
+    ["executions", "read"], ["executions", "run"],
+  ],
+  operator: [
+    ["workflows", "read"], ["workflows", "run"],
+    ["environments", "read"],
+    ["connectors", "read"],
+    ["analytics", "read"],
+    ["dashboards", "read"],
+    ["ai", "read"], ["ai", "run"],
+    ["executions", "read"], ["executions", "run"],
+    ["audit", "read"],
+  ],
+  billing_admin: [
+    ["billing", "read"], ["billing", "write"],
+    ["analytics", "read"],
+    ["environments", "read"],
+    ["users", "read"],
   ],
   viewer: [
     ["workflows", "read"],

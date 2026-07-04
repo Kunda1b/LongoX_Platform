@@ -42,6 +42,12 @@ variable "engine_version" {
   default     = "16.3"
 }
 
+variable "synchronous_replication" {
+  description = "Enable synchronous (quorum-1) replication for control-plane RPO=0. Set to false for execution-plane (async, RPO≤15min)."
+  type        = bool
+  default     = true
+}
+
 variable "backup_retention_period" {
   description = "Backup retention period in days"
   type        = number

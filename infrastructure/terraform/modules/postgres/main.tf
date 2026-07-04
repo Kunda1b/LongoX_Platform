@@ -62,6 +62,41 @@ resource "aws_rds_cluster_parameter_group" "main" {
     value = "5000"
   }
 
+  # ─── ADR §5.4 / §23.3: Replication configuration ────────────────────────────
+  # Control-plane DB: synchronous (quorum-1) streaming replication → RPO = 0
+  # Execution-plane DB: async WAL streaming → RPO ≤ 15 min
+  # Aurora handles replication at the cluster level; these parameters tune
+  # the PostgreSQL WAL and sync-commit behavior for the control plane.
+  parameter {
+    name  = "synchronous_commit"
+    value = var.synchronous_replication ? "on" : "local"
+  }
+
+  parameter {
+    name  = "wal_level"
+    value = "replica"
+  }
+
+  parameter {
+    name  = "max_wal_senders"
+    value = "10"
+  }
+
+  parameter {
+    name  = "wal_keep_size"
+    value = "1024"
+  }
+
+  parameter {
+    name  = "hot_standby"
+    value = "on"
+  }
+
+  parameter {
+    name  = "hot_standby_feedback"
+    value = "on"
+  }
+
   tags = local.common_tags
 }
 

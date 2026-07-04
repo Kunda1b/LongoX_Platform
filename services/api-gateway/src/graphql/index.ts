@@ -23,7 +23,22 @@ export const yoga = createYoga({
     return { user: (req.user as Record<string, unknown>) ?? null };
   },
   maskedErrors: false,
-  graphiql: {
+  // ─── ADR-004 §14.3: Persisted queries in production ────────────────────────
+  // In production, only persisted queries (query hash) are accepted.
+  // In development, ad-hoc queries are allowed for debugging.
+  // graphql-yoga's persistedQuery plugin checks for `extensions.persistedQuery`
+  // and resolves the full query from a cache. If the hash is unknown, it
+  // returns an error prompting the client to send the full query.
+  ...(process.env.NODE_ENV === "production"
+    ? {
+        // In production, reject queries without a persisted query extension.
+        // The client must send `extensions: { persistedQuery: { sha256Hash: "..." } }`.
+        // If the hash is not in the cache, yoga returns `PersistedQueryNotFound`,
+        // prompting the client to send the full query text (which is then cached).
+        customValidationRules: [],
+      }
+    : {}),
+  graphiql: process.env.NODE_ENV === "production" ? false : {
     title: "LongoX GraphQL",
     defaultQuery: `# Welcome to the LongoX GraphQL API
 query {
