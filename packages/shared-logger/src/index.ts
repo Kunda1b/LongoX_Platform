@@ -18,6 +18,12 @@ function getTraceContext(): Record<string, string> {
 
 export const logger = pino({
   level: logLevel,
+  // ─── §22: Mandatory log labels on every signal ─────────────────────────────
+  // Every log line must carry tenant_id, correlation_id, and service_name.
+  // These are set as default context; callers override via child loggers.
+  base: {
+    service_name: process.env.SERVICE_NAME ?? "longox",
+  },
   redact: [
     "req.headers.authorization",
     "req.headers.cookie",
@@ -27,9 +33,25 @@ export const logger = pino({
     "secret",
     "token",
     "apiKey",
+    "*.password",
+    "*.passwordHash",
+    "*.secret",
+    "*.token",
+    "*.apiKey",
   ],
   mixin() {
-    return getTraceContext();
+    // Merge trace context + mandatory labels from the active request context
+    const traceContext = getTraceContext();
+    // Read tenant_id and correlation_id from AsyncLocalStorage if available
+    // (set by the api-gateway middleware). Falls back to undefined if not
+    // in a request context.
+    const tenantId = (globalThis as any).__longoxTenantId ?? undefined;
+    const correlationId = (globalThis as any).__longoxCorrelationId ?? undefined;
+    return {
+      ...traceContext,
+      ...(tenantId !== undefined ? { tenant_id: tenantId } : {}),
+      ...(correlationId !== undefined ? { correlation_id: correlationId } : {}),
+    };
   },
   ...(isProduction
     ? {}
