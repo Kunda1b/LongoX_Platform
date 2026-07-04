@@ -8,8 +8,8 @@ import {
 export interface CreateDatasetInput {
   name: string;
   description?: string;
-  tenantId: number;
-  promptId?: number;
+  tenantId: string;
+  promptId?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -37,7 +37,7 @@ export class EvaluationDatasetService {
     return dataset;
   }
 
-  async listDatasets(tenantId: number) {
+  async listDatasets(tenantId: string) {
     return db
       .select()
       .from(aiEvaluationDatasetsTable)
@@ -45,7 +45,7 @@ export class EvaluationDatasetService {
       .orderBy(aiEvaluationDatasetsTable.updatedAt);
   }
 
-  async getDataset(id: number) {
+  async getDataset(id: string) {
     const [dataset] = await db
       .select()
       .from(aiEvaluationDatasetsTable)
@@ -61,7 +61,7 @@ export class EvaluationDatasetService {
     return { ...dataset, entries };
   }
 
-  async addEntries(datasetId: number, entries: AddEntryInput[]) {
+  async addEntries(datasetId: string, entries: AddEntryInput[]) {
     const values = entries.map((e) => ({
       datasetId,
       input: e.input,
@@ -88,7 +88,7 @@ export class EvaluationDatasetService {
     return inserted;
   }
 
-  async removeEntry(datasetId: number, entryId: number) {
+  async removeEntry(datasetId: string, entryId: string) {
     const [deleted] = await db
       .delete(aiEvaluationDatasetEntriesTable)
       .where(
@@ -114,7 +114,7 @@ export class EvaluationDatasetService {
     return deleted;
   }
 
-  async deleteDataset(id: number) {
+  async deleteDataset(id: string) {
     const [dataset] = await db
       .update(aiEvaluationDatasetsTable)
       .set({ status: "archived" })

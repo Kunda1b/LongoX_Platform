@@ -6,7 +6,7 @@ import {
 
 export class WorkflowEventPublisher {
   async publishWorkflowCreated(
-    workflowId: number,
+    workflowId: string,
     name: string,
     triggerType: string,
   ): Promise<void> {
@@ -19,7 +19,7 @@ export class WorkflowEventPublisher {
   }
 
   async publishWorkflowUpdated(
-    workflowId: number,
+    workflowId: string,
     name: string,
   ): Promise<void> {
     await eventBus.publish(
@@ -27,14 +27,14 @@ export class WorkflowEventPublisher {
     );
   }
 
-  async publishWorkflowDeleted(workflowId: number): Promise<void> {
+  async publishWorkflowDeleted(workflowId: string): Promise<void> {
     await eventBus.publish(
       createEvent("workflow.deleted", String(workflowId), "workflow", {}),
     );
   }
 
   async publishWorkflowPublished(
-    workflowId: number,
+    workflowId: string,
     version: number,
     changeNote?: string,
   ): Promise<void> {
@@ -47,8 +47,8 @@ export class WorkflowEventPublisher {
   }
 
   async publishExecutionStarted(
-    executionId: number,
-    workflowId: number,
+    executionId: string,
+    workflowId: string,
     triggerType: string,
   ): Promise<void> {
     await eventBus.publish(
@@ -60,8 +60,8 @@ export class WorkflowEventPublisher {
   }
 
   async publishExecutionCompleted(
-    executionId: number,
-    workflowId: number,
+    executionId: string,
+    workflowId: string,
     durationMs: number,
   ): Promise<void> {
     await eventBus.publish(
@@ -73,8 +73,8 @@ export class WorkflowEventPublisher {
   }
 
   async publishExecutionFailed(
-    executionId: number,
-    workflowId: number,
+    executionId: string,
+    workflowId: string,
     error: string,
   ): Promise<void> {
     await eventBus.publish(

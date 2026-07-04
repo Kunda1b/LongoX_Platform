@@ -2,13 +2,13 @@ declare global {
   namespace Express {
     interface Request {
       user?: {
-        id: number;
+        id: string;
         email: string;
         name: string;
-        tenantId: number | null;
+        tenantId: string | null;
         role: string;
       };
-      tenantId?: number;
+      tenantId?: string;
       correlationId?: string;
     }
   }

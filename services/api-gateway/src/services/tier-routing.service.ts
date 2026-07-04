@@ -49,7 +49,7 @@ export function getRedisIndexForTier(tier: number): number {
   return getTierConfig(tier).redisIndex;
 }
 
-export function getVaultPrefixForTier(tier: number, tenantId: number): string {
+export function getVaultPrefixForTier(tier: number, tenantId: string): string {
   return `${getTierConfig(tier).vaultPrefix}/tenants/${tenantId}`;
 }
 
@@ -62,7 +62,7 @@ export function getRateLimitsForTier(tier: number): { perMin: number; burst: num
   return { perMin: cfg.rateLimitPerMin, burst: cfg.rateLimitBurst };
 }
 
-export async function getTenantTier(tenantId: number): Promise<number> {
+export async function getTenantTier(tenantId: string): Promise<number> {
   const [tenant] = await db
     .select({ tier: tenantsTable.tier })
     .from(tenantsTable)

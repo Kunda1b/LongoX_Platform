@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth";
 
 type AIPrompt = {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   content: string;

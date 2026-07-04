@@ -4,7 +4,7 @@ import type { ConnectorRepository } from "../../domain";
 import { ConnectorInstallation } from "../../domain";
 
 export interface UpgradeConnectorInput {
-  tenantId: number;
+  tenantId: string;
   installationId: number;
   newVersionId: number;
 }

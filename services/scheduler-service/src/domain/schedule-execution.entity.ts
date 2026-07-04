@@ -6,14 +6,14 @@ export type ScheduleExecutionStatus =
   | "skipped";
 
 export interface ScheduleExecutionProps {
-  id: number;
-  scheduleId: number;
-  tenantId: number;
-  workflowId: number;
+  id: string;
+  scheduleId: string;
+  tenantId: string;
+  workflowId: string;
   scheduledAt: Date;
   startedAt?: Date;
   completedAt?: Date;
-  executionId?: number;
+  executionId?: string;
   status: ScheduleExecutionStatus;
   error?: string;
   retryCount: number;
@@ -57,7 +57,7 @@ export class ScheduleExecution {
     return this.props.retryCount;
   }
 
-  start(executionId: number): void {
+  start(executionId: string): void {
     this.props.startedAt = new Date();
     this.props.executionId = executionId;
     this.props.status = "running";

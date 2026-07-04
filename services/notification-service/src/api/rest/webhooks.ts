@@ -43,7 +43,7 @@ router.post("/webhooks/endpoints", async (req, res): Promise<void> => {
 });
 
 router.delete("/webhooks/endpoints/:id", async (req, res): Promise<void> => {
-  const deleted = await endpointRepository.delete(Number(req.params.id));
+  const deleted = await endpointRepository.delete(String(req.params.id));
   if (!deleted) {
     res.status(404).json({ error: "Not found" });
     return;

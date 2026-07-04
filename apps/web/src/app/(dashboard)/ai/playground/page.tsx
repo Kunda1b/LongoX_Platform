@@ -30,7 +30,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 
 interface PlaygroundResult {
-  id: number;
+  id: string;
   provider: string;
   model: string;
   response: string;
@@ -53,7 +53,7 @@ interface CompareResult {
 }
 
 interface AIModel {
-  id: number;
+  id: string;
   provider: string;
   name: string;
   modelId: string;

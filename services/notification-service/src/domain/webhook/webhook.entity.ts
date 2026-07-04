@@ -1,5 +1,5 @@
 export interface WebhookEndpoint {
-  id: number;
+  id: string;
   tenantId: string;
   url: string;
   secret: string | null;
@@ -17,8 +17,8 @@ export interface CreateWebhookEndpointInput {
 }
 
 export interface WebhookDelivery {
-  id: number;
-  endpointId: number;
+  id: string;
+  endpointId: string;
   eventType: string;
   payload: Record<string, unknown>;
   status: "pending" | "delivered" | "failed";
@@ -31,7 +31,7 @@ export interface WebhookDelivery {
 }
 
 export interface ListWebhookDeliveriesFilter {
-  endpointId?: number;
+  endpointId?: string;
   status?: string;
   limit?: number;
 }

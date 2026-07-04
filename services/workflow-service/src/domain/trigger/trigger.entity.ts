@@ -3,7 +3,7 @@ export type TriggerKind = "manual" | "webhook" | "schedule" | "event";
 export class Trigger {
   constructor(
     public readonly id: string,
-    public readonly workflowId: number,
+    public readonly workflowId: string,
     public readonly kind: TriggerKind,
     public readonly config: Record<string, unknown>,
     public readonly enabled: boolean,
@@ -11,7 +11,7 @@ export class Trigger {
     public readonly updatedAt: Date,
   ) {}
 
-  static createWebhook(workflowId: number, path: string): Trigger {
+  static createWebhook(workflowId: string, path: string): Trigger {
     return new Trigger(
       `trigger-${workflowId}-webhook-${Date.now()}`,
       workflowId,
@@ -24,7 +24,7 @@ export class Trigger {
   }
 
   static createSchedule(
-    workflowId: number,
+    workflowId: string,
     cron: string,
     timezone: string = "UTC",
   ): Trigger {

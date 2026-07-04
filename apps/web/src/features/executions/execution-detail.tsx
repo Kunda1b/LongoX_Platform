@@ -46,7 +46,7 @@ import { cn } from "@/lib/utils";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Step {
-  id: number;
+  id: string;
   nodeId: string;
   nodeName: string;
   nodeType?: string | null;
@@ -449,7 +449,7 @@ export function ExecutionDetail() {
   const retryMutation = useRetryExecution({
     mutation: {
       onSuccess: (newExec) => {
-        const e = newExec as { id: number };
+        const e = newExec as { id: string };
         queryClient.invalidateQueries({
           queryKey: getListExecutionsQueryKey(),
         });
@@ -491,7 +491,7 @@ export function ExecutionDetail() {
   const successCount = steps.filter((s) => s.status === "success").length;
   const failedCount = steps.filter((s) => s.status === "failed").length;
 
-  function handleStepClick(stepId: number) {
+  function handleStepClick(stepId: string) {
     setSelectedStepId(stepId);
     setMobileView("detail");
   }

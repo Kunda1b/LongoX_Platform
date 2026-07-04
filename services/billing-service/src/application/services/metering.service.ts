@@ -5,11 +5,11 @@ import type { InsertMeteringEvent } from "@longox/db";
 export interface MeteringEventInput {
   eventId: string;
   eventType: string;
-  tenantId: number;
-  workflowId?: number | null;
-  executionId?: number | null;
-  connectorId?: number | null;
-  dashboardId?: number | null;
+  tenantId: string;
+  workflowId?: string | null;
+  executionId?: string | null;
+  connectorId?: string | null;
+  dashboardId?: string | null;
   quantity: string | number;
   unit: string;
   metadata?: Record<string, unknown>;
@@ -59,7 +59,7 @@ export class MeteringService {
   }
 
   async getUsage(
-    tenantId: number,
+    tenantId: string,
     from: Date,
     to: Date,
     eventType?: string,
@@ -89,7 +89,7 @@ export class MeteringService {
   }
 
   async getDailyUsage(
-    tenantId: number,
+    tenantId: string,
     date: Date,
   ): Promise<DailyUsage[]> {
     const dayStart = new Date(date);
@@ -122,7 +122,7 @@ export class MeteringService {
   }
 
   async getMonthlyUsage(
-    tenantId: number,
+    tenantId: string,
     year: number,
     month: number,
   ): Promise<MonthlyUsage[]> {

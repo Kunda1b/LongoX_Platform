@@ -43,7 +43,7 @@ export interface UsageAgainstPlan {
 }
 
 export class EntitlementService {
-  async getPlan(tenantId: number): Promise<PlanLimits | null> {
+  async getPlan(tenantId: string): Promise<PlanLimits | null> {
     const [account] = await db
       .select()
       .from(billingAccountsTable)
@@ -77,7 +77,7 @@ export class EntitlementService {
     };
   }
 
-  async getUsageAgainstPlan(tenantId: number): Promise<UsageAgainstPlan> {
+  async getUsageAgainstPlan(tenantId: string): Promise<UsageAgainstPlan> {
     const [workflowCount] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(workflowsTable)
@@ -142,7 +142,7 @@ export class EntitlementService {
   }
 
   async checkLimit(
-    tenantId: number,
+    tenantId: string,
     resource: string,
     quantity: number,
   ): Promise<boolean> {
@@ -164,7 +164,7 @@ export class EntitlementService {
     return entry.current + quantity <= entry.limit;
   }
 
-  async enforce(tenantId: number, resource: string): Promise<void> {
+  async enforce(tenantId: string, resource: string): Promise<void> {
     const usage = await this.getUsageAgainstPlan(tenantId);
 
     const limitMap: Record<string, { current: number; limit: number }> = {

@@ -28,7 +28,7 @@ router.post("/notifications", async (req, res): Promise<void> => {
 });
 
 router.post("/notifications/:id/read", async (req, res): Promise<void> => {
-  const row = await markRead.execute(Number(req.params.id));
+  const row = await markRead.execute(String(req.params.id));
   if (!row) {
     res.status(404).json({ error: "Not found" });
     return;

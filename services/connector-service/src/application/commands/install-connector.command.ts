@@ -8,9 +8,9 @@ import {
 } from "../../infrastructure/security";
 
 export interface InstallConnectorInput {
-  tenantId: number;
-  connectorId: number;
-  connectorVersionId?: number;
+  tenantId: string;
+  connectorId: string;
+  connectorVersionId?: string;
   config: Record<string, unknown>;
   installedBy: number;
   /** Deployment environment — affects trust-tier enforcement. */

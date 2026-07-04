@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 
 interface SSOConnection {
-  id: number;
+  id: string;
   provider: string;
   domain: string | null;
   enabled: boolean;

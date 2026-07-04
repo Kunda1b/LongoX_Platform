@@ -9,7 +9,7 @@ export interface VersionDiff {
 }
 
 export interface CreateVersionInput {
-  promptId: number;
+  promptId: string;
   content: string;
   config?: Record<string, unknown>;
   createdBy?: string;
@@ -46,7 +46,7 @@ export class PromptVersioningService {
   }
 
   async promoteVersion(
-    promptId: number,
+    promptId: string,
     fromVersion: number,
     toEnvironment: string,
   ): Promise<{ success: boolean; gateResult?: Awaited<ReturnType<EvaluationGateService["checkRegression"]>> }> {
@@ -109,7 +109,7 @@ export class PromptVersioningService {
   async diffVersions(
     v1: number,
     v2: number,
-    promptId?: number,
+    promptId?: string,
   ): Promise<VersionDiff[]> {
     const conditions1 = [eq(promptVersionsTable.version, v1)];
     const conditions2 = [eq(promptVersionsTable.version, v2)];

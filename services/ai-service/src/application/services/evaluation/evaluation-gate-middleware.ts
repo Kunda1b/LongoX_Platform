@@ -22,7 +22,7 @@ export class EvaluationGateBlockedError extends Error {
 }
 
 export async function withEvaluationGate(
-  promptId: number,
+  promptId: string,
   candidateVersion: number,
   targetEnvironment: string,
 ) {

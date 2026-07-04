@@ -71,8 +71,8 @@ router.post(
       temperature?: number;
       maxTokens?: number;
       responseFormat?: "text" | "json";
-      promptId?: number;
-      workflowId?: number;
+      promptId?: string;
+      workflowId?: string;
       guardrailIds?: number[];
       routingPolicyId?: number;
       scrubPii?: boolean;
@@ -452,7 +452,7 @@ router.get(
     const [row] = await db
       .select()
       .from(tokenUsageTable)
-      .where(eq(tokenUsageTable.id, Number(req.params.id)));
+      .where(eq(tokenUsageTable.id, String(req.params.id)));
 
     if (!row) {
       res.status(404).json({ error: "Not found" });
@@ -477,7 +477,7 @@ router.post(
   authorize("ai:run"),
   async (req, res): Promise<void> => {
     res.json({
-      id: Number(req.params.id),
+      id: String(req.params.id),
       status: "cancelled",
       cancelledAt: new Date().toISOString(),
     });
@@ -574,7 +574,7 @@ router.get(
     const [row] = await db
       .select()
       .from(aiGuardrailsTable)
-      .where(eq(aiGuardrailsTable.id, Number(req.params.id)));
+      .where(eq(aiGuardrailsTable.id, String(req.params.id)));
 
     if (!row) {
       res.status(404).json({ error: "Not found" });
@@ -599,7 +599,7 @@ router.patch(
   "/ai/guardrails/:id",
   authorize("ai:write"),
   async (req, res): Promise<void> => {
-    const id = Number(req.params.id);
+    const id = String(req.params.id);
     const updates: Record<string, unknown> = {};
     const b = req.body as Partial<{
       name: string;
@@ -646,7 +646,7 @@ router.delete(
   async (req, res): Promise<void> => {
     await db
       .delete(aiGuardrailsTable)
-      .where(eq(aiGuardrailsTable.id, Number(req.params.id)));
+      .where(eq(aiGuardrailsTable.id, String(req.params.id)));
     res.status(204).end();
   },
 );
@@ -658,7 +658,7 @@ router.get(
     const rows = await db
       .select()
       .from(aiGuardrailHitsTable)
-      .where(eq(aiGuardrailHitsTable.guardrailId, Number(req.params.id)))
+      .where(eq(aiGuardrailHitsTable.guardrailId, String(req.params.id)))
       .orderBy(aiGuardrailHitsTable.createdAt);
 
     res.json(

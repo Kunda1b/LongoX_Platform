@@ -8,7 +8,7 @@ export type SearchCollection =
   | "connectors";
 
 export interface SearchResult {
-  id: number;
+  id: string;
   type: string;
   title: string;
   description: string | null;
@@ -31,9 +31,9 @@ export interface SearchResponse {
 
 export interface ExecutionSearchInput {
   query: string;
-  tenantId: number;
+  tenantId: string;
   status?: string;
-  workflowId?: number;
+  workflowId?: string;
   startDate?: Date;
   endDate?: Date;
   limit?: number;
@@ -41,10 +41,10 @@ export interface ExecutionSearchInput {
 
 export interface AuditLogSearchInput {
   query: string;
-  tenantId: number;
+  tenantId: string;
   action?: string;
   resource?: string;
-  userId?: number;
+  userId?: string;
   startDate?: Date;
   endDate?: Date;
   limit?: number;
@@ -52,7 +52,7 @@ export interface AuditLogSearchInput {
 
 export interface AiPromptSearchInput {
   query: string;
-  tenantId: number;
+  tenantId: string;
   model?: string;
   limit?: number;
 }

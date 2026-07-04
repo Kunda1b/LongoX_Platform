@@ -38,7 +38,7 @@ export class InMemoryLeaseStore implements LeaseStore {
   }
 
   async acquire(
-    executionId: number,
+    executionId: string,
     nodeId: string,
     ttlMs?: number,
   ): Promise<NodeLease | null> {
@@ -110,7 +110,7 @@ export class RedisLeaseStore implements LeaseStore {
   }
 
   async acquire(
-    executionId: number,
+    executionId: string,
     nodeId: string,
     ttlMs?: number,
   ): Promise<NodeLease | null> {
@@ -145,7 +145,7 @@ export class RedisLeaseStore implements LeaseStore {
 export class NoOpLeaseStore implements LeaseStore {
   private readonly workerId = generateWorkerId();
 
-  async acquire(executionId: number, nodeId: string): Promise<NodeLease> {
+  async acquire(executionId: string, nodeId: string): Promise<NodeLease> {
     return {
       executionId,
       nodeId,
@@ -159,7 +159,7 @@ export class NoOpLeaseStore implements LeaseStore {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function leaseKey(executionId: number, nodeId: string): string {
+function leaseKey(executionId: string, nodeId: string): string {
   return `${executionId}:${nodeId}`;
 }
 

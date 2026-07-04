@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db, tenantsTable, regionsTable, regionPoliciesTable } from "@longox/db";
 
 export class DataResidencyService {
-  async getTenantRegion(tenantId: number) {
+  async getTenantRegion(tenantId: string) {
     const [tenant] = await db
       .select()
       .from(tenantsTable)
@@ -27,7 +27,7 @@ export class DataResidencyService {
     };
   }
 
-  async setTenantRegion(tenantId: number, regionId: string) {
+  async setTenantRegion(tenantId: string, regionId: string) {
     const [region] = await db
       .select()
       .from(regionsTable)
@@ -47,7 +47,7 @@ export class DataResidencyService {
     return tenant;
   }
 
-  async validateDataAccess(tenantId: number, requestingRegion: string) {
+  async validateDataAccess(tenantId: string, requestingRegion: string) {
     const [tenant] = await db
       .select()
       .from(tenantsTable)
@@ -106,7 +106,7 @@ export class DataResidencyService {
     };
   }
 
-  async enforceDataResidency(tenantId: number, dataType: string, data: unknown) {
+  async enforceDataResidency(tenantId: string, dataType: string, data: unknown) {
     const [tenant] = await db
       .select()
       .from(tenantsTable)
@@ -127,7 +127,7 @@ export class DataResidencyService {
     };
   }
 
-  async getComplianceRequirements(tenantId: number) {
+  async getComplianceRequirements(tenantId: string) {
     const [tenant] = await db
       .select()
       .from(tenantsTable)

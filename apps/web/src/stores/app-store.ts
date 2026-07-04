@@ -5,7 +5,7 @@ interface AppState {
   activeEnvironment: string | null;
   theme: "light" | "dark" | "system";
   sidebarCollapsed: boolean;
-  setActiveTenantId: (id: number | null) => void;
+  setActiveTenantId: (id: string | null) => void;
   setActiveEnvironment: (env: string | null) => void;
   setTheme: (theme: "light" | "dark" | "system") => void;
   toggleSidebar: () => void;

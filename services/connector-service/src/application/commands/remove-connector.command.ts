@@ -2,7 +2,7 @@ import { db, tenantConnectorInstallsTable } from "@longox/db";
 import { eq, and } from "drizzle-orm";
 
 export interface RemoveConnectorInput {
-  tenantId: number;
+  tenantId: string;
   installationId: number;
 }
 

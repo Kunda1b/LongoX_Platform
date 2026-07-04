@@ -1,5 +1,5 @@
 export interface AuditEntry {
-  id: number;
+  id: string;
   actorType: string;
   actorId: string | null;
   action: string;

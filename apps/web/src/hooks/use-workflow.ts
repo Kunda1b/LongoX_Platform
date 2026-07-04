@@ -2,11 +2,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 
 interface Workflow {
-  id: number;
+  id: string;
   name: string;
   status: string;
-  tenantId: number;
-  currentVersionId: number | null;
+  tenantId: string;
+  currentVersionId: string | null;
   nodes?: Record<string, unknown>[];
   tags?: string[];
   createdAt: string;
@@ -14,14 +14,14 @@ interface Workflow {
 }
 
 interface WorkflowListParams {
-  tenantId?: number;
+  tenantId?: string;
   status?: string;
   search?: string;
   page?: number;
   limit?: number;
 }
 
-export function useWorkflow(workflowId?: number) {
+export function useWorkflow(workflowId?: string) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -52,7 +52,7 @@ export function useWorkflow(workflowId?: number) {
   });
 
   const publishMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       const response = await apiClient.post(`/api/v1/workflows/${id}/publish`);
       return response.data;
     },

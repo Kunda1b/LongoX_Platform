@@ -6,8 +6,8 @@ export type ExecutionStatus =
   | "cancelled";
 
 export interface Execution {
-  id: number;
-  workflowId: number;
+  id: string;
+  workflowId: string;
   workflowName: string;
   status: ExecutionStatus;
   startedAt: string;
@@ -18,7 +18,7 @@ export interface Execution {
 }
 
 export interface ExecutionStep {
-  id: number;
+  id: string;
   nodeId: string;
   nodeName: string;
   nodeType: string;
@@ -33,8 +33,8 @@ export interface ExecutionStep {
 }
 
 export interface ExecutionCheckpoint {
-  id: number;
-  executionId: number;
+  id: string;
+  executionId: string;
   nodeId: string;
   nodeName: string;
   nodeType: string;
@@ -49,9 +49,9 @@ export interface ExecutionCheckpoint {
 }
 
 export interface DLQEntry {
-  id: number;
-  executionId: number;
-  workflowId: number;
+  id: string;
+  executionId: string;
+  workflowId: string;
   workflowName: string;
   nodeId: string;
   nodeName: string;

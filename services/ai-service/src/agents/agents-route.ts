@@ -121,7 +121,7 @@ router.delete("/agents/memory/:id", authorize("ai:write"), async (req, res): Pro
     .delete(agentMemoryTable)
     .where(
       and(
-        eq(agentMemoryTable.id, Number(req.params.id)),
+        eq(agentMemoryTable.id, String(req.params.id)),
         eq(agentMemoryTable.tenantId, tenantId),
       ),
     );

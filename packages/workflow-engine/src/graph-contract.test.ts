@@ -10,7 +10,7 @@ import type { WorkflowGraph, WorkflowNodeContract } from "./graph-contract";
 
 function makeValidGraph(overrides?: Partial<WorkflowGraph>): WorkflowGraph {
   return {
-    workflowId: 1,
+    workflowId: "1",
     version: 1,
     checksum: { algorithm: "sha-256", value: "abc", computedAt: new Date().toISOString() },
     nodes: [
@@ -45,7 +45,7 @@ describe("validateGraphContract", () => {
   });
 
   it("rejects missing workflowId", () => {
-    const errors = validateGraphContract(makeValidGraph({ workflowId: 0 }));
+    const errors = validateGraphContract(makeValidGraph({ workflowId: "" }));
     expect(errors).toContain("workflowId must be a positive integer");
   });
 

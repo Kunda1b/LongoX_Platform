@@ -16,7 +16,7 @@ export interface AuditExportFilters {
 
 interface QueuedJob {
   id: string;
-  tenantId: number;
+  tenantId: string;
   format: "csv" | "json";
   filters: AuditExportFilters;
   status: "pending" | "processing" | "completed" | "failed";
@@ -158,7 +158,7 @@ async function processJob(job: QueuedJob): Promise<void> {
 
 export class AuditExportService {
   async exportAuditLog(
-    tenantId: number,
+    tenantId: string,
     from: Date,
     to: Date,
     filters?: AuditExportFilters,
@@ -197,7 +197,7 @@ export class AuditExportService {
     }));
   }
 
-  async exportToCsv(tenantId: number, from: Date, to: Date) {
+  async exportToCsv(tenantId: string, from: Date, to: Date) {
     const entries = await this.exportAuditLog(tenantId, from, to);
     const header = "timestamp,actor,actor_type,action,resource,resource_type,resource_id";
     const rows = entries.map(
@@ -207,7 +207,7 @@ export class AuditExportService {
     return [header, ...rows].join("\n");
   }
 
-  async exportToJson(tenantId: number, from: Date, to: Date) {
+  async exportToJson(tenantId: string, from: Date, to: Date) {
     const entries = await this.exportAuditLog(tenantId, from, to);
     return JSON.stringify(
       {
@@ -223,7 +223,7 @@ export class AuditExportService {
     );
   }
 
-  async exportAuditLogsAsCSV(tenantId: number, filters?: AuditExportFilters): Promise<string> {
+  async exportAuditLogsAsCSV(tenantId: string, filters?: AuditExportFilters): Promise<string> {
     const job: QueuedJob = {
       id: generateId(),
       tenantId,
@@ -243,7 +243,7 @@ export class AuditExportService {
     return job.result ?? "";
   }
 
-  async exportAuditLogsAsJSON(tenantId: number, filters?: AuditExportFilters): Promise<string> {
+  async exportAuditLogsAsJSON(tenantId: string, filters?: AuditExportFilters): Promise<string> {
     const job: QueuedJob = {
       id: generateId(),
       tenantId,
@@ -263,7 +263,7 @@ export class AuditExportService {
     return job.result ?? "";
   }
 
-  async getExportHistory(tenantId: number) {
+  async getExportHistory(tenantId: string) {
     const exports = await db
       .select()
       .from(auditExportsTable)

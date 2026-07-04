@@ -67,7 +67,7 @@ export class PostgresUserRepository implements UserRepository {
     };
   }
 
-  async findById(id: number): Promise<UserRecord | null> {
+  async findById(id: string): Promise<UserRecord | null> {
     const [user] = await db
       .select()
       .from(usersTable)
@@ -85,7 +85,7 @@ export class PostgresUserRepository implements UserRepository {
     };
   }
 
-  async findProfileById(id: number): Promise<UserProfile | null> {
+  async findProfileById(id: string): Promise<UserProfile | null> {
     const [user] = await db
       .select({
         id: usersTable.id,
@@ -113,14 +113,14 @@ export class PostgresUserRepository implements UserRepository {
     };
   }
 
-  async updateLastLogin(id: number): Promise<void> {
+  async updateLastLogin(id: string): Promise<void> {
     await db
       .update(usersTable)
       .set({ lastLoginAt: new Date() })
       .where(eq(usersTable.id, id));
   }
 
-  async isActive(id: number): Promise<boolean> {
+  async isActive(id: string): Promise<boolean> {
     const [user] = await db
       .select({ isActive: usersTable.isActive })
       .from(usersTable)

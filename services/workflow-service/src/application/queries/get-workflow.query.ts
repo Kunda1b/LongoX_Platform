@@ -1,3 +1,3 @@
 export interface GetWorkflowQuery {
-  id: number;
+  id: string;
 }

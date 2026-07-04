@@ -24,7 +24,7 @@ export interface WorkflowEdge {
 
 export class Workflow {
   constructor(
-    public readonly id: number,
+    public readonly id: string,
     public name: string,
     public description: string | null,
     public status: WorkflowStatus,

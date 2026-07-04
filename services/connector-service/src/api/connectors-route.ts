@@ -95,7 +95,7 @@ router.get(
   "/connectors/:id/actions",
   authorize({ resource: "connectors", action: "read" }),
   async (req, res): Promise<void> => {
-    const id = Number(req.params.id);
+    const id = String(req.params.id);
     const actions = await db
       .select()
       .from(connectorActionsTable)
@@ -108,7 +108,7 @@ router.get(
   "/connectors/:id/triggers",
   authorize({ resource: "connectors", action: "read" }),
   async (req, res): Promise<void> => {
-    const id = Number(req.params.id);
+    const id = String(req.params.id);
     const triggers = await db
       .select()
       .from(connectorTriggersTable)
@@ -156,7 +156,7 @@ router.post(
   authorize({ resource: "connectors", action: "install" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const connectorId = Number(req.params.id);
+    const connectorId = String(req.params.id);
     const tenantId = req.user!.tenantId!;
     const userId = req.user!.id;
     const config = (req.body.config ?? {}) as Record<string, unknown>;
@@ -189,7 +189,7 @@ router.post(
   authorize({ resource: "connectors", action: "write" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const installationId = Number(req.params.installationId);
+    const installationId = String(req.params.installationId);
     const tenantId = req.user!.tenantId!;
     const config = (req.body.config ?? {}) as Record<string, unknown>;
 
@@ -211,7 +211,7 @@ router.post(
   authorize({ resource: "connectors", action: "install" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const installationId = Number(req.params.installationId);
+    const installationId = String(req.params.installationId);
     const tenantId = req.user!.tenantId!;
     const newVersionId = Number(req.body.connectorVersionId);
 
@@ -237,7 +237,7 @@ router.get(
   "/connectors/:id/versions",
   authorize({ resource: "connectors", action: "read" }),
   async (req, res): Promise<void> => {
-    const connectorId = Number(req.params.id);
+    const connectorId = String(req.params.id);
     const versions = await db
       .select()
       .from(connectorVersionsTable)
@@ -252,7 +252,7 @@ router.delete(
   authorize({ resource: "connectors", action: "install" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const installationId = Number(req.params.installationId);
+    const installationId = String(req.params.installationId);
     const tenantId = req.user!.tenantId!;
 
     try {
@@ -271,7 +271,7 @@ router.post(
   authorize({ resource: "connectors", action: "read" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const installationId = Number(req.params.installationId);
+    const installationId = String(req.params.installationId);
     const tenantId = req.user!.tenantId!;
 
     try {
@@ -336,7 +336,7 @@ router.post(
   authorize({ resource: "connectors", action: "execute" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const installationId = Number(req.params.installationId);
+    const installationId = String(req.params.installationId);
     const tenantId = req.user!.tenantId!;
     const actionId = String(req.body.actionId ?? "");
     const input = (req.body.input ?? {}) as Record<string, unknown>;
@@ -409,7 +409,7 @@ router.post(
   authorize({ resource: "connectors", action: "webhook" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const installationId = Number(req.params.installationId);
+    const installationId = String(req.params.installationId);
     const tenantId = req.user!.tenantId!;
     const triggerId = String(req.body.triggerId ?? "");
     const webhookUrl = String(req.body.webhookUrl ?? "");
@@ -459,7 +459,7 @@ router.post(
   authorize({ resource: "connectors", action: "execute" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const installationId = Number(req.params.installationId);
+    const installationId = String(req.params.installationId);
     const tenantId = req.user!.tenantId!;
     const triggerId = String(req.body.triggerId ?? "");
     const lastPollId = String(req.body.lastPollId ?? "");
@@ -527,7 +527,7 @@ router.post(
   authorize({ resource: "connectors", action: "install" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const installationId = Number(req.params.installationId);
+    const installationId = String(req.params.installationId);
     const tenantId = req.user!.tenantId!;
 
     try {

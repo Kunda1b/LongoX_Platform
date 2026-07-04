@@ -59,8 +59,8 @@ export interface ApprovalGateMetadata {
 }
 
 export interface ChildWorkflowReference {
-  workflowId: number;
-  versionId?: number;
+  workflowId: string;
+  versionId?: string;
   executionMode: "sync" | "async";
   inputMapping: Record<string, string>;
   outputMapping: Record<string, string>;
@@ -77,7 +77,7 @@ export interface EnvironmentPromotionMetadata {
   approvedBy?: string;
   approvedAt?: string;
   diffChecksum?: GraphChecksum;
-  releaseId?: number;
+  releaseId?: string;
 }
 
 export interface WorkflowNodeContract {
@@ -100,7 +100,7 @@ export interface WorkflowNodeContract {
 }
 
 export interface WorkflowGraph {
-  workflowId: number;
+  workflowId: string;
   version: number;
   checksum: GraphChecksum;
   nodes: WorkflowNodeContract[];
@@ -155,7 +155,7 @@ export function computeGraphChecksum(graph: Partial<WorkflowGraph>): GraphChecks
 
 export function validateGraphContract(graph: WorkflowGraph): string[] {
   const errors: string[] = [];
-  if (!graph.workflowId || graph.workflowId <= 0) errors.push("workflowId must be a positive integer");
+  if (!graph.workflowId) errors.push("workflowId is required");
   if (!graph.version || graph.version <= 0) errors.push("version must be a positive integer");
   if (!graph.checksum || !graph.checksum.value) errors.push("checksum is required");
   if (!graph.metadata?.name) errors.push("metadata.name is required");

@@ -24,37 +24,37 @@ export interface ApprovalStore {
    * Returns the task ID (used as the pause token).
    */
   createApprovalTask(opts: {
-    executionId: number;
-    workflowId: number;
+    executionId: string;
+    workflowId: string;
     nodeId: string;
     config: Record<string, unknown>;
     requesterId?: number;
     approverIds?: number[];
     note?: string;
-  }): Promise<number>;
+  }): Promise<string>;
 
   /**
    * Record an approval decision.
    * Returns the task ID that was decided.
    */
   decide(opts: {
-    taskId: number;
+    taskId: string;
     decision: ApprovalDecision;
     decidedBy?: number;
     note?: string;
   }): Promise<void>;
 
   /** Retrieve a task by its ID. */
-  getTask(taskId: number): Promise<ApprovalTask | null>;
+  getTask(taskId: string): Promise<ApprovalTask | null>;
 
   /** Retrieve pending tasks for an execution. */
-  getPendingTasksForExecution(executionId: number): Promise<ApprovalTask[]>;
+  getPendingTasksForExecution(executionId: string): Promise<ApprovalTask[]>;
 }
 
 export interface ApprovalTask {
-  id: number;
-  executionId: number;
-  workflowId: number;
+  id: string;
+  executionId: string;
+  workflowId: string;
   nodeId: string;
   status: "pending" | "approved" | "rejected" | "timed_out";
   requesterId?: number;
@@ -81,19 +81,19 @@ export interface ResumeDispatcher {
 // ─── In-memory approval store (dev / testing) ─────────────────────────────────
 
 export class InMemoryApprovalStore implements ApprovalStore {
-  private tasks = new Map<number, ApprovalTask>();
+  private tasks = new Map<string, ApprovalTask>();
   private nextId = 1;
 
   async createApprovalTask(opts: {
-    executionId: number;
-    workflowId: number;
+    executionId: string;
+    workflowId: string;
     nodeId: string;
     config: Record<string, unknown>;
     requesterId?: number;
     approverIds?: number[];
     note?: string;
-  }): Promise<number> {
-    const id = this.nextId++;
+  }): Promise<string> {
+    const id = `task_${this.nextId++}`;
     this.tasks.set(id, {
       id,
       executionId: opts.executionId,
@@ -109,7 +109,7 @@ export class InMemoryApprovalStore implements ApprovalStore {
   }
 
   async decide(opts: {
-    taskId: number;
+    taskId: string;
     decision: ApprovalDecision;
     decidedBy?: number;
     note?: string;
@@ -122,11 +122,11 @@ export class InMemoryApprovalStore implements ApprovalStore {
     task.decidedAt = new Date();
   }
 
-  async getTask(taskId: number): Promise<ApprovalTask | null> {
+  async getTask(taskId: string): Promise<ApprovalTask | null> {
     return this.tasks.get(taskId) ?? null;
   }
 
-  async getPendingTasksForExecution(executionId: number): Promise<ApprovalTask[]> {
+  async getPendingTasksForExecution(executionId: string): Promise<ApprovalTask[]> {
     return [...this.tasks.values()].filter(
       (t) => t.executionId === executionId && t.status === "pending",
     );
@@ -148,7 +148,7 @@ export function startApprovalTimeoutSweeper(
     // This is a simplified sweep — production should query the DB directly.
     const now = Date.now();
     if (store instanceof InMemoryApprovalStore) {
-      const allTasks = await store.getPendingTasksForExecution(-1);
+      const allTasks = await store.getPendingTasksForExecution('');
       for (const task of allTasks) {
         const timeoutMs =
           (task.config["timeoutMs"] as number | undefined) ?? 7 * 24 * 60 * 60 * 1000;

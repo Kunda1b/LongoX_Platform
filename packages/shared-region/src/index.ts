@@ -31,7 +31,7 @@ export interface FailoverStatus {
 }
 
 export interface DataResidencyPolicy {
-  tenantId: number;
+  tenantId: string;
   allowedRegions: string[];
   requiredRegion: string | null;
   dataClassification: "standard" | "sensitive" | "critical";

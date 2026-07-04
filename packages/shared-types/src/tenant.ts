@@ -1,5 +1,5 @@
 export interface Tenant {
-  id: number;
+  id: string;
   name: string;
   slug: string;
   plan: "free" | "pro" | "enterprise";
@@ -10,16 +10,16 @@ export interface Tenant {
 }
 
 export interface Environment {
-  id: number;
-  tenantId: number;
+  id: string;
+  tenantId: string;
   name: "dev" | "staging" | "production";
   promotionPolicy: "auto" | "manual" | "requires_approval";
   createdAt: string;
 }
 
 export interface RegionPolicy {
-  id: number;
-  tenantId: number;
+  id: string;
+  tenantId: string;
   region: string;
   dataResidency: boolean;
   executionLocality: boolean;

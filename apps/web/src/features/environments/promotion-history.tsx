@@ -8,8 +8,8 @@ import { formatDistanceToNow } from "date-fns";
 import { ArrowRight, CheckCircle2, XCircle, RotateCcw } from "lucide-react";
 
 interface Promotion {
-  id: number;
-  workflowId: number;
+  id: string;
+  workflowId: string;
   workflowName: string;
   fromEnvironment: string;
   toEnvironment: string;

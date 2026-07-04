@@ -13,7 +13,7 @@ export interface RegressionResult {
   baselineScore: number | null;
   diff: number | null;
   details: {
-    runId: number;
+    runId: string;
     threshold: number;
     totalEntries: number;
     passedEntries: number;
@@ -30,9 +30,9 @@ export interface PromotionGateResult {
 
 export class RegressionGateService {
   async evaluateRegression(
-    promptId: number,
+    promptId: string,
     candidateVersion: number,
-    options?: { datasetId?: number; threshold?: number },
+    options?: { datasetId?: string; threshold?: number },
   ): Promise<RegressionResult> {
     const [prompt] = await db
       .select()
@@ -95,7 +95,7 @@ export class RegressionGateService {
   }
 
   async checkPromotionGate(
-    promptId: number,
+    promptId: string,
     candidateVersion: number,
     targetEnvironment: string,
   ): Promise<PromotionGateResult> {
@@ -137,7 +137,7 @@ export class RegressionGateService {
     }
   }
 
-  async setBaseline(promptId: number, version: number) {
+  async setBaseline(promptId: string, version: number) {
     const [lastRun] = await db
       .select()
       .from(aiEvaluationRunsTable)
@@ -159,14 +159,14 @@ export class RegressionGateService {
     };
   }
 
-  async getBaseline(promptId: number) {
+  async getBaseline(promptId: string) {
     const score = await this.getStoredBaselineScore(promptId);
     return score !== null ? { promptId, baselineScore: score } : null;
   }
 
   private async getStoredBaselineScore(
-    promptId: number,
-  ): Promise<number | null> {
+    promptId: string,
+  ): Promise<string | null> {
     const [lastRun] = await db
       .select()
       .from(aiEvaluationRunsTable)

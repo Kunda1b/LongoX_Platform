@@ -9,10 +9,10 @@ export interface SearchRepository {
 
   searchExecutions(
     query: string,
-    tenantId: number,
+    tenantId: string,
     filters?: {
       status?: string;
-      workflowId?: number;
+      workflowId?: string;
       startDate?: Date;
       endDate?: Date;
     },
@@ -21,11 +21,11 @@ export interface SearchRepository {
 
   searchAuditLogs(
     query: string,
-    tenantId: number,
+    tenantId: string,
     filters?: {
       action?: string;
       resource?: string;
-      userId?: number;
+      userId?: string;
       startDate?: Date;
       endDate?: Date;
     },
@@ -34,7 +34,7 @@ export interface SearchRepository {
 
   searchAiPrompts(
     query: string,
-    tenantId: number,
+    tenantId: string,
     filters?: {
       model?: string;
     },

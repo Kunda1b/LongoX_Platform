@@ -28,8 +28,8 @@ interface RegionSelection {
 
 export class RegionalExecutionPoolService {
   async getOptimalRegion(
-    tenantId: number,
-    workflowId: number,
+    tenantId: string,
+    workflowId: string,
   ): Promise<RegionSelection> {
     const activePools = await db
       .select()
@@ -120,7 +120,7 @@ export class RegionalExecutionPoolService {
     };
   }
 
-  async routeToRegion(executionId: number, region: string): Promise<{ routed: boolean; executionId: number; region: string }> {
+  async routeToRegion(executionId: string, region: string): Promise<{ routed: boolean; executionId: string; region: string }> {
     const [pool] = await db
       .select()
       .from(regionalPoolsTable)

@@ -7,7 +7,7 @@ import { authorize } from "@longox/shared-rbac";
 const router: IRouter = Router();
 
 router.get("/dashboards/:id/pages", authorize("dashboards:read"), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   if (Number.isNaN(id)) {
     res.status(400).json({ error: "Invalid dashboard id" });
     return;

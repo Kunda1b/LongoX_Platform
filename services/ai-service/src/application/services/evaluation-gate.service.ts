@@ -18,7 +18,7 @@ export interface GateResult {
 export class EvaluationGateService {
   private readonly regressionThreshold = -0.1;
 
-  async evaluatePrompt(promptId: number, version: number): Promise<GateResult> {
+  async evaluatePrompt(promptId: string, version: number): Promise<GateResult> {
     const [prompt] = await db
       .select()
       .from(promptsTable)
@@ -95,7 +95,7 @@ export class EvaluationGateService {
   }
 
   async checkRegression(
-    promptId: number,
+    promptId: string,
     candidateVersion: number,
     baselineVersion: number,
   ): Promise<GateResult> {

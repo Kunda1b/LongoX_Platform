@@ -72,7 +72,7 @@ export default function AIMarketplacePage() {
   });
 
   const installMutation = useMutation({
-    mutationFn: async (listingId: number) => {
+    mutationFn: async (listingId: string) => {
       const res = await fetch(`/api/marketplace/listings/${listingId}/install`, {
         method: "POST",
         headers: {
@@ -97,7 +97,7 @@ export default function AIMarketplacePage() {
   });
 
   const deployMutation = useMutation({
-    mutationFn: async ({ listingId, config }: { listingId: number; config?: Record<string, unknown> }) => {
+    mutationFn: async ({ listingId, config }: { listingId: string; config?: Record<string, unknown> }) => {
       const res = await fetch(`/api/marketplace/listings/${listingId}/deploy`, {
         method: "POST",
         headers: {

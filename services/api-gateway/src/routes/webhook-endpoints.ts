@@ -46,7 +46,7 @@ router.get("/webhook-endpoints", authorize("workflows.read"), requireTenantConte
 
 router.post("/webhook-endpoints", authorize("workflows.write"), requireTenantContext, async (req, res): Promise<void> => {
   const { workflowId, name, description, allowedIps, headers } = req.body as {
-    workflowId?: number;
+    workflowId?: string;
     name?: string;
     description?: string;
     allowedIps?: string[];
@@ -82,9 +82,9 @@ router.post("/webhook-endpoints", authorize("workflows.write"), requireTenantCon
 });
 
 router.get("/webhook-endpoints/:id", authorize("workflows.read"), requireTenantContext, async (req, res): Promise<void> => {
-  const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
   const [row] = await db
@@ -99,9 +99,9 @@ router.get("/webhook-endpoints/:id", authorize("workflows.read"), requireTenantC
 });
 
 router.patch("/webhook-endpoints/:id", authorize("workflows.write"), requireTenantContext, async (req, res): Promise<void> => {
-  const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
   const b = req.body as Partial<{
@@ -134,9 +134,9 @@ router.post(
   authorize("workflows.write"),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = parseInt(String(req.params.id), 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: "Invalid id" });
+    const id = req.params.id;
+    if (!id) {
+      res.status(400).json({ error: "id is required" });
       return;
     }
     const [row] = await db
@@ -153,9 +153,9 @@ router.post(
 );
 
 router.delete("/webhook-endpoints/:id", authorize("workflows.write"), requireTenantContext, async (req, res): Promise<void> => {
-  const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
   await db

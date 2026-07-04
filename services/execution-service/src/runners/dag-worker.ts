@@ -65,7 +65,7 @@ const leaseStore = createLeaseStore();
 
 export class DbCheckpointStore implements CheckpointStore {
   async save(opts: {
-    executionId: number;
+    executionId: string;
     nodeId: string;
     nodeName: string;
     nodeType: string;
@@ -76,7 +76,7 @@ export class DbCheckpointStore implements CheckpointStore {
     errorMessage?: string;
     durationMs?: number;
     metadata?: Record<string, unknown>;
-  }): Promise<number> {
+  }): Promise<string> {
     const [row] = await db
       .insert(executionCheckpointsTable)
       .values({
@@ -97,7 +97,7 @@ export class DbCheckpointStore implements CheckpointStore {
     return row.id;
   }
 
-  async loadCompleted(executionId: number): Promise<Array<{ nodeId: string; outputData: Record<string, unknown> }>> {
+  async loadCompleted(executionId: string): Promise<Array<{ nodeId: string; outputData: Record<string, unknown> }>> {
     const rows = await db
       .select({
         nodeId: executionCheckpointsTable.nodeId,
@@ -116,7 +116,7 @@ export class DbCheckpointStore implements CheckpointStore {
       }));
   }
 
-  async update(checkpointId: number, updates: {
+  async update(checkpointId: string, updates: {
     status: "success" | "failed" | "paused";
     outputData?: Record<string, unknown>;
     errorMessage?: string;
@@ -141,7 +141,7 @@ export class DbCheckpointStore implements CheckpointStore {
 export class DbIdempotencyStore implements IdempotencyStore {
   private readonly successfulIds = new Map<string, Record<string, unknown>>();
 
-  async isComplete(executionId: number, nodeId: string): Promise<boolean> {
+  async isComplete(executionId: string, nodeId: string): Promise<boolean> {
     const key = `${executionId}:${nodeId}`;
     if (this.successfulIds.has(key)) return true;
 
@@ -158,11 +158,11 @@ export class DbIdempotencyStore implements IdempotencyStore {
     return false;
   }
 
-  async markComplete(executionId: number, nodeId: string, output: Record<string, unknown>): Promise<void> {
+  async markComplete(executionId: string, nodeId: string, output: Record<string, unknown>): Promise<void> {
     this.successfulIds.set(`${executionId}:${nodeId}`, output);
   }
 
-  async getOutput(executionId: number, nodeId: string): Promise<Record<string, unknown> | null> {
+  async getOutput(executionId: string, nodeId: string): Promise<Record<string, unknown> | null> {
     const key = `${executionId}:${nodeId}`;
     return this.successfulIds.get(key) ?? null;
   }
@@ -171,14 +171,14 @@ export class DbIdempotencyStore implements IdempotencyStore {
 // ─── Main DAG execution function ──────────────────────────────────────────────
 
 export async function runWorkflowDAG(opts: {
-  executionId: number;
-  workflowId: number;
+  executionId: string;
+  workflowId: string;
   workflowName: string;
-  tenantId?: number;
+  tenantId?: string;
   graph: WorkflowGraph;
   triggerPayload?: Record<string, unknown>;
   triggerType?: string;
-  parentExecutionId?: number;
+  parentExecutionId?: string;
 }): Promise<void> {
   const {
     executionId,
@@ -373,7 +373,7 @@ export async function runWorkflowDAG(opts: {
 
       // ── Approval gate writer ─────────────────────────────────────────────────
       writeApprovalGate: async (gateOpts: {
-        executionId: number;
+        executionId: string;
         nodeId: string;
         config: ApprovalGateConfig;
         input: Record<string, unknown>;

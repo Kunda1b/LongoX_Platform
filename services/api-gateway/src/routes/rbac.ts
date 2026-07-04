@@ -147,7 +147,7 @@ async function ensureRbacSeed() {
   }
 
   // 3. Assign permissions to each role (idempotent via unique constraint)
-  const assignments: { roleId: number; permissionId: number }[] = [];
+  const assignments: { roleId: string; permissionId: string }[] = [];
   for (const [roleName, permKeys] of Object.entries(ROLE_PERMISSIONS)) {
     const roleId = roleMap[roleName];
     if (!roleId) continue;
@@ -221,7 +221,7 @@ router.post("/roles", authorize({ resource: "users", action: "write" }), async (
   const { name, description, tenantId } = req.body as {
     name: string;
     description?: string;
-    tenantId?: number;
+    tenantId?: string;
   };
   if (!name?.trim()) {
     res.status(400).json({ error: "name is required" });
@@ -242,7 +242,7 @@ router.post("/roles", authorize({ resource: "users", action: "write" }), async (
 });
 
 router.get("/roles/:id", authorize({ resource: "users", action: "write" }), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const [role] = await db
     .select()
     .from(rolesTable)
@@ -284,11 +284,11 @@ router.get("/roles/:id", authorize({ resource: "users", action: "write" }), asyn
 });
 
 router.patch("/roles/:id", authorize({ resource: "users", action: "write" }), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const { name, description, tenantId } = req.body as Partial<{
     name: string;
     description: string;
-    tenantId: number;
+    tenantId: string;
   }>;
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = name.trim();
@@ -318,7 +318,7 @@ router.patch("/roles/:id", authorize({ resource: "users", action: "write" }), as
 });
 
 router.delete("/roles/:id", authorize({ resource: "users", action: "write" }), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   await db
     .delete(rolePermissionsTable)
     .where(eq(rolePermissionsTable.roleId, id));
@@ -333,8 +333,8 @@ router.put(
   "/roles/:id/permissions/:permissionId",
   authorize({ resource: "users", action: "write" }),
   async (req, res): Promise<void> => {
-    const roleId = Number(req.params.id);
-    const permissionId = Number(req.params.permissionId);
+    const roleId = String(req.params.id);
+    const permissionId = String(req.params.permissionId);
     await db
       .insert(rolePermissionsTable)
       .values({ roleId, permissionId })
@@ -347,8 +347,8 @@ router.delete(
   "/roles/:id/permissions/:permissionId",
   authorize({ resource: "users", action: "write" }),
   async (req, res): Promise<void> => {
-    const roleId = Number(req.params.id);
-    const permissionId = Number(req.params.permissionId);
+    const roleId = String(req.params.id);
+    const permissionId = String(req.params.permissionId);
     await db
       .delete(rolePermissionsTable)
       .where(
@@ -415,8 +415,8 @@ router.get("/user-roles", authorize({ resource: "users", action: "write" }), asy
 router.post("/user-roles", authorize({ resource: "users", action: "write" }), async (req, res): Promise<void> => {
   const { userId, roleId, tenantId } = req.body as {
     userId: string;
-    roleId: number;
-    tenantId?: number;
+    roleId: string;
+    tenantId?: string;
   };
   if (!userId?.trim() || !roleId) {
     res.status(400).json({ error: "userId and roleId are required" });
@@ -450,7 +450,7 @@ router.post("/user-roles", authorize({ resource: "users", action: "write" }), as
 });
 
 router.delete("/user-roles/:id", authorize({ resource: "users", action: "write" }), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   await db.delete(userRolesTable).where(eq(userRolesTable.id, id));
   res.status(204).end();
 });
@@ -490,7 +490,7 @@ router.get("/members", authorize({ resource: "users", action: "read" }), async (
           .where(inArray(userRolesTable.userId, userIds))
       : [];
 
-  const roleByUser: Record<string, { id: number; name: string; description: string | null }> = {};
+  const roleByUser: Record<string, { id: string; name: string; description: string | null }> = {};
   for (const r of roleAssignments) {
     roleByUser[r.userId] = { id: r.roleId, name: r.roleName, description: r.roleDescription ?? null };
   }
@@ -512,7 +512,7 @@ router.get("/members", authorize({ resource: "users", action: "read" }), async (
 router.put("/members/:userId/role", authorize({ resource: "users", action: "write" }), async (req, res): Promise<void> => {
   await ensureRbacSeed();
   const { userId } = req.params;
-  const { roleId } = req.body as { roleId: number };
+  const { roleId } = req.body as { roleId: string };
   const tenantId = req.tenantId as number;
 
   const [user] = await db

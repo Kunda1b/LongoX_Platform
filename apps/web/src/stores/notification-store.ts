@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 interface NotificationState {
-  notifications: Array<{ id: number; title: string; body: string | null; type: string; status: string; createdAt: string }>;
+  notifications: Array<{ id: string; title: string; body: string | null; type: string; status: string; createdAt: string }>;
   unreadCount: number;
   setNotifications: (notifications: NotificationState["notifications"]) => void;
   markAllRead: () => void;

@@ -1,11 +1,11 @@
 export type InstallationStatus = "installing" | "active" | "error" | "removed";
 
 export interface ConnectorInstallationProps {
-  id: number;
-  tenantId: number;
-  connectorId: number;
+  id: string;
+  tenantId: string;
+  connectorId: string;
   connectorName: string;
-  environmentId?: number;
+  environmentId?: string;
   status: InstallationStatus;
   config: Record<string, unknown>;
   error?: string;

@@ -8,7 +8,7 @@ import {
 import { eq, and, gte, lte, sql } from "drizzle-orm";
 
 export interface EnterpriseCommitment {
-  id: number;
+  id: string;
   name: string;
   commitmentType: string;
   annualAmount: string;
@@ -33,7 +33,7 @@ export interface CommitmentOverage {
 }
 
 export class EnterpriseService {
-  async getCommitment(tenantId: number): Promise<EnterpriseCommitment | null> {
+  async getCommitment(tenantId: string): Promise<EnterpriseCommitment | null> {
     const [commitment] = await db
       .select()
       .from(enterpriseCommitmentsTable)
@@ -67,7 +67,7 @@ export class EnterpriseService {
   }
 
   async trackCommitmentUsage(
-    tenantId: number,
+    tenantId: string,
     usage: { resource: string; quantity: number },
   ): Promise<void> {
     const commitment = await this.getCommitment(tenantId);
@@ -114,7 +114,7 @@ export class EnterpriseService {
   }
 
   async checkCommitment(
-    tenantId: number,
+    tenantId: string,
     resource: string,
     quantity: number,
   ): Promise<boolean> {
@@ -127,7 +127,7 @@ export class EnterpriseService {
     return usage + quantity <= limit;
   }
 
-  async getCommitmentOverage(tenantId: number): Promise<CommitmentOverage[]> {
+  async getCommitmentOverage(tenantId: string): Promise<CommitmentOverage[]> {
     const commitment = await this.getCommitment(tenantId);
     if (!commitment) return [];
 
@@ -156,7 +156,7 @@ export class EnterpriseService {
   }
 
   private async getUsageByResource(
-    tenantId: number,
+    tenantId: string,
     resource: string,
   ): Promise<number> {
     const now = new Date();

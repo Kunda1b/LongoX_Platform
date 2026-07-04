@@ -6,7 +6,7 @@ import type {
 } from "./listing.entity";
 
 export interface ListingRepository {
-  findById(id: number): Promise<Listing | null>;
+  findById(id: string): Promise<Listing | null>;
   findAll(filters?: {
     type?: ListingType;
     category?: string;
@@ -19,6 +19,6 @@ export interface ListingRepository {
   create(
     props: Omit<ListingProps, "id" | "createdAt" | "updatedAt">,
   ): Promise<Listing>;
-  update(id: number, data: Partial<ListingProps>): Promise<Listing>;
-  delete(id: number): Promise<void>;
+  update(id: string, data: Partial<ListingProps>): Promise<Listing>;
+  delete(id: string): Promise<void>;
 }

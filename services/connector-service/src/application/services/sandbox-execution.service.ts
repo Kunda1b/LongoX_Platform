@@ -12,9 +12,9 @@ const TIER_TO_POLICY: Record<ConnectorCertificationLevel, SandboxPolicy> = {
 
 export interface SandboxExecutionInput {
   connectorName: string;
-  connectorId: number;
+  connectorId: string;
   installationId: number;
-  tenantId: number;
+  tenantId: string;
   actionId: string;
   auth: Record<string, unknown>;
   config: Record<string, unknown>;

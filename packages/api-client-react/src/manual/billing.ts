@@ -9,7 +9,7 @@ import { customFetch } from "../custom-fetch";
 import type { ErrorType } from "../custom-fetch";
 
 export interface BillingPlan {
-  id: number;
+  id: string;
   name: string;
   displayName: string;
   description: string | null;
@@ -34,7 +34,7 @@ export interface SubscriptionStatus {
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
   plan: {
-    id: number;
+    id: string;
     name: string;
     displayName: string;
     tier: string;

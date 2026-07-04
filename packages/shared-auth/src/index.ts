@@ -7,10 +7,10 @@ import jwt from "jsonwebtoken";
 import type { Request as ExpressRequest } from "express";
 
 export interface AuthUser {
-  id: number;
+  id: string;
   email: string;
   name: string;
-  tenantId: number | null;
+  tenantId: string | null;
   role: string;
 }
 
@@ -24,7 +24,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: AuthUser;
-      tenantId?: number;
+      tenantId?: string;
     }
   }
 }
@@ -63,7 +63,7 @@ export function decodeToken(token: string): TokenPayload | null {
 }
 
 export class TenantContext {
-  constructor(public readonly tenantId: number) {}
+  constructor(public readonly tenantId: string) {}
 
   static fromRequest(req: ExpressRequest): TenantContext {
     const tenantId = req.user?.tenantId;
@@ -104,7 +104,7 @@ export class ForbiddenError extends Error {
 
 export function requireTenant<T extends Request>(
   req: T,
-): asserts req is T & { tenantId: number } {
+): asserts req is T & { tenantId: string } {
   if (!req.tenantId) {
     throw new ForbiddenError();
   }

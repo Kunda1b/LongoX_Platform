@@ -157,7 +157,7 @@ export class SearchIndexProjection {
   private async upsertDocument(doc: {
     documentId: string;
     documentType: string;
-    tenantId?: number;
+    tenantId?: string;
     title: string;
     content: string;
     metadata: Record<string, unknown>;

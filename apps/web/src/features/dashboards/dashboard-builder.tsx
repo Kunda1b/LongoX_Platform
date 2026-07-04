@@ -255,7 +255,7 @@ export function DashboardBuilder({ existingDashboard }: DashboardBuilderProps) {
       return;
     }
     // The generated `usePublishDashboard` hook's mutate arg type is
-    // `{ id: number }`. The `data` field (publish notes) is not in the
+    // `{ id: string }`. The `data` field (publish notes) is not in the
     // generated type — passing it via `as any` would work at runtime but
     // fails typecheck. We pass only the typed `id` arg; the publish notes
     // can be added when the OpenAPI spec is updated to include them.

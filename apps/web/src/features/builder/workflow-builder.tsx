@@ -1367,7 +1367,7 @@ function flowNodesToWorkflow(flowNodes: Node[]): WorkflowNode[] {
 // ─── Main builder ─────────────────────────────────────────────────────────────
 
 interface WorkflowBuilderInnerProps {
-  workflowId: number;
+  workflowId: string;
   initialNodes: WorkflowNode[];
   nodeTypesList: NodeType[];
   onSaved?: () => void;
@@ -1826,7 +1826,7 @@ function WorkflowBuilderInner({
 // ─── Public export ────────────────────────────────────────────────────────────
 
 interface WorkflowBuilderProps {
-  workflowId: number;
+  workflowId: string;
   initialNodes: WorkflowNode[];
   nodeTypesList: NodeType[];
   onSaved?: () => void;

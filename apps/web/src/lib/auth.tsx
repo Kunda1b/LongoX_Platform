@@ -11,10 +11,10 @@ import {
 import { useRouter } from "next/navigation";
 
 export type User = {
-  id: number;
+  id: string;
   email: string;
   name: string;
-  tenantId: number | null;
+  tenantId: string | null;
   role: string;
   emailVerifiedAt: string | null;
   avatarUrl: string | null;

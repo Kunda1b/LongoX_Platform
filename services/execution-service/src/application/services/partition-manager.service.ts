@@ -88,7 +88,7 @@ export class PartitionManagerService {
     }));
   }
 
-  async getActivePartitions(tenantId: number): Promise<PartitionInfo[]> {
+  async getActivePartitions(tenantId: string): Promise<PartitionInfo[]> {
     const { hotExpiresAt } =
       await this.policyService.getExpirationDates(tenantId);
     const all = await this.getPartitions();
@@ -100,7 +100,7 @@ export class PartitionManagerService {
     });
   }
 
-  async getExpiredPartitions(tenantId: number): Promise<PartitionInfo[]> {
+  async getExpiredPartitions(tenantId: string): Promise<PartitionInfo[]> {
     const { hotExpiresAt } =
       await this.policyService.getExpirationDates(tenantId);
     const all = await this.getPartitions();

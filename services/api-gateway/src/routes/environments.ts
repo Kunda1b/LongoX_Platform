@@ -41,7 +41,7 @@ router.get(
   "/environments/:id",
   authorize({ resource: "environments", action: "read" }),
   async (req: Request, res: Response): Promise<void> => {
-    const id = Number(req.params.id);
+    const id = String(req.params.id);
     const [row] = await db.select().from(environmentsTable).where(eq(environmentsTable.id, id));
     if (!row) {
       res.status(404).json({ error: "Environment not found" });
@@ -92,7 +92,7 @@ router.patch(
   "/environments/:id",
   authorize({ resource: "environments", action: "write" }),
   async (req: Request, res: Response): Promise<void> => {
-    const id = Number(req.params.id);
+    const id = String(req.params.id);
     const { name, type, description } = req.body as {
       name?: string;
       type?: string;
@@ -127,7 +127,7 @@ router.delete(
   "/environments/:id",
   authorize({ resource: "environments", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const id = Number(req.params.id);
+    const id = String(req.params.id);
     await db.delete(environmentsTable).where(eq(environmentsTable.id, id));
     res.status(204).end();
   },
@@ -198,7 +198,7 @@ router.post(
   "/environments/promotions/:id/approve",
   authorize({ resource: "environments", action: "promote" }),
   async (req: Request, res: Response): Promise<void> => {
-    const promotionId = Number(req.params.id);
+    const promotionId = String(req.params.id);
     const approvedBy = req.user?.email ?? "system";
     const note = req.body.note as string | undefined;
 
@@ -219,7 +219,7 @@ router.post(
   "/environments/promotions/:id/reject",
   authorize({ resource: "environments", action: "promote" }),
   async (req: Request, res: Response): Promise<void> => {
-    const promotionId = Number(req.params.id);
+    const promotionId = String(req.params.id);
     const reason = req.body.reason as string;
     if (!reason?.trim()) {
       res.status(400).json({ error: "reason is required" });
@@ -244,7 +244,7 @@ router.get(
   "/environments/promotions/:id",
   authorize({ resource: "environments", action: "read" }),
   async (req: Request, res: Response): Promise<void> => {
-    const promotionId = Number(req.params.id);
+    const promotionId = String(req.params.id);
 
     const [promotion] = await db
       .select()
@@ -278,7 +278,7 @@ router.get(
   "/environments/:id/releases",
   authorize({ resource: "environments", action: "read" }),
   async (req: Request, res: Response): Promise<void> => {
-    const environmentId = Number(req.params.id);
+    const environmentId = String(req.params.id);
 
     const releases = await db
       .select()
@@ -316,7 +316,7 @@ router.get(
   "/environments/diff/:workflowId",
   authorize({ resource: "environments", action: "read" }),
   async (req: Request, res: Response): Promise<void> => {
-    const workflowId = Number(req.params.workflowId);
+    const workflowId = String(req.params.workflowId);
     const { from, to } = req.query as { from?: string; to?: string };
 
     const versions = await db

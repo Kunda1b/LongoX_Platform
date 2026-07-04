@@ -6,7 +6,7 @@ export interface ProxyRequest {
   body?: unknown;
   headers?: Record<string, string>;
   query?: Record<string, string>;
-  user?: { id: number; tenantId: number | null; role: string };
+  user?: { id: string; tenantId: string | null; role: string };
 }
 
 export interface ProxyResponse {

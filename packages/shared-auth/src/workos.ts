@@ -191,7 +191,7 @@ export async function getWorkOSUser(userId: string): Promise<WorkOSUser> {
 
 export function mapWorkOSUser(
   wosUser: WorkOSUser,
-  opts: { tenantId: number | null; role: string; dbUserId: number },
+  opts: { tenantId: string | null; role: string; dbUserId: string },
 ): AuthUser {
   return {
     id: opts.dbUserId,

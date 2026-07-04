@@ -25,7 +25,7 @@ export class PostgresDataSourceRepository implements DataSourceRepository {
     });
   }
 
-  async findById(id: number): Promise<DataSource | null> {
+  async findById(id: string): Promise<DataSource | null> {
     const [row] = await db
       .select()
       .from(dataSourcesTable)
@@ -35,7 +35,7 @@ export class PostgresDataSourceRepository implements DataSourceRepository {
   }
 
   async findByTenantId(
-    tenantId: number,
+    tenantId: string,
     kind?: DataSourceKind,
   ): Promise<DataSource[]> {
     let query = db
@@ -67,7 +67,7 @@ export class PostgresDataSourceRepository implements DataSourceRepository {
   }
 
   async update(
-    id: number,
+    id: string,
     data: Partial<DataSourceProps>,
   ): Promise<DataSource> {
     const [row] = await db
@@ -78,11 +78,11 @@ export class PostgresDataSourceRepository implements DataSourceRepository {
     return this.toDomain(row);
   }
 
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await db.delete(dataSourcesTable).where(eq(dataSourcesTable.id, id));
   }
 
-  async countByTenantId(tenantId: number): Promise<number> {
+  async countByTenantId(tenantId: string): Promise<number> {
     const [result] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(dataSourcesTable)

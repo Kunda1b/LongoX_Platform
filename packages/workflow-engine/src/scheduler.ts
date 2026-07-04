@@ -1,6 +1,6 @@
 export interface ScheduledJob {
   id: string;
-  workflowId: number;
+  workflowId: string;
   cron: string;
   timezone: string;
   enabled: boolean;

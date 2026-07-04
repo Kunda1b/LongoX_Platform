@@ -12,8 +12,8 @@ export type AiAuditEventType =
   | "ai.evaluation.failed";
 
 export interface AiAuditDetail {
-  runId?: number;
-  promptId?: number;
+  runId?: string;
+  promptId?: string;
   version?: number;
   provider?: string;
   model?: string;

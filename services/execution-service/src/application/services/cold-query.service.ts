@@ -35,7 +35,7 @@ async function downloadFromS3(key: string): Promise<Buffer> {
 
 async function queryParquetFromS3(
   key: string,
-  filters?: { id?: number; tenantId?: number },
+  filters?: { id?: string; tenantId?: string },
 ): Promise<any[]> {
   let buffer: Buffer;
 
@@ -89,8 +89,8 @@ export class ColdQueryService {
   }
 
   async queryExecution(
-    id: number,
-    tenantId: number,
+    id: string,
+    tenantId: string,
   ): Promise<typeof executionsTable.$inferSelect | null> {
     const [execution] = await db
       .select()
@@ -116,7 +116,7 @@ export class ColdQueryService {
   }
 
   async queryByDateRange(
-    tenantId: number,
+    tenantId: string,
     from: Date,
     to: Date,
   ): Promise<(typeof executionsTable.$inferSelect)[]> {
@@ -142,8 +142,8 @@ export class ColdQueryService {
   }
 
   async restoreFromCold(
-    executionId: number,
-    tenantId: number,
+    executionId: string,
+    tenantId: string,
   ): Promise<typeof executionsTable.$inferSelect | null> {
     const policy = await this.policyService.getPolicy(tenantId);
     if (!policy.coldQueryEnabled) {
@@ -164,7 +164,7 @@ export class ColdQueryService {
   }
 
   async getColdQueryPresignedUrl(
-    exportId: number,
+    exportId: string,
   ): Promise<string | null> {
     const [record] = await db
       .select()
@@ -181,8 +181,8 @@ export class ColdQueryService {
   }
 
   private async queryColdStorage(
-    id: number,
-    tenantId: number,
+    id: string,
+    tenantId: string,
   ): Promise<typeof executionsTable.$inferSelect | null> {
     const exports = await db
       .select()
@@ -211,7 +211,7 @@ export class ColdQueryService {
   }
 
   private async queryColdStorageByRange(
-    tenantId: number,
+    tenantId: string,
     from: Date,
     to: Date,
   ): Promise<(typeof executionsTable.$inferSelect)[]> {

@@ -5,7 +5,7 @@ import { buildUsageBreakdown, round2 } from "../../domain/billing/pricing";
 export class GetCurrentBillingQuery {
   constructor(private readonly repository: UsageRepository) {}
 
-  async execute(tenantId: number): Promise<BillingPeriod> {
+  async execute(tenantId: string): Promise<BillingPeriod> {
     const now = new Date();
     const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const periodEnd = new Date(

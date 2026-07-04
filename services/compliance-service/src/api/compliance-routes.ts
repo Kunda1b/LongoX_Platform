@@ -66,7 +66,7 @@ router.post(
   authorize({ resource: "compliance", action: "admin" }),
   async (req, res): Promise<void> => {
     try {
-      const { userId, reason } = req.body as { userId?: number; reason?: string };
+      const { userId, reason } = req.body as { userId?: string; reason?: string };
       if (!userId || !reason) {
         res.status(400).json({ error: "userId and reason are required" });
         return;
@@ -102,7 +102,7 @@ router.post(
   authorize({ resource: "compliance", action: "admin" }),
   async (req, res): Promise<void> => {
     try {
-      const result = await gdpr.cancelDeletionRequest(Number(req.params.id));
+      const result = await gdpr.cancelDeletionRequest(String(req.params.id));
       res.json(result);
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
@@ -176,7 +176,7 @@ router.get(
       .from(auditExportsTable)
       .where(
         and(
-          eq(auditExportsTable.id, Number(req.params.id)),
+          eq(auditExportsTable.id, String(req.params.id)),
           eq(auditExportsTable.tenantId, req.tenantId!),
         ),
       );
@@ -235,7 +235,7 @@ router.get(
   authorize({ resource: "compliance", action: "read" }),
   async (req, res): Promise<void> => {
     try {
-      const record = await evidence.getEvidence(Number(req.params.id));
+      const record = await evidence.getEvidence(String(req.params.id));
       res.json(record);
     } catch (error) {
       res.status(404).json({ error: (error as Error).message });
@@ -248,7 +248,7 @@ router.get(
   authorize({ resource: "compliance", action: "read" }),
   async (req, res): Promise<void> => {
     try {
-      const result = await evidence.verifyEvidence(Number(req.params.id));
+      const result = await evidence.verifyEvidence(String(req.params.id));
       res.json(result);
     } catch (error) {
       res.status(404).json({ error: (error as Error).message });
@@ -302,7 +302,7 @@ router.get(
   authorize({ resource: "compliance", action: "read" }),
   async (req, res): Promise<void> => {
     try {
-      const detail = await securityIncidents.getIncident(Number(req.params.id));
+      const detail = await securityIncidents.getIncident(String(req.params.id));
       res.json(detail);
     } catch (error) {
       res.status(404).json({ error: (error as Error).message });
@@ -316,7 +316,7 @@ router.patch(
   async (req, res): Promise<void> => {
     try {
       const incident = await securityIncidents.updateIncident(
-        Number(req.params.id),
+        String(req.params.id),
         req.body as { status?: string; title?: string; description?: string; metadata?: Record<string, unknown> },
       );
       res.json(incident);
@@ -337,7 +337,7 @@ router.post(
         return;
       }
       const incident = await securityIncidents.resolveIncident(
-        Number(req.params.id),
+        String(req.params.id),
         resolution,
         req.user!.id,
       );
@@ -354,7 +354,7 @@ router.post(
   async (req, res): Promise<void> => {
     try {
       const { evidenceType, data } = req.body as { evidenceType: string; data: unknown };
-      const record = await securityIncidents.addEvidence(Number(req.params.id), { evidenceType, data });
+      const record = await securityIncidents.addEvidence(String(req.params.id), { evidenceType, data });
       res.status(201).json(record);
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });

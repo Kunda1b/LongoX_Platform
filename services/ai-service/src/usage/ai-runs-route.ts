@@ -20,7 +20,7 @@ interface AiRunRequest {
   temperature?: number;
   maxTokens?: number;
   responseFormat?: "text" | "json";
-  workflowId?: number;
+  workflowId?: string;
 }
 
 router.post("/ai/runs", authorize("ai:run"), async (req, res): Promise<void> => {

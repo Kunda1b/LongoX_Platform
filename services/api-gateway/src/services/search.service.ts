@@ -8,14 +8,14 @@ import { connectorsTable } from "@longox/db/schema";
 interface IndexData {
   title: string;
   content: string;
-  tenantId?: number | null;
+  tenantId?: string | null;
   permissionResource?: string | null;
   permissionAction?: string | null;
   metadata?: Record<string, unknown>;
 }
 
 interface SearchOptions {
-  tenantId?: number | null;
+  tenantId?: string | null;
   resourceTypes?: string[];
   limit?: number;
   offset?: number;
@@ -23,7 +23,7 @@ interface SearchOptions {
 }
 
 interface SearchResult {
-  id: number;
+  id: string;
   resourceType: string;
   resourceId: string;
   title: string;
@@ -41,7 +41,7 @@ interface SearchResponse {
 
 const resourceQueries: Record<
   string,
-  () => Promise<{ resourceType: string; id: number; title: string; content: string; tenantId: number | null }[]>
+  () => Promise<{ resourceType: string; id: string; title: string; content: string; tenantId: string | null }[]>
 > = {
   workflow: async () => {
     const rows = await db

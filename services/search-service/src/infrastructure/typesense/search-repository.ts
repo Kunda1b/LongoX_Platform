@@ -124,12 +124,12 @@ export class TypesenseSearchRepository implements SearchRepository {
   // ─── Index Management ────────────────────────────────────────────────────────
 
   async indexWorkflow(workflow: {
-    id: number;
+    id: string;
     name: string;
     description?: string;
     status: string;
     triggerType: string;
-    tenantId: number;
+    tenantId: string;
     createdAt: Date;
     updatedAt: Date;
   }): Promise<void> {
@@ -146,11 +146,11 @@ export class TypesenseSearchRepository implements SearchRepository {
   }
 
   async indexExecution(execution: {
-    id: number;
-    workflowId: number;
+    id: string;
+    workflowId: string;
     workflowName: string;
     status: string;
-    tenantId: number;
+    tenantId: string;
     startedAt: Date;
     completedAt?: Date;
     durationMs?: number;
@@ -170,12 +170,12 @@ export class TypesenseSearchRepository implements SearchRepository {
   }
 
   async indexAuditLog(log: {
-    id: number;
+    id: string;
     action: string;
     resource: string;
     resourceId: string;
-    tenantId: number;
-    userId: number;
+    tenantId: string;
+    userId: string;
     details: string;
     timestamp: Date;
   }): Promise<void> {
@@ -192,7 +192,7 @@ export class TypesenseSearchRepository implements SearchRepository {
   }
 
   async indexConnector(connector: {
-    id: number;
+    id: string;
     name: string;
     description?: string;
     category: string;
@@ -210,11 +210,11 @@ export class TypesenseSearchRepository implements SearchRepository {
   }
 
   async indexPrompt(prompt: {
-    id: number;
+    id: string;
     name: string;
     content: string;
     model: string;
-    tenantId: number;
+    tenantId: string;
     createdAt: Date;
   }): Promise<void> {
     await indexDocument("prompts", {
@@ -245,10 +245,10 @@ export class TypesenseSearchRepository implements SearchRepository {
 
   async searchExecutions(
     query: string,
-    tenantId: number,
+    tenantId: string,
     filters?: {
       status?: string;
-      workflowId?: number;
+      workflowId?: string;
       startDate?: Date;
       endDate?: Date;
     },
@@ -294,11 +294,11 @@ export class TypesenseSearchRepository implements SearchRepository {
 
   async searchAuditLogs(
     query: string,
-    tenantId: number,
+    tenantId: string,
     filters?: {
       action?: string;
       resource?: string;
-      userId?: number;
+      userId?: string;
       startDate?: Date;
       endDate?: Date;
     },
@@ -348,7 +348,7 @@ export class TypesenseSearchRepository implements SearchRepository {
 
   async searchAiPrompts(
     query: string,
-    tenantId: number,
+    tenantId: string,
     filters?: {
       model?: string;
     },

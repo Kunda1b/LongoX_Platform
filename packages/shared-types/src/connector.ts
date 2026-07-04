@@ -27,9 +27,9 @@ export interface ConnectorTriggerDefinition {
 }
 
 export interface ConnectorInstallation {
-  id: number;
-  connectorId: number;
-  tenantId: number;
+  id: string;
+  connectorId: string;
+  tenantId: string;
   config: Record<string, unknown>;
   authType: AuthType;
   status: "installed" | "active" | "error" | "retired";

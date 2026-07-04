@@ -10,8 +10,8 @@ import { Plug, Plus, Settings, ArrowUpCircle, Trash2, Download, Search, ShieldCh
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Installation {
-  id: number;
-  connectorId: number;
+  id: string;
+  connectorId: string;
   connectorName: string;
   version: string;
   status: string;
@@ -35,7 +35,7 @@ export default function ConnectorsPage() {
     }
   };
 
-  const handleInstall = async (connectorId: number) => {
+  const handleInstall = async (connectorId: string) => {
     try {
       await customFetch(`/api/connectors/${connectorId}/install`, {
         method: "POST",
@@ -93,7 +93,7 @@ export default function ConnectorsPage() {
     }
   };
 
-  const getInstallationForConnector = (connectorId: number): Installation | undefined => {
+  const getInstallationForConnector = (connectorId: string): Installation | undefined => {
     return installations.find((i) => i.connectorId === connectorId);
   };
 

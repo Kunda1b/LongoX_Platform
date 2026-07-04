@@ -42,8 +42,8 @@ export interface WorkflowGraph {
 // ─── Execution context ────────────────────────────────────────────────────────
 
 export interface ExecutionContext {
-  executionId: number;
-  workflowId: number;
+  executionId: string;
+  workflowId: string;
   workflowName: string;
   triggerType: string;
   triggerPayload: Record<string, unknown>;
@@ -54,7 +54,7 @@ export interface ExecutionContext {
   /** Idempotency key for the whole execution (usually executionId as string) */
   idempotencyKey?: string;
   /** Parent execution ID when this is a child workflow */
-  parentExecutionId?: number;
+  parentExecutionId?: string;
 }
 
 // ─── Node execution result ────────────────────────────────────────────────────
@@ -69,7 +69,7 @@ export interface NodeExecutionResult {
   durationMs: number;
   attemptNumber: number;
   /** Set when node is in approval-gate pause state */
-  approvalTaskId?: number;
+  approvalTaskId?: string;
   /** Set when node spawned a child workflow */
   childExecutionId?: number;
   /** Loop iteration count (for bounded-loop nodes) */
@@ -163,7 +163,7 @@ export interface ApprovalGateConfig {
 export type ApprovalDecision = "approved" | "rejected" | "timed_out";
 
 export interface ApprovalResumeSignal {
-  executionId: number;
+  executionId: string;
   nodeId: string;
   decision: ApprovalDecision;
   decidedBy?: number;
@@ -187,7 +187,7 @@ export interface BoundedLoopConfig {
 
 export interface ChildWorkflowConfig {
   /** ID of the workflow to spawn */
-  workflowId: number;
+  workflowId: string;
   /** Whether to await completion before continuing. Default: false (fire-and-forget) */
   await?: boolean;
   /** How to map current node output into child trigger payload */
@@ -198,14 +198,14 @@ export interface ChildWorkflowConfig {
 
 export interface LeaseStore {
   acquire(
-    executionId: number,
+    executionId: string,
     nodeId: string,
     ttlMs?: number,
   ): Promise<NodeLease | null>;
 }
 
 export interface NodeLease {
-  executionId: number;
+  executionId: string;
   nodeId: string;
   workerId: string;
   acquiredAt: Date;
@@ -217,16 +217,16 @@ export interface NodeLease {
 
 export interface IdempotencyStore {
   /** Returns true if the node has already completed successfully for this execution. */
-  isComplete(executionId: number, nodeId: string): Promise<boolean>;
+  isComplete(executionId: string, nodeId: string): Promise<boolean>;
   /** Marks the node as complete with its output. */
   markComplete(
-    executionId: number,
+    executionId: string,
     nodeId: string,
     output: Record<string, unknown>,
   ): Promise<void>;
   /** Retrieves the stored output for an already-complete node. */
   getOutput(
-    executionId: number,
+    executionId: string,
     nodeId: string,
   ): Promise<Record<string, unknown> | null>;
 }
@@ -236,7 +236,7 @@ export interface IdempotencyStore {
 export interface CheckpointStore {
   /** Save a checkpoint for a node execution. */
   save(opts: {
-    executionId: number;
+    executionId: string;
     nodeId: string;
     nodeName: string;
     nodeType: string;
@@ -247,13 +247,13 @@ export interface CheckpointStore {
     errorMessage?: string;
     durationMs?: number;
     metadata?: Record<string, unknown>;
-  }): Promise<number>;
+  }): Promise<string>;
   /** Load all successful checkpoints for an execution (for resume). */
   loadCompleted(
-    executionId: number,
+    executionId: string,
   ): Promise<Array<{ nodeId: string; outputData: Record<string, unknown> }>>;
   /** Update an existing checkpoint by its DB id. */
-  update(checkpointId: number, updates: {
+  update(checkpointId: string, updates: {
     status: "success" | "failed" | "paused";
     outputData?: Record<string, unknown>;
     errorMessage?: string;
@@ -265,19 +265,19 @@ export interface CheckpointStore {
 // ─── DAG runner events ────────────────────────────────────────────────────────
 
 export type DAGEvent =
-  | { type: "execution.started"; executionId: number; workflowId: number }
-  | { type: "node.started"; executionId: number; nodeId: string; nodeName: string; attempt: number }
-  | { type: "node.completed"; executionId: number; nodeId: string; durationMs: number }
-  | { type: "node.failed"; executionId: number; nodeId: string; error: string; attempt: number }
-  | { type: "node.retrying"; executionId: number; nodeId: string; attempt: number; delayMs: number }
-  | { type: "node.paused"; executionId: number; nodeId: string; approvalTaskId: number }
-  | { type: "node.compensating"; executionId: number; nodeId: string }
-  | { type: "node.compensated"; executionId: number; nodeId: string }
-  | { type: "node.child_spawned"; executionId: number; nodeId: string; childExecutionId: number }
-  | { type: "execution.completed"; executionId: number; durationMs: number }
-  | { type: "execution.failed"; executionId: number; error: string }
-  | { type: "execution.saga_compensating"; executionId: number; steps: number }
-  | { type: "dlq.entry"; executionId: number; nodeId: string; error: string };
+  | { type: "execution.started"; executionId: string; workflowId: string }
+  | { type: "node.started"; executionId: string; nodeId: string; nodeName: string; attempt: number }
+  | { type: "node.completed"; executionId: string; nodeId: string; durationMs: number }
+  | { type: "node.failed"; executionId: string; nodeId: string; error: string; attempt: number }
+  | { type: "node.retrying"; executionId: string; nodeId: string; attempt: number; delayMs: number }
+  | { type: "node.paused"; executionId: string; nodeId: string; approvalTaskId: string }
+  | { type: "node.compensating"; executionId: string; nodeId: string }
+  | { type: "node.compensated"; executionId: string; nodeId: string }
+  | { type: "node.child_spawned"; executionId: string; nodeId: string; childExecutionId: number }
+  | { type: "execution.completed"; executionId: string; durationMs: number }
+  | { type: "execution.failed"; executionId: string; error: string }
+  | { type: "execution.saga_compensating"; executionId: string; steps: number }
+  | { type: "dlq.entry"; executionId: string; nodeId: string; error: string };
 
 export type DAGEventHandler = (event: DAGEvent) => void | Promise<void>;
 
@@ -301,7 +301,7 @@ export interface DAGRunnerOptions {
   /** Child workflow spawner */
   spawnChildWorkflow?: (config: ChildWorkflowConfig, input: Record<string, unknown>, context: ExecutionContext) => Promise<number>;
   /** Approval gate writer */
-  writeApprovalGate?: (opts: { executionId: number; nodeId: string; config: ApprovalGateConfig; input: Record<string, unknown> }) => Promise<number>;
+  writeApprovalGate?: (opts: { executionId: string; nodeId: string; config: ApprovalGateConfig; input: Record<string, unknown> }) => Promise<string>;
   /** Node lease store for multi-worker safety */
   leaseStore?: LeaseStore;
 }

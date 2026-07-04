@@ -2,9 +2,9 @@ export type ScheduleStatus = "active" | "paused" | "completed" | "failed";
 export type ScheduleInterval = "once" | "recurring" | "cron";
 
 export interface ScheduleProps {
-  id: number;
-  tenantId: number;
-  workflowId: number;
+  id: string;
+  tenantId: string;
+  workflowId: string;
   name: string;
   description?: string;
   interval: ScheduleInterval;

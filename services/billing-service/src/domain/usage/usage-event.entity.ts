@@ -1,6 +1,6 @@
 export interface UsageEvent {
-  id: number;
-  workflowId: number | null;
+  id: string;
+  workflowId: string | null;
   workflowName: string | null;
   eventType: string;
   quantity: number;
@@ -10,7 +10,7 @@ export interface UsageEvent {
 
 export interface ListUsageEventsFilter {
   limit?: number;
-  workflowId?: number | null;
+  workflowId?: string | null;
   eventType?: string;
 }
 

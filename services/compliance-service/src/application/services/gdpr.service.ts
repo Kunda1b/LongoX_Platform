@@ -59,7 +59,7 @@ async function uploadToS3(
 }
 
 export class GdprService {
-  async exportUserData(userId: number, tenantId: number) {
+  async exportUserData(userId: string, tenantId: string) {
     const [user] = await db
       .select()
       .from(usersTable)
@@ -219,7 +219,7 @@ export class GdprService {
     };
   }
 
-  async createExportRequest(userId: number, tenantId: number) {
+  async createExportRequest(userId: string, tenantId: string) {
     const [request] = await db
       .insert(gdprRequestsTable)
       .values({
@@ -234,7 +234,7 @@ export class GdprService {
     return request;
   }
 
-  async fulfillExportRequest(requestId: number) {
+  async fulfillExportRequest(requestId: string) {
     const [request] = await db
       .select()
       .from(gdprRequestsTable)
@@ -272,7 +272,7 @@ export class GdprService {
     return { requestId, storagePath: storageUrl, dataSizeBytes: Buffer.byteLength(jsonData) };
   }
 
-  async deleteUserData(userId: number, tenantId: number) {
+  async deleteUserData(userId: string, tenantId: string) {
     const [user] = await db
       .select()
       .from(usersTable)
@@ -357,7 +357,7 @@ export class GdprService {
       .where(eq(tenantConnectorInstallsTable.tenantId, tenantId));
   }
 
-  async createDeletionRequest(userId: number, tenantId: number, reason: string) {
+  async createDeletionRequest(userId: string, tenantId: string, reason: string) {
     const [request] = await db
       .insert(gdprRequestsTable)
       .values({
@@ -371,7 +371,7 @@ export class GdprService {
     return request;
   }
 
-  async fulfillDeletionRequest(requestId: number) {
+  async fulfillDeletionRequest(requestId: string) {
     const [request] = await db
       .select()
       .from(gdprRequestsTable)
@@ -399,7 +399,7 @@ export class GdprService {
     return { requestId, fulfilled: true };
   }
 
-  async cancelDeletionRequest(requestId: number) {
+  async cancelDeletionRequest(requestId: string) {
     const [request] = await db
       .select()
       .from(gdprRequestsTable)

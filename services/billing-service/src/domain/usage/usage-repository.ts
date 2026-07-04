@@ -7,12 +7,12 @@ import type {
 
 export interface UsageRepository {
   listEvents(
-    tenantId: number,
+    tenantId: string,
     filter: ListUsageEventsFilter,
   ): Promise<UsageEvent[]>;
-  getMetrics(tenantId: number, monthStart: Date): Promise<UsageMetrics>;
+  getMetrics(tenantId: string, monthStart: Date): Promise<UsageMetrics>;
   getEventQuantities(
-    tenantId: number,
+    tenantId: string,
     periodStart: Date,
     periodEnd?: Date,
   ): Promise<UsageEventQuantity[]>;

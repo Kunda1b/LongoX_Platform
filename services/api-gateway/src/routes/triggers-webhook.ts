@@ -213,7 +213,7 @@ router.post(
     // read directly from the webhook_endpoints table.
     // Note: webhook_endpoints has no tenant_id column — tenant is reached via
     // the workflow lookup below.
-    let endpoint: { id: number; secret: string } | null = null;
+    let endpoint: { id: string; secret: string } | null = null;
     if (endpointId) {
       const [row] = await db
         .select({
@@ -272,7 +272,7 @@ router.post(
     }
 
     // ─── Resolve the workflow ───────────────────────────────────────────────
-    let workflow: { id: number; tenantId: number | null; name: string } | null =
+    let workflow: { id: string; tenantId: string | null; name: string } | null =
       null;
     if (workflowId) {
       const [row] = await db

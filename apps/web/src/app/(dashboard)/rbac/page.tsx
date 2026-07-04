@@ -142,7 +142,7 @@ function MemberRow({
 }: {
   member: WorkspaceMember;
   roles: Role[];
-  onRoleChange: (userId: string, roleId: number) => Promise<void>;
+  onRoleChange: (userId: string, roleId: string) => Promise<void>;
 }) {
   const [saving, setSaving] = useState(false);
   const memberRole = member.role ?? null;
@@ -233,7 +233,7 @@ export default function RBACPage() {
       )
     : [];
 
-  const handleRoleChange = async (userId: string, roleId: number) => {
+  const handleRoleChange = async (userId: string, roleId: string) => {
     await assignMemberRole(userId, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

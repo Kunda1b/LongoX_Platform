@@ -3,9 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 
 interface Execution {
-  id: number;
-  workflowId: number;
-  workflowVersionId: number;
+  id: string;
+  workflowId: string;
+  workflowVersionId: string;
   status: string;
   triggerType: string;
   startedAt: string;
@@ -14,7 +14,7 @@ interface Execution {
 }
 
 interface ExecutionCheckpoint {
-  executionId: number;
+  executionId: string;
   nodeId: string;
   nodeName: string;
   status: string;
@@ -30,7 +30,7 @@ interface ExecutionStreamEvent {
 
 type SseStatus = "disconnected" | "connecting" | "connected" | "error";
 
-export function useExecution(executionId?: number) {
+export function useExecution(executionId?: string) {
   const queryClient = useQueryClient();
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
   const [sseStatus, setSseStatus] = useState<SseStatus>("disconnected");
@@ -104,7 +104,7 @@ export function useExecution(executionId?: number) {
   };
 }
 
-export function useExecutions(workflowId?: number) {
+export function useExecutions(workflowId?: string) {
   const query = useQuery({
     queryKey: ["executions", workflowId],
     queryFn: async () => {

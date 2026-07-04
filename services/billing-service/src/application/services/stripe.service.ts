@@ -25,7 +25,7 @@ export interface SubscriptionStatus {
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
   plan: {
-    id: number;
+    id: string;
     name: string;
     displayName: string;
     tier: string;
@@ -35,7 +35,7 @@ export interface SubscriptionStatus {
 
 export class StripeService {
   async getOrCreateCustomer(
-    tenantId: number,
+    tenantId: string,
     email: string,
     name: string,
   ): Promise<string> {
@@ -73,7 +73,7 @@ export class StripeService {
   }
 
   async createCheckoutSession(
-    tenantId: number,
+    tenantId: string,
     priceId: string,
     successUrl: string,
     cancelUrl: string,
@@ -116,7 +116,7 @@ export class StripeService {
   }
 
   async createPortalSession(
-    tenantId: number,
+    tenantId: string,
     returnUrl: string,
   ): Promise<PortalSessionResult> {
     const [account] = await db
@@ -139,7 +139,7 @@ export class StripeService {
   }
 
   async createSubscription(
-    tenantId: number,
+    tenantId: string,
     priceId: string,
   ): Promise<Stripe.Subscription> {
     const [account] = await db
@@ -172,7 +172,7 @@ export class StripeService {
   }
 
   async cancelSubscription(
-    tenantId: number,
+    tenantId: string,
     subscriptionId: string,
   ): Promise<void> {
     const stripe = getStripe();
@@ -186,7 +186,7 @@ export class StripeService {
       .where(eq(billingAccountsTable.tenantId, tenantId));
   }
 
-  async getSubscription(tenantId: number): Promise<SubscriptionStatus | null> {
+  async getSubscription(tenantId: string): Promise<SubscriptionStatus | null> {
     const [account] = await db
       .select()
       .from(billingAccountsTable)
@@ -260,7 +260,7 @@ export class StripeService {
       .where(eq(invoicesTable.invoiceNumber, invoiceId));
   }
 
-  async enforcePlanEntitlements(tenantId: number): Promise<void> {
+  async enforcePlanEntitlements(tenantId: string): Promise<void> {
     const [account] = await db
       .select()
       .from(billingAccountsTable)

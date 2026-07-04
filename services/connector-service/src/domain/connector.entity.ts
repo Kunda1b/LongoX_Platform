@@ -49,7 +49,7 @@ export interface ConnectorHealthStatus {
 }
 
 export interface ConnectorProps {
-  id: number;
+  id: string;
   name: string;
   displayName?: string;
   version: string;

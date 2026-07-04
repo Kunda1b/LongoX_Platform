@@ -10,7 +10,7 @@ import {
 } from "@longox/db";
 
 interface RequestPromotionInput {
-  workflowId: number;
+  workflowId: string;
   fromEnvironment: string;
   toEnvironment: string;
   notes?: string;
@@ -87,7 +87,7 @@ function computeDiff(fromNodes: unknown, toNodes: unknown): DiffReview {
 }
 
 async function writeAuditLog(
-  tenantId: number | null | undefined,
+  tenantId: string | null | undefined,
   actorId: string,
   action: string,
   resourceType: string,

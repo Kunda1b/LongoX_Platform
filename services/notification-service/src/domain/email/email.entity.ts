@@ -1,5 +1,5 @@
 export interface EmailMessage {
-  id: number;
+  id: string;
   to: string;
   from: string;
   subject: string;

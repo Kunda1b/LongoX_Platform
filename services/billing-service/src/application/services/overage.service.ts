@@ -17,7 +17,7 @@ export interface OverageCharge {
 
 export class OverageService {
   async track(
-    tenantId: number,
+    tenantId: string,
     resource: string,
     overageQuantity: number,
   ): Promise<void> {
@@ -65,7 +65,7 @@ export class OverageService {
   }
 
   async getOverageCharges(
-    tenantId: number,
+    tenantId: string,
     period: { start: Date; end: Date },
   ): Promise<OverageCharge[]> {
     const rows = await db
@@ -89,7 +89,7 @@ export class OverageService {
   }
 
   async createOverageInvoiceLines(
-    tenantId: number,
+    tenantId: string,
     period: { start: Date; end: Date },
   ): Promise<void> {
     const charges = await this.getOverageCharges(tenantId, period);

@@ -10,8 +10,8 @@ export interface EventEnvelope {
   subject: string;
   time: string;
   identity: {
-    userId?: number;
-    tenantId?: number;
+    userId?: string;
+    tenantId?: string;
     role?: string;
     service?: string;
   };
@@ -67,7 +67,7 @@ export type EventType =
   | "platform.certificate.expiring";
 
 export interface WorkflowCreatedEventData {
-  workflowId: number;
+  workflowId: string;
   name: string;
   triggerType: string;
   createdBy: string;
@@ -75,7 +75,7 @@ export interface WorkflowCreatedEventData {
 }
 
 export interface WorkflowUpdatedEventData {
-  workflowId: number;
+  workflowId: string;
   name?: string;
   triggerType?: string;
   updatedBy: string;
@@ -84,13 +84,13 @@ export interface WorkflowUpdatedEventData {
 }
 
 export interface WorkflowDeletedEventData {
-  workflowId: number;
+  workflowId: string;
   name: string;
   deletedBy: string;
 }
 
 export interface WorkflowPublishedEventData {
-  workflowId: number;
+  workflowId: string;
   version: number;
   versionChecksum: GraphChecksum;
   environment: string;
@@ -98,7 +98,7 @@ export interface WorkflowPublishedEventData {
 }
 
 export interface WorkflowVersionCreatedEventData {
-  workflowId: number;
+  workflowId: string;
   version: number;
   versionChecksum: GraphChecksum;
   nodeCount: number;
@@ -106,7 +106,7 @@ export interface WorkflowVersionCreatedEventData {
 }
 
 export interface WorkflowPromotedEventData {
-  workflowId: number;
+  workflowId: string;
   fromEnvironment: string;
   toEnvironment: string;
   promotionId: number;
@@ -115,7 +115,7 @@ export interface WorkflowPromotedEventData {
 }
 
 export interface WorkflowRolledBackEventData {
-  workflowId: number;
+  workflowId: string;
   fromVersion: number;
   toVersion: number;
   environment: string;
@@ -123,8 +123,8 @@ export interface WorkflowRolledBackEventData {
 }
 
 export interface ExecutionStartedEventData {
-  executionId: number;
-  workflowId: number;
+  executionId: string;
+  workflowId: string;
   workflowVersion: number;
   triggeredBy: string;
   triggerType: string;
@@ -132,8 +132,8 @@ export interface ExecutionStartedEventData {
 }
 
 export interface ExecutionCompletedEventData {
-  executionId: number;
-  workflowId: number;
+  executionId: string;
+  workflowId: string;
   durationMs: number;
   totalNodes: number;
   status: "success" | "failed" | "cancelled" | "timeout";
@@ -141,8 +141,8 @@ export interface ExecutionCompletedEventData {
 }
 
 export interface ExecutionFailedEventData {
-  executionId: number;
-  workflowId: number;
+  executionId: string;
+  workflowId: string;
   durationMs: number;
   totalNodes: number;
   error: string;
@@ -150,20 +150,20 @@ export interface ExecutionFailedEventData {
 }
 
 export interface ExecutionCancelledEventData {
-  executionId: number;
-  workflowId: number;
+  executionId: string;
+  workflowId: string;
   cancelledBy: string;
   reason?: string;
 }
 
 export interface ExecutionTimeoutEventData {
-  executionId: number;
-  workflowId: number;
+  executionId: string;
+  workflowId: string;
   timeoutMs: number;
 }
 
 export interface ExecutionNodeEventData {
-  executionId: number;
+  executionId: string;
   nodeId: string;
   nodeType: string;
   nodeLabel: string;
@@ -174,9 +174,9 @@ export interface ExecutionNodeEventData {
 }
 
 export interface ExecutionApprovalEventData {
-  executionId: number;
+  executionId: string;
   nodeId: string;
-  approvalTaskId: number;
+  approvalTaskId: string;
   decision: "approved" | "rejected";
   decidedBy?: number;
   note?: string;
@@ -243,7 +243,7 @@ export interface AiEvaluationEventData {
 }
 
 export interface AiPromptEventData {
-  promptId: number;
+  promptId: string;
   promptName: string;
   version: number;
   action: "created" | "promoted";
@@ -253,7 +253,7 @@ export interface AiPromptEventData {
 export interface BillingEventData {
   invoiceId?: string;
   subscriptionId?: string;
-  tenantId: number;
+  tenantId: string;
   amount: number;
   currency: string;
   periodStart?: string;
@@ -261,7 +261,7 @@ export interface BillingEventData {
 }
 
 export interface BillingEntitlementEventData {
-  tenantId: number;
+  tenantId: string;
   plan: string;
   feature: string;
   currentUsage: number;
@@ -269,27 +269,27 @@ export interface BillingEntitlementEventData {
 }
 
 export interface PlatformTenantEventData {
-  tenantId: number;
+  tenantId: string;
   tenantName: string;
   tier: string;
   action: string;
 }
 
 export interface PlatformUserEventData {
-  tenantId: number;
-  userId: number;
+  tenantId: string;
+  userId: string;
   email: string;
   role: string;
   action: string;
 }
 
 export interface PlatformMigrationEventData {
-  tenantId: number;
+  tenantId: string;
   fromTier: string;
   toTier: string;
   fromPlacement: string;
   toPlacement: string;
-  migrationId: number;
+  migrationId: string;
 }
 
 export interface PlatformHealthEventData {

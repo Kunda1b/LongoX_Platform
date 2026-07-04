@@ -66,7 +66,7 @@ interface AgentRunResult {
 }
 
 interface AgentMemory {
-  id: number;
+  id: string;
   agentId: string;
   memoryType: string;
   key: string;
@@ -169,7 +169,7 @@ export default function AgentsPage() {
   });
 
   const deleteMemoryMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       const res = await fetch(`/api/agents/memory/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },

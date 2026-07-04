@@ -92,7 +92,7 @@ router.get("/api/rag/knowledge-bases/:id", authorize("ai:read"), requireTenantCo
     .select()
     .from(ragKnowledgeBasesTable)
     .where(
-      eq(ragKnowledgeBasesTable.id, Number(req.params.id)),
+      eq(ragKnowledgeBasesTable.id, String(req.params.id)),
     );
   if (!row || row.tenantId !== tenantId) {
     res.status(404).json({ error: "Not found" });
@@ -103,7 +103,7 @@ router.get("/api/rag/knowledge-bases/:id", authorize("ai:read"), requireTenantCo
 
 router.delete("/api/rag/knowledge-bases/:id", authorize("ai:delete"), requireTenantContext, async (req, res): Promise<void> => {
   const tenantId = (req as any).tenantId;
-  const kbId = Number(req.params.id);
+  const kbId = String(req.params.id);
   const [kb] = await db
     .select()
     .from(ragKnowledgeBasesTable)
@@ -120,7 +120,7 @@ router.delete("/api/rag/knowledge-bases/:id", authorize("ai:delete"), requireTen
 
 router.post("/api/rag/knowledge-bases/:id/documents", authorize("ai:write"), requireTenantContext, async (req, res): Promise<void> => {
   const tenantId = (req as any).tenantId;
-  const kbId = Number(req.params.id);
+  const kbId = String(req.params.id);
   const [kb] = await db
     .select()
     .from(ragKnowledgeBasesTable)
@@ -150,7 +150,7 @@ router.post("/api/rag/knowledge-bases/:id/documents", authorize("ai:write"), req
 
 router.get("/api/rag/knowledge-bases/:id/documents", authorize("ai:read"), requireTenantContext, async (req, res): Promise<void> => {
   const tenantId = (req as any).tenantId;
-  const kbId = Number(req.params.id);
+  const kbId = String(req.params.id);
   const [kb] = await db
     .select()
     .from(ragKnowledgeBasesTable)
@@ -169,8 +169,8 @@ router.get("/api/rag/knowledge-bases/:id/documents", authorize("ai:read"), requi
 
 router.delete("/api/rag/knowledge-bases/:id/documents/:docId", authorize("ai:write"), requireTenantContext, async (req, res): Promise<void> => {
   const tenantId = (req as any).tenantId;
-  const kbId = Number(req.params.id);
-  const docId = Number(req.params.docId);
+  const kbId = String(req.params.id);
+  const docId = String(req.params.docId);
   const [kb] = await db
     .select()
     .from(ragKnowledgeBasesTable)
@@ -185,7 +185,7 @@ router.delete("/api/rag/knowledge-bases/:id/documents/:docId", authorize("ai:wri
 
 router.post("/api/rag/knowledge-bases/:id/search", authorize("ai:read"), requireTenantContext, async (req, res): Promise<void> => {
   const tenantId = (req as any).tenantId;
-  const kbId = Number(req.params.id);
+  const kbId = String(req.params.id);
   const [kb] = await db
     .select()
     .from(ragKnowledgeBasesTable)
@@ -213,7 +213,7 @@ router.post("/api/rag/knowledge-bases/:id/search", authorize("ai:read"), require
 
 router.post("/api/rag/knowledge-bases/:id/query", authorize("ai:write"), requireTenantContext, async (req, res): Promise<void> => {
   const tenantId = (req as any).tenantId;
-  const kbId = Number(req.params.id);
+  const kbId = String(req.params.id);
   const [kb] = await db
     .select()
     .from(ragKnowledgeBasesTable)
@@ -252,7 +252,7 @@ router.post("/api/rag/knowledge-bases/:id/query", authorize("ai:write"), require
 
 router.post("/api/rag/knowledge-bases/:id/reindex", authorize("ai:write"), requireTenantContext, async (req, res): Promise<void> => {
   const tenantId = (req as any).tenantId;
-  const kbId = Number(req.params.id);
+  const kbId = String(req.params.id);
   const [kb] = await db
     .select()
     .from(ragKnowledgeBasesTable)

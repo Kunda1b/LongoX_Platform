@@ -45,7 +45,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 
 type RoutingPolicy = {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   strategy: string;
@@ -134,7 +134,7 @@ export default function AIRouterPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       const res = await fetch(`/api/ai-routing-policies/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
@@ -148,7 +148,7 @@ export default function AIRouterPage() {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: async ({ id, isEnabled }: { id: number; isEnabled: boolean }) => {
+    mutationFn: async ({ id, isEnabled }: { id: string; isEnabled: boolean }) => {
       const res = await fetch(`/api/ai-routing-policies/${id}`, {
         method: "PATCH",
         headers: {

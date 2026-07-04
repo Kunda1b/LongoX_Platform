@@ -1,18 +1,18 @@
 export type JobType = "workflow-execution" | "webhook-delivery" | "ai-run";
 
 export interface WorkflowJobData {
-  executionId: number;
-  workflowId: number;
+  executionId: string;
+  workflowId: string;
   workflowName: string;
   nodes: unknown[];
   triggerPayload: Record<string, unknown>;
   triggerType: string;
   /** Optional parent execution id for child-workflow orchestration (§9.6). */
-  parentExecutionId?: number | null;
+  parentExecutionId?: string | null;
 }
 
 export interface WebhookJobData {
-  workflowId: number;
+  workflowId: string;
   payload: Record<string, unknown>;
 }
 
@@ -20,7 +20,7 @@ export interface AiRunJobData {
   nodeTypeId: string;
   config: Record<string, unknown>;
   input: Record<string, unknown>;
-  workflowId: number;
+  workflowId: string;
 }
 
 export type JobDataMap = {

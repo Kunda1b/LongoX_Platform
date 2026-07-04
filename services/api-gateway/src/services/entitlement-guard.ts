@@ -1,11 +1,11 @@
 import type { Request, Response, NextFunction } from "express";
 
 interface EntitlementClient {
-  enforce(tenantId: number, resource: string): Promise<void>;
+  enforce(tenantId: string, resource: string): Promise<void>;
 }
 
 const entitlementClient: EntitlementClient = {
-  enforce: async (tenantId: number, resource: string): Promise<void> => {
+  enforce: async (tenantId: string, resource: string): Promise<void> => {
     const { EntitlementService, PlanLimitExceeded } = await import("@longox/billing-service");
     const service = new EntitlementService();
     await service.enforce(tenantId, resource);

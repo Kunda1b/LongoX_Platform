@@ -3,7 +3,7 @@ import { eq, and, gte, lte, sql } from "drizzle-orm";
 import type { InsertUsageRollup } from "@longox/db";
 
 export class UsageRollupService {
-  async rollupDaily(tenantId: number, date: Date): Promise<void> {
+  async rollupDaily(tenantId: string, date: Date): Promise<void> {
     const dayStart = new Date(date);
     dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(date);
@@ -104,7 +104,7 @@ export class UsageRollupService {
     }
   }
 
-  async rollupMonthly(tenantId: number, year: number, month: number): Promise<void> {
+  async rollupMonthly(tenantId: string, year: number, month: number): Promise<void> {
     const monthStart = new Date(year, month - 1, 1);
     const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
 
@@ -191,7 +191,7 @@ export class UsageRollupService {
     }
   }
 
-  async rollupAll(tenantId: number): Promise<void> {
+  async rollupAll(tenantId: string): Promise<void> {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     await this.rollupDaily(tenantId, yesterday);

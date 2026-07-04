@@ -6,7 +6,7 @@ import type {
 } from "../../domain/datasource.entity";
 
 export interface CreateDataSourceInput {
-  tenantId: number;
+  tenantId: string;
   name: string;
   description?: string;
   kind: DataSourceKind;
@@ -40,7 +40,7 @@ export interface UpdateDataSourceInput {
 export class UpdateDataSourceCommand {
   constructor(private repository: DataSourceRepository) {}
 
-  async execute(id: number, input: UpdateDataSourceInput): Promise<DataSource> {
+  async execute(id: string, input: UpdateDataSourceInput): Promise<DataSource> {
     const existing = await this.repository.findById(id);
     if (!existing) throw new Error(`DataSource with id ${id} not found`);
 
@@ -51,7 +51,7 @@ export class UpdateDataSourceCommand {
 export class DeleteDataSourceCommand {
   constructor(private repository: DataSourceRepository) {}
 
-  async execute(id: number): Promise<void> {
+  async execute(id: string): Promise<void> {
     const existing = await this.repository.findById(id);
     if (!existing) throw new Error(`DataSource with id ${id} not found`);
     await this.repository.delete(id);
@@ -67,7 +67,7 @@ export class TestDataSourceConnectionCommand {
     >,
   ) {}
 
-  async execute(id: number): Promise<{ success: boolean; error?: string }> {
+  async execute(id: string): Promise<{ success: boolean; error?: string }> {
     const ds = await this.repository.findById(id);
     if (!ds) throw new Error(`DataSource with id ${id} not found`);
 

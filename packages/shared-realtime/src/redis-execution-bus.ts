@@ -2,7 +2,7 @@ import { EventEmitter } from "node:events";
 import { logger } from "@longox/shared-logger";
 
 export interface ExecutionEventPayload {
-  executionId: number;
+  executionId: string;
   eventType: string;
   data: Record<string, unknown>;
 }
@@ -50,7 +50,7 @@ async function publishToRedis(payload: ExecutionEventPayload): Promise<void> {
 
 export const sseExecutionBus = {
   onExecutionEvent: (
-    executionId: number,
+    executionId: string,
     handler: (payload: ExecutionEventPayload) => void,
   ): (() => void) => {
     const wrapped = (payload: ExecutionEventPayload) => {

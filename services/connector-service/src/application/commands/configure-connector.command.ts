@@ -4,7 +4,7 @@ import type { ConnectorRepository } from "../../domain";
 import { ConnectorInstallation } from "../../domain";
 
 export interface ConfigureConnectorInput {
-  tenantId: number;
+  tenantId: string;
   installationId: number;
   config: Record<string, unknown>;
 }

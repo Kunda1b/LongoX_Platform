@@ -24,7 +24,7 @@ export interface BillingPeriod {
 }
 
 export interface Invoice {
-  id: number;
+  id: string;
   periodStart: string;
   periodEnd: string;
   totalAmount: number;

@@ -4,7 +4,7 @@ export interface SandboxAuditEntry {
   connectorName: string;
   executionId: string;
   actionId: string;
-  tenantId: number;
+  tenantId: string;
   policy: {
     maxCpuMs: number;
     maxMemoryMb: number;

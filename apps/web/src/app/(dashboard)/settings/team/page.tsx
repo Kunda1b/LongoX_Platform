@@ -73,13 +73,13 @@ type Member = {
   isActive: boolean;
   joinedAt: string;
   lastLoginAt: string | null;
-  role: { id: number; name: string; description: string | null } | null;
+  role: { id: string; name: string; description: string | null } | null;
 };
 
 type Invitation = {
-  id: number;
+  id: string;
   email: string;
-  role: { id: number; name: string };
+  role: { id: string; name: string };
   status: string;
   invitedBy: string;
   expiresAt: string;
@@ -87,7 +87,7 @@ type Invitation = {
 };
 
 type SystemRole = {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
 };
@@ -226,12 +226,12 @@ export default function TeamPage() {
     }
   }
 
-  async function handleCancelInvitation(id: number) {
+  async function handleCancelInvitation(id: string) {
     await fetch(`${API}/invitations/${id}`, { method: "DELETE", headers });
     setInvitations((prev) => prev.filter((i) => i.id !== id));
   }
 
-  async function handleRoleChange(userId: string, roleId: number) {
+  async function handleRoleChange(userId: string, roleId: string) {
     await fetch(`${API}/members/${userId}/role`, {
       method: "PUT",
       headers,

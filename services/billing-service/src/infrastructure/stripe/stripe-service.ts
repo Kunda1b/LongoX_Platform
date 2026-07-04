@@ -9,7 +9,7 @@ import {
 import { eq, and } from "drizzle-orm";
 
 export interface CreateCheckoutInput {
-  tenantId: number;
+  tenantId: string;
   planId: number;
   billingCycle: "monthly" | "annual";
 }
@@ -28,7 +28,7 @@ export interface SubscriptionStatus {
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
   plan: {
-    id: number;
+    id: string;
     name: string;
     displayName: string;
     tier: string;
@@ -37,7 +37,7 @@ export interface SubscriptionStatus {
 
 export class StripeService {
   async getOrCreateCustomer(
-    tenantId: number,
+    tenantId: string,
     email: string,
     name: string,
   ): Promise<string> {
@@ -146,7 +146,7 @@ export class StripeService {
     };
   }
 
-  async createPortalSession(tenantId: number): Promise<PortalSessionResult> {
+  async createPortalSession(tenantId: string): Promise<PortalSessionResult> {
     const [account] = await db
       .select()
       .from(billingAccountsTable)
@@ -167,7 +167,7 @@ export class StripeService {
   }
 
   async getSubscriptionStatus(
-    tenantId: number,
+    tenantId: string,
   ): Promise<SubscriptionStatus | null> {
     const [account] = await db
       .select()
@@ -267,7 +267,7 @@ export class StripeService {
   }
 
   private async syncAccountFromCheckout(
-    tenantId: number,
+    tenantId: string,
     session: Stripe.Checkout.Session,
     planId: number,
     billingCycle: string,

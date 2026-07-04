@@ -6,7 +6,7 @@ export type ListingStatus =
   | "pending_review";
 
 export interface ListingProps {
-  id: number;
+  id: string;
   title: string;
   description: string;
   listingType: ListingType;

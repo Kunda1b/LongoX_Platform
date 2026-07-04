@@ -14,17 +14,17 @@ import type {
 
 export const getListDataSourcesUrl = () => `/api/datasources`;
 
-export const getDataSourceUrl = (id: number) => `/api/datasources/${id}`;
+export const getDataSourceUrl = (id: string) => `/api/datasources/${id}`;
 
 export const getListAdaptersUrl = () => `/api/datasources/adapters`;
 
-export const getTestConnectionUrl = (id: number) =>
+export const getTestConnectionUrl = (id: string) =>
   `/api/datasources/${id}/test`;
 
-export const getExecuteQueryUrl = (id: number) =>
+export const getExecuteQueryUrl = (id: string) =>
   `/api/datasources/${id}/query`;
 
-export const getListTablesUrl = (id: number) => `/api/datasources/${id}/tables`;
+export const getListTablesUrl = (id: string) => `/api/datasources/${id}/tables`;
 
 export const listDataSources = async (
   params?: ListDataSourcesParams,
@@ -42,7 +42,7 @@ export const listDataSources = async (
 };
 
 export const getDataSource = async (
-  id: number,
+  id: string,
   options?: RequestInit,
 ): Promise<DataSource> => {
   return customFetch<DataSource>(getDataSourceUrl(id), {
@@ -64,7 +64,7 @@ export const createDataSource = async (
 };
 
 export const updateDataSource = async (
-  id: number,
+  id: string,
   input: Partial<DataSourceInput>,
   options?: RequestInit,
 ): Promise<DataSource> => {
@@ -77,7 +77,7 @@ export const updateDataSource = async (
 };
 
 export const deleteDataSource = async (
-  id: number,
+  id: string,
   options?: RequestInit,
 ): Promise<void> => {
   await customFetch<void>(getDataSourceUrl(id), {
@@ -96,7 +96,7 @@ export const listAdapters = async (
 };
 
 export const testConnection = async (
-  id: number,
+  id: string,
   options?: RequestInit,
 ): Promise<ConnectionTestResult> => {
   return customFetch<ConnectionTestResult>(getTestConnectionUrl(id), {
@@ -106,7 +106,7 @@ export const testConnection = async (
 };
 
 export const executeQuery = async (
-  id: number,
+  id: string,
   query: string,
   options?: RequestInit,
 ): Promise<QueryResult> => {
@@ -119,7 +119,7 @@ export const executeQuery = async (
 };
 
 export const listDataSourceTables = async (
-  id: number,
+  id: string,
   options?: RequestInit,
 ): Promise<string[]> => {
   return customFetch<string[]>(getListTablesUrl(id), {
@@ -131,7 +131,7 @@ export const listDataSourceTables = async (
 export const getListDataSourcesQueryKey = (params?: ListDataSourcesParams) =>
   [`/api/datasources`, ...(params ? [params] : [])] as const;
 
-export const getDataSourceQueryKey = (id: number) =>
+export const getDataSourceQueryKey = (id: string) =>
   [`/api/datasources/${id}`] as const;
 
 export const getListAdaptersQueryKey = () =>
@@ -156,7 +156,7 @@ export function useListDataSources<
 }
 
 export function useGetDataSource<TData = DataSource, TError = ErrorType<void>>(
-  id: number,
+  id: string,
   options?: {
     query?: UseQueryOptions<DataSource, TError, TData>;
     request?: RequestInit;
@@ -208,7 +208,7 @@ export function useUpdateDataSource<TError = ErrorType<unknown>>(
   options?: UseMutationOptions<
     DataSource,
     TError,
-    { id: number; data: Partial<DataSourceInput> }
+    { id: string; data: Partial<DataSourceInput> }
   >,
 ) {
   const queryClient = useQueryClient();
@@ -227,7 +227,7 @@ export function useDeleteDataSource<TError = ErrorType<unknown>>(
 ) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => deleteDataSource(id),
+    mutationFn: (id: string) => deleteDataSource(id),
     onSuccess: (...args) => {
       queryClient.invalidateQueries({ queryKey: [`/api/datasources`] });
       options?.onSuccess?.(...args);
@@ -240,7 +240,7 @@ export function useTestConnection<TError = ErrorType<unknown>>(
   options?: UseMutationOptions<ConnectionTestResult, TError, number>,
 ) {
   return useMutation({
-    mutationFn: (id: number) => testConnection(id),
+    mutationFn: (id: string) => testConnection(id),
     ...options,
   });
 }
@@ -249,7 +249,7 @@ export function useExecuteQuery<TError = ErrorType<unknown>>(
   options?: UseMutationOptions<
     QueryResult,
     TError,
-    { id: number; query: string }
+    { id: string; query: string }
   >,
 ) {
   return useMutation({

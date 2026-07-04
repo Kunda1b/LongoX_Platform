@@ -61,7 +61,7 @@ export class PostgresNotificationRepository
     return toDomain(row);
   }
 
-  async markRead(id: number): Promise<Notification | null> {
+  async markRead(id: string): Promise<Notification | null> {
     const [row] = await db
       .update(notificationsTable)
       .set({ status: "read" })

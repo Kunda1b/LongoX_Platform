@@ -114,7 +114,7 @@ router.get(
       .where(eq(usersTable.email, workosUser.email.toLowerCase()))
       .limit(1);
 
-    let userId: number;
+    let userId: string;
     if (dbUser) {
       await db
         .update(usersTable)

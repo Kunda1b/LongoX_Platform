@@ -17,8 +17,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Undo2, ArrowRight } from "lucide-react";
 
 interface Promotion {
-  id: number;
-  workflowId: number;
+  id: string;
+  workflowId: string;
   workflowName: string;
   fromEnvironment: string;
   toEnvironment: string;

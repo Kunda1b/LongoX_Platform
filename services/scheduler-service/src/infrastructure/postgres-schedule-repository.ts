@@ -30,7 +30,7 @@ export class PostgresScheduleRepository implements ScheduleRepository {
     });
   }
 
-  async findById(id: number): Promise<Schedule | null> {
+  async findById(id: string): Promise<Schedule | null> {
     const [row] = await db
       .select()
       .from(schedulesTable)
@@ -39,7 +39,7 @@ export class PostgresScheduleRepository implements ScheduleRepository {
     return row ? this.toDomain(row) : null;
   }
 
-  async findByTenantId(tenantId: number): Promise<Schedule[]> {
+  async findByTenantId(tenantId: string): Promise<Schedule[]> {
     const rows = await db
       .select()
       .from(schedulesTable)
@@ -48,7 +48,7 @@ export class PostgresScheduleRepository implements ScheduleRepository {
     return rows.map(this.toDomain);
   }
 
-  async findByWorkflowId(workflowId: number): Promise<Schedule[]> {
+  async findByWorkflowId(workflowId: string): Promise<Schedule[]> {
     const rows = await db
       .select()
       .from(schedulesTable)
@@ -109,7 +109,7 @@ export class PostgresScheduleRepository implements ScheduleRepository {
     return this.toDomain(row);
   }
 
-  async update(id: number, data: Partial<ScheduleProps>): Promise<Schedule> {
+  async update(id: string, data: Partial<ScheduleProps>): Promise<Schedule> {
     const [row] = await db
       .update(schedulesTable)
       .set({ ...data, updatedAt: new Date() })
@@ -118,11 +118,11 @@ export class PostgresScheduleRepository implements ScheduleRepository {
     return this.toDomain(row);
   }
 
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await db.delete(schedulesTable).where(eq(schedulesTable.id, id));
   }
 
-  async countByTenantId(tenantId: number): Promise<number> {
+  async countByTenantId(tenantId: string): Promise<number> {
     const [result] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(schedulesTable)
