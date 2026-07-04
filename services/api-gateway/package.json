@@ -38,7 +38,6 @@
     "@longox/workflow-service": "workspace:*",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
-    "drizzle-orm": "catalog:",
     "express": "^5.2.1",
     "graphql": "^16.9.0",
     "graphql-yoga": "^5.10.0",

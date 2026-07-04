@@ -18,8 +18,7 @@
 
 import { Router, type IRouter, type Request, type Response } from "express";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { eq } from "drizzle-orm";
-import { db, webhookEndpointsTable, workflowsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 // NOTE: `@longox/execution-service/workflow-runner` is a workspace subpath
 // export. TypeScript's `moduleResolution: "bundler"` sometimes fails to
 // resolve workspace `exports` subpaths; the same @ts-ignore pattern is used
@@ -215,14 +214,10 @@ router.post(
     // the workflow lookup below.
     let endpoint: { id: string; secret: string } | null = null;
     if (endpointId) {
-      const [row] = await db
-        .select({
-          id: webhookEndpointsTable.id,
-          secret: webhookEndpointsTable.secret,
-        })
-        .from(webhookEndpointsTable)
-        .where(eq(webhookEndpointsTable.id, String(endpointId)))
-        .limit(1);
+      const row = (await prisma.webhookEndpoint.findUnique({
+        where: { id: String(endpointId) },
+        select: { id: true, secret: true },
+      })) as any;
       if (row) {
         endpoint = {
           id: row.id,
@@ -275,27 +270,18 @@ router.post(
     let workflow: { id: string; tenantId: string | null; name: string } | null =
       null;
     if (workflowId) {
-      const [row] = await db
-        .select({
-          id: workflowsTable.id,
-          tenantId: workflowsTable.tenantId,
-          name: workflowsTable.name,
-        })
-        .from(workflowsTable)
-        .where(eq(workflowsTable.id, workflowId))
-        .limit(1);
+      const row = (await prisma.workflow.findUnique({
+        where: { id: workflowId },
+        select: { id: true, tenantId: true, name: true },
+      })) as any;
       workflow = row ?? null;
     } else if (workflowSlug) {
-      const [row] = await db
-        .select({
-          id: workflowsTable.id,
-          tenantId: workflowsTable.tenantId,
-          name: workflowsTable.name,
-        })
-        .from(workflowsTable)
-        .where(eq(workflowsTable.name, workflowSlug))
-        .limit(1);
-      workflow = row ?? null;
+      const rows = (await prisma.workflow.findMany({
+        where: { name: workflowSlug },
+        select: { id: true, tenantId: true, name: true },
+        take: 1,
+      })) as any[];
+      workflow = rows[0] ?? null;
     }
 
     if (!workflow) {

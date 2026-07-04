@@ -1,44 +1,38 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
-import {
-  appsTable,
-  connectorsTable,
-  credentialsTable,
-  db,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authorize } from "@longox/shared-rbac";
 import { ftsSearchService } from "../services/search.service";
 
 const router: IRouter = Router();
 
-function serializeConnector(row: typeof connectorsTable.$inferSelect) {
+function serializeConnector(row: any) {
   return {
     id: row.id,
     name: row.name,
     displayName: row.displayName ?? null,
-    version: row.version ?? null,
+    version: (row as any).version ?? null,
     category: row.category,
     description: row.description,
     icon: row.icon,
-    color: row.color ?? null,
-    author: row.author ?? null,
-    certificationLevel: row.certificationLevel ?? null,
+    color: (row as any).color ?? null,
+    author: (row as any).author ?? null,
+    certificationLevel: (row as any).certificationLevel ?? row.trustLevel ?? null,
     authType: row.authType ?? null,
-    authConfig: row.authConfig ?? null,
-    permissions: row.permissions ?? [],
-    capabilities: row.capabilities ?? null,
-    rateLimit: row.rateLimit ?? null,
-    healthStatus: row.healthStatus ?? null,
-    isInstalled: row.isInstalled,
-    isFeatured: row.isFeatured,
-    actionCount: row.actionCount,
-    triggerCount: row.triggerCount,
-    installCount: row.installCount,
-    rating: row.rating ?? null,
+    authConfig: (row as any).authConfig ?? null,
+    permissions: (row as any).permissions ?? [],
+    capabilities: (row as any).capabilities ?? null,
+    rateLimit: (row as any).rateLimit ?? null,
+    healthStatus: (row as any).healthStatus ?? null,
+    isInstalled: (row as any).isInstalled ?? false,
+    isFeatured: (row as any).isFeatured ?? false,
+    actionCount: (row as any).actionCount ?? 0,
+    triggerCount: (row as any).triggerCount ?? 0,
+    installCount: (row as any).installCount ?? 0,
+    rating: (row as any).rating ?? null,
   };
 }
 
-function serializeApp(row: typeof appsTable.$inferSelect) {
+function serializeApp(row: any) {
   return {
     id: row.id,
     name: row.name,
@@ -46,27 +40,27 @@ function serializeApp(row: typeof appsTable.$inferSelect) {
     type: row.type,
     status: row.status,
     pageCount: row.pageCount,
-    lastEditedAt: row.lastEditedAt.toISOString(),
+    lastEditedAt: row.lastEditedAt instanceof Date ? row.lastEditedAt.toISOString() : new Date(row.lastEditedAt).toISOString(),
     viewCount: row.viewCount,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : new Date(row.createdAt).toISOString(),
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : new Date(row.updatedAt).toISOString(),
     layout: row.layout ?? null,
   };
 }
 
-function serializeCredential(row: typeof credentialsTable.$inferSelect) {
+function serializeCredential(row: any) {
   return {
     id: row.id,
     name: row.name,
-    connectorId: row.connectorId,
+    connectorId: String(row.connectorId),
     connectorName: row.connectorName,
     fields: row.fields,
-    createdAt: row.createdAt.toISOString(),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : new Date(row.createdAt).toISOString(),
   };
 }
 
 router.get("/connectors/categories", authorize({ resource: "connectors", action: "read" }), async (_req, res): Promise<void> => {
-  const rows = await db.select().from(connectorsTable);
+  const rows = (await prisma.connector.findMany()) as any[];
   const counts = new Map<string, number>();
   for (const row of rows) {
     counts.set(row.category, (counts.get(row.category) ?? 0) + 1);
@@ -79,13 +73,9 @@ router.get("/connectors/categories", authorize({ resource: "connectors", action:
 });
 
 router.get("/connectors", authorize({ resource: "connectors", action: "read" }), async (req, res): Promise<void> => {
-  const conditions = [];
-  if (req.query.category)
-    conditions.push(eq(connectorsTable.category, String(req.query.category)));
-  if (req.query.installed)
-    conditions.push(
-      eq(connectorsTable.isInstalled, String(req.query.installed) === "true"),
-    );
+  const where: any = {};
+  if (req.query.category) where.category = String(req.query.category);
+  if (req.query.installed) where.isInstalled = String(req.query.installed) === "true";
 
   const searchQuery = req.query.search as string | undefined;
   if (searchQuery) {
@@ -95,33 +85,28 @@ router.get("/connectors", authorize({ resource: "connectors", action: "read" }),
     });
     const ids = searchResult.results.map((r) => r.resourceId);
     if (ids.length > 0) {
-      conditions.push(inArray(connectorsTable.id, ids));
+      where.id = { in: ids };
     } else {
       res.json([]);
       return;
     }
   }
 
-  const rows = await db
-    .select()
-    .from(connectorsTable)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(connectorsTable.isFeatured), connectorsTable.name);
+  const rows = (await prisma.connector.findMany({
+    where,
+    orderBy: [{ isFeatured: "desc" }, { name: "asc" }] as any,
+  })) as any[];
 
   res.json(rows.map(serializeConnector));
 });
 
 router.get("/connectors/:id", authorize({ resource: "connectors", action: "read" }), async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  if (!Number.isInteger(id)) {
+  if (!Number.isInteger(Number(id))) {
     res.status(400).json({ error: "Invalid connector id" });
     return;
   }
-  const [row] = await db
-    .select()
-    .from(connectorsTable)
-    .where(eq(connectorsTable.id, id))
-    .limit(1);
+  const row = (await prisma.connector.findUnique({ where: { id } })) as any;
   if (!row) {
     res.status(404).json({ error: "Connector not found" });
     return;
@@ -131,18 +116,17 @@ router.get("/connectors/:id", authorize({ resource: "connectors", action: "read"
 
 router.post("/connectors/:id/install", authorize({ resource: "connectors", action: "install" }), async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  if (!Number.isInteger(id)) {
+  if (!Number.isInteger(Number(id))) {
     res.status(400).json({ error: "Invalid connector id" });
     return;
   }
-  const [row] = await db
-    .update(connectorsTable)
-    .set({
+  const row = (await prisma.connector.update({
+    where: { id },
+    data: {
       isInstalled: true,
-      installCount: sql`${connectorsTable.installCount} + 1`,
-    })
-    .where(eq(connectorsTable.id, id))
-    .returning();
+      installCount: { increment: 1 },
+    } as any,
+  })) as any;
   if (!row) {
     res.status(404).json({ error: "Connector not found" });
     return;
@@ -152,18 +136,15 @@ router.post("/connectors/:id/install", authorize({ resource: "connectors", actio
 
 router.post("/connectors/:id/configure", authorize({ resource: "connectors", action: "write" }), async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  if (!Number.isInteger(id)) {
+  if (!Number.isInteger(Number(id))) {
     res.status(400).json({ error: "Invalid connector id" });
     return;
   }
   const config = req.body.config || {};
-  const [row] = await db
-    .update(connectorsTable)
-    .set({
-      authConfig: config,
-    })
-    .where(eq(connectorsTable.id, id))
-    .returning();
+  const row = (await prisma.connector.update({
+    where: { id },
+    data: { authConfig: config } as any,
+  })) as any;
   if (!row) {
     res.status(404).json({ error: "Connector not found" });
     return;
@@ -173,18 +154,15 @@ router.post("/connectors/:id/configure", authorize({ resource: "connectors", act
 
 router.post("/connectors/:id/upgrade", authorize({ resource: "connectors", action: "install" }), async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  if (!Number.isInteger(id)) {
+  if (!Number.isInteger(Number(id))) {
     res.status(400).json({ error: "Invalid connector id" });
     return;
   }
   const version = req.body.version || "1.0.1";
-  const [row] = await db
-    .update(connectorsTable)
-    .set({
-      version: version,
-    })
-    .where(eq(connectorsTable.id, id))
-    .returning();
+  const row = (await prisma.connector.update({
+    where: { id },
+    data: { version } as any,
+  })) as any;
   if (!row) {
     res.status(404).json({ error: "Connector not found" });
     return;
@@ -194,17 +172,14 @@ router.post("/connectors/:id/upgrade", authorize({ resource: "connectors", actio
 
 router.post("/connectors/:id/remove", authorize({ resource: "connectors", action: "install" }), async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  if (!Number.isInteger(id)) {
+  if (!Number.isInteger(Number(id))) {
     res.status(400).json({ error: "Invalid connector id" });
     return;
   }
-  const [row] = await db
-    .update(connectorsTable)
-    .set({
-      isInstalled: false,
-    })
-    .where(eq(connectorsTable.id, id))
-    .returning();
+  const row = (await prisma.connector.update({
+    where: { id },
+    data: { isInstalled: false } as any,
+  })) as any;
   if (!row) {
     res.status(404).json({ error: "Connector not found" });
     return;
@@ -213,7 +188,7 @@ router.post("/connectors/:id/remove", authorize({ resource: "connectors", action
 });
 
 router.get("/apps/stats", authorize({ resource: "apps", action: "read" }), async (_req, res): Promise<void> => {
-  const rows = await db.select().from(appsTable);
+  const rows = (await prisma.app.findMany()) as any[];
   const byType = new Map<string, number>();
   for (const row of rows) {
     byType.set(row.type, (byType.get(row.type) ?? 0) + 1);
@@ -228,10 +203,9 @@ router.get("/apps/stats", authorize({ resource: "apps", action: "read" }), async
 });
 
 router.get("/apps", authorize({ resource: "apps", action: "read" }), async (req, res): Promise<void> => {
-  const conditions = [];
-  if (req.query.type) conditions.push(eq(appsTable.type, String(req.query.type)));
-  if (req.query.status)
-    conditions.push(eq(appsTable.status, String(req.query.status)));
+  const where: any = {};
+  if (req.query.type) where.type = String(req.query.type);
+  if (req.query.status) where.status = String(req.query.status);
 
   const searchQuery = req.query.search as string | undefined;
   if (searchQuery) {
@@ -241,18 +215,17 @@ router.get("/apps", authorize({ resource: "apps", action: "read" }), async (req,
     });
     const ids = searchResult.results.map((r) => r.resourceId);
     if (ids.length > 0) {
-      conditions.push(inArray(appsTable.id, ids));
+      where.id = { in: ids };
     } else {
       res.json([]);
       return;
     }
   }
 
-  const rows = await db
-    .select()
-    .from(appsTable)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(appsTable.updatedAt));
+  const rows = (await prisma.app.findMany({
+    where,
+    orderBy: { updatedAt: "desc" },
+  })) as any[];
 
   res.json(rows.map(serializeApp));
 });
@@ -269,26 +242,25 @@ router.post("/apps", authorize({ resource: "apps", action: "write" }), async (re
     return;
   }
 
-  const [row] = await db
-    .insert(appsTable)
-    .values({
+  const row = (await prisma.app.create({
+    data: {
       name: body.name.trim(),
       description: body.description ?? null,
       type: body.type ?? "dashboard",
-      layout: body.layout ?? null,
-    })
-    .returning();
+      layout: body.layout ?? undefined,
+    } as any,
+  })) as any;
 
   res.status(201).json(serializeApp(row));
 });
 
 router.get("/apps/:id", authorize({ resource: "apps", action: "read" }), async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  if (!Number.isInteger(id)) {
+  if (!Number.isInteger(Number(id))) {
     res.status(400).json({ error: "Invalid app id" });
     return;
   }
-  const [row] = await db.select().from(appsTable).where(eq(appsTable.id, id));
+  const row = (await prisma.app.findUnique({ where: { id } })) as any;
   if (!row) {
     res.status(404).json({ error: "App not found" });
     return;
@@ -298,7 +270,7 @@ router.get("/apps/:id", authorize({ resource: "apps", action: "read" }), async (
 
 router.patch("/apps/:id", authorize({ resource: "apps", action: "write" }), async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  if (!Number.isInteger(id)) {
+  if (!Number.isInteger(Number(id))) {
     res.status(400).json({ error: "Invalid app id" });
     return;
   }
@@ -314,11 +286,10 @@ router.patch("/apps/:id", authorize({ resource: "apps", action: "write" }), asyn
   if (body.status !== undefined) updates.status = body.status;
   if (body.layout !== undefined) updates.layout = body.layout;
 
-  const [row] = await db
-    .update(appsTable)
-    .set(updates)
-    .where(eq(appsTable.id, id))
-    .returning();
+  const row = (await prisma.app.update({
+    where: { id },
+    data: updates as any,
+  })) as any;
   if (!row) {
     res.status(404).json({ error: "App not found" });
     return;
@@ -328,19 +299,18 @@ router.patch("/apps/:id", authorize({ resource: "apps", action: "write" }), asyn
 
 router.delete("/apps/:id", authorize({ resource: "apps", action: "delete" }), async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  if (!Number.isInteger(id)) {
+  if (!Number.isInteger(Number(id))) {
     res.status(400).json({ error: "Invalid app id" });
     return;
   }
-  await db.delete(appsTable).where(eq(appsTable.id, id));
+  await prisma.app.delete({ where: { id } });
   res.status(204).end();
 });
 
 router.get("/credentials", authorize({ resource: "credentials", action: "read" }), async (_req, res): Promise<void> => {
-  const rows = await db
-    .select()
-    .from(credentialsTable)
-    .orderBy(desc(credentialsTable.createdAt));
+  const rows = (await prisma.credential.findMany({
+    orderBy: { createdAt: "desc" },
+  })) as any[];
   res.json(rows.map(serializeCredential));
 });
 
@@ -358,25 +328,24 @@ router.post("/credentials", authorize({ resource: "credentials", action: "write"
     return;
   }
 
-  const [row] = await db
-    .insert(credentialsTable)
-    .values({
+  const row = (await prisma.credential.create({
+    data: {
       name: body.name.trim(),
-      connectorId: String(body.connectorId),
+      connectorId: Number(body.connectorId),
       connectorName: body.connectorName.trim(),
       fields: body.fields ?? [],
-    })
-    .returning();
+    } as any,
+  })) as any;
   res.status(201).json(serializeCredential(row));
 });
 
 router.delete("/credentials/:id", authorize({ resource: "credentials", action: "write" }), async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  if (!Number.isInteger(id)) {
+  if (!Number.isInteger(Number(id))) {
     res.status(400).json({ error: "Invalid credential id" });
     return;
   }
-  await db.delete(credentialsTable).where(eq(credentialsTable.id, id));
+  await prisma.credential.delete({ where: { id } });
   res.status(204).end();
 });
 

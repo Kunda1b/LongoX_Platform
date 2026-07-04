@@ -1,7 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, sql } from "drizzle-orm";
 import crypto from "node:crypto";
-import { db, webhookEndpointsTable, workflowsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authorize, requireTenantContext } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
@@ -10,7 +9,7 @@ function generateSecret(): string {
   return crypto.randomBytes(32).toString("hex");
 }
 
-function fmt(row: typeof webhookEndpointsTable.$inferSelect) {
+function fmt(row: any) {
   return {
     id: row.id,
     workflowId: row.workflowId,
@@ -18,12 +17,14 @@ function fmt(row: typeof webhookEndpointsTable.$inferSelect) {
     description: row.description ?? null,
     secret: row.secret ?? null,
     isActive: row.isActive,
-    lastTriggeredAt: row.lastTriggeredAt?.toISOString() ?? null,
+    lastTriggeredAt: row.lastTriggeredAt
+      ? (row.lastTriggeredAt instanceof Date ? row.lastTriggeredAt.toISOString() : new Date(row.lastTriggeredAt).toISOString())
+      : null,
     triggerCount: row.triggerCount,
     allowedIps: row.allowedIps ?? [],
     headers: row.headers ?? {},
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : new Date(row.createdAt).toISOString(),
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : new Date(row.updatedAt).toISOString(),
   };
 }
 
@@ -31,16 +32,10 @@ router.get("/webhook-endpoints", authorize("workflows.read"), requireTenantConte
   const workflowId = req.query.workflowId
     ? String(req.query.workflowId)
     : undefined;
-  const rows = workflowId
-    ? await db
-        .select()
-        .from(webhookEndpointsTable)
-        .where(eq(webhookEndpointsTable.workflowId, workflowId))
-        .orderBy(webhookEndpointsTable.id)
-    : await db
-        .select()
-        .from(webhookEndpointsTable)
-        .orderBy(webhookEndpointsTable.id);
+  const rows = (await prisma.webhookEndpoint.findMany({
+    where: workflowId ? { workflowId } : undefined,
+    orderBy: { id: "asc" },
+  })) as any[];
   res.json(rows.map(fmt));
 });
 
@@ -57,26 +52,24 @@ router.post("/webhook-endpoints", authorize("workflows.write"), requireTenantCon
     return;
   }
 
-  const [workflow] = await db
-    .select()
-    .from(workflowsTable)
-    .where(eq(workflowsTable.id, workflowId));
+  const workflow = (await prisma.workflow.findUnique({
+    where: { id: workflowId },
+  })) as any;
   if (!workflow) {
     res.status(404).json({ error: "Workflow not found" });
     return;
   }
 
-  const [row] = await db
-    .insert(webhookEndpointsTable)
-    .values({
+  const row = (await prisma.webhookEndpoint.create({
+    data: {
       workflowId,
       name: name.trim(),
       description,
       secret: generateSecret(),
-      allowedIps: allowedIps ?? [],
-      headers: headers ?? {},
-    })
-    .returning();
+      allowedIps: (allowedIps ?? []) as any,
+      headers: (headers ?? {}) as any,
+    } as any,
+  })) as any;
 
   res.status(201).json(fmt(row));
 });
@@ -87,10 +80,7 @@ router.get("/webhook-endpoints/:id", authorize("workflows.read"), requireTenantC
     res.status(400).json({ error: "id is required" });
     return;
   }
-  const [row] = await db
-    .select()
-    .from(webhookEndpointsTable)
-    .where(eq(webhookEndpointsTable.id, id));
+  const row = (await prisma.webhookEndpoint.findUnique({ where: { id } })) as any;
   if (!row) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -117,11 +107,10 @@ router.patch("/webhook-endpoints/:id", authorize("workflows.write"), requireTena
   if (b.isActive !== undefined) updates.isActive = b.isActive;
   if (b.allowedIps !== undefined) updates.allowedIps = b.allowedIps;
   if (b.headers !== undefined) updates.headers = b.headers;
-  const [row] = await db
-    .update(webhookEndpointsTable)
-    .set(updates)
-    .where(eq(webhookEndpointsTable.id, id))
-    .returning();
+  const row = (await prisma.webhookEndpoint.update({
+    where: { id },
+    data: updates as any,
+  })) as any;
   if (!row) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -139,11 +128,10 @@ router.post(
       res.status(400).json({ error: "id is required" });
       return;
     }
-    const [row] = await db
-      .update(webhookEndpointsTable)
-      .set({ secret: generateSecret() })
-      .where(eq(webhookEndpointsTable.id, id))
-      .returning();
+    const row = (await prisma.webhookEndpoint.update({
+      where: { id },
+      data: { secret: generateSecret() },
+    })) as any;
     if (!row) {
       res.status(404).json({ error: "Not found" });
       return;
@@ -158,9 +146,7 @@ router.delete("/webhook-endpoints/:id", authorize("workflows.write"), requireTen
     res.status(400).json({ error: "id is required" });
     return;
   }
-  await db
-    .delete(webhookEndpointsTable)
-    .where(eq(webhookEndpointsTable.id, id));
+  await prisma.webhookEndpoint.delete({ where: { id } });
   res.status(204).end();
 });
 

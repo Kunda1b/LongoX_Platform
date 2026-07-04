@@ -1,13 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { eq, desc } from "drizzle-orm";
-import {
-  db,
-  tenantTiersTable,
-  tenantTierAssignmentsTable,
-  tenantPlacementTable,
-  tenantSettingsTable,
-  tenantMigrationsTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authorize } from "@longox/shared-rbac";
 import { tenantPlacementService } from "../services/tenant-placement.service";
 import { tenantMigrationService } from "../services/tenant-migration.service";
@@ -18,11 +10,10 @@ router.get(
   "/tenants/tiers",
   authorize({ resource: "tenants", action: "admin" }),
   async (_req: Request, res: Response): Promise<void> => {
-    const rows = await db
-      .select()
-      .from(tenantTiersTable)
-      .where(eq(tenantTiersTable.isActive, true))
-      .orderBy(tenantTiersTable.sortOrder);
+    const rows = (await prisma.tenantTier.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: "asc" },
+    })) as any[];
     res.json(
       rows.map((t) => ({
         id: t.id,
@@ -33,8 +24,8 @@ router.get(
         maxEnvironments: t.maxEnvironments,
         maxMembers: t.maxMembers,
         maxStorageGb: t.maxStorageGb,
-        maxAiTokensMonthly: t.maxAiTokensMonthly,
-        maxRagQueriesMonthly: t.maxRagQueriesMonthly,
+        maxAiTokensMonthly: t.maxAiTokensMonthly?.toString() ?? "0",
+        maxRagQueriesMonthly: t.maxRagQueriesMonthly?.toString() ?? "0",
         includeAuditLogging: t.includeAuditLogging,
         includeSso: t.includeSso,
         includeSla: t.includeSla,
@@ -44,8 +35,8 @@ router.get(
         supportLevel: t.supportLevel,
         monthlyPriceCents: t.monthlyPriceCents,
         sortOrder: t.sortOrder,
-        createdAt: t.createdAt.toISOString(),
-        updatedAt: t.updatedAt.toISOString(),
+        createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : new Date(t.createdAt).toISOString(),
+        updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : new Date(t.updatedAt).toISOString(),
       })),
     );
   },
@@ -56,11 +47,7 @@ router.get(
   authorize({ resource: "tenants", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
     const id = String(req.params.id);
-    const [tier] = await db
-      .select()
-      .from(tenantTiersTable)
-      .where(eq(tenantTiersTable.id, id))
-      .limit(1);
+    const tier = (await prisma.tenantTier.findUnique({ where: { id } })) as any;
     if (!tier) {
       res.status(404).json({ error: "Tier not found" });
       return;
@@ -74,8 +61,8 @@ router.get(
       maxEnvironments: tier.maxEnvironments,
       maxMembers: tier.maxMembers,
       maxStorageGb: tier.maxStorageGb,
-      maxAiTokensMonthly: tier.maxAiTokensMonthly,
-      maxRagQueriesMonthly: tier.maxRagQueriesMonthly,
+      maxAiTokensMonthly: tier.maxAiTokensMonthly?.toString() ?? "0",
+      maxRagQueriesMonthly: tier.maxRagQueriesMonthly?.toString() ?? "0",
       includeAuditLogging: tier.includeAuditLogging,
       includeSso: tier.includeSso,
       includeSla: tier.includeSla,
@@ -85,8 +72,8 @@ router.get(
       supportLevel: tier.supportLevel,
       monthlyPriceCents: tier.monthlyPriceCents,
       sortOrder: tier.sortOrder,
-      createdAt: tier.createdAt.toISOString(),
-      updatedAt: tier.updatedAt.toISOString(),
+      createdAt: tier.createdAt instanceof Date ? tier.createdAt.toISOString() : new Date(tier.createdAt).toISOString(),
+      updatedAt: tier.updatedAt instanceof Date ? tier.updatedAt.toISOString() : new Date(tier.updatedAt).toISOString(),
     });
   },
 );
@@ -97,10 +84,9 @@ router.post(
   async (req: Request, res: Response): Promise<void> => {
     // Request validation defined in lib/api-spec/openapi.yaml — single source of truth
     const body = req.body as Record<string, unknown>;
-    const [tier] = await db
-      .insert(tenantTiersTable)
-      .values(body as typeof tenantTiersTable.$inferInsert)
-      .returning();
+    const tier = (await prisma.tenantTier.create({
+      data: body as any,
+    })) as any;
     res.status(201).json({
       id: tier.id,
       name: tier.name,
@@ -110,8 +96,8 @@ router.post(
       maxEnvironments: tier.maxEnvironments,
       maxMembers: tier.maxMembers,
       maxStorageGb: tier.maxStorageGb,
-      maxAiTokensMonthly: tier.maxAiTokensMonthly,
-      maxRagQueriesMonthly: tier.maxRagQueriesMonthly,
+      maxAiTokensMonthly: tier.maxAiTokensMonthly?.toString() ?? "0",
+      maxRagQueriesMonthly: tier.maxRagQueriesMonthly?.toString() ?? "0",
       includeAuditLogging: tier.includeAuditLogging,
       includeSso: tier.includeSso,
       includeSla: tier.includeSla,
@@ -121,8 +107,8 @@ router.post(
       supportLevel: tier.supportLevel,
       monthlyPriceCents: tier.monthlyPriceCents,
       sortOrder: tier.sortOrder,
-      createdAt: tier.createdAt.toISOString(),
-      updatedAt: tier.updatedAt.toISOString(),
+      createdAt: tier.createdAt instanceof Date ? tier.createdAt.toISOString() : new Date(tier.createdAt).toISOString(),
+      updatedAt: tier.updatedAt instanceof Date ? tier.updatedAt.toISOString() : new Date(tier.updatedAt).toISOString(),
     });
   },
 );
@@ -133,11 +119,10 @@ router.put(
   async (req: Request, res: Response): Promise<void> => {
     const id = String(req.params.id);
     const body = req.body as Record<string, unknown>;
-    const [tier] = await db
-      .update(tenantTiersTable)
-      .set(body)
-      .where(eq(tenantTiersTable.id, id))
-      .returning();
+    const tier = (await prisma.tenantTier.update({
+      where: { id },
+      data: body as any,
+    })) as any;
     if (!tier) {
       res.status(404).json({ error: "Tier not found" });
       return;
@@ -151,8 +136,8 @@ router.put(
       maxEnvironments: tier.maxEnvironments,
       maxMembers: tier.maxMembers,
       maxStorageGb: tier.maxStorageGb,
-      maxAiTokensMonthly: tier.maxAiTokensMonthly,
-      maxRagQueriesMonthly: tier.maxRagQueriesMonthly,
+      maxAiTokensMonthly: tier.maxAiTokensMonthly?.toString() ?? "0",
+      maxRagQueriesMonthly: tier.maxRagQueriesMonthly?.toString() ?? "0",
       includeAuditLogging: tier.includeAuditLogging,
       includeSso: tier.includeSso,
       includeSla: tier.includeSla,
@@ -162,8 +147,8 @@ router.put(
       supportLevel: tier.supportLevel,
       monthlyPriceCents: tier.monthlyPriceCents,
       sortOrder: tier.sortOrder,
-      createdAt: tier.createdAt.toISOString(),
-      updatedAt: tier.updatedAt.toISOString(),
+      createdAt: tier.createdAt instanceof Date ? tier.createdAt.toISOString() : new Date(tier.createdAt).toISOString(),
+      updatedAt: tier.updatedAt instanceof Date ? tier.updatedAt.toISOString() : new Date(tier.updatedAt).toISOString(),
     });
   },
 );
@@ -178,22 +163,18 @@ router.get(
       return;
     }
 
-    const [assignment] = await db
-      .select()
-      .from(tenantTierAssignmentsTable)
-      .where(eq(tenantTierAssignmentsTable.tenantId, tenantId))
-      .limit(1);
+    const assignment = (await prisma.tenantTierAssignment.findUnique({
+      where: { tenantId },
+    })) as any;
 
     if (!assignment) {
       res.json({ tier: null, assignment: null });
       return;
     }
 
-    const [tier] = await db
-      .select()
-      .from(tenantTiersTable)
-      .where(eq(tenantTiersTable.id, assignment.tierId))
-      .limit(1);
+    const tier = (await prisma.tenantTier.findUnique({
+      where: { id: assignment.tierId },
+    })) as any;
 
     res.json({
       tier: tier
@@ -206,8 +187,8 @@ router.get(
             maxEnvironments: tier.maxEnvironments,
             maxMembers: tier.maxMembers,
             maxStorageGb: tier.maxStorageGb,
-            maxAiTokensMonthly: tier.maxAiTokensMonthly,
-            maxRagQueriesMonthly: tier.maxRagQueriesMonthly,
+            maxAiTokensMonthly: tier.maxAiTokensMonthly?.toString() ?? "0",
+            maxRagQueriesMonthly: tier.maxRagQueriesMonthly?.toString() ?? "0",
             includeAuditLogging: tier.includeAuditLogging,
             includeSso: tier.includeSso,
             includeSla: tier.includeSla,
@@ -217,16 +198,18 @@ router.get(
             supportLevel: tier.supportLevel,
             monthlyPriceCents: tier.monthlyPriceCents,
             sortOrder: tier.sortOrder,
-            createdAt: tier.createdAt.toISOString(),
-            updatedAt: tier.updatedAt.toISOString(),
+            createdAt: tier.createdAt instanceof Date ? tier.createdAt.toISOString() : new Date(tier.createdAt).toISOString(),
+            updatedAt: tier.updatedAt instanceof Date ? tier.updatedAt.toISOString() : new Date(tier.updatedAt).toISOString(),
           }
         : null,
       assignment: {
         id: assignment.id,
         tenantId: assignment.tenantId,
         tierId: assignment.tierId,
-        assignedAt: assignment.assignedAt.toISOString(),
-        expiresAt: assignment.expiresAt?.toISOString() ?? null,
+        assignedAt: assignment.assignedAt instanceof Date ? assignment.assignedAt.toISOString() : new Date(assignment.assignedAt).toISOString(),
+        expiresAt: assignment.expiresAt
+          ? (assignment.expiresAt instanceof Date ? assignment.expiresAt.toISOString() : new Date(assignment.expiresAt).toISOString())
+          : null,
         assignedBy: assignment.assignedBy,
         changeReason: assignment.changeReason,
         infrastructureLevel: assignment.infrastructureLevel,
@@ -249,65 +232,63 @@ router.put(
 
     const { tierId, reason } = req.body as { tierId?: string; reason?: string };
 
-    const [targetTier] = await db
-      .select()
-      .from(tenantTiersTable)
-      .where(eq(tenantTiersTable.id, tierId ?? ""))
-      .limit(1);
+    const targetTier = (await prisma.tenantTier.findUnique({
+      where: { id: tierId ?? "" },
+    })) as any;
 
     if (!targetTier) {
       res.status(404).json({ error: "Target tier not found" });
       return;
     }
 
-    const [existingAssignment] = await db
-      .select()
-      .from(tenantTierAssignmentsTable)
-      .where(eq(tenantTierAssignmentsTable.tenantId, tenantId))
-      .limit(1);
+    const existingAssignment = (await prisma.tenantTierAssignment.findUnique({
+      where: { tenantId },
+    })) as any;
 
-    const [settings] = await db
-      .select()
-      .from(tenantSettingsTable)
-      .where(eq(tenantSettingsTable.tenantId, tenantId))
-      .limit(1);
+    const settings = (await prisma.tenantSettings.findUnique({
+      where: { tenantId },
+    })) as any;
 
     if (existingAssignment) {
-      await db
-        .update(tenantTierAssignmentsTable)
-        .set({
+      await prisma.tenantTierAssignment.update({
+        where: { tenantId },
+        data: {
           tierId: tierId ?? "",
           infrastructureLevel: targetTier.infrastructureLevel,
           assignedAt: new Date(),
           assignedBy: req.user?.email ?? "system",
           changeReason: reason ?? null,
           updatedAt: new Date(),
-        })
-        .where(eq(tenantTierAssignmentsTable.tenantId, tenantId));
+        } as any,
+      });
     } else {
-      await db.insert(tenantTierAssignmentsTable).values({
-        tenantId,
-        tierId: tierId ?? "",
-        infrastructureLevel: targetTier.infrastructureLevel,
-        assignedBy: req.user?.email ?? "system",
-        changeReason: reason ?? null,
+      await prisma.tenantTierAssignment.create({
+        data: {
+          tenantId,
+          tierId: tierId ?? "",
+          infrastructureLevel: targetTier.infrastructureLevel,
+          assignedBy: req.user?.email ?? "system",
+          changeReason: reason ?? null,
+        } as any,
       });
     }
 
     if (settings) {
-      await db
-        .update(tenantSettingsTable)
-        .set({
+      await prisma.tenantSettings.update({
+        where: { tenantId },
+        data: {
           tierId,
           infrastructureLevel: targetTier.infrastructureLevel,
           updatedAt: new Date(),
-        })
-        .where(eq(tenantSettingsTable.tenantId, tenantId));
+        } as any,
+      });
     } else {
-      await db.insert(tenantSettingsTable).values({
-        tenantId,
-        tierId,
-        infrastructureLevel: targetTier.infrastructureLevel,
+      await prisma.tenantSettings.create({
+        data: {
+          tenantId,
+          tierId,
+          infrastructureLevel: targetTier.infrastructureLevel,
+        } as any,
       });
     }
 
@@ -382,9 +363,8 @@ router.post(
         targetTierId,
       );
 
-      const [migration] = await db
-        .insert(tenantMigrationsTable)
-        .values({
+      const migration = (await prisma.tenantMigration.create({
+        data: {
           tenantId,
           fromTierId: plan.plan.fromTierId,
           toTierId: plan.plan.toTierId,
@@ -393,9 +373,9 @@ router.post(
           fromCluster: plan.plan.fromCluster,
           toCluster: plan.plan.toCluster,
           status: "planned",
-          steps: plan.steps as unknown as Record<string, unknown>[],
-        })
-        .returning();
+          steps: plan.steps as any,
+        } as any,
+      })) as any;
 
       res.status(201).json({
         planId: migration.id,

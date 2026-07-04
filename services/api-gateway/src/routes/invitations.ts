@@ -1,16 +1,6 @@
 import { Router, type IRouter } from "express";
 import crypto from "node:crypto";
-import { eq, and } from "drizzle-orm";
-import {
-  db,
-  workspaceInvitationsTable,
-  usersTable,
-  tenantsTable,
-  membershipsTable,
-  userRolesTable,
-  rolesTable,
-  auditLogTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authMiddleware, signToken } from "../lib/auth";
 import { authorize } from "@longox/shared-rbac";
 import { sendInvitationEmail } from "../lib/email";
@@ -30,37 +20,33 @@ router.get(
       return;
     }
 
-    const rows = await db
-      .select({
-        id: workspaceInvitationsTable.id,
-        email: workspaceInvitationsTable.email,
-        roleId: workspaceInvitationsTable.roleId,
-        roleName: rolesTable.name,
-        status: workspaceInvitationsTable.status,
-        expiresAt: workspaceInvitationsTable.expiresAt,
-        createdAt: workspaceInvitationsTable.createdAt,
-        invitedByName: usersTable.name,
-      })
-      .from(workspaceInvitationsTable)
-      .innerJoin(rolesTable, eq(workspaceInvitationsTable.roleId, rolesTable.id))
-      .innerJoin(usersTable, eq(workspaceInvitationsTable.invitedBy, usersTable.id))
-      .where(
-        and(
-          eq(workspaceInvitationsTable.tenantId, tenantId),
-          eq(workspaceInvitationsTable.status, "pending"),
-        ),
-      )
-      .orderBy(workspaceInvitationsTable.createdAt);
+    const rows = (await prisma.workspaceInvitation.findMany({
+      where: { tenantId, status: "pending" },
+      orderBy: { createdAt: "asc" },
+      include: {
+        role: { select: { name: true } },
+      } as any,
+    })) as any[];
+
+    // Fetch invitedBy user names in a second query (no direct relation on invitation)
+    const inviterIds = Array.from(new Set(rows.map((r) => r.invitedBy).filter(Boolean))) as string[];
+    const inviters = inviterIds.length
+      ? ((await prisma.user.findMany({
+          where: { id: { in: inviterIds } },
+          select: { id: true, name: true },
+        })) as any[])
+      : [];
+    const inviterMap = new Map(inviters.map((u) => [u.id, u.name]));
 
     res.json(
       rows.map((r) => ({
         id: r.id,
         email: r.email,
-        role: { id: r.roleId, name: r.roleName },
+        role: { id: r.roleId, name: r.role?.name ?? "" },
         status: r.status,
-        invitedBy: r.invitedByName,
-        expiresAt: r.expiresAt.toISOString(),
-        createdAt: r.createdAt.toISOString(),
+        invitedBy: inviterMap.get(r.invitedBy) ?? null,
+        expiresAt: r.expiresAt instanceof Date ? r.expiresAt.toISOString() : new Date(r.expiresAt).toISOString(),
+        createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : new Date(r.createdAt).toISOString(),
       })),
     );
   },
@@ -94,11 +80,10 @@ router.post(
     }
 
     // Check role exists and is a customer role (no platform roles via invite)
-    const [role] = await db
-      .select({ id: rolesTable.id, name: rolesTable.name })
-      .from(rolesTable)
-      .where(eq(rolesTable.id, roleId))
-      .limit(1);
+    const role = (await prisma.rbacRole.findUnique({
+      where: { id: roleId },
+      select: { id: true, name: true },
+    })) as any;
 
     if (!role) {
       res.status(404).json({ error: "Role not found" });
@@ -118,11 +103,10 @@ router.post(
     }
 
     // Check if user is already a member
-    const [existingMember] = await db
-      .select({ id: usersTable.id })
-      .from(usersTable)
-      .where(and(eq(usersTable.email, trimmedEmail), eq(usersTable.tenantId, tenantId)))
-      .limit(1);
+    const existingMember = (await prisma.user.findFirst({
+      where: { email: trimmedEmail, tenantId } as any,
+      select: { id: true },
+    })) as any;
 
     if (existingMember) {
       res.status(409).json({ error: "This user is already a member of the workspace" });
@@ -130,23 +114,20 @@ router.post(
     }
 
     // Cancel any existing pending invite for this email+tenant
-    await db
-      .update(workspaceInvitationsTable)
-      .set({ status: "cancelled" })
-      .where(
-        and(
-          eq(workspaceInvitationsTable.tenantId, tenantId),
-          eq(workspaceInvitationsTable.email, trimmedEmail),
-          eq(workspaceInvitationsTable.status, "pending"),
-        ),
-      );
+    await prisma.workspaceInvitation.updateMany({
+      where: {
+        tenantId,
+        email: trimmedEmail,
+        status: "pending",
+      },
+      data: { status: "cancelled" },
+    });
 
     const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    const [invitation] = await db
-      .insert(workspaceInvitationsTable)
-      .values({
+    const invitation = (await prisma.workspaceInvitation.create({
+      data: {
         tenantId,
         email: trimmedEmail,
         roleId: role.id,
@@ -154,24 +135,23 @@ router.post(
         token,
         status: "pending",
         expiresAt,
-      })
-      .returning();
+      },
+    })) as any;
 
     // Look up workspace name for email
-    const [tenant] = await db
-      .select({ name: tenantsTable.name })
-      .from(tenantsTable)
-      .where(eq(tenantsTable.id, tenantId))
-      .limit(1);
+    const tenant = (await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { name: true },
+    })) as any;
 
-    await db.insert(auditLogTable).values({
-      tenantId,
-      action: "invitation.sent",
-      resourceType: "invitation",
-      resourceId: String(invitation.id),
-      actorType: "user",
-      actorId: String(req.user!.id),
-      metadata: { email: trimmedEmail, roleId: role.id, roleName: role.name },
+    await prisma.auditLog.create({
+      data: {
+        actorId: String(req.user!.id),
+        action: "invitation.sent",
+        targetType: "invitation",
+        targetId: String(invitation.id),
+        diffJson: { email: trimmedEmail, roleId: role.id, roleName: role.name, tenantId, actorType: "user" } as any,
+      } as any,
     });
 
     sendInvitationEmail(
@@ -189,8 +169,8 @@ router.post(
       email: invitation.email,
       role: { id: role.id, name: role.name },
       status: invitation.status,
-      expiresAt: invitation.expiresAt.toISOString(),
-      createdAt: invitation.createdAt.toISOString(),
+      expiresAt: invitation.expiresAt instanceof Date ? invitation.expiresAt.toISOString() : new Date(invitation.expiresAt).toISOString(),
+      createdAt: invitation.createdAt instanceof Date ? invitation.createdAt.toISOString() : new Date(invitation.createdAt).toISOString(),
     });
   },
 );
@@ -205,26 +185,20 @@ router.delete(
     const tenantId = req.user!.tenantId;
     const id = String(req.params.id);
 
-    const [inv] = await db
-      .select({ id: workspaceInvitationsTable.id })
-      .from(workspaceInvitationsTable)
-      .where(
-        and(
-          eq(workspaceInvitationsTable.id, id),
-          eq(workspaceInvitationsTable.tenantId, tenantId!),
-        ),
-      )
-      .limit(1);
+    const inv = (await prisma.workspaceInvitation.findFirst({
+      where: { id, tenantId: tenantId! },
+      select: { id: true },
+    })) as any;
 
     if (!inv) {
       res.status(404).json({ error: "Invitation not found" });
       return;
     }
 
-    await db
-      .update(workspaceInvitationsTable)
-      .set({ status: "cancelled" })
-      .where(eq(workspaceInvitationsTable.id, id));
+    await prisma.workspaceInvitation.update({
+      where: { id },
+      data: { status: "cancelled" },
+    });
 
     res.status(204).end();
   },
@@ -242,11 +216,9 @@ router.get(
     }
 
     const now = new Date();
-    const [inv] = await db
-      .select()
-      .from(workspaceInvitationsTable)
-      .where(eq(workspaceInvitationsTable.token, token))
-      .limit(1);
+    const inv = (await prisma.workspaceInvitation.findFirst({
+      where: { token },
+    })) as any;
 
     if (!inv) {
       res.status(404).json({ error: "Invalid or expired invitation link" });
@@ -259,32 +231,28 @@ router.get(
     }
 
     if (inv.expiresAt < now) {
-      await db
-        .update(workspaceInvitationsTable)
-        .set({ status: "expired" })
-        .where(eq(workspaceInvitationsTable.id, inv.id));
+      await prisma.workspaceInvitation.update({
+        where: { id: inv.id },
+        data: { status: "expired" },
+      });
       res.status(400).json({ error: "Invitation link has expired" });
       return;
     }
 
     // Check if user with this email already exists
-    const [existingUser] = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.email, inv.email))
-      .limit(1);
+    const existingUser = (await prisma.user.findUnique({
+      where: { email: inv.email },
+    })) as any;
 
-    const [role] = await db
-      .select({ id: rolesTable.id, name: rolesTable.name })
-      .from(rolesTable)
-      .where(eq(rolesTable.id, inv.roleId))
-      .limit(1);
+    const role = (await prisma.rbacRole.findUnique({
+      where: { id: inv.roleId },
+      select: { id: true, name: true },
+    })) as any;
 
-    const [tenant] = await db
-      .select({ name: tenantsTable.name, slug: tenantsTable.slug })
-      .from(tenantsTable)
-      .where(eq(tenantsTable.id, inv.tenantId))
-      .limit(1);
+    const tenant = (await prisma.tenant.findUnique({
+      where: { id: inv.tenantId },
+      select: { name: true, slug: true },
+    })) as any;
 
     if (existingUser) {
       // User exists — add them to the workspace
@@ -293,51 +261,53 @@ router.get(
         return;
       }
 
-      await db.transaction(async (tx) => {
+      await prisma.$transaction(async (tx: any) => {
         // Update user's tenantId if they don't have one
         if (!existingUser.tenantId) {
-          await tx
-            .update(usersTable)
-            .set({ tenantId: inv.tenantId, role: role?.name ?? "viewer", updatedAt: new Date() })
-            .where(eq(usersTable.id, existingUser.id));
+          await tx.user.update({
+            where: { id: existingUser.id },
+            data: { tenantId: inv.tenantId, role: role?.name ?? "viewer", updatedAt: new Date() } as any,
+          });
         }
 
-        // Assign role
-        await tx
-          .insert(userRolesTable)
-          .values({
+        // Assign role (userRolesTable → membership)
+        await tx.membership.create({
+          data: {
             userId: String(existingUser.id),
             roleId: inv.roleId,
             tenantId: inv.tenantId,
-          })
-          .onConflictDoNothing();
+          } as any,
+        }).catch(() => {
+          // Ignore unique-constraint conflicts (onConflictDoNothing)
+        });
 
         // Add to memberships
-        await tx
-          .insert(membershipsTable)
-          .values({
+        await tx.membership.create({
+          data: {
             tenantId: inv.tenantId,
             userId: existingUser.id,
             roleId: inv.roleId,
             invitedBy: inv.invitedBy,
             status: "active",
-          })
-          .onConflictDoNothing();
+          } as any,
+        }).catch(() => {
+          // Ignore unique-constraint conflicts (onConflictDoNothing)
+        });
 
         // Mark invitation as accepted
-        await tx
-          .update(workspaceInvitationsTable)
-          .set({ status: "accepted", acceptedAt: new Date() })
-          .where(eq(workspaceInvitationsTable.id, inv.id));
+        await tx.workspaceInvitation.update({
+          where: { id: inv.id },
+          data: { status: "accepted", acceptedAt: new Date() },
+        });
 
-        await tx.insert(auditLogTable).values({
-          tenantId: inv.tenantId,
-          action: "invitation.accepted",
-          resourceType: "invitation",
-          resourceId: String(inv.id),
-          actorType: "user",
-          actorId: String(existingUser.id),
-          metadata: { email: inv.email, roleId: inv.roleId },
+        await tx.auditLog.create({
+          data: {
+            actorId: String(existingUser.id),
+            action: "invitation.accepted",
+            targetType: "invitation",
+            targetId: String(inv.id),
+            diffJson: { email: inv.email, roleId: inv.roleId, tenantId: inv.tenantId, actorType: "user" } as any,
+          } as any,
         });
       });
 
@@ -359,7 +329,9 @@ router.get(
           name: existingUser.name,
           tenantId: inv.tenantId,
           role: role?.name ?? existingUser.role,
-          emailVerifiedAt: existingUser.emailVerifiedAt?.toISOString() ?? null,
+          emailVerifiedAt: existingUser.emailVerifiedAt
+            ? (existingUser.emailVerifiedAt instanceof Date ? existingUser.emailVerifiedAt.toISOString() : new Date(existingUser.emailVerifiedAt).toISOString())
+            : null,
           avatarUrl: existingUser.avatarUrl ?? null,
         },
         workspace: tenant,
@@ -390,11 +362,9 @@ router.post(
     }
 
     const now = new Date();
-    const [inv] = await db
-      .select()
-      .from(workspaceInvitationsTable)
-      .where(eq(workspaceInvitationsTable.token, token))
-      .limit(1);
+    const inv = (await prisma.workspaceInvitation.findFirst({
+      where: { token },
+    })) as any;
 
     if (!inv || inv.status !== "pending" || inv.expiresAt < now) {
       res.status(400).json({ error: "Invalid or expired invitation" });
@@ -406,39 +376,40 @@ router.post(
       return;
     }
 
-    await db.transaction(async (tx) => {
-      await tx
-        .update(usersTable)
-        .set({ tenantId: inv.tenantId, updatedAt: new Date() })
-        .where(eq(usersTable.id, req.user!.id));
+    await prisma.$transaction(async (tx: any) => {
+      await tx.user.update({
+        where: { id: req.user!.id },
+        data: { tenantId: inv.tenantId, updatedAt: new Date() } as any,
+      });
 
-      await tx
-        .insert(userRolesTable)
-        .values({ userId: String(req.user!.id), roleId: inv.roleId, tenantId: inv.tenantId })
-        .onConflictDoNothing();
+      await tx.membership.create({
+        data: { userId: String(req.user!.id), roleId: inv.roleId, tenantId: inv.tenantId } as any,
+      }).catch(() => {
+        // Ignore unique-constraint conflicts (onConflictDoNothing)
+      });
 
-      await tx
-        .insert(membershipsTable)
-        .values({
+      await tx.membership.create({
+        data: {
           tenantId: inv.tenantId,
           userId: req.user!.id,
           roleId: inv.roleId,
           invitedBy: inv.invitedBy,
           status: "active",
-        })
-        .onConflictDoNothing();
+        } as any,
+      }).catch(() => {
+        // Ignore unique-constraint conflicts (onConflictDoNothing)
+      });
 
-      await tx
-        .update(workspaceInvitationsTable)
-        .set({ status: "accepted", acceptedAt: new Date() })
-        .where(eq(workspaceInvitationsTable.id, inv.id));
+      await tx.workspaceInvitation.update({
+        where: { id: inv.id },
+        data: { status: "accepted", acceptedAt: new Date() },
+      });
     });
 
-    const [role] = await db
-      .select({ name: rolesTable.name })
-      .from(rolesTable)
-      .where(eq(rolesTable.id, inv.roleId))
-      .limit(1);
+    const role = (await prisma.rbacRole.findUnique({
+      where: { id: inv.roleId },
+      select: { name: true },
+    })) as any;
 
     const authUser = {
       id: req.user!.id,

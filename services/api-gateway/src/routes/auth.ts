@@ -1,18 +1,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
-import { eq, and, gt } from "drizzle-orm";
 import crypto from "node:crypto";
-import {
-  db,
-  usersTable,
-  userMfaTable,
-  tenantsTable,
-  membershipsTable,
-  userRegistrationsTable,
-  auditLogTable,
-  userRolesTable,
-  rolesTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import {
   authMiddleware,
   getBearerToken,
@@ -41,11 +30,10 @@ async function uniqueTenantSlug(base: string): Promise<string> {
   let slug = slugify(base);
   for (let attempt = 0; attempt < 100; attempt++) {
     const candidate = attempt === 0 ? slug : `${slug}-${attempt}`;
-    const [existing] = await db
-      .select({ id: tenantsTable.id })
-      .from(tenantsTable)
-      .where(eq(tenantsTable.slug, candidate))
-      .limit(1);
+    const existing = (await prisma.tenant.findUnique({
+      where: { slug: candidate },
+      select: { id: true },
+    })) as any;
     if (!existing) return candidate;
   }
   return `${slug}-${Date.now()}`;
@@ -69,11 +57,10 @@ router.post(
   const trimmedPassword = password.trim();
   const trimmedOrg = organizationName?.trim();
 
-  const [existingUser] = await db
-    .select({ id: usersTable.id })
-    .from(usersTable)
-    .where(eq(usersTable.email, trimmedEmail))
-    .limit(1);
+  const existingUser = (await prisma.user.findUnique({
+    where: { email: trimmedEmail },
+    select: { id: true },
+  })) as any;
 
   if (existingUser) {
     res.status(409).json({ error: "An account with this email already exists" });
@@ -86,65 +73,73 @@ router.post(
   const verificationToken = crypto.randomBytes(32).toString("hex");
 
   try {
-    const result = await db.transaction(async (tx) => {
-      const [tenant] = await tx
-        .insert(tenantsTable)
-        .values({
+    const result = await prisma.$transaction(async (tx: any) => {
+      const tenant = (await tx.tenant.create({
+        data: {
           name: orgName,
           slug,
-          plan: "free",
-          isActive: true,
-        })
-        .returning();
+          planId: "free",
+          status: "active",
+        } as any,
+      })) as any;
 
-      const [user] = await tx
-        .insert(usersTable)
-        .values({
+      const user = (await tx.user.create({
+        data: {
           email: trimmedEmail,
           passwordHash,
           name: trimmedName,
           tenantId: tenant.id,
           role: "owner",
-          isActive: true,
+          status: "active",
           emailVerificationToken: verificationToken,
-        })
-        .returning();
+        } as any,
+      })) as any;
 
-      // Assign the owner role via the RBAC user_roles table
+      // Assign the owner role via the RBAC membership table
       const ownerRoleId = await getSystemRoleId("owner");
       if (ownerRoleId) {
-        await tx.insert(userRolesTable).values({
-          userId: String(user.id),
-          roleId: ownerRoleId,
-          tenantId: tenant.id,
+        await tx.membership.create({
+          data: {
+            userId: String(user.id),
+            roleId: ownerRoleId,
+            tenantId: tenant.id,
+          } as any,
+        }).catch(() => {
+          // Ignore unique constraint conflicts
         });
       }
 
-      await tx.insert(membershipsTable).values({
-        tenantId: tenant.id,
-        userId: user.id,
-        roleId: ownerRoleId ?? undefined,
-        status: "active",
+      await tx.membership.create({
+        data: {
+          tenantId: tenant.id,
+          userId: user.id,
+          roleId: ownerRoleId ?? undefined,
+          status: "active",
+        } as any,
+      }).catch(() => {
+        // Ignore unique constraint conflicts
       });
 
-      await tx.insert(userRegistrationsTable).values({
-        userId: user.id,
-        tenantId: tenant.id,
-        email: trimmedEmail,
-        organizationName: orgName,
-        status: "completed",
-        ipAddress: req.ip ?? null,
-        userAgent: req.get("user-agent") ?? null,
+      await tx.userRegistration.create({
+        data: {
+          userId: user.id,
+          tenantId: tenant.id,
+          email: trimmedEmail,
+          organizationName: orgName,
+          status: "completed",
+          ipAddress: req.ip ?? null,
+          userAgent: req.get("user-agent") ?? null,
+        } as any,
       });
 
-      await tx.insert(auditLogTable).values({
-        tenantId: tenant.id,
-        action: "user.registered",
-        resourceType: "user",
-        resourceId: String(user.id),
-        actorType: "user",
-        actorId: String(user.id),
-        metadata: { tenantId: tenant.id, email: trimmedEmail },
+      await tx.auditLog.create({
+        data: {
+          actorId: String(user.id),
+          action: "user.registered",
+          targetType: "user",
+          targetId: String(user.id),
+          diffJson: { tenantId: tenant.id, email: trimmedEmail, actorType: "user" } as any,
+        } as any,
       });
 
       return { tenant, user, verificationToken };
@@ -155,7 +150,7 @@ router.post(
       email: result.user.email,
       name: result.user.name,
       tenantId: result.user.tenantId ?? null,
-      role: result.user.role,
+      role: (result.user as any).role,
       emailVerifiedAt: null as string | null,
     };
     const token = signToken(authUser);
@@ -185,17 +180,15 @@ router.post(
   async (req, res): Promise<void> => {
   const { email, password } = req.body as { email: string; password: string };
 
-  const [user] = await db
-    .select()
-    .from(usersTable)
-    .where(eq(usersTable.email, email.trim().toLowerCase()))
-    .limit(1);
+  const user = (await prisma.user.findUnique({
+    where: { email: email.trim().toLowerCase() },
+  })) as any;
   if (!user) {
     res.status(401).json({ error: "Invalid email or password" });
     return;
   }
 
-  if (!user.isActive) {
+  if (user.status !== "active") {
     res.status(401).json({ error: "Account is disabled" });
     return;
   }
@@ -206,45 +199,36 @@ router.post(
     return;
   }
 
-  await db
-    .update(usersTable)
-    .set({ lastLoginAt: new Date() })
-    .where(eq(usersTable.id, user.id));
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { lastLoginAt: new Date() },
+  });
 
-  const [mfa] = await db
-    .select()
-    .from(userMfaTable)
-    .where(
-      and(eq(userMfaTable.userId, user.id), eq(userMfaTable.enabled, true)),
-    )
-    .limit(1);
+  const mfa = (await prisma.userMfa.findFirst({
+    where: { userId: user.id, enabled: true },
+  })) as any;
 
   const requiresMfa = !!mfa;
 
-  // Look up canonical role from user_roles → roles (fall back to users.role)
-  const [userRoleRow] = await db
-    .select({ name: rolesTable.name })
-    .from(userRolesTable)
-    .innerJoin(rolesTable, eq(userRolesTable.roleId, rolesTable.id))
-    .where(
-      and(
-        eq(userRolesTable.userId, String(user.id)),
-        user.tenantId !== null
-          ? eq(userRolesTable.tenantId, user.tenantId)
-          : undefined,
-      ),
-    )
-    .limit(1);
+  // Look up canonical role from memberships → rbacRoles (fall back to users.role)
+  const userRoleRow = (await prisma.membership.findFirst({
+    where: {
+      userId: String(user.id),
+      ...(user.tenantId ? { tenantId: user.tenantId } : {}),
+    } as any,
+    include: { role: { select: { name: true } } } as any,
+  })) as any;
 
-  // For existing users without a user_roles entry, migrate them to owner on login
-  let canonicalRole = userRoleRow?.name ?? user.role;
-  if (!userRoleRow && (user.role === "admin" || user.role === "owner")) {
+  // For existing users without a membership entry, migrate them to owner on login
+  let canonicalRole = userRoleRow?.role?.name ?? (user as any).role;
+  if (!userRoleRow && ((user as any).role === "admin" || (user as any).role === "owner")) {
     const ownerRoleId = await getSystemRoleId("owner");
     if (ownerRoleId && user.tenantId) {
-      await db
-        .insert(userRolesTable)
-        .values({ userId: String(user.id), roleId: ownerRoleId, tenantId: user.tenantId })
-        .onConflictDoNothing();
+      await prisma.membership.create({
+        data: { userId: String(user.id), roleId: ownerRoleId, tenantId: user.tenantId } as any,
+      }).catch(() => {
+        // Ignore unique constraint conflicts
+      });
     }
     canonicalRole = "owner";
   }
@@ -266,7 +250,9 @@ router.post(
       name: user.name,
       tenantId: user.tenantId,
       role: canonicalRole,
-      emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+      emailVerifiedAt: user.emailVerifiedAt
+        ? (user.emailVerifiedAt instanceof Date ? user.emailVerifiedAt.toISOString() : new Date(user.emailVerifiedAt).toISOString())
+        : null,
       avatarUrl: null,
     },
     requiresMfa,
@@ -280,28 +266,30 @@ router.post(["/auth/logout", "/api/auth/logout", "/api/v1/auth/logout"], authMid
 });
 
 router.get(["/auth/me", "/api/auth/me", "/api/v1/auth/me"], authMiddleware, async (req, res): Promise<void> => {
-  const [user] = await db
-    .select({
-      id: usersTable.id,
-      email: usersTable.email,
-      name: usersTable.name,
-      role: usersTable.role,
-      tenantId: usersTable.tenantId,
-      isActive: usersTable.isActive,
-      avatarUrl: usersTable.avatarUrl,
-      lastLoginAt: usersTable.lastLoginAt,
-      createdAt: usersTable.createdAt,
-    })
-    .from(usersTable)
-    .where(eq(usersTable.id, req.user!.id))
-    .limit(1);
+  const user = (await prisma.user.findUnique({
+    where: { id: req.user!.id },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      status: true,
+      tenantId: true,
+      avatarUrl: true,
+      lastLoginAt: true,
+      createdAt: true,
+    } as any,
+  })) as any;
 
   if (!user) {
     res.status(404).json({ error: "User not found" });
     return;
   }
 
-  res.json(user);
+  res.json({
+    ...user,
+    role: (user as any).role,
+    isActive: user.status === "active",
+  });
 });
 
 // GET /api/auth/verify-email?token=...  (public)
@@ -314,11 +302,10 @@ router.get(
       return;
     }
 
-    const [user] = await db
-      .select({ id: usersTable.id, emailVerifiedAt: usersTable.emailVerifiedAt })
-      .from(usersTable)
-      .where(eq(usersTable.emailVerificationToken, token))
-      .limit(1);
+    const user = (await prisma.user.findFirst({
+      where: { emailVerificationToken: token } as any,
+      select: { id: true, emailVerifiedAt: true } as any,
+    })) as any;
 
     if (!user) {
       res.status(400).json({ error: "Invalid or expired verification link" });
@@ -330,10 +317,10 @@ router.get(
       return;
     }
 
-    await db
-      .update(usersTable)
-      .set({ emailVerifiedAt: new Date(), emailVerificationToken: null })
-      .where(eq(usersTable.id, user.id));
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerifiedAt: new Date(), emailVerificationToken: null } as any,
+    });
 
     res.json({ message: "Email verified successfully" });
   },
@@ -344,16 +331,15 @@ router.post(
   ["/auth/resend-verification", "/api/auth/resend-verification", "/api/v1/auth/resend-verification"],
   authMiddleware,
   async (req, res): Promise<void> => {
-    const [user] = await db
-      .select({
-        id: usersTable.id,
-        email: usersTable.email,
-        name: usersTable.name,
-        emailVerifiedAt: usersTable.emailVerifiedAt,
-      })
-      .from(usersTable)
-      .where(eq(usersTable.id, req.user!.id))
-      .limit(1);
+    const user = (await prisma.user.findUnique({
+      where: { id: req.user!.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        emailVerifiedAt: true,
+      } as any,
+    })) as any;
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
@@ -366,10 +352,10 @@ router.post(
     }
 
     const newToken = crypto.randomBytes(32).toString("hex");
-    await db
-      .update(usersTable)
-      .set({ emailVerificationToken: newToken })
-      .where(eq(usersTable.id, user.id));
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerificationToken: newToken } as any,
+    });
 
     sendVerificationEmail(user.email, user.name, newToken).catch((err) =>
       console.error("[Email] Failed to resend verification email:", err),
@@ -389,14 +375,13 @@ router.post(
       return;
     }
 
-    const [user] = await db
-      .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name, isActive: usersTable.isActive })
-      .from(usersTable)
-      .where(eq(usersTable.email, email.trim().toLowerCase()))
-      .limit(1);
+    const user = (await prisma.user.findUnique({
+      where: { email: email.trim().toLowerCase() },
+      select: { id: true, email: true, name: true, status: true } as any,
+    })) as any;
 
     // Always respond with success to avoid email enumeration
-    if (!user || !user.isActive) {
+    if (!user || user.status !== "active") {
       res.json({ message: "If that email exists, a reset link has been sent" });
       return;
     }
@@ -404,10 +389,13 @@ router.post(
     const resetToken = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    await db
-      .update(usersTable)
-      .set({ passwordResetToken: resetToken, passwordResetTokenExpiresAt: expiresAt })
-      .where(eq(usersTable.id, user.id));
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetToken: resetToken,
+        passwordResetTokenExpiresAt: expiresAt,
+      } as any,
+    });
 
     sendPasswordResetEmail(user.email, user.name, resetToken).catch((err) =>
       console.error("[Email] Failed to send password reset email:", err),
@@ -434,16 +422,13 @@ router.post(
     }
 
     const now = new Date();
-    const [user] = await db
-      .select({ id: usersTable.id, passwordResetTokenExpiresAt: usersTable.passwordResetTokenExpiresAt })
-      .from(usersTable)
-      .where(
-        and(
-          eq(usersTable.passwordResetToken, token),
-          gt(usersTable.passwordResetTokenExpiresAt, now),
-        ),
-      )
-      .limit(1);
+    const user = (await prisma.user.findFirst({
+      where: {
+        passwordResetToken: token,
+        passwordResetTokenExpiresAt: { gt: now },
+      } as any,
+      select: { id: true, passwordResetTokenExpiresAt: true } as any,
+    })) as any;
 
     if (!user) {
       res.status(400).json({ error: "Invalid or expired reset link" });
@@ -452,14 +437,14 @@ router.post(
 
     const passwordHash = await bcrypt.hash(password.trim(), 10);
 
-    await db
-      .update(usersTable)
-      .set({
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
         passwordHash,
         passwordResetToken: null,
         passwordResetTokenExpiresAt: null,
-      })
-      .where(eq(usersTable.id, user.id));
+      } as any,
+    });
 
     res.json({ message: "Password reset successfully" });
   },
@@ -483,25 +468,24 @@ router.patch(
       return;
     }
 
-    const [updated] = await db
-      .update(usersTable)
-      .set({ name: trimmedName, updatedAt: new Date() })
-      .where(eq(usersTable.id, req.user!.id))
-      .returning({
-        id: usersTable.id,
-        email: usersTable.email,
-        name: usersTable.name,
-        role: usersTable.role,
-        tenantId: usersTable.tenantId,
-        avatarUrl: usersTable.avatarUrl,
-      });
+    const updated = (await prisma.user.update({
+      where: { id: req.user!.id },
+      data: { name: trimmedName, updatedAt: new Date() } as any,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        tenantId: true,
+        avatarUrl: true,
+      } as any,
+    })) as any;
 
     if (!updated) {
       res.status(404).json({ error: "User not found" });
       return;
     }
 
-    res.json({ user: updated });
+    res.json({ user: { ...updated, role: (updated as any).role } });
   },
 );
 
@@ -528,14 +512,11 @@ router.post(
       return;
     }
 
-    const [updated] = await db
-      .update(usersTable)
-      .set({ avatarUrl: avatar, updatedAt: new Date() })
-      .where(eq(usersTable.id, req.user!.id))
-      .returning({
-        id: usersTable.id,
-        avatarUrl: usersTable.avatarUrl,
-      });
+    const updated = (await prisma.user.update({
+      where: { id: req.user!.id },
+      data: { avatarUrl: avatar, updatedAt: new Date() } as any,
+      select: { id: true, avatarUrl: true } as any,
+    })) as any;
 
     if (!updated) {
       res.status(404).json({ error: "User not found" });
@@ -551,10 +532,10 @@ router.delete(
   ["/auth/avatar", "/api/auth/avatar", "/api/v1/auth/avatar"],
   authMiddleware,
   async (req, res): Promise<void> => {
-    await db
-      .update(usersTable)
-      .set({ avatarUrl: null, updatedAt: new Date() })
-      .where(eq(usersTable.id, req.user!.id));
+    await prisma.user.update({
+      where: { id: req.user!.id },
+      data: { avatarUrl: null, updatedAt: new Date() } as any,
+    });
 
     res.json({ avatarUrl: null });
   },
@@ -580,11 +561,10 @@ router.patch(
       return;
     }
 
-    const [user] = await db
-      .select({ id: usersTable.id, passwordHash: usersTable.passwordHash })
-      .from(usersTable)
-      .where(eq(usersTable.id, req.user!.id))
-      .limit(1);
+    const user = (await prisma.user.findUnique({
+      where: { id: req.user!.id },
+      select: { id: true, passwordHash: true } as any,
+    })) as any;
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
@@ -598,10 +578,10 @@ router.patch(
     }
 
     const passwordHash = await bcrypt.hash(newPassword.trim(), 10);
-    await db
-      .update(usersTable)
-      .set({ passwordHash, updatedAt: new Date() })
-      .where(eq(usersTable.id, user.id));
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, updatedAt: new Date() } as any,
+    });
 
     res.json({ message: "Password updated successfully" });
   },
@@ -612,18 +592,17 @@ router.get(
   ["/auth/notification-preferences", "/api/auth/notification-preferences", "/api/v1/auth/notification-preferences"],
   authMiddleware,
   async (req, res): Promise<void> => {
-    const [user] = await db
-      .select({ settings: usersTable.settings })
-      .from(usersTable)
-      .where(eq(usersTable.id, req.user!.id))
-      .limit(1);
+    const user = (await prisma.user.findUnique({
+      where: { id: req.user!.id },
+      select: { settings: true } as any,
+    })) as any;
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
     }
 
-    const settings = (user.settings as Record<string, unknown>) ?? {};
+    const settings = ((user as any).settings as Record<string, unknown>) ?? {};
     const prefs = (settings.notifications as Record<string, boolean>) ?? {};
 
     res.json({
@@ -658,33 +637,31 @@ router.patch(
       if (key in incoming) sanitized[key] = Boolean(incoming[key]);
     }
 
-    const [user] = await db
-      .select({ settings: usersTable.settings })
-      .from(usersTable)
-      .where(eq(usersTable.id, req.user!.id))
-      .limit(1);
+    const user = (await prisma.user.findUnique({
+      where: { id: req.user!.id },
+      select: { settings: true } as any,
+    })) as any;
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
     }
 
-    const existingSettings = (user.settings as Record<string, unknown>) ?? {};
+    const existingSettings = ((user as any).settings as Record<string, unknown>) ?? {};
     const existingPrefs = (existingSettings.notifications as Record<string, boolean>) ?? {};
 
     const merged = { ...existingPrefs, ...sanitized };
 
-    await db
-      .update(usersTable)
-      .set({
-        settings: { ...existingSettings, notifications: merged },
+    await prisma.user.update({
+      where: { id: req.user!.id },
+      data: {
+        settings: { ...existingSettings, notifications: merged } as any,
         updatedAt: new Date(),
-      })
-      .where(eq(usersTable.id, req.user!.id));
+      } as any,
+    });
 
     res.json(merged);
   },
 );
 
 export default router;
-

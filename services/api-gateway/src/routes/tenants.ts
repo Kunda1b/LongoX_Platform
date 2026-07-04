@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, sql } from "drizzle-orm";
-import { db, tenantsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
@@ -12,32 +11,34 @@ let seeded = false;
 async function ensureTenants() {
   if (seeded) return;
   seeded = true;
-  const [{ count }] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(tenantsTable);
+  const count = await prisma.tenant.count();
   if (count > 0) return;
-  await db.insert(tenantsTable).values([
-    { name: "Acme Corp", slug: "acme", plan: "enterprise", isActive: true },
-    { name: "Stark Industries", slug: "stark", plan: "pro", isActive: true },
-    { name: "Wayne Enterprises", slug: "wayne", plan: "free", isActive: true },
-  ]);
+  await prisma.tenant.createMany({
+    data: [
+      { name: "Acme Corp", slug: "acme", planId: "enterprise", status: "active" } as any,
+      { name: "Stark Industries", slug: "stark", planId: "pro", status: "active" } as any,
+      { name: "Wayne Enterprises", slug: "wayne", planId: "free", status: "active" } as any,
+    ],
+  });
 }
 
 // ─── List tenants ─────────────────────────────────────────────────────────────
 
 router.get("/tenants", authorize({ resource: "tenants", action: "admin" }), async (_req, res): Promise<void> => {
   await ensureTenants();
-  const rows = await db.select().from(tenantsTable).orderBy(tenantsTable.id);
+  const rows = (await prisma.tenant.findMany({
+    orderBy: { id: "asc" },
+  })) as any[];
   res.json(
     rows.map((t) => ({
       id: t.id,
       name: t.name,
       slug: t.slug,
-      plan: t.plan,
-      isActive: t.isActive,
+      plan: t.planId ?? t.plan,
+      isActive: t.status === "active" ? true : t.isActive,
       settings: t.settings ?? null,
-      createdAt: t.createdAt.toISOString(),
-      updatedAt: t.updatedAt.toISOString(),
+      createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : new Date(t.createdAt).toISOString(),
+      updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : new Date(t.updatedAt).toISOString(),
     })),
   );
 });
@@ -46,10 +47,7 @@ router.get("/tenants", authorize({ resource: "tenants", action: "admin" }), asyn
 
 router.get("/tenants/:id", authorize({ resource: "tenants", action: "admin" }), async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  const [t] = await db
-    .select()
-    .from(tenantsTable)
-    .where(eq(tenantsTable.id, id));
+  const t = (await prisma.tenant.findUnique({ where: { id } })) as any;
   if (!t) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -58,11 +56,11 @@ router.get("/tenants/:id", authorize({ resource: "tenants", action: "admin" }), 
     id: t.id,
     name: t.name,
     slug: t.slug,
-    plan: t.plan,
-    isActive: t.isActive,
+    plan: t.planId ?? t.plan,
+    isActive: t.status === "active" ? true : t.isActive,
     settings: t.settings ?? null,
-    createdAt: t.createdAt.toISOString(),
-    updatedAt: t.updatedAt.toISOString(),
+    createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : new Date(t.createdAt).toISOString(),
+    updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : new Date(t.updatedAt).toISOString(),
   });
 });
 
@@ -86,19 +84,24 @@ router.post("/tenants", authorize({ resource: "tenants", action: "admin" }), asy
     res.status(400).json({ error: "name and slug are required" });
     return;
   }
-  const [t] = await db
-    .insert(tenantsTable)
-    .values({ name: name.trim(), slug: slug.trim(), plan, isActive, settings })
-    .returning();
+  const t = (await prisma.tenant.create({
+    data: {
+      name: name.trim(),
+      slug: slug.trim(),
+      planId: plan,
+      status: isActive ? "active" : "suspended",
+      settings,
+    } as any,
+  })) as any;
   res.status(201).json({
     id: t.id,
     name: t.name,
     slug: t.slug,
-    plan: t.plan,
-    isActive: t.isActive,
+    plan: t.planId ?? t.plan,
+    isActive: t.status === "active" ? true : t.isActive,
     settings: t.settings ?? null,
-    createdAt: t.createdAt.toISOString(),
-    updatedAt: t.updatedAt.toISOString(),
+    createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : new Date(t.createdAt).toISOString(),
+    updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : new Date(t.updatedAt).toISOString(),
   });
 });
 
@@ -116,14 +119,13 @@ router.patch("/tenants/:id", authorize({ resource: "tenants", action: "admin" })
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = name.trim();
   if (slug !== undefined) updates.slug = slug.trim();
-  if (plan !== undefined) updates.plan = plan;
-  if (isActive !== undefined) updates.isActive = isActive;
+  if (plan !== undefined) updates.planId = plan;
+  if (isActive !== undefined) updates.status = isActive ? "active" : "suspended";
   if (settings !== undefined) updates.settings = settings;
-  const [t] = await db
-    .update(tenantsTable)
-    .set(updates)
-    .where(eq(tenantsTable.id, id))
-    .returning();
+  const t = (await prisma.tenant.update({
+    where: { id },
+    data: updates as any,
+  })) as any;
   if (!t) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -132,11 +134,11 @@ router.patch("/tenants/:id", authorize({ resource: "tenants", action: "admin" })
     id: t.id,
     name: t.name,
     slug: t.slug,
-    plan: t.plan,
-    isActive: t.isActive,
+    plan: t.planId ?? t.plan,
+    isActive: t.status === "active" ? true : t.isActive,
     settings: t.settings ?? null,
-    createdAt: t.createdAt.toISOString(),
-    updatedAt: t.updatedAt.toISOString(),
+    createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : new Date(t.createdAt).toISOString(),
+    updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : new Date(t.updatedAt).toISOString(),
   });
 });
 
@@ -144,7 +146,7 @@ router.patch("/tenants/:id", authorize({ resource: "tenants", action: "admin" })
 
 router.delete("/tenants/:id", authorize({ resource: "tenants", action: "admin" }), async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  await db.delete(tenantsTable).where(eq(tenantsTable.id, id));
+  await prisma.tenant.delete({ where: { id } });
   res.status(204).end();
 });
 

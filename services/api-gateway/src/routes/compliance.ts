@@ -1,6 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
-import { db, auditLogTable, usersTable, tenantsTable, gdprRequestsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
@@ -15,26 +14,20 @@ router.get(
       endDate?: string;
     };
 
-    const conditions = [eq(auditLogTable.tenantId, req.tenantId ?? "")];
+    const where: any = { tenantId: req.tenantId ?? "" };
+    if (startDate) where.occurredAt = { ...(where.occurredAt ?? {}), gte: new Date(startDate) };
+    if (endDate) where.occurredAt = { ...(where.occurredAt ?? {}), lte: new Date(endDate) };
 
-    if (startDate) {
-      conditions.push(gte(auditLogTable.createdAt, new Date(startDate)));
-    }
-    if (endDate) {
-      conditions.push(lte(auditLogTable.createdAt, new Date(endDate)));
-    }
-
-    const entries = await db
-      .select()
-      .from(auditLogTable)
-      .where(and(...conditions))
-      .orderBy(desc(auditLogTable.createdAt));
+    const entries = (await prisma.auditLog.findMany({
+      where,
+      orderBy: { occurredAt: "desc" },
+    })) as any[];
 
     if (format === "csv") {
       const header = "id,actor_type,actor_id,action,resource_type,resource_id,created_at";
       const rows = entries.map(
         (e) =>
-          `${e.id},${e.actorType},${e.actorId ?? ""},${e.action},${e.resourceType},${e.resourceId},${e.createdAt.toISOString()}`,
+          `${e.id},${(e as any).actorType ?? "system"},${e.actorId ?? ""},${e.action},${e.targetType},${e.targetId},${e.occurredAt instanceof Date ? e.occurredAt.toISOString() : new Date(e.occurredAt).toISOString()}`,
       );
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", "attachment; filename=audit-log.csv");
@@ -54,34 +47,28 @@ router.get(
   async (req: Request, res: Response): Promise<void> => {
     const tenantId = req.tenantId ?? "";
 
-    const totalEntries = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(auditLogTable)
-      .where(eq(auditLogTable.tenantId, tenantId))
-      .then((r) => Number(r[0]?.count ?? 0));
+    const totalEntries = await prisma.auditLog.count({
+      where: { tenantId } as any,
+    });
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const recentEntries = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(auditLogTable)
-      .where(
-        and(
-          eq(auditLogTable.tenantId, tenantId),
-          gte(auditLogTable.createdAt, thirtyDaysAgo),
-        ),
-      )
-      .then((r) => Number(r[0]?.count ?? 0));
+    const recentEntries = await prisma.auditLog.count({
+      where: {
+        tenantId,
+        occurredAt: { gte: thirtyDaysAgo },
+      } as any,
+    });
 
-    const uniqueActors = await db
-      .select({ count: sql<number>`count(distinct ${auditLogTable.actorId})::int` })
-      .from(auditLogTable)
-      .where(eq(auditLogTable.tenantId, tenantId))
-      .then((r) => Number(r[0]?.count ?? 0));
+    const uniqueActors = await prisma.auditLog.groupBy({
+      by: ["actorId"],
+      where: { tenantId } as any,
+      _count: { _all: true },
+    });
 
     res.json({
       totalEntries,
       recentEntries,
-      uniqueActors,
+      uniqueActors: uniqueActors.length,
       retentionDays: 90,
       storageEstimateMb: Math.round((totalEntries * 0.5) * 100) / 100,
     });
@@ -93,10 +80,7 @@ router.get(
   authorize({ resource: "compliance", action: "read" }),
   async (req: Request, res: Response): Promise<void> => {
     const tenantId = req.tenantId ?? "";
-    const [tenant] = await db
-      .select()
-      .from(tenantsTable)
-      .where(eq(tenantsTable.id, tenantId));
+    const tenant = (await prisma.tenant.findUnique({ where: { id: tenantId } })) as any;
 
     const settings = (tenant?.settings ?? {}) as Record<string, unknown>;
 
@@ -125,10 +109,7 @@ router.patch(
       anonymizeAfterDays,
     } = req.body as Record<string, unknown>;
 
-    const [tenant] = await db
-      .select()
-      .from(tenantsTable)
-      .where(eq(tenantsTable.id, tenantId));
+    const tenant = (await prisma.tenant.findUnique({ where: { id: tenantId } })) as any;
 
     if (!tenant) {
       res.status(404).json({ error: "Tenant not found" });
@@ -146,10 +127,10 @@ router.patch(
       ...(anonymizeAfterDays !== undefined && { anonymizeAfterDays }),
     };
 
-    await db
-      .update(tenantsTable)
-      .set({ settings: updatedSettings })
-      .where(eq(tenantsTable.id, tenantId));
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { settings: updatedSettings } as any,
+    });
 
     res.json({ success: true, settings: updatedSettings });
   },
@@ -167,26 +148,17 @@ router.post(
       return;
     }
 
-    const [user] = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.id, userId));
+    const user = (await prisma.user.findUnique({ where: { id: userId } })) as any;
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
     }
 
-    const auditEntries = await db
-      .select()
-      .from(auditLogTable)
-      .where(
-        and(
-          eq(auditLogTable.tenantId, tenantId),
-          eq(auditLogTable.actorId, String(userId)),
-        ),
-      )
-      .orderBy(desc(auditLogTable.createdAt));
+    const auditEntries = (await prisma.auditLog.findMany({
+      where: { tenantId, actorId: String(userId) } as any,
+      orderBy: { occurredAt: "desc" },
+    })) as any[];
 
     const gdprData = {
       exportedAt: new Date().toISOString(),
@@ -194,16 +166,16 @@ router.post(
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role,
-        isActive: user.isActive,
+        role: (user as any).role,
+        isActive: user.status === "active",
         createdAt: user.createdAt,
         lastLoginAt: user.lastLoginAt,
       },
       auditEntries: auditEntries.map((e) => ({
         action: e.action,
-        resourceType: e.resourceType,
-        resourceId: e.resourceId,
-        createdAt: e.createdAt,
+        resourceType: e.targetType,
+        resourceId: e.targetId,
+        createdAt: e.occurredAt,
       })),
       retentionPolicy: {
         auditLogRetentionDays: 90,
@@ -228,25 +200,22 @@ router.post(
       return;
     }
 
-    const [user] = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.id, userId));
+    const user = (await prisma.user.findUnique({ where: { id: userId } })) as any;
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
     }
 
-    await db
-      .update(usersTable)
-      .set({
-        isActive: false,
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        status: "deactivated",
         email: `deleted-${userId}@anonymized.longox.io`,
         name: "Deleted User",
         passwordHash: "ANONYMIZED",
-      })
-      .where(eq(usersTable.id, userId));
+      } as any,
+    });
 
     res.json({ success: true, message: "Account anonymized per GDPR request" });
   },
@@ -264,39 +233,29 @@ router.post(
       return;
     }
 
-    const [user] = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.id, userId));
+    const user = (await prisma.user.findUnique({ where: { id: userId } })) as any;
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
     }
 
-    const [gdprRequest] = await db
-      .insert(gdprRequestsTable)
-      .values({
+    const gdprRequest = (await prisma.gdprRequest.create({
+      data: {
         tenantId,
         userId,
         requestType: "export",
         status: "completed",
-        dataScope: { allUserData: true },
+        dataScope: { allUserData: true } as any,
         exportFormat: "json",
         completedAt: new Date(),
-      })
-      .returning();
+      },
+    })) as any;
 
-    const auditEntries = await db
-      .select()
-      .from(auditLogTable)
-      .where(
-        and(
-          eq(auditLogTable.tenantId, tenantId),
-          eq(auditLogTable.actorId, String(userId)),
-        ),
-      )
-      .orderBy(desc(auditLogTable.createdAt));
+    const auditEntries = (await prisma.auditLog.findMany({
+      where: { tenantId, actorId: String(userId) } as any,
+      orderBy: { occurredAt: "desc" },
+    })) as any[];
 
     const gdprData = {
       exportedAt: new Date().toISOString(),
@@ -305,16 +264,16 @@ router.post(
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role,
-        isActive: user.isActive,
+        role: (user as any).role,
+        isActive: user.status === "active",
         createdAt: user.createdAt,
         lastLoginAt: user.lastLoginAt,
       },
       auditEntries: auditEntries.map((e) => ({
         action: e.action,
-        resourceType: e.resourceType,
-        resourceId: e.resourceId,
-        createdAt: e.createdAt,
+        resourceType: e.targetType,
+        resourceId: e.targetId,
+        createdAt: e.occurredAt,
       })),
       retentionPolicy: {
         auditLogRetentionDays: 90,
@@ -339,37 +298,33 @@ router.post(
       return;
     }
 
-    const [user] = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.id, userId));
+    const user = (await prisma.user.findUnique({ where: { id: userId } })) as any;
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
     }
 
-    const [deletionRequest] = await db
-      .insert(gdprRequestsTable)
-      .values({
+    const deletionRequest = (await prisma.gdprRequest.create({
+      data: {
         tenantId: req.tenantId ?? "",
         userId,
         requestType: "deletion",
         status: "completed",
-        dataScope: { reason: reason ?? "Requested by admin", allUserData: true },
+        dataScope: { reason: reason ?? "Requested by admin", allUserData: true } as any,
         completedAt: new Date(),
-      })
-      .returning();
+      },
+    })) as any;
 
-    await db
-      .update(usersTable)
-      .set({
-        isActive: false,
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        status: "deactivated",
         email: `deleted-${userId}@anonymized.longox.io`,
         name: "Deleted User",
         passwordHash: "ANONYMIZED",
-      })
-      .where(eq(usersTable.id, userId));
+      } as any,
+    });
 
     res.json({ success: true, requestId: deletionRequest.id, message: "Account anonymized per GDPR request" });
   },

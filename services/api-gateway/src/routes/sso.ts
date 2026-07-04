@@ -1,13 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
-import {
-  db,
-  ssoConnectionsTable,
-  userSsoIdentitiesTable,
-  usersTable,
-  tenantsTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { signToken } from "../lib/auth";
 import bcrypt from "bcryptjs";
 
@@ -31,11 +24,9 @@ router.get(
     const provider = String(req.params.provider);
     const redirectUrl = (req.query.redirect as string) ?? "/dashboard";
 
-    const [connection] = await db
-      .select()
-      .from(ssoConnectionsTable)
-      .where(eq(ssoConnectionsTable.provider, provider))
-      .limit(1);
+    const connection = (await prisma.ssoConnection.findFirst({
+      where: { provider },
+    })) as any;
 
     if (!connection || !connection.enabled) {
       res
@@ -74,11 +65,9 @@ router.post(
     }
     SSO_STATE_STORE.delete(state);
 
-    const [connection] = await db
-      .select()
-      .from(ssoConnectionsTable)
-      .where(eq(ssoConnectionsTable.provider, provider))
-      .limit(1);
+    const connection = (await prisma.ssoConnection.findFirst({
+      where: { provider },
+    })) as any;
 
     if (!connection) {
       res.status(400).json({ error: "SSO provider not configured" });
@@ -101,83 +90,80 @@ router.post(
       return;
     }
 
-    const [existingIdentity] = await db
-      .select()
-      .from(userSsoIdentitiesTable)
-      .where(eq(userSsoIdentitiesTable.providerUserId, userInfo.id))
-      .limit(1);
+    const existingIdentity = (await prisma.userSsoIdentity.findFirst({
+      where: { providerUserId: userInfo.id },
+    })) as any;
 
-    let user: typeof usersTable.$inferSelect;
+    let user: any;
 
     if (existingIdentity) {
-      const [existingUser] = await db
-        .select()
-        .from(usersTable)
-        .where(eq(usersTable.id, existingIdentity.userId))
-        .limit(1);
+      const existingUser = (await prisma.user.findUnique({
+        where: { id: existingIdentity.userId },
+      })) as any;
       if (!existingUser) {
         res.status(500).json({ error: "User account not found" });
         return;
       }
       user = existingUser;
     } else {
-      const [existingUser] = await db
-        .select()
-        .from(usersTable)
-        .where(eq(usersTable.email, email))
-        .limit(1);
+      const existingUser = (await prisma.user.findUnique({
+        where: { email },
+      })) as any;
 
       if (existingUser) {
-        await db.insert(userSsoIdentitiesTable).values({
-          userId: existingUser.id,
-          provider,
-          providerUserId: userInfo.id,
-          providerEmail: email,
+        await prisma.userSsoIdentity.create({
+          data: {
+            userId: existingUser.id,
+            provider,
+            providerUserId: userInfo.id,
+            providerEmail: email,
+          } as any,
         });
         user = existingUser;
       } else {
-        const [tenant] = await db.select().from(tenantsTable).limit(1);
+        const tenant = (await prisma.tenant.findFirst()) as any;
 
         const hash = await bcrypt.hash(randomBytes(32).toString("hex"), 10);
-        const [newUser] = await db
-          .insert(usersTable)
-          .values({
+        const newUser = (await prisma.user.create({
+          data: {
             email,
             passwordHash: hash,
             name: userInfo.name ?? email.split("@")[0],
             tenantId: tenant?.id ?? null,
             role: "editor",
-            isActive: true,
-          })
-          .returning();
+            status: "active",
+          } as any,
+        })) as any;
 
-        await db.insert(userSsoIdentitiesTable).values({
-          userId: newUser.id,
-          provider,
-          providerUserId: userInfo.id,
-          providerEmail: email,
+        await prisma.userSsoIdentity.create({
+          data: {
+            userId: newUser.id,
+            provider,
+            providerUserId: userInfo.id,
+            providerEmail: email,
+          } as any,
         });
 
         user = newUser;
       }
     }
 
-    if (!user.isActive) {
+    if (user.status !== "active") {
       res.status(401).json({ error: "Account is disabled" });
       return;
     }
 
-    await db
-      .update(usersTable)
-      .set({ lastLoginAt: new Date() })
-      .where(eq(usersTable.id, user.id));
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
 
     const authUser = {
       id: user.id,
       email: user.email,
       name: user.name,
       tenantId: user.tenantId ?? null,
-      role: user.role,
+      role: (user as any).role,
     };
     const token = signToken(authUser);
 
@@ -188,7 +174,7 @@ router.post(
         email: user.email,
         name: user.name,
         tenantId: user.tenantId,
-        role: user.role,
+        role: (user as any).role,
       },
       redirect: stateData.redirectUrl,
     });
@@ -198,10 +184,9 @@ router.post(
 router.get(
   "/auth/sso/providers",
   async (_req: Request, res: Response): Promise<void> => {
-    const connections = await db
-      .select()
-      .from(ssoConnectionsTable)
-      .orderBy(ssoConnectionsTable.provider);
+    const connections = (await prisma.ssoConnection.findMany({
+      orderBy: { provider: "asc" },
+    })) as any[];
 
     res.json(
       connections.map((c) => ({
@@ -212,7 +197,7 @@ router.get(
         hasClientId: !!c.providerClientId,
         hasIssuerUrl: !!c.providerIssuerUrl,
         metadata: c.metadata,
-        createdAt: c.createdAt.toISOString(),
+        createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : new Date(c.createdAt).toISOString(),
       })),
     );
   },
@@ -221,11 +206,9 @@ router.get(
 router.get(
   "/auth/sso/providers/:provider",
   async (req: Request, res: Response): Promise<void> => {
-    const [connection] = await db
-      .select()
-      .from(ssoConnectionsTable)
-      .where(eq(ssoConnectionsTable.provider, String(req.params.provider)))
-      .limit(1);
+    const connection = (await prisma.ssoConnection.findFirst({
+      where: { provider: String(req.params.provider) },
+    })) as any;
 
     if (!connection) {
       res.status(404).json({ error: "SSO provider not configured" });
@@ -240,8 +223,8 @@ router.get(
       enabled: connection.enabled,
       domain: connection.domain,
       metadata: connection.metadata,
-      createdAt: connection.createdAt.toISOString(),
-      updatedAt: connection.updatedAt.toISOString(),
+      createdAt: connection.createdAt instanceof Date ? connection.createdAt.toISOString() : new Date(connection.createdAt).toISOString(),
+      updatedAt: connection.updatedAt instanceof Date ? connection.updatedAt.toISOString() : new Date(connection.updatedAt).toISOString(),
     });
   },
 );
@@ -274,33 +257,33 @@ router.post(
       return;
     }
 
-    const [existing] = await db
-      .select()
-      .from(ssoConnectionsTable)
-      .where(eq(ssoConnectionsTable.provider, provider))
-      .limit(1);
+    const existing = (await prisma.ssoConnection.findFirst({
+      where: { provider },
+    })) as any;
 
     if (existing) {
-      await db
-        .update(ssoConnectionsTable)
-        .set({
+      await prisma.ssoConnection.update({
+        where: { id: existing.id },
+        data: {
           providerClientId: clientId,
           providerClientSecret: clientSecret,
           providerIssuerUrl: issuerUrl,
           domain,
           metadata: metadata ?? existing.metadata,
-        })
-        .where(eq(ssoConnectionsTable.id, existing.id));
+        } as any,
+      });
 
       res.json({ success: true, message: "SSO configuration updated" });
     } else {
-      await db.insert(ssoConnectionsTable).values({
-        provider,
-        providerClientId: clientId,
-        providerClientSecret: clientSecret,
-        providerIssuerUrl: issuerUrl,
-        domain,
-        metadata: metadata ?? null,
+      await prisma.ssoConnection.create({
+        data: {
+          provider,
+          providerClientId: clientId,
+          providerClientSecret: clientSecret,
+          providerIssuerUrl: issuerUrl,
+          domain,
+          metadata: metadata ?? null,
+        } as any,
       });
 
       res.json({ success: true, message: "SSO provider configured" });
@@ -314,21 +297,19 @@ router.patch(
     const provider = String(req.params.provider);
     const { enabled } = req.body as { enabled: boolean };
 
-    const [existing] = await db
-      .select()
-      .from(ssoConnectionsTable)
-      .where(eq(ssoConnectionsTable.provider, provider))
-      .limit(1);
+    const existing = (await prisma.ssoConnection.findFirst({
+      where: { provider },
+    })) as any;
 
     if (!existing) {
       res.status(404).json({ error: "SSO provider not found" });
       return;
     }
 
-    await db
-      .update(ssoConnectionsTable)
-      .set({ enabled })
-      .where(eq(ssoConnectionsTable.id, existing.id));
+    await prisma.ssoConnection.update({
+      where: { id: existing.id },
+      data: { enabled } as any,
+    });
 
     res.json({ success: true, enabled });
   },
@@ -338,16 +319,16 @@ router.delete(
   "/auth/sso/:provider",
   async (req: Request, res: Response): Promise<void> => {
     const provider = String(req.params.provider);
-    await db
-      .delete(ssoConnectionsTable)
-      .where(eq(ssoConnectionsTable.provider, provider));
+    await prisma.ssoConnection.deleteMany({
+      where: { provider },
+    });
     res.status(204).end();
   },
 );
 
 function buildAuthorizeUrl(
   provider: string,
-  connection: typeof ssoConnectionsTable.$inferSelect,
+  connection: any,
   state: string,
 ): string {
   const baseConfigs: Record<string, { authorizeUrl: string; scope: string }> = {
@@ -407,7 +388,7 @@ function buildAuthorizeUrl(
 
 async function exchangeCodeForUserInfo(
   provider: string,
-  connection: typeof ssoConnectionsTable.$inferSelect,
+  connection: any,
   code: string,
 ): Promise<{ id: string; email: string; name: string } | null> {
   const redirectUri = `${process.env["PUBLIC_API_URL"] ?? ""}/api/auth/sso/${provider}/callback`;

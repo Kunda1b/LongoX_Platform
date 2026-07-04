@@ -1,9 +1,4 @@
-import { sql, eq, and, count, inArray } from "drizzle-orm";
-import { db, searchIndexTable, toTsVector } from "@longox/db";
-import { workflowsTable } from "@longox/db/schema";
-import { appsTable } from "@longox/db/schema";
-import { templatesTable } from "@longox/db/schema";
-import { connectorsTable } from "@longox/db/schema";
+import { prisma } from "@longox/db/prisma";
 
 interface IndexData {
   title: string;
@@ -44,14 +39,9 @@ const resourceQueries: Record<
   () => Promise<{ resourceType: string; id: string; title: string; content: string; tenantId: string | null }[]>
 > = {
   workflow: async () => {
-    const rows = await db
-      .select({
-        id: workflowsTable.id,
-        name: workflowsTable.name,
-        description: workflowsTable.description,
-        tenantId: workflowsTable.tenantId,
-      })
-      .from(workflowsTable);
+    const rows = (await prisma.workflow.findMany({
+      select: { id: true, name: true, description: true, tenantId: true } as any,
+    })) as any[];
     return rows.map((r) => ({
       resourceType: "workflow",
       id: r.id,
@@ -61,13 +51,9 @@ const resourceQueries: Record<
     }));
   },
   app: async () => {
-    const rows = await db
-      .select({
-        id: appsTable.id,
-        name: appsTable.name,
-        description: appsTable.description,
-      })
-      .from(appsTable);
+    const rows = (await prisma.app.findMany({
+      select: { id: true, name: true, description: true } as any,
+    })) as any[];
     return rows.map((r) => ({
       resourceType: "app",
       id: r.id,
@@ -77,13 +63,9 @@ const resourceQueries: Record<
     }));
   },
   template: async () => {
-    const rows = await db
-      .select({
-        id: templatesTable.id,
-        name: templatesTable.name,
-        description: templatesTable.description,
-      })
-      .from(templatesTable);
+    const rows = (await prisma.template.findMany({
+      select: { id: true, name: true, description: true } as any,
+    })) as any[];
     return rows.map((r) => ({
       resourceType: "template",
       id: r.id,
@@ -93,13 +75,9 @@ const resourceQueries: Record<
     }));
   },
   connector: async () => {
-    const rows = await db
-      .select({
-        id: connectorsTable.id,
-        name: connectorsTable.name,
-        description: connectorsTable.description,
-      })
-      .from(connectorsTable);
+    const rows = (await prisma.connector.findMany({
+      select: { id: true, name: true, description: true } as any,
+    })) as any[];
     return rows.map((r) => ({
       resourceType: "connector",
       id: r.id,
@@ -116,33 +94,34 @@ export class FtsSearchService {
     resourceId: string,
     data: IndexData,
   ): Promise<void> {
-    const tsv = toTsVector(`${data.title} ${data.content}`);
-    await db
-      .insert(searchIndexTable)
-      .values({
-        resourceType,
-        resourceId,
-        title: data.title,
-        content: data.content,
-        tsv,
-        tenantId: data.tenantId ?? null,
-        permissionResource: data.permissionResource ?? null,
-        permissionAction: data.permissionAction ?? null,
-        metadata: (data.metadata ?? {}) as Record<string, unknown>,
-      })
-      .onConflictDoUpdate({
-        target: [searchIndexTable.resourceType, searchIndexTable.resourceId],
-        set: {
-          title: data.title,
-          content: data.content,
-          tsv,
-          tenantId: data.tenantId ?? null,
-          permissionResource: data.permissionResource ?? null,
-          permissionAction: data.permissionAction ?? null,
-          metadata: (data.metadata ?? {}) as Record<string, unknown>,
-          updatedAt: new Date(),
-        },
-      });
+    // Use raw SQL for tsvector column support.
+    await prisma.$executeRaw`
+      INSERT INTO search_index (id, resource_type, resource_id, title, content, tsv, tenant_id, permission_resource, permission_action, metadata, created_at, updated_at)
+      VALUES (
+        encode(gen_random_bytes(12), 'hex'),
+        ${resourceType},
+        ${resourceId},
+        ${data.title},
+        ${data.content},
+        to_tsvector('english', ${data.title} || ' ' || ${data.content}),
+        ${data.tenantId ?? null},
+        ${data.permissionResource ?? null},
+        ${data.permissionAction ?? null},
+        ${JSON.stringify(data.metadata ?? {})}::jsonb,
+        NOW(),
+        NOW()
+      )
+      ON CONFLICT (resource_type, resource_id)
+      DO UPDATE SET
+        title = EXCLUDED.title,
+        content = EXCLUDED.content,
+        tsv = EXCLUDED.tsv,
+        tenant_id = EXCLUDED.tenant_id,
+        permission_resource = EXCLUDED.permission_resource,
+        permission_action = EXCLUDED.permission_action,
+        metadata = EXCLUDED.metadata,
+        updated_at = NOW()
+    `;
   }
 
   async search(
@@ -153,62 +132,72 @@ export class FtsSearchService {
     const offset = options.offset ?? 0;
     const page = Math.floor(offset / limit) + 1;
 
-    const conditions: ReturnType<typeof sql>[] = [
-      sql`${searchIndexTable.tsv} @@ websearch_to_tsquery('english', ${query})`,
-    ];
+    // Build SQL with parameterized values via $queryRawUnsafe to support FTS.
+    const tenantId = options.tenantId ?? null;
+    const resourceTypes = options.resourceTypes ?? null;
+    const permFilter = options.permissionFilter ?? null;
 
-    if (options.tenantId !== undefined && options.tenantId !== null) {
-      conditions.push(
-        sql`(${searchIndexTable.tenantId} = ${options.tenantId} OR ${searchIndexTable.tenantId} IS NULL)`,
-      );
+    const params: unknown[] = [query];
+    let whereSql = `tsv @@ websearch_to_tsquery('english', $1)`;
+    let paramIdx = 2;
+
+    if (tenantId !== null && tenantId !== undefined) {
+      params.push(tenantId);
+      whereSql += ` AND (tenant_id = $${paramIdx} OR tenant_id IS NULL)`;
+      paramIdx++;
     }
 
-    if (options.resourceTypes && options.resourceTypes.length > 0) {
-      conditions.push(inArray(searchIndexTable.resourceType, options.resourceTypes));
+    if (resourceTypes && resourceTypes.length > 0) {
+      const placeholders = resourceTypes
+        .map((_, i) => `$${paramIdx + i}`)
+        .join(",");
+      params.push(...resourceTypes);
+      whereSql += ` AND resource_type IN (${placeholders})`;
+      paramIdx += resourceTypes.length;
     }
 
-    if (options.permissionFilter) {
-      conditions.push(
-        sql`(${searchIndexTable.permissionResource} = ${options.permissionFilter.resource} OR ${searchIndexTable.permissionResource} IS NULL)`,
-      );
-      conditions.push(
-        sql`(${searchIndexTable.permissionAction} = ${options.permissionFilter.action} OR ${searchIndexTable.permissionAction} IS NULL)`,
-      );
+    if (permFilter) {
+      params.push(permFilter.resource);
+      whereSql += ` AND (permission_resource = $${paramIdx} OR permission_resource IS NULL)`;
+      paramIdx++;
+      params.push(permFilter.action);
+      whereSql += ` AND (permission_action = $${paramIdx} OR permission_action IS NULL)`;
+      paramIdx++;
     }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    // Count query
+    const countSql = `SELECT COUNT(*)::int AS total FROM search_index WHERE ${whereSql}`;
+    const countRows = (await prisma.$queryRawUnsafe<{ total: number }[]>(
+      countSql,
+      ...params,
+    )) as { total: number }[];
+    const total = Number(countRows[0]?.total ?? 0);
 
-    const [countResult] = await db
-      .select({ total: count() })
-      .from(searchIndexTable)
-      .where(whereClause);
+    // Main query with rank
+    const mainSql = `
+      SELECT
+        id,
+        resource_type,
+        resource_id,
+        title,
+        content,
+        ts_rank(tsv, websearch_to_tsquery('english', $1)) AS rank,
+        metadata
+      FROM search_index
+      WHERE ${whereSql}
+      ORDER BY rank DESC
+      LIMIT $${paramIdx} OFFSET $${paramIdx + 1}
+    `;
+    params.push(limit, offset);
 
-    const total = Number(countResult?.total ?? 0);
-
-    const rankCol = sql`ts_rank(${searchIndexTable.tsv}, websearch_to_tsquery('english', ${query}))`.as("rank");
-
-    const rows = await db
-      .select({
-        id: searchIndexTable.id,
-        resourceType: searchIndexTable.resourceType,
-        resourceId: searchIndexTable.resourceId,
-        title: searchIndexTable.title,
-        content: searchIndexTable.content,
-        rank: rankCol,
-        metadata: searchIndexTable.metadata,
-      })
-      .from(searchIndexTable)
-      .where(whereClause)
-      .orderBy(sql`rank DESC`)
-      .limit(limit)
-      .offset(offset);
+    const rows = (await prisma.$queryRawUnsafe<any[]>(mainSql, ...params)) as any[];
 
     const results: SearchResult[] = rows.map((r) => ({
-      id: r.id,
-      resourceType: r.resourceType,
-      resourceId: r.resourceId,
+      id: String(r.id),
+      resourceType: r.resource_type,
+      resourceId: r.resource_id,
       title: r.title,
-      snippet: r.content ? r.content.substring(0, 200) : "",
+      snippet: r.content ? String(r.content).substring(0, 200) : "",
       rank: Number(r.rank),
       metadata: (r.metadata ?? {}) as Record<string, unknown>,
     }));
@@ -236,14 +225,9 @@ export class FtsSearchService {
     resourceType: string,
     resourceId: string,
   ): Promise<void> {
-    await db
-      .delete(searchIndexTable)
-      .where(
-        and(
-          eq(searchIndexTable.resourceType, resourceType),
-          eq(searchIndexTable.resourceId, resourceId),
-        ),
-      );
+    await prisma.searchIndex.deleteMany({
+      where: { resourceType, resourceId } as any,
+    });
   }
 
   async bulkReindex(resourceType?: string): Promise<{ reindexed: number }> {
