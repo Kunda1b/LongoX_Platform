@@ -34,7 +34,7 @@ export interface ListingProps {
 export class Listing {
   constructor(private props: ListingProps) {}
 
-  get id(): number {
+  get id(): string {
     return this.props.id;
   }
   get title(): string {

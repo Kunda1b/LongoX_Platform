@@ -23,16 +23,16 @@ export interface ScheduleExecutionProps {
 export class ScheduleExecution {
   constructor(private props: ScheduleExecutionProps) {}
 
-  get id(): number {
+  get id(): string {
     return this.props.id;
   }
-  get scheduleId(): number {
+  get scheduleId(): string {
     return this.props.scheduleId;
   }
-  get tenantId(): number {
+  get tenantId(): string {
     return this.props.tenantId;
   }
-  get workflowId(): number {
+  get workflowId(): string {
     return this.props.workflowId;
   }
   get scheduledAt(): Date {
@@ -44,7 +44,7 @@ export class ScheduleExecution {
   get completedAt(): Date | undefined {
     return this.props.completedAt;
   }
-  get executionId(): number | undefined {
+  get executionId(): string | undefined {
     return this.props.executionId;
   }
   get status(): ScheduleExecutionStatus {

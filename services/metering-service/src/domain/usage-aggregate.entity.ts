@@ -17,10 +17,10 @@ export interface UsageAggregateProps {
 export class UsageAggregate {
   constructor(private props: UsageAggregateProps) {}
 
-  get id(): number {
+  get id(): string {
     return this.props.id;
   }
-  get tenantId(): number {
+  get tenantId(): string {
     return this.props.tenantId;
   }
   get eventType(): string {

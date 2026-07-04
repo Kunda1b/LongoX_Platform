@@ -68,7 +68,7 @@ router.get(
     const eventType = req.query.eventType as string | undefined;
     const from = req.query.from ? new Date(String(req.query.from)) : undefined;
     const to = req.query.to ? new Date(String(req.query.to)) : undefined;
-    const workflowId = req.query.workflowId ? Number(req.query.workflowId) : undefined;
+    const workflowId = req.query.workflowId ? String(req.query.workflowId) : undefined;
     const limit = Number(req.query.limit) || 100;
 
     try {

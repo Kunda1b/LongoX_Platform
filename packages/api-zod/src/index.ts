@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // ─── Shared param schemas ─────────────────────────────────────────────────────
 
-const IdParams = z.object({ id: z.coerce.number().int().positive() });
+const IdParams = z.object({ id: z.string() });
 
 // ─── Workflows ────────────────────────────────────────────────────────────────
 
@@ -21,7 +21,7 @@ export const CreateWorkflowBody = z.object({
   nodes: z.array(z.any()).optional(),
   region: z.string().optional(),
   deploymentZone: z.string().optional(),
-  tenantId: z.number().int().optional(),
+  tenantId: z.string().optional(),
 });
 export type CreateWorkflowBody = z.infer<typeof CreateWorkflowBody>;
 
@@ -54,7 +54,7 @@ export type RunWorkflowParams = z.infer<typeof RunWorkflowParams>;
 // ─── Executions ───────────────────────────────────────────────────────────────
 
 export const ListExecutionsQueryParams = z.object({
-  workflowId: z.coerce.number().int().positive().optional(),
+  workflowId: z.string().optional(),
   status: z.string().optional(),
   limit: z.coerce.number().int().positive().optional(),
   offset: z.coerce.number().int().min(0).optional(),

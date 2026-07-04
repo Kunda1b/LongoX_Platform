@@ -91,7 +91,7 @@ export class PostgresMeteringRepository implements MeteringRepository {
     if (events.length === 0) return null;
 
     return new UsageAggregate({
-      id: 0,
+      id: "",
       tenantId,
       eventType,
       period: _period,
@@ -120,7 +120,7 @@ export class PostgresMeteringRepository implements MeteringRepository {
     }
     return new UsageAggregate({
       ..._props,
-      id: 0,
+      id: "",
       createdAt: new Date(),
       updatedAt: new Date(),
     });

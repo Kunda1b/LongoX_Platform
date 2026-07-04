@@ -320,7 +320,7 @@ export class StripeService {
     );
 
     await db.insert(invoicesTable).values({
-      billingAccountId: 0,
+      billingAccountId: "",
       invoiceNumber: invoice.id,
       periodStart,
       periodEnd,

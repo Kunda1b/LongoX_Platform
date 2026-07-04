@@ -187,7 +187,7 @@ router.get("/permissions", authorize({ resource: "users", action: "write" }), as
 
 router.get("/roles", authorize({ resource: "users", action: "write" }), async (req, res): Promise<void> => {
   await ensureRbacSeed();
-  const tenantId = req.query.tenantId ? Number(req.query.tenantId) : undefined;
+  const tenantId = req.query.tenantId ? String(req.query.tenantId) : undefined;
 
   const rows = await db
     .select()
@@ -365,7 +365,7 @@ router.delete(
 
 router.get("/user-roles", authorize({ resource: "users", action: "write" }), async (req, res): Promise<void> => {
   const userId = req.query.userId as string | undefined;
-  const tenantId = req.query.tenantId ? Number(req.query.tenantId) : undefined;
+  const tenantId = req.query.tenantId ? String(req.query.tenantId) : undefined;
 
   const rows = await db
     .select({

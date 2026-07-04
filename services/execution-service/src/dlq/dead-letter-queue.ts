@@ -14,7 +14,7 @@ export interface DLQEntry {
 }
 
 export class DeadLetterQueue {
-  async addEntry(entry: DLQEntry): Promise<number> {
+  async addEntry(entry: DLQEntry): Promise<string> {
     const [inserted] = await db
       .insert(dlqEntriesTable)
       .values({

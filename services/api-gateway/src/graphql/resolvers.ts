@@ -196,14 +196,14 @@ export const resolvers = {
       const rows = await db
         .select({ tenantId: membershipsTable.tenantId, roleId: membershipsTable.roleId, status: membershipsTable.status })
         .from(membershipsTable).where(eq(membershipsTable.userId, Number(parent.id)));
-      return rows.map((r) => ({ userId: String(parent.id), tenantId: String(r.tenantId), role: { id: 0, name: "member", permissions: [] }, status: (r.status ?? "active").toUpperCase() as "ACTIVE" | "INVITED" | "DEACTIVATED" }));
+      return rows.map((r) => ({ userId: String(parent.id), tenantId: String(r.tenantId), role: { id: "", name: "member", permissions: [] }, status: (r.status ?? "active").toUpperCase() as "ACTIVE" | "INVITED" | "DEACTIVATED" }));
     },
   },
 
   Tenant: {
     memberships: async (parent: Record<string, unknown>) => {
       const rows = await db.select().from(membershipsTable).where(eq(membershipsTable.tenantId, Number(parent.id)));
-      return rows.map((r) => ({ userId: String(r.userId), tenantId: String(r.tenantId), role: { id: 0, name: "member", permissions: [] }, status: (r.status ?? "active").toUpperCase() as "ACTIVE" | "INVITED" | "DEACTIVATED" }));
+      return rows.map((r) => ({ userId: String(r.userId), tenantId: String(r.tenantId), role: { id: "", name: "member", permissions: [] }, status: (r.status ?? "active").toUpperCase() as "ACTIVE" | "INVITED" | "DEACTIVATED" }));
     },
   },
 

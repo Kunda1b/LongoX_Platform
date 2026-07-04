@@ -41,10 +41,10 @@ export interface DataSourceProps {
 export class DataSource {
   constructor(private props: DataSourceProps) {}
 
-  get id(): number {
+  get id(): string {
     return this.props.id;
   }
-  get tenantId(): number {
+  get tenantId(): string {
     return this.props.tenantId;
   }
   get name(): string {

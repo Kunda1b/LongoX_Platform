@@ -41,7 +41,7 @@ router.post("/datasources", authorize("dashboards:write"), async (req, res): Pro
 });
 
 router.delete("/datasources/:id", authorize("dashboards:delete"), async (req, res): Promise<void> => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   if (!id) {
     res.status(400).json({ error: "id is required" });
     return;
@@ -60,7 +60,7 @@ router.delete("/datasources/:id", authorize("dashboards:delete"), async (req, re
 });
 
 router.post("/datasources/:id/test", authorize("dashboards:write"), async (req, res): Promise<void> => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   if (!id) {
     res.status(400).json({ error: "id is required" });
     return;

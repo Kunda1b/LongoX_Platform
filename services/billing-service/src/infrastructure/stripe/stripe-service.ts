@@ -188,7 +188,7 @@ export class StripeService {
         cancelAtPeriodEnd: false,
         plan: tenant
           ? {
-              id: 0,
+              id: "",
               name: tenant.plan,
               displayName: tenant.plan.charAt(0).toUpperCase() + tenant.plan.slice(1),
               tier: tenant.plan,

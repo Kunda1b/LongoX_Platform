@@ -15,6 +15,6 @@ export interface ScheduleRepository {
   ): Promise<Schedule>;
   update(id: string, data: Partial<ScheduleProps>): Promise<Schedule>;
   delete(id: string): Promise<void>;
-  countByTenantId(tenantId: string): Promise<number>;
-  countByStatus(status: ScheduleStatus): Promise<number>;
+  countByTenantId(tenantId: string): Promise<string>;
+  countByStatus(status: ScheduleStatus): Promise<string>;
 }

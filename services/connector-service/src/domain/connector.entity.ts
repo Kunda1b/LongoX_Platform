@@ -76,7 +76,7 @@ export interface ConnectorProps {
 export class Connector {
   constructor(private props: ConnectorProps) {}
 
-  get id(): number {
+  get id(): string {
     return this.props.id;
   }
   get name(): string {

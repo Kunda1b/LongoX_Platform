@@ -52,9 +52,7 @@ router.delete("/webhooks/endpoints/:id", async (req, res): Promise<void> => {
 });
 
 router.get("/webhooks/deliveries", async (req, res): Promise<void> => {
-  const endpointId = req.query.endpointId
-    ? Number(req.query.endpointId)
-    : undefined;
+  const endpointId = req.query.endpointId as string | undefined;
   const status = req.query.status as string | undefined;
   const limit = Number(req.query.limit ?? 50);
   const rows = await deliveryRepository.list({ endpointId, status, limit });

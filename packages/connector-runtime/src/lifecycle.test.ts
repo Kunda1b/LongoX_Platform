@@ -54,9 +54,9 @@ function makeManifest(): ConnectorManifest {
 function makeState(overrides?: Partial<LifecycleState>): LifecycleState {
   return {
     installationId: 1,
-    connectorId: 1,
+    connectorId: "1",
     connectorName: "test",
-    tenantId: 1,
+    tenantId: "1",
     currentEvent: "installing",
     previousEvent: null,
     status: "installing",

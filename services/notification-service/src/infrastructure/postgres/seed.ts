@@ -14,7 +14,7 @@ export async function ensureNotificationSeed(): Promise<void> {
 
   await db.insert(notificationsTable).values([
     {
-      tenantId: 1,
+      tenantId: "1",
       type: "success",
       title: "Workflow run completed",
       body: '"Daily Digest" finished successfully with 12 records processed.',
@@ -23,7 +23,7 @@ export async function ensureNotificationSeed(): Promise<void> {
       recipientId: "user-1",
     },
     {
-      tenantId: 1,
+      tenantId: "1",
       type: "error",
       title: "Connector authentication failed",
       body: "Slack connector credentials expired. Please re-authenticate.",
@@ -32,7 +32,7 @@ export async function ensureNotificationSeed(): Promise<void> {
       recipientId: "user-1",
     },
     {
-      tenantId: 1,
+      tenantId: "1",
       type: "info",
       title: "New template available",
       body: 'A new "E-commerce Analytics" template was added to the marketplace.',
@@ -41,7 +41,7 @@ export async function ensureNotificationSeed(): Promise<void> {
       recipientId: "user-1",
     },
     {
-      tenantId: 1,
+      tenantId: "1",
       type: "warning",
       title: "Usage limit approaching",
       body: "You have used 85% of your monthly workflow execution quota.",
@@ -50,7 +50,7 @@ export async function ensureNotificationSeed(): Promise<void> {
       recipientId: "user-1",
     },
     {
-      tenantId: 1,
+      tenantId: "1",
       type: "info",
       title: "Deployment succeeded",
       body: "Workflow promoted to production environment successfully.",

@@ -71,7 +71,7 @@ export interface NodeExecutionResult {
   /** Set when node is in approval-gate pause state */
   approvalTaskId?: string;
   /** Set when node spawned a child workflow */
-  childExecutionId?: number;
+  childExecutionId?: string;
   /** Loop iteration count (for bounded-loop nodes) */
   iterations?: number;
 }
@@ -273,7 +273,7 @@ export type DAGEvent =
   | { type: "node.paused"; executionId: string; nodeId: string; approvalTaskId: string }
   | { type: "node.compensating"; executionId: string; nodeId: string }
   | { type: "node.compensated"; executionId: string; nodeId: string }
-  | { type: "node.child_spawned"; executionId: string; nodeId: string; childExecutionId: number }
+  | { type: "node.child_spawned"; executionId: string; nodeId: string; childExecutionId: string }
   | { type: "execution.completed"; executionId: string; durationMs: number }
   | { type: "execution.failed"; executionId: string; error: string }
   | { type: "execution.saga_compensating"; executionId: string; steps: number }
@@ -299,7 +299,7 @@ export interface DAGRunnerOptions {
   /** Whether to run saga compensation on failure. Default: true */
   enableSaga?: boolean;
   /** Child workflow spawner */
-  spawnChildWorkflow?: (config: ChildWorkflowConfig, input: Record<string, unknown>, context: ExecutionContext) => Promise<number>;
+  spawnChildWorkflow?: (config: ChildWorkflowConfig, input: Record<string, unknown>, context: ExecutionContext) => Promise<string>;
   /** Approval gate writer */
   writeApprovalGate?: (opts: { executionId: string; nodeId: string; config: ApprovalGateConfig; input: Record<string, unknown> }) => Promise<string>;
   /** Node lease store for multi-worker safety */

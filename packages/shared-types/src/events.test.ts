@@ -10,7 +10,7 @@ import type { EventEnvelope, EventType } from "./events";
 describe("createEventEnvelope", () => {
   it("creates a valid envelope with required fields", () => {
     const envelope = createEventEnvelope("workflow.published", {
-      workflowId: 1,
+      workflowId: "1",
       version: 2,
     });
     expect(envelope.id).toBeTruthy();

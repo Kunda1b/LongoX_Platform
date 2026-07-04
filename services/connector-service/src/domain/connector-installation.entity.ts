@@ -18,13 +18,13 @@ export interface ConnectorInstallationProps {
 export class ConnectorInstallation {
   constructor(private props: ConnectorInstallationProps) {}
 
-  get id(): number {
+  get id(): string {
     return this.props.id;
   }
-  get tenantId(): number {
+  get tenantId(): string {
     return this.props.tenantId;
   }
-  get connectorId(): number {
+  get connectorId(): string {
     return this.props.connectorId;
   }
   get connectorName(): string {

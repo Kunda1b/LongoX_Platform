@@ -234,7 +234,7 @@ router.post(
     // In production, every workflow MUST have an explicit endpoint configured.
     if (!endpoint) {
       endpoint = {
-        id: 0,
+        id: "",
         secret:
           process.env.WEBHOOK_DEFAULT_SECRET ?? "longox-dev-webhook-secret",
       };
