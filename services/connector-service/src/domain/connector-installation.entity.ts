@@ -9,7 +9,7 @@ export interface ConnectorInstallationProps {
   status: InstallationStatus;
   config: Record<string, unknown>;
   error?: string;
-  installedBy: number;
+  installedBy: string;
   lastUsedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -18,13 +18,13 @@ export interface ConnectorInstallationProps {
 export class ConnectorInstallation {
   constructor(private props: ConnectorInstallationProps) {}
 
-  get id(): number {
+  get id(): string {
     return this.props.id;
   }
-  get tenantId(): number {
+  get tenantId(): string {
     return this.props.tenantId;
   }
-  get connectorId(): number {
+  get connectorId(): string {
     return this.props.connectorId;
   }
   get connectorName(): string {
@@ -36,7 +36,7 @@ export class ConnectorInstallation {
   get config(): Record<string, unknown> {
     return { ...this.props.config };
   }
-  get installedBy(): number {
+  get installedBy(): string {
     return this.props.installedBy;
   }
 

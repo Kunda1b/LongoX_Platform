@@ -15,7 +15,7 @@ export interface ListingRepository {
     featured?: boolean;
   }): Promise<Listing[]>;
   findFeatured(): Promise<Listing[]>;
-  findByAuthor(authorId: number): Promise<Listing[]>;
+  findByAuthor(authorId: string): Promise<Listing[]>;
   create(
     props: Omit<ListingProps, "id" | "createdAt" | "updatedAt">,
   ): Promise<Listing>;

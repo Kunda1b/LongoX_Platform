@@ -80,8 +80,8 @@ export interface AgentRunResult {
 export interface AgentPlan {
   goal: string;
   steps: AgentPlanStep[];
-  currentStep: number;
-  completedSteps: number[];
+  currentStep: string;
+  completedSteps: string[];
 }
 
 export interface AgentPlanStep {

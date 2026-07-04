@@ -507,7 +507,7 @@ export async function enqueueWorkflow(opts: {
   triggerPayload?: Record<string, unknown>;
   triggerType?: "manual" | "webhook" | "schedule" | "api" | "recovery" | "child_workflow";
   parentExecutionId?: string;
-}): Promise<number> {
+}): Promise<string> {
   const { workflowId, triggerPayload = {}, parentExecutionId } = opts;
 
   const [workflow] = await db

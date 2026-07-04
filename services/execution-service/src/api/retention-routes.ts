@@ -141,7 +141,7 @@ router.get(
   "/api/retention/archives/:id",
   authorize({ resource: "executions", action: "read" }),
   async (req, res): Promise<void> => {
-    const exportId = req.params.id;
+    const exportId = String(req.params.id);
     if (!exportId) {
       res.status(400).json({ error: "id is required" });
       return;
@@ -164,7 +164,7 @@ router.post(
     const { tenantId, action } = req.body;
 
     if (tenantId && action) {
-      await scheduler.runManual(parseInt(tenantId, 10), action);
+      await scheduler.runManual(tenantId, action);
       res.json({ message: `Manual ${action} completed for tenant ${tenantId}` });
       return;
     }

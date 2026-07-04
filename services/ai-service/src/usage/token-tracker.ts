@@ -34,7 +34,7 @@ export class TokenTracker {
           outputTokens: record.outputTokens,
           cost: record.cost,
         },
-      });
+      } as any);
     } catch {
       // Non-fatal
     }

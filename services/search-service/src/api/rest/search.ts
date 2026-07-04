@@ -24,7 +24,7 @@ const ALL_TYPES: SearchableType[] = [
   "connectors",
 ];
 
-function tenantIdFrom(req: Request): number {
+function tenantIdFrom(req: Request): string {
   return req.user!.tenantId!;
 }
 
@@ -46,9 +46,7 @@ router.get("/search", authorize("workflows.read"), requireTenantContext, async (
 router.get("/search/executions", authorize("executions.read"), requireTenantContext, async (req, res): Promise<void> => {
   const q = ((req.query.q as string) ?? "").trim();
   const status = req.query.status as string | undefined;
-  const workflowId = req.query.workflowId
-    ? parseInt(req.query.workflowId as string, 10)
-    : undefined;
+  const workflowId = req.query.workflowId as string | undefined;
   const startDate = req.query.startDate
     ? new Date(req.query.startDate as string)
     : undefined;
@@ -76,9 +74,7 @@ router.get("/search/audit-logs", authorize("audit.read"), requireTenantContext, 
   const q = ((req.query.q as string) ?? "").trim();
   const action = req.query.action as string | undefined;
   const resource = req.query.resource as string | undefined;
-  const userId = req.query.userId
-    ? parseInt(req.query.userId as string, 10)
-    : undefined;
+  const userId = req.query.userId as string | undefined;
   const startDate = req.query.startDate
     ? new Date(req.query.startDate as string)
     : undefined;

@@ -5,8 +5,8 @@ import { ConnectorInstallation } from "../../domain";
 
 export interface UpgradeConnectorInput {
   tenantId: string;
-  installationId: number;
-  newVersionId: number;
+  installationId: string;
+  newVersionId: string;
 }
 
 export class UpgradeConnectorCommand {
@@ -18,7 +18,7 @@ export class UpgradeConnectorCommand {
       .set({
         connectorVersionId: input.newVersionId,
         updatedAt: new Date(),
-      })
+      } as any)
       .where(
         and(
           eq(tenantConnectorInstallsTable.id, input.installationId),
@@ -41,7 +41,7 @@ export class UpgradeConnectorCommand {
       environmentId: undefined,
       status: row.status as any,
       config: (row.config ?? {}) as Record<string, unknown>,
-      installedBy: row.installedBy ?? 0,
+      installedBy: String(row.installedBy ?? ""),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     });

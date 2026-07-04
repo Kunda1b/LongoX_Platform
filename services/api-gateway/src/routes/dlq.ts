@@ -53,7 +53,7 @@ function serializeExecution(row: typeof executionsTable.$inferSelect) {
 router.get("/dlq", authorize("executions.read"), requireTenantContext, async (req, res): Promise<void> => {
   const limit = Math.min(Number(req.query.limit) || 50, 200);
   const status = req.query.status ? String(req.query.status) : undefined;
-  const workflowId = req.query.workflowId ? Number(req.query.workflowId) : undefined;
+  const workflowId = req.query.workflowId ? String(req.query.workflowId) : undefined;
 
   const conditions = [];
   if (status) conditions.push(eq(dlqEntriesTable.status, status));

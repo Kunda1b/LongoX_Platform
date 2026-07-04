@@ -116,7 +116,7 @@ router.get("/agents/memory", authorize("ai:read"), async (req, res): Promise<voi
 });
 
 router.delete("/agents/memory/:id", authorize("ai:write"), async (req, res): Promise<void> => {
-  const tenantId = req.tenantId ?? 0;
+  const tenantId = req.tenantId ?? "";
   await db
     .delete(agentMemoryTable)
     .where(

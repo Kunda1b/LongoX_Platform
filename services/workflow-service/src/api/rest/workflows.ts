@@ -295,7 +295,7 @@ router.post("/workflows/:id/publish", authorize({ resource: "workflows", action:
   try {
     const result = await publishWorkflow({
       workflowId: params.data.id,
-      tenantId: req.user!.tenantId ?? 0,
+      tenantId: req.user!.tenantId ?? "",
       graph,
       changeNote,
       publishedBy: req.user!.name,

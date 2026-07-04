@@ -40,7 +40,7 @@ export class EvidenceRetentionService {
     const [evidence] = await db
       .insert(complianceEvidenceTable)
       .values({
-        tenantId: metadata?.tenantId ?? 0,
+        tenantId: metadata?.tenantId ?? "",
         evidenceType: eventType,
         title: data.title,
         description: data.description ?? null,

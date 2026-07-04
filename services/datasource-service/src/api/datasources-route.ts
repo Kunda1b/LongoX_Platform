@@ -39,7 +39,7 @@ function serializeDs(row: typeof dataSourcesTable.$inferSelect) {
 }
 
 router.get("/datasources", async (req, res): Promise<void> => {
-  const tenantId = Number(req.query.tenantId) || undefined;
+  const tenantId = String(req.query.tenantId) || undefined;
   const kind = req.query.kind as string | undefined;
   const limit = Math.min(Number(req.query.limit) || 50, 200);
 
@@ -59,7 +59,7 @@ router.get("/datasources/adapters", async (_req, res): Promise<void> => {
 });
 
 router.get("/datasources/:id", async (req, res): Promise<void> => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   if (!id) {
     res.status(400).json({ error: "id is required" });
     return;
@@ -91,12 +91,12 @@ router.post("/datasources", async (req, res): Promise<void> => {
 
   try {
     const ds = await createDs.execute({
-      tenantId: Number(tenantId),
+      tenantId: String(tenantId),
       name: String(name),
       description: description ? String(description) : undefined,
       kind: String(kind) as any,
       config: (config ?? {}) as Record<string, unknown>,
-      createdBy: Number(createdBy),
+      createdBy: String(createdBy),
     });
     res.status(201).json(ds.toJSON());
   } catch (err) {
@@ -105,7 +105,7 @@ router.post("/datasources", async (req, res): Promise<void> => {
 });
 
 router.patch("/datasources/:id", async (req, res): Promise<void> => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   if (!id) {
     res.status(400).json({ error: "id is required" });
     return;
@@ -120,7 +120,7 @@ router.patch("/datasources/:id", async (req, res): Promise<void> => {
 });
 
 router.delete("/datasources/:id", async (req, res): Promise<void> => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   if (!id) {
     res.status(400).json({ error: "id is required" });
     return;
@@ -135,7 +135,7 @@ router.delete("/datasources/:id", async (req, res): Promise<void> => {
 });
 
 router.post("/datasources/:id/test", async (req, res): Promise<void> => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   if (!id) {
     res.status(400).json({ error: "id is required" });
     return;
@@ -150,7 +150,7 @@ router.post("/datasources/:id/test", async (req, res): Promise<void> => {
 });
 
 router.post("/datasources/:id/query", async (req, res): Promise<void> => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   if (!id) {
     res.status(400).json({ error: "id is required" });
     return;
@@ -183,7 +183,7 @@ router.post("/datasources/:id/query", async (req, res): Promise<void> => {
 });
 
 router.get("/datasources/:id/tables", async (req, res): Promise<void> => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   if (!id) {
     res.status(400).json({ error: "id is required" });
     return;

@@ -21,7 +21,7 @@ router.post(
   authorize({ resource: "compliance", action: "read" }),
   async (req, res): Promise<void> => {
     try {
-      const request = await gdpr.createExportRequest(req.user!.id, req.tenantId!);
+      const request = await gdpr.createExportRequest(String(req.user!.id), req.tenantId!);
       const fulfillment = await gdpr.fulfillExportRequest(request.id);
       res.status(201).json(fulfillment);
     } catch (error) {
@@ -53,7 +53,7 @@ router.get(
   authorize({ resource: "compliance", action: "read" }),
   async (req, res): Promise<void> => {
     try {
-      const data = await gdpr.exportUserData(req.user!.id, req.tenantId!);
+      const data = await gdpr.exportUserData(String(req.user!.id), req.tenantId!);
       res.json(data);
     } catch (error) {
       res.status(404).json({ error: (error as Error).message });
@@ -143,7 +143,7 @@ router.post(
           rowCount: 0,
           fileSizeBytes: Buffer.byteLength(result),
           storagePath: `audit-exports/${req.tenantId!}/${Date.now()}.${format}`,
-          createdBy: req.user!.id,
+          createdBy: String(req.user!.id),
           completedAt: new Date(),
           expiresAt: new Date(Date.now() + 30 * 86400000),
         })
@@ -339,7 +339,7 @@ router.post(
       const incident = await securityIncidents.resolveIncident(
         String(req.params.id),
         resolution,
-        req.user!.id,
+        String(req.user!.id),
       );
       res.json(incident);
     } catch (error) {

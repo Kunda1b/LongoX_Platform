@@ -5,7 +5,7 @@ import { ConnectorInstallation } from "../../domain";
 
 export interface ConfigureConnectorInput {
   tenantId: string;
-  installationId: number;
+  installationId: string;
   config: Record<string, unknown>;
 }
 
@@ -18,7 +18,7 @@ export class ConfigureConnectorCommand {
       .set({
         config: input.config,
         updatedAt: new Date(),
-      })
+      } as any)
       .where(
         and(
           eq(tenantConnectorInstallsTable.id, input.installationId),
@@ -41,7 +41,7 @@ export class ConfigureConnectorCommand {
       environmentId: undefined,
       status: row.status as any,
       config: (row.config ?? {}) as Record<string, unknown>,
-      installedBy: row.installedBy ?? 0,
+      installedBy: row.installedBy ?? "",
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     });

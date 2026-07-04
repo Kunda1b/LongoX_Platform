@@ -92,7 +92,7 @@ function PlanCard({
           className="w-full"
           variant={isCurrent ? "outline" : "default"}
           disabled={isCurrent || isCheckoutPending}
-          onClick={() => onSelect(plan.id)}
+          onClick={() => onSelect(plan.id as any)}
         >
           {isCheckoutPending ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

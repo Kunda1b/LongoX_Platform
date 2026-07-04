@@ -198,7 +198,7 @@ router.get("/audit/:id", async (req: Request, res: Response): Promise<void> => {
   const [entry] = await db
     .select()
     .from(auditLogTable)
-    .where(eq(auditLogTable.id, id))
+    .where(eq(auditLogTable.id, String(id)))
     .limit(1);
   if (!entry) {
     res.status(404).json({

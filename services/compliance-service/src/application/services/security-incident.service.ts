@@ -44,7 +44,7 @@ export class SecurityIncidentService {
     const [incident] = await db
       .update(securityIncidentsTable)
       .set({
-        ...(updates.status && { status: updates.status }),
+        ...(updates.status && { status: updates.status } as any),
         ...(updates.title && { title: updates.title }),
         ...(updates.description && { description: updates.description }),
         ...(updates.metadata && { metadata: updates.metadata }),
@@ -56,7 +56,7 @@ export class SecurityIncidentService {
     return incident;
   }
 
-  async resolveIncident(id: string, resolution: string, resolvedBy: number) {
+  async resolveIncident(id: string, resolution: string, resolvedBy: string) {
     const [incident] = await db
       .update(securityIncidentsTable)
       .set({
@@ -64,7 +64,7 @@ export class SecurityIncidentService {
         resolution,
         resolvedBy,
         resolvedAt: new Date(),
-      })
+      } as any)
       .where(eq(securityIncidentsTable.id, id))
       .returning();
 

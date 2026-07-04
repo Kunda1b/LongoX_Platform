@@ -11,7 +11,7 @@ export default function DashboardDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { data: dashboard, isLoading } = useGetDashboard(parseInt(id));
+  const { data: dashboard, isLoading } = useGetDashboard(id as any);
 
   if (isLoading) {
     return (

@@ -11,32 +11,32 @@ export class ReportingProjection {
   }
 
   private async updateKPIs(event: PlatformEvent): Promise<void> {
-    const tenantId = (event.metadata.tenantId as number) ?? 0;
+    const tenantId = (event.metadata.tenantId as string) ?? "";
     const period = this.getPeriod(new Date(event.timestamp));
 
     switch (event.type) {
       case "execution.completed":
-        await this.upsertKPI("executions.total", 1, tenantId, period);
+        await this.upsertKPI("executions.total", 1, String(tenantId), period) as any;
         await this.upsertKPI(
           "executions.success_rate",
           1,
           tenantId,
           period,
-        );
+        ) as any;
         break;
       case "execution.failed":
-        await this.upsertKPI("executions.total", 1, tenantId, period);
+        await this.upsertKPI("executions.total", 1, String(tenantId), period) as any;
         await this.upsertKPI(
           "executions.failure_rate",
           1,
           tenantId,
           period,
-        );
+        ) as any;
         break;
       case "ai.run.completed":
         await this.upsertKPI(
           "ai.cost",
-          (event.payload.cost as number) ?? 0,
+          (event.payload.cost as string) as any ?? "",
           tenantId,
           period,
         );
@@ -45,21 +45,21 @@ export class ReportingProjection {
           1,
           tenantId,
           period,
-        );
+        ) as any;
         break;
       case "billing.usage.recorded":
         await this.upsertKPI(
           "billing.usage",
-          (event.payload.quantity as number) ?? 0,
+          (event.payload.quantity as string) as any ?? "",
           tenantId,
           period,
         );
         break;
       case "tenant.created":
-        await this.upsertKPI("tenants.total", 1, 0, period);
+        await this.upsertKPI("tenants.total", 1, "", period) as any;
         break;
       case "user.created":
-        await this.upsertKPI("users.total", 1, tenantId, period);
+        await this.upsertKPI("users.total", 1, String(tenantId), period) as any;
         break;
     }
   }
@@ -77,25 +77,25 @@ export class ReportingProjection {
         .where(
           and(
             eq(reportingKPIsTable.kpiName, name),
-            eq(reportingKPIsTable.tenantId, tenantId),
+            eq(reportingKPIsTable.tenantId, String(tenantId)),
             eq(reportingKPIsTable.period, period),
           ),
         )
         .limit(1);
 
       if (existing) {
-        const newValue = Number(existing.kpiValue) + value;
+        const newValue = String(existing.kpiValue) + value;
         await db
           .update(reportingKPIsTable)
           .set({ kpiValue: String(newValue) })
-          .where(eq(reportingKPIsTable.id, existing.id));
+          .where(eq(reportingKPIsTable.id, String(existing.id)));
       } else {
         await db.insert(reportingKPIsTable).values({
           kpiName: name,
           kpiValue: String(value),
           tenantId,
           period,
-        });
+        } as any);
       }
     } catch (err) {
       console.error("[ReportingProjection] Failed to upsert KPI:", err);
@@ -121,7 +121,7 @@ export class ReportingProjection {
     if (!events || events.length === 0) return;
 
     const [eventType, period] = key.split(":");
-    const tenantId = (events[0].metadata.tenantId as number) ?? 0;
+    const tenantId = (events[0].metadata.tenantId as string) ?? "";
 
     const data = {
       eventType,

@@ -32,7 +32,7 @@ export class RagQueryService {
     private accounting: TokenAccountingService = tokenAccountingService,
   ) {}
 
-  async query(kbId: number, question: string, options: RagQueryOptions = {}): Promise<RagQueryResult> {
+  async query(kbId: string, question: string, options: RagQueryOptions = {}): Promise<RagQueryResult> {
     const model = options.model ?? "gpt-4o-mini";
     const maxTokens = options.maxTokens ?? 1024;
     const temperature = options.temperature ?? 0.3;

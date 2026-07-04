@@ -142,7 +142,7 @@ router.post("/runs", authorize("ai:write"), async (req, res): Promise<void> => {
 
 router.get("/runs", authorize("ai:read"), async (req, res): Promise<void> => {
   try {
-    const datasetId = req.query.datasetId ? Number(req.query.datasetId) : undefined;
+    const datasetId = req.query.datasetId ? String(req.query.datasetId) : undefined;
     const runs = await evaluationRunService.listRuns(datasetId);
     res.json(runs);
   } catch (error) {

@@ -58,7 +58,7 @@ export function GdprTooling() {
       const res = await fetch("/api/compliance/gdpr/delete-account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: Number(deleteUserId), confirm: true }),
+        body: JSON.stringify({ userId: String(deleteUserId), confirm: true }),
       });
       if (!res.ok) {
         const err = await res.json();

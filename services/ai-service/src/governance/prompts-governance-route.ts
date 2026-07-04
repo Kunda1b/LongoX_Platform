@@ -30,7 +30,7 @@ router.get("/prompts/:id/versions", authorize("ai:read"), async (req, res): Prom
 router.post("/prompts/:id/publish", authorize("ai:write"), async (req, res): Promise<void> => {
   const id = String(req.params.id);
   const { approverId, comment } = req.body as {
-    approverId?: number;
+    approverId?: string;
     comment?: string;
   };
 

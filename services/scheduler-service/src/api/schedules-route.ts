@@ -40,8 +40,8 @@ function serializeSchedule(row: typeof schedulesTable.$inferSelect) {
 }
 
 router.get("/schedules", async (req, res): Promise<void> => {
-  const tenantId = Number(req.query.tenantId) || undefined;
-  const workflowId = Number(req.query.workflowId) || undefined;
+  const tenantId = String(req.query.tenantId) || undefined;
+  const workflowId = String(req.query.workflowId) || undefined;
   const status = req.query.status as string | undefined;
   const limit = Math.min(Number(req.query.limit) || 50, 200);
 
@@ -68,7 +68,7 @@ router.get("/schedules/stats", async (_req, res): Promise<void> => {
 });
 
 router.get("/schedules/:id", async (req, res): Promise<void> => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   if (!id) {
     res.status(400).json({ error: "id is required" });
     return;
@@ -113,8 +113,8 @@ router.post("/schedules", async (req, res): Promise<void> => {
 
   try {
     const schedule = await createSchedule.execute({
-      tenantId: Number(tenantId),
-      workflowId: Number(workflowId),
+      tenantId: String(tenantId),
+      workflowId: String(workflowId),
       name: String(name),
       description: description ? String(description) : undefined,
       interval: String(interval) as any,
@@ -134,7 +134,7 @@ router.post("/schedules", async (req, res): Promise<void> => {
 });
 
 router.patch("/schedules/:id", async (req, res): Promise<void> => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   if (!id) {
     res.status(400).json({ error: "id is required" });
     return;
@@ -149,7 +149,7 @@ router.patch("/schedules/:id", async (req, res): Promise<void> => {
 });
 
 router.delete("/schedules/:id", async (req, res): Promise<void> => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   if (!id) {
     res.status(400).json({ error: "id is required" });
     return;
@@ -164,7 +164,7 @@ router.delete("/schedules/:id", async (req, res): Promise<void> => {
 });
 
 router.post("/schedules/:id/pause", async (req, res): Promise<void> => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   if (!id) {
     res.status(400).json({ error: "id is required" });
     return;
@@ -184,7 +184,7 @@ router.post("/schedules/:id/pause", async (req, res): Promise<void> => {
 });
 
 router.post("/schedules/:id/activate", async (req, res): Promise<void> => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   if (!id) {
     res.status(400).json({ error: "id is required" });
     return;

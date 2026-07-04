@@ -28,10 +28,10 @@ export interface MeteringEventProps {
 export class MeteringEvent {
   constructor(private props: MeteringEventProps) {}
 
-  get id(): number {
+  get id(): string {
     return this.props.id;
   }
-  get tenantId(): number {
+  get tenantId(): string {
     return this.props.tenantId;
   }
   get eventType(): EventType {
@@ -46,7 +46,7 @@ export class MeteringEvent {
   get source(): string {
     return this.props.source;
   }
-  get workflowId(): number | undefined {
+  get workflowId(): string | undefined {
     return this.props.workflowId;
   }
   get timestamp(): Date {

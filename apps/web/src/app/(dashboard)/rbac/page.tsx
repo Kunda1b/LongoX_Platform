@@ -158,7 +158,7 @@ function MemberRow({
   const handleRoleChange = async (roleId: string) => {
     setSaving(true);
     try {
-      await onRoleChange(member.userId, Number(roleId));
+      await onRoleChange(member.userId, String(roleId));
     } finally {
       setSaving(false);
     }

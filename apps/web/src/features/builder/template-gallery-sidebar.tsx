@@ -62,11 +62,11 @@ export function TemplateGallerySidebar({
   onApplyTemplate: (nodes: Node[]) => void;
 }) {
   const [search, setSearch] = useState("");
-  const [confirmId, setConfirmId] = useState<number | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const { data: templates = [], isLoading } = useListTemplates({ search });
 
   const { data: selectedTemplate, isFetching: templateLoading } =
-    useGetTemplate(confirmId!, {
+    useGetTemplate(confirmId as any, {
       query: { enabled: confirmId !== null },
     } as any);
 
@@ -133,7 +133,7 @@ export function TemplateGallerySidebar({
                 <div
                   key={t.id}
                   className="rounded-lg border p-3 space-y-2 hover:bg-muted/30 transition-colors cursor-pointer"
-                  onClick={() => setConfirmId(t.id)}
+                  onClick={() => setConfirmId(String(t.id))}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <span className="text-xs font-semibold leading-tight line-clamp-2 flex-1">
@@ -167,7 +167,7 @@ export function TemplateGallerySidebar({
       {/* Confirm apply dialog */}
       <Dialog
         open={confirmId !== null}
-        onOpenChange={(o) => !o && setConfirmId(null)}
+        onOpenChange={(o) => !o && setConfirmId(String(null))}
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -218,7 +218,7 @@ export function TemplateGallerySidebar({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setConfirmId(null)}
+              onClick={() => setConfirmId(String(null))}
             >
               Cancel
             </Button>
@@ -231,7 +231,7 @@ export function TemplateGallerySidebar({
                   const flowNodes = templateNodesToFlow(selectedTemplate.nodes);
                   onApplyTemplate(flowNodes);
                 }
-                setConfirmId(null);
+                setConfirmId(String(null));
                 onClose();
               }}
             >

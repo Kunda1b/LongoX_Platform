@@ -18,7 +18,7 @@ export class PostgresListingRepository implements ListingRepository {
       category: row.category,
       tags: row.tags as string[],
       author: row.author ?? "LongoX",
-      authorId: row.authorId ?? 0,
+      authorId: row.authorId ?? "",
       version: row.version ?? "1.0.0",
       status: row.status as ListingStatus,
       installCount: row.installCount ?? 0,
@@ -89,7 +89,7 @@ export class PostgresListingRepository implements ListingRepository {
     return rows.map(this.toDomain);
   }
 
-  async findByAuthor(authorId: number): Promise<Listing[]> {
+  async findByAuthor(authorId: string): Promise<Listing[]> {
     const rows = await db
       .select()
       .from(marketplaceListingsTable)
@@ -121,7 +121,7 @@ export class PostgresListingRepository implements ListingRepository {
         pricing: props.pricing ?? { free: true },
         metadata: props.metadata,
         nodes: [],
-      })
+      } as any)
       .returning();
     return this.toDomain(row);
   }

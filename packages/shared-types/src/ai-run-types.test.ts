@@ -24,7 +24,7 @@ describe("AiRunRequest", () => {
     const req: AiRunRequest = {
       provider: "openai",
       model: "gpt-4",
-      promptId: 1,
+      promptId: "1",
       promptVersion: 2,
       messages: [
         { role: "system", content: "You are helpful." },
@@ -34,7 +34,7 @@ describe("AiRunRequest", () => {
       maxTokens: 1000,
       topP: 0.9,
       stop: ["\n"],
-      knowledgeBaseId: 42,
+      knowledgeBaseId: "42",
       ragOptions: { topK: 5, minScore: 0.7, includeCitations: true },
       guardrailIds: [1, 2],
       traceId: "trace-abc",
@@ -100,7 +100,7 @@ describe("AiRunResponse", () => {
       cost: 0,
       currency: "USD",
       citations: [{
-        documentId: 1,
+        documentId: "1",
         documentName: "doc.pdf",
         chunkId: 10,
         chunkContent: "Important info",
@@ -168,7 +168,7 @@ describe("AiGuardrailResult", () => {
 describe("AiRagCitation", () => {
   it("supports metadata", () => {
     const citation: AiRagCitation = {
-      documentId: 1,
+      documentId: "1",
       documentName: "report.pdf",
       chunkId: 5,
       chunkContent: "Content here",
@@ -220,10 +220,10 @@ describe("AiRunFilters", () => {
       status: "completed",
       provider: "openai",
       model: "gpt-4",
-      promptId: 1,
+      promptId: "1",
       fromDate: "2024-01-01",
       toDate: "2024-01-31",
-      tenantId: 42,
+      tenantId: "42",
       limit: 20,
       offset: 0,
     };

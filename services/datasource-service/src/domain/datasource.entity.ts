@@ -33,7 +33,7 @@ export interface DataSourceProps {
   status: DataSourceStatus;
   lastTestedAt?: Date;
   lastTestError?: string;
-  createdBy: number;
+  createdBy: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,10 +41,10 @@ export interface DataSourceProps {
 export class DataSource {
   constructor(private props: DataSourceProps) {}
 
-  get id(): number {
+  get id(): string {
     return this.props.id;
   }
-  get tenantId(): number {
+  get tenantId(): string {
     return this.props.tenantId;
   }
   get name(): string {
@@ -68,7 +68,7 @@ export class DataSource {
   get lastTestError(): string | undefined {
     return this.props.lastTestError;
   }
-  get createdBy(): number {
+  get createdBy(): string {
     return this.props.createdBy;
   }
 

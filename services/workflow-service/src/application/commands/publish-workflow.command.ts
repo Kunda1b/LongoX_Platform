@@ -42,7 +42,7 @@ export interface PublishWorkflowResult {
   versionId: string;
   versionNumber: number;
   checksum: string;
-  diffId: number | null;
+  diffId: string | null;
   publishedAt: string;
 }
 
@@ -144,7 +144,7 @@ export async function publishWorkflow(
 
   // ── 5. Compute and persist diff ─────────────────────────────────────────────
 
-  let diffId: number | null = null;
+  let diffId: string | null = null;
 
   if (latestVersion) {
     const prevGraph: WorkflowGraph = {

@@ -29,7 +29,7 @@ export class ListInvoicesQuery {
       const total = lineItems.reduce((s, l) => s + l.total, 0);
 
       invoices.push({
-        id: i,
+        id: String(i),
         periodStart: periodStart.toISOString(),
         periodEnd: periodEnd.toISOString(),
         totalAmount: round2(total),

@@ -44,7 +44,7 @@ export class StripeService {
     const [existing] = await db
       .select()
       .from(billingAccountsTable)
-      .where(eq(billingAccountsTable.tenantId, tenantId))
+      .where(eq(billingAccountsTable.tenantId, String(tenantId)))
       .limit(1);
 
     if (existing?.stripeCustomerId) {
@@ -61,14 +61,14 @@ export class StripeService {
     if (existing) {
       await db
         .update(billingAccountsTable)
-        .set({ stripeCustomerId: customer.id })
-        .where(eq(billingAccountsTable.id, existing.id));
+        .set({ stripeCustomerId: customer.id } as any)
+        .where(eq(billingAccountsTable.id, String(existing.id)));
     } else {
       await db.insert(billingAccountsTable).values({
         tenantId,
         stripeCustomerId: customer.id,
         status: "active",
-      });
+      } as any);
     }
 
     return customer.id;
@@ -84,7 +84,7 @@ export class StripeService {
       .from(billingPlansTable)
       .where(
         and(
-          eq(billingPlansTable.id, input.planId),
+          eq(billingPlansTable.id, String(input.planId)),
           eq(billingPlansTable.isActive, true),
         ),
       )
@@ -150,7 +150,7 @@ export class StripeService {
     const [account] = await db
       .select()
       .from(billingAccountsTable)
-      .where(eq(billingAccountsTable.tenantId, tenantId))
+      .where(eq(billingAccountsTable.tenantId, String(tenantId)))
       .limit(1);
 
     if (!account?.stripeCustomerId) {
@@ -172,14 +172,14 @@ export class StripeService {
     const [account] = await db
       .select()
       .from(billingAccountsTable)
-      .where(eq(billingAccountsTable.tenantId, tenantId))
+      .where(eq(billingAccountsTable.tenantId, String(tenantId)))
       .limit(1);
 
     if (!account?.stripeSubscriptionId) {
       const [tenant] = await db
         .select()
         .from(tenantsTable)
-        .where(eq(tenantsTable.id, tenantId))
+        .where(eq(tenantsTable.id, String(tenantId)))
         .limit(1);
 
       return {
@@ -188,7 +188,7 @@ export class StripeService {
         cancelAtPeriodEnd: false,
         plan: tenant
           ? {
-              id: 0,
+              id: "",
               name: tenant.plan,
               displayName: tenant.plan.charAt(0).toUpperCase() + tenant.plan.slice(1),
               tier: tenant.plan,
@@ -207,7 +207,7 @@ export class StripeService {
       const [planRecord] = await db
         .select()
         .from(billingPlansTable)
-        .where(eq(billingPlansTable.id, account.planId))
+        .where(eq(billingPlansTable.id, String(account.planId)))
         .limit(1);
       if (planRecord) {
         plan = {
@@ -283,20 +283,20 @@ export class StripeService {
         planId,
         billingCycle,
         status: "active",
-      })
-      .where(eq(billingAccountsTable.tenantId, tenantId));
+      } as any)
+      .where(eq(billingAccountsTable.tenantId, String(tenantId)));
 
     await db
       .update(tenantsTable)
-      .set({ plan: (await this.getPlanTier(planId)) ?? "free" })
-      .where(eq(tenantsTable.id, tenantId));
+      .set({ plan: (await this.getPlanTier(planId)) ?? "free" } as any)
+      .where(eq(tenantsTable.id, String(tenantId)));
   }
 
   private async getPlanTier(planId: number): Promise<string | null> {
     const [plan] = await db
       .select({ tier: billingPlansTable.tier })
       .from(billingPlansTable)
-      .where(eq(billingPlansTable.id, planId))
+      .where(eq(billingPlansTable.id, String(planId)))
       .limit(1);
     return plan?.tier ?? null;
   }
@@ -323,8 +323,8 @@ export class StripeService {
         ),
         currentPeriodEnd: new Date(subscription.current_period_end * 1000),
         status: "active",
-      })
-      .where(eq(billingAccountsTable.tenantId, Number(tenantId)));
+      } as any)
+      .where(eq(billingAccountsTable.tenantId, String(tenantId)));
   }
 
   private async handleSubscriptionUpdated(
@@ -346,8 +346,8 @@ export class StripeService {
           subscription.status === "active" || subscription.status === "trialing"
             ? "active"
             : "past_due",
-      })
-      .where(eq(billingAccountsTable.tenantId, Number(tenantId)));
+      } as any)
+      .where(eq(billingAccountsTable.tenantId, String(tenantId)));
   }
 
   private async handleSubscriptionDeleted(
@@ -363,13 +363,13 @@ export class StripeService {
         status: "canceled",
         stripeSubscriptionId: null,
         planId: null,
-      })
-      .where(eq(billingAccountsTable.tenantId, Number(tenantId)));
+      } as any)
+      .where(eq(billingAccountsTable.tenantId, String(tenantId)));
 
     await db
       .update(tenantsTable)
-      .set({ plan: "free" })
-      .where(eq(tenantsTable.id, Number(tenantId)));
+      .set({ plan: "free" } as any)
+      .where(eq(tenantsTable.id, String(tenantId)));
   }
 
   private async handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
@@ -386,8 +386,8 @@ export class StripeService {
       .set({
         stripeSubscriptionStatus: "active",
         status: "active",
-      })
-      .where(eq(billingAccountsTable.tenantId, Number(tenantId)));
+      } as any)
+      .where(eq(billingAccountsTable.tenantId, String(tenantId)));
   }
 
   private async handleInvoicePaymentFailed(
@@ -406,7 +406,7 @@ export class StripeService {
       .set({
         stripeSubscriptionStatus: "past_due",
         status: "past_due",
-      })
-      .where(eq(billingAccountsTable.tenantId, Number(tenantId)));
+      } as any)
+      .where(eq(billingAccountsTable.tenantId, String(tenantId)));
   }
 }

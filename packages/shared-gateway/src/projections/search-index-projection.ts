@@ -46,7 +46,7 @@ export class SearchIndexProjection {
     await this.upsertDocument({
       documentId: `workflow-${event.aggregateId}`,
       documentType: "workflow",
-      tenantId: event.metadata.tenantId as number | undefined,
+      tenantId: event.metadata.tenantId as string | undefined,
       title,
       content,
       metadata: {
@@ -70,7 +70,7 @@ export class SearchIndexProjection {
     await this.upsertDocument({
       documentId: `template-${event.aggregateId}`,
       documentType: "template",
-      tenantId: event.metadata.tenantId as number | undefined,
+      tenantId: event.metadata.tenantId as string | undefined,
       title,
       content,
       metadata: {
@@ -89,7 +89,7 @@ export class SearchIndexProjection {
     await this.upsertDocument({
       documentId: `dashboard-${event.aggregateId}`,
       documentType: "dashboard",
-      tenantId: event.metadata.tenantId as number | undefined,
+      tenantId: event.metadata.tenantId as string | undefined,
       title,
       content,
       metadata: {
@@ -111,7 +111,7 @@ export class SearchIndexProjection {
     await this.upsertDocument({
       documentId: `connector-${event.aggregateId}`,
       documentType: "connector",
-      tenantId: event.metadata.tenantId as number | undefined,
+      tenantId: event.metadata.tenantId as string | undefined,
       title,
       content,
       metadata: {
@@ -128,7 +128,7 @@ export class SearchIndexProjection {
     await this.upsertDocument({
       documentId: `user-${event.aggregateId}`,
       documentType: "user",
-      tenantId: event.metadata.tenantId as number | undefined,
+      tenantId: event.metadata.tenantId as string | undefined,
       title: name,
       content: `${name} ${email}`,
       metadata: { email },
@@ -142,7 +142,7 @@ export class SearchIndexProjection {
     await this.upsertDocument({
       documentId: `ai-run-${event.aggregateId}`,
       documentType: "ai_run",
-      tenantId: event.metadata.tenantId as number | undefined,
+      tenantId: event.metadata.tenantId as string | undefined,
       title: `AI Run: ${provider}/${model}`,
       content: JSON.stringify(event.payload),
       metadata: {
@@ -188,7 +188,7 @@ export class SearchIndexProjection {
           title: doc.title,
           content: doc.content,
           metadata: doc.metadata,
-        });
+        } as any);
       }
     } catch (err) {
       console.error("[SearchIndexProjection] Failed to upsert document:", err);

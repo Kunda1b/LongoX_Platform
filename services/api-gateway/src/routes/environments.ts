@@ -139,12 +139,12 @@ router.post(
   async (req: Request, res: Response): Promise<void> => {
     // Request validation is defined in lib/api-spec/openapi.yaml — the single source of truth
     const body = req.body as Record<string, unknown>;
-    const workflowId = body.workflowId as number;
+    const workflowId = body.workflowId as string;
     const fromEnvironment = body.fromEnvironment as string;
     const toEnvironment = body.toEnvironment as string;
     const notes = body.notes as string | undefined;
     const approvalRequired = body.approvalRequired as boolean | undefined;
-    if (!workflowId || typeof workflowId !== "number") { res.status(400).json({ error: "workflowId is required and must be a number" }); return; }
+    if (!workflowId || typeof workflowId !== "string") { res.status(400).json({ error: "workflowId is required and must be a string" }); return; }
     if (!fromEnvironment || typeof fromEnvironment !== "string") { res.status(400).json({ error: "fromEnvironment is required" }); return; }
     if (!toEnvironment || typeof toEnvironment !== "string") { res.status(400).json({ error: "toEnvironment is required" }); return; }
     const promotedBy = req.user?.email ?? "system";
@@ -177,7 +177,7 @@ router.post(
   async (req: Request, res: Response): Promise<void> => {
     // Request validation is defined in lib/api-spec/openapi.yaml — the single source of truth
     const { promotionId } = req.body as Record<string, unknown>;
-    if (!promotionId || typeof promotionId !== "number") { res.status(400).json({ error: "promotionId is required and must be a number" }); return; }
+    if (!promotionId || typeof promotionId !== "string") { res.status(400).json({ error: "promotionId is required and must be a string" }); return; }
     const rolledBackBy = req.user?.email ?? "system";
 
     try {

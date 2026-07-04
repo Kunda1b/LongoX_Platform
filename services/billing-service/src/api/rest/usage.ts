@@ -20,7 +20,7 @@ router.get("/usage/events", authorize("billing.read"), requireTenantContext, asy
   const tenantId = req.user!.tenantId!;
 
   const limit = Number(req.query.limit) || 50;
-  const workflowId = req.query.workflowId ? Number(req.query.workflowId) : null;
+  const workflowId = req.query.workflowId ? String(req.query.workflowId) : null;
   const eventType = req.query.eventType as string | undefined;
   const events = await listUsageEvents.execute(tenantId, {
     limit,

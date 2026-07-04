@@ -18,11 +18,11 @@ import { cn } from "@/lib/utils";
 export function TenantSwitcher() {
   const { user } = useAuth();
   const { data: tenants } = useListTenants();
-  const [activeTenantId, setActiveTenantId] = useState<number | null>(
+  const [activeTenantId, setActiveTenantId] = useState<string | null>(
     user?.tenantId ?? null,
   );
 
-  const activeTenant = tenants?.find((t) => t.id === activeTenantId);
+  const activeTenant = tenants?.find((t) => String(t.id) === activeTenantId);
   const initials = activeTenant?.name
     ?.split(" ")
     .map((n) => n[0])
@@ -53,7 +53,7 @@ export function TenantSwitcher() {
           <DropdownMenuItem
             key={t.id}
             className="flex items-center gap-3 cursor-pointer"
-            onClick={() => setActiveTenantId(t.id)}
+            onClick={() => setActiveTenantId(String(t.id))}
           >
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold">
               {t.name
@@ -67,7 +67,7 @@ export function TenantSwitcher() {
               <p className="text-sm font-medium truncate">{t.name}</p>
               <p className="text-xs text-muted-foreground capitalize">{t.plan}</p>
             </div>
-            {t.id === activeTenantId && (
+            {String(t.id) === activeTenantId && (
               <Check className="h-4 w-4 text-primary shrink-0" />
             )}
           </DropdownMenuItem>

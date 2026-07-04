@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { EmbeddingService, embeddingService } from "./embedding.service";
 
 export interface SearchResult {
-  chunkId: number;
+  chunkId: string;
   documentId: string;
   chunkIndex: number;
   content: string;
@@ -24,7 +24,7 @@ export class VectorSearchService {
   constructor(private embedding: EmbeddingService = embeddingService) {}
 
   async search(
-    kbId: number,
+    kbId: string,
     query: string,
     options: SearchOptions = {},
   ): Promise<SearchResult[]> {
@@ -47,7 +47,7 @@ export class VectorSearchService {
   }
 
   private async pgvectorSearch(
-    kbId: number,
+    kbId: string,
     queryVector: number[],
     topK: number,
     minScore: number,
@@ -100,7 +100,7 @@ export class VectorSearchService {
   }
 
   private async inMemorySearch(
-    kbId: number,
+    kbId: string,
     queryVector: number[],
     topK: number,
     minScore: number,
@@ -166,7 +166,7 @@ export class VectorSearchService {
   }
 
   async hybridSearch(
-    kbId: number,
+    kbId: string,
     query: string,
     options: SearchOptions & { ftsWeight?: number; vectorWeight?: number } = {},
   ): Promise<SearchResult[]> {
@@ -229,7 +229,7 @@ export class VectorSearchService {
       }
     }
 
-    const combined = new Map<number, SearchResult>();
+    const combined = new Map<string, SearchResult>();
 
     for (const r of vectorResults) {
       combined.set(r.chunkId, { ...r, score: r.score * vectorWeight });

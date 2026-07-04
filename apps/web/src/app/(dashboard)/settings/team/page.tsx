@@ -206,7 +206,7 @@ export default function TeamPage() {
       const res = await fetch(`${API}/invitations`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ email: inviteEmail.trim(), roleId: Number(inviteRoleId) }),
+        body: JSON.stringify({ email: inviteEmail.trim(), roleId: String(inviteRoleId) }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -340,7 +340,7 @@ export default function TeamPage() {
                       {isAtLeast("admin") && !isMe && !isOwner && systemRoles.length > 0 ? (
                         <Select
                           value={String(member.role?.id ?? "")}
-                          onValueChange={(v) => handleRoleChange(member.userId, Number(v))}
+                          onValueChange={(v) => handleRoleChange(member.userId as any, v)}
                         >
                           <SelectTrigger className="h-7 w-32 text-xs">
                             <SelectValue />

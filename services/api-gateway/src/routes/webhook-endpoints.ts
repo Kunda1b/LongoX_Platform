@@ -29,7 +29,7 @@ function fmt(row: typeof webhookEndpointsTable.$inferSelect) {
 
 router.get("/webhook-endpoints", authorize("workflows.read"), requireTenantContext, async (req, res): Promise<void> => {
   const workflowId = req.query.workflowId
-    ? parseInt(req.query.workflowId as string, 10)
+    ? String(req.query.workflowId)
     : undefined;
   const rows = workflowId
     ? await db
@@ -82,7 +82,7 @@ router.post("/webhook-endpoints", authorize("workflows.write"), requireTenantCon
 });
 
 router.get("/webhook-endpoints/:id", authorize("workflows.read"), requireTenantContext, async (req, res): Promise<void> => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   if (!id) {
     res.status(400).json({ error: "id is required" });
     return;
@@ -99,7 +99,7 @@ router.get("/webhook-endpoints/:id", authorize("workflows.read"), requireTenantC
 });
 
 router.patch("/webhook-endpoints/:id", authorize("workflows.write"), requireTenantContext, async (req, res): Promise<void> => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   if (!id) {
     res.status(400).json({ error: "id is required" });
     return;
@@ -134,7 +134,7 @@ router.post(
   authorize("workflows.write"),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = req.params.id;
+    const id = String(req.params.id);
     if (!id) {
       res.status(400).json({ error: "id is required" });
       return;
@@ -153,7 +153,7 @@ router.post(
 );
 
 router.delete("/webhook-endpoints/:id", authorize("workflows.write"), requireTenantContext, async (req, res): Promise<void> => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   if (!id) {
     res.status(400).json({ error: "id is required" });
     return;

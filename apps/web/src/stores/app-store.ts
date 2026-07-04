@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 interface AppState {
-  activeTenantId: number | null;
+  activeTenantId: string | null;
   activeEnvironment: string | null;
   theme: "light" | "dark" | "system";
   sidebarCollapsed: boolean;

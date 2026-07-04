@@ -247,12 +247,12 @@ router.put(
       return;
     }
 
-    const { tierId, reason } = req.body as { tierId?: number; reason?: string };
+    const { tierId, reason } = req.body as { tierId?: string; reason?: string };
 
     const [targetTier] = await db
       .select()
       .from(tenantTiersTable)
-      .where(eq(tenantTiersTable.id, tierId ?? 0))
+      .where(eq(tenantTiersTable.id, tierId ?? ""))
       .limit(1);
 
     if (!targetTier) {
@@ -276,7 +276,7 @@ router.put(
       await db
         .update(tenantTierAssignmentsTable)
         .set({
-          tierId: tierId ?? 0,
+          tierId: tierId ?? "",
           infrastructureLevel: targetTier.infrastructureLevel,
           assignedAt: new Date(),
           assignedBy: req.user?.email ?? "system",
@@ -287,7 +287,7 @@ router.put(
     } else {
       await db.insert(tenantTierAssignmentsTable).values({
         tenantId,
-        tierId: tierId ?? 0,
+        tierId: tierId ?? "",
         infrastructureLevel: targetTier.infrastructureLevel,
         assignedBy: req.user?.email ?? "system",
         changeReason: reason ?? null,
@@ -313,7 +313,7 @@ router.put(
 
     const placement = await tenantPlacementService.determinePlacement(
       tenantId,
-      tierId ?? 0,
+      tierId ?? "",
     );
 
     res.json({
@@ -370,7 +370,7 @@ router.post(
       return;
     }
 
-    const { targetTierId } = req.body as { targetTierId?: number };
+    const { targetTierId } = req.body as { targetTierId?: string };
     if (!targetTierId) {
       res.status(400).json({ error: "targetTierId is required" });
       return;

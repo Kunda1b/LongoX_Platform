@@ -14,7 +14,7 @@ export interface CheckpointData {
 }
 
 export class CheckpointManager {
-  async saveCheckpoint(data: CheckpointData): Promise<number> {
+  async saveCheckpoint(data: CheckpointData): Promise<string> {
     const [checkpoint] = await db
       .insert(executionCheckpointsTable)
       .values({

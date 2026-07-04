@@ -13,7 +13,7 @@ export interface ListingProps {
   category: string;
   tags: string[];
   author: string;
-  authorId: number;
+  authorId: string;
   version: string;
   icon?: string;
   screenshots?: string[];
@@ -34,7 +34,7 @@ export interface ListingProps {
 export class Listing {
   constructor(private props: ListingProps) {}
 
-  get id(): number {
+  get id(): string {
     return this.props.id;
   }
   get title(): string {

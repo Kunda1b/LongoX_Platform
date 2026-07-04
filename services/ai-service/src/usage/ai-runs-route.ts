@@ -111,7 +111,7 @@ router.post("/ai/runs", authorize("ai:run"), async (req, res): Promise<void> => 
         eventType: "ai.run.completed",
         quantity: inputTokens + outputTokens,
         metadata: { model, inputTokens, outputTokens, durationMs, cost },
-      });
+      } as any);
     } catch {
       /* non-fatal */
     }

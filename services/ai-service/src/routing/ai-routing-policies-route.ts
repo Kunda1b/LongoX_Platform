@@ -25,7 +25,7 @@ function fmt(row: typeof aiRoutingPoliciesTable.$inferSelect) {
 }
 
 router.get("/ai-routing-policies", authorize("ai:read"), async (req, res): Promise<void> => {
-  const tenantId = req.tenantId ?? 0;
+  const tenantId = req.tenantId ?? "";
   if (!tenantId) {
     res.status(400).json({ error: "Tenant context required" });
     return;
@@ -39,7 +39,7 @@ router.get("/ai-routing-policies", authorize("ai:read"), async (req, res): Promi
 });
 
 router.get("/ai-routing-policies/:id", authorize("ai:read"), async (req, res): Promise<void> => {
-  const tenantId = req.tenantId ?? 0;
+  const tenantId = req.tenantId ?? "";
   const [row] = await db
     .select()
     .from(aiRoutingPoliciesTable)
@@ -57,7 +57,7 @@ router.get("/ai-routing-policies/:id", authorize("ai:read"), async (req, res): P
 });
 
 router.post("/ai-routing-policies", authorize("ai:write"), async (req, res): Promise<void> => {
-  const tenantId = req.tenantId ?? 0;
+  const tenantId = req.tenantId ?? "";
   if (!tenantId) {
     res.status(400).json({ error: "Tenant context required" });
     return;
@@ -106,7 +106,7 @@ router.post("/ai-routing-policies", authorize("ai:write"), async (req, res): Pro
 });
 
 router.patch("/ai-routing-policies/:id", authorize("ai:write"), async (req, res): Promise<void> => {
-  const tenantId = req.tenantId ?? 0;
+  const tenantId = req.tenantId ?? "";
   const id = String(req.params.id);
   const updates: Record<string, unknown> = {};
   const b = req.body as Partial<{
@@ -150,7 +150,7 @@ router.patch("/ai-routing-policies/:id", authorize("ai:write"), async (req, res)
 });
 
 router.delete("/ai-routing-policies/:id", authorize("ai:delete"), async (req, res): Promise<void> => {
-  const tenantId = req.tenantId ?? 0;
+  const tenantId = req.tenantId ?? "";
   await db
     .delete(aiRoutingPoliciesTable)
     .where(

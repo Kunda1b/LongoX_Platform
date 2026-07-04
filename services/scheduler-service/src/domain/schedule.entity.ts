@@ -27,13 +27,13 @@ export interface ScheduleProps {
 export class Schedule {
   constructor(private props: ScheduleProps) {}
 
-  get id(): number {
+  get id(): string {
     return this.props.id;
   }
-  get tenantId(): number {
+  get tenantId(): string {
     return this.props.tenantId;
   }
-  get workflowId(): number {
+  get workflowId(): string {
     return this.props.workflowId;
   }
   get name(): string {

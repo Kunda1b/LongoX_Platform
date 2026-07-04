@@ -55,7 +55,7 @@ export class SandboxRuntime {
       connectorName: "sandbox-runtime",
       actionId: "execute",
       executionId: `sandbox-${Date.now()}`,
-      tenantId: Number(context.tenantId ?? 0),
+      tenantId: String(context.tenantId ?? ""),
       auth: (context.auth as Record<string, unknown>) ?? {},
       input: context,
       config: { environment: this.config.environment },

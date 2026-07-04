@@ -31,8 +31,8 @@ router.post(
         metadata: (metadata ?? {}) as Record<string, unknown>,
         source: String(source),
         sourceId: sourceId ? String(sourceId) : undefined,
-        workflowId: workflowId ? Number(workflowId) : undefined,
-        executionId: executionId ? Number(executionId) : undefined,
+        workflowId: workflowId ? String(workflowId) : undefined,
+        executionId: executionId ? String(executionId) : undefined,
       });
       res.status(201).json(event.toJSON());
     } catch (err) {
@@ -68,7 +68,7 @@ router.get(
     const eventType = req.query.eventType as string | undefined;
     const from = req.query.from ? new Date(String(req.query.from)) : undefined;
     const to = req.query.to ? new Date(String(req.query.to)) : undefined;
-    const workflowId = req.query.workflowId ? Number(req.query.workflowId) : undefined;
+    const workflowId = req.query.workflowId ? String(req.query.workflowId) : undefined;
     const limit = Number(req.query.limit) || 100;
 
     try {
