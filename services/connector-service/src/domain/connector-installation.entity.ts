@@ -9,7 +9,7 @@ export interface ConnectorInstallationProps {
   status: InstallationStatus;
   config: Record<string, unknown>;
   error?: string;
-  installedBy: number;
+  installedBy: string;
   lastUsedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -36,7 +36,7 @@ export class ConnectorInstallation {
   get config(): Record<string, unknown> {
     return { ...this.props.config };
   }
-  get installedBy(): number {
+  get installedBy(): string {
     return this.props.installedBy;
   }
 

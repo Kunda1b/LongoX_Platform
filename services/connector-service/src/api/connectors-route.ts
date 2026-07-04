@@ -166,7 +166,7 @@ router.post(
         tenantId,
         connectorId,
         config,
-        installedBy: userId,
+        installedBy: userId as any,
         connectorVersionId: req.body.connectorVersionId,
       });
 
@@ -213,7 +213,7 @@ router.post(
   async (req, res): Promise<void> => {
     const installationId = String(req.params.installationId);
     const tenantId = req.user!.tenantId!;
-    const newVersionId = Number(req.body.connectorVersionId);
+    const newVersionId = String(req.body.connectorVersionId);
 
     if (!newVersionId) {
       res.status(400).json({ error: "connectorVersionId is required" });
@@ -302,7 +302,7 @@ router.post(
 
       const result = await sandboxExecutionService.execute({
         connectorName: connector?.name ?? "unknown",
-        connectorId: connector?.id ?? 0,
+        connectorId: connector?.id ?? "",
         installationId,
         tenantId,
         actionId: "test",
@@ -374,7 +374,7 @@ router.post(
 
       const result = await sandboxExecutionService.execute({
         connectorName: connector?.name ?? "unknown",
-        connectorId: connector?.id ?? 0,
+        connectorId: connector?.id ?? "",
         installationId,
         tenantId,
         actionId,
@@ -497,7 +497,7 @@ router.post(
 
       const result = await sandboxExecutionService.execute({
         connectorName: connector?.name ?? "unknown",
-        connectorId: connector?.id ?? 0,
+        connectorId: connector?.id ?? "",
         installationId,
         tenantId,
         actionId: `poll:${triggerId}`,

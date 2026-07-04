@@ -12,7 +12,7 @@ export interface InstallConnectorInput {
   connectorId: string;
   connectorVersionId?: string;
   config: Record<string, unknown>;
-  installedBy: number;
+  installedBy: string;
   /** Deployment environment — affects trust-tier enforcement. */
   environment?: "production" | "staging" | "development";
   /** Whether the tenant admin has opted into partner/community connectors. */
@@ -101,7 +101,7 @@ export class InstallConnectorCommand {
         status: "active",
         config: input.config,
         installedBy: input.installedBy,
-      })
+      } as any)
       .returning();
 
     return new ConnectorInstallation({
@@ -112,7 +112,7 @@ export class InstallConnectorCommand {
       environmentId: undefined,
       status: row.status as "installing" | "active" | "error" | "removed",
       config: (row.config ?? {}) as Record<string, unknown>,
-      installedBy: row.installedBy ?? input.installedBy,
+      installedBy: String(row.installedBy ?? input.installedBy ?? ""),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     });

@@ -3,7 +3,7 @@ import { eq, and } from "drizzle-orm";
 
 export interface RemoveConnectorInput {
   tenantId: string;
-  installationId: number;
+  installationId: string;
 }
 
 export class RemoveConnectorCommand {

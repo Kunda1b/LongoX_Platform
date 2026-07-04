@@ -24,7 +24,7 @@ export type ConnectorLifecycleEvent =
   | "error";
 
 export interface LifecycleState {
-  installationId: number;
+  installationId: string;
   connectorId: string;
   connectorName: string;
   tenantId: string;
@@ -48,7 +48,7 @@ type LifecycleListener = (event: ConnectorLifecycleEvent, state: LifecycleState)
 class LifecycleEngine {
   private hooks = new Map<ConnectorLifecycleEvent, LifecycleHook[]>();
   private listeners = new Set<LifecycleListener>();
-  private states = new Map<number, LifecycleState>();
+  private states = new Map<string, LifecycleState>();
 
   registerHook(events: ConnectorLifecycleEvent[], hook: LifecycleHook): void {
     for (const event of events) {
@@ -115,7 +115,7 @@ class LifecycleEngine {
     return newState;
   }
 
-  getState(installationId: number): LifecycleState | undefined {
+  getState(installationId: string): LifecycleState | undefined {
     return this.states.get(installationId);
   }
 
