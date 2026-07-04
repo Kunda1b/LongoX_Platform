@@ -8,7 +8,7 @@ export type PlatformEventType =
   | "workflow.activated"
   | "workflow.deactivated"
   | "workflow.promoted"
-  | "workflow.rolled-back"
+  | "environment.rolled_back"
   | "workflow.started"
   | "workflow.completed"
   | "execution.started"
@@ -24,7 +24,7 @@ export type PlatformEventType =
   | "user.updated"
   | "tenant.created"
   | "tenant.updated"
-  | "billing.usage.recorded"
+  | "usage.recorded"
   | "billing.invoice.generated"
   | "template.published"
   | "template.installed"
@@ -36,7 +36,7 @@ export type PlatformEventType =
   | "prompt.approved"
   | "prompt.rejected"
   | "environment.promoted"
-  | "environment.rolled-back"
+  | "environment.rolled_back"
   | "agent.run.started"
   | "agent.run.completed"
   | "agent.run.failed";
@@ -126,7 +126,7 @@ export function createEvent(
   metadata: Record<string, unknown> = {},
   options: { tenantId?: string | null; eventVersion?: number } = {},
 ): PlatformEvent {
-  const id = randomUUID();
+  const id = `evt_${randomUUID()}`;
   const eventVersion = options.eventVersion ?? 1;
   return {
     // Architecture-compliant names
@@ -199,7 +199,7 @@ export function validateEvent(
   } else {
     const id = event.event_id ?? event.id ?? "";
     const uuidRe =
-      /^(evt_)?[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      /^(evt_)[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if (!uuidRe.test(id)) {
       errors.push({
         field: "event_id",

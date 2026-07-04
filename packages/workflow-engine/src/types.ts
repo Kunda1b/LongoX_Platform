@@ -55,6 +55,14 @@ export interface ExecutionContext {
   idempotencyKey?: string;
   /** Parent execution ID when this is a child workflow */
   parentExecutionId?: string;
+  /**
+   * Nesting depth for child-workflow orchestration (architecture §9.1).
+   *
+   * Top-level executions start at depth 0. Each child workflow spawn
+   * increments the depth by 1; the runner rejects any spawn that would
+   * exceed `DAGRunnerOptions.maxChildWorkflowDepth` (default 5).
+   */
+  childWorkflowDepth?: number;
 }
 
 // ─── Node execution result ────────────────────────────────────────────────────
@@ -183,15 +191,39 @@ export interface BoundedLoopConfig {
   breakOnKey?: string;
 }
 
+/**
+ * Architecture §9.1 loop-iteration caps.
+ *
+ * Default tenants are capped at 100 iterations; Pro tenants at 10,000.
+ * Unbounded loops are forbidden. The runner rejects (at the node level)
+ * any loop node whose `maxIterations` exceeds the cap configured in
+ * `DAGRunnerOptions.maxLoopIterations`.
+ */
+export const MAX_LOOP_ITERATIONS_DEFAULT = 100;
+export const MAX_LOOP_ITERATIONS_PRO = 10_000;
+
 // ─── Child workflow ───────────────────────────────────────────────────────────
 
 export interface ChildWorkflowConfig {
   /** ID of the workflow to spawn */
   workflowId: string;
-  /** Whether to await completion before continuing. Default: false (fire-and-forget) */
+  /**
+   * Whether to await completion before continuing. Default: false (fire-and-forget).
+   *
+   * When `await` is true the runner polls the child execution's status
+   * (via `DAGRunnerOptions.awaitChildWorkflowCompletion`) until the child
+   * reaches a terminal state. The current node's result mirrors the
+   * child's terminal status.
+   */
   await?: boolean;
   /** How to map current node output into child trigger payload */
   inputMapping?: Record<string, string>;
+  /**
+   * Optional wall-clock cap on how long the parent will wait for the child
+   * when `await: true`. Defaults to the parent execution's remaining
+   * timeout budget. Expressed in milliseconds.
+   */
+  awaitTimeoutMs?: number;
 }
 
 // ─── Node lease ───────────────────────────────────────────────────────────────
@@ -215,23 +247,93 @@ export interface NodeLease {
 
 // ─── Idempotency ──────────────────────────────────────────────────────────────
 
+/**
+ * Input shape for idempotency checks. Architecture §9.1 requires the
+ * idempotency key to be derived from `workflow_id + run_id + node_id +
+ * attempt` (the `run_id` is the workflow execution id).
+ */
+export interface IdempotencyKeyInput {
+  /** Workflow definition id (`workflow_id` in §9.1). */
+  workflowId: string;
+  /** Workflow execution id (`run_id` in §9.1). */
+  executionId: string;
+  /** Node id within the workflow graph. */
+  nodeId: string;
+  /** Attempt number (1-based). */
+  attempt: number;
+}
+
+/**
+ * Build the canonical §9.1 idempotency key.
+ *
+ * Format: `${workflowId}|${executionId}|${nodeId}|${attempt}`.
+ * Components are pipe-delimited so the key is greppable in logs and
+ * uniquely identifies a single (workflow, run, node, attempt) tuple.
+ */
+export function buildIdempotencyKey(input: IdempotencyKeyInput): string {
+  return `${input.workflowId}|${input.executionId}|${input.nodeId}|${input.attempt}`;
+}
+
 export interface IdempotencyStore {
-  /** Returns true if the node has already completed successfully for this execution. */
-  isComplete(executionId: string, nodeId: string): Promise<boolean>;
-  /** Marks the node as complete with its output. */
+  /**
+   * Returns true if the node has already completed successfully for this
+   * (workflow, run, node, attempt) tuple.
+   */
+  isComplete(input: IdempotencyKeyInput): Promise<boolean>;
+  /** Marks the (workflow, run, node, attempt) tuple as complete with its output. */
   markComplete(
-    executionId: string,
-    nodeId: string,
+    input: IdempotencyKeyInput,
     output: Record<string, unknown>,
   ): Promise<void>;
-  /** Retrieves the stored output for an already-complete node. */
+  /** Retrieves the stored output for an already-complete tuple. */
   getOutput(
-    executionId: string,
-    nodeId: string,
+    input: IdempotencyKeyInput,
   ): Promise<Record<string, unknown> | null>;
 }
 
 // ─── Checkpoint ───────────────────────────────────────────────────────────────
+
+/**
+ * Per-node checkpoint schema — architecture.md §9.7.
+ *
+ * Persisted inside the `node_execution_checkpoints.state_json` JSON column.
+ * The full set of fields MUST be present so that a recovery worker can
+ * reconstruct a crashed run: idempotency key, compensation status, retry
+ * count, and start/finish timestamps.
+ *
+ * Field mapping (architecture §9.7):
+ *   - idempotency_key:   `${executionId}|${nodeId}|${attempt}`
+ *   - compensation_status: pending | done | failed | skipped
+ *   - retry_count:       number of retries already attempted (attempt - 1)
+ *   - started_at:        when the node execution began
+ *   - finished_at:       when the node execution ended (null while running)
+ */
+export interface CheckpointData {
+  /** Canonical id from the workflow_executions row. */
+  executionId: string;
+  nodeId: string;
+  nodeName: string;
+  nodeType: string;
+  /** Lifecycle state — uses the §9.7 `state` vocabulary. */
+  status: "pending" | "running" | "completed" | "failed" | "paused" | "skipped";
+  attemptNumber: number;
+  inputData: Record<string, unknown>;
+  outputData?: Record<string, unknown> | null;
+  errorMessage?: string | null;
+  durationMs?: number | null;
+  metadata?: Record<string, unknown>;
+  // ── §9.7 mandated fields ──────────────────────────────────────────────────
+  /** Idempotency key — format: `${executionId}|${nodeId}|${attemptNumber}`. */
+  idempotencyKey: string;
+  /** Saga compensation state. */
+  compensationStatus: "pending" | "done" | "failed" | "skipped";
+  /** Number of retries already attempted (= attempt - 1). */
+  retryCount: number;
+  /** ISO timestamp the node started executing. */
+  startedAt: string;
+  /** ISO timestamp the node finished (null while running). */
+  finishedAt: string | null;
+}
 
 export interface CheckpointStore {
   /** Save a checkpoint for a node execution. */
@@ -247,6 +349,20 @@ export interface CheckpointStore {
     errorMessage?: string;
     durationMs?: number;
     metadata?: Record<string, unknown>;
+    /**
+     * Optional workflow + run identifiers used to build the §9.7
+     * `idempotency_key` (`workflowId|runId|nodeId|attempt`). When omitted,
+     * the checkpoint store falls back to `executionId|nodeId|attempt`.
+     */
+    workflowId?: string;
+    /** Optional run id (defaults to the executionId). */
+    runId?: string;
+    /** Optional compensation status override (defaults to "pending"). */
+    compensationStatus?: "pending" | "done" | "failed" | "skipped";
+    /** Optional explicit start timestamp (defaults to now). */
+    startedAt?: Date;
+    /** Optional explicit finish timestamp (set when status != "running"). */
+    finishedAt?: Date | null;
   }): Promise<string>;
   /** Load all successful checkpoints for an execution (for resume). */
   loadCompleted(
@@ -259,7 +375,30 @@ export interface CheckpointStore {
     errorMessage?: string;
     durationMs?: number;
     metadata?: Record<string, unknown>;
+    /** Saga compensation status — set to "done" after a successful compensate. */
+    compensationStatus?: "pending" | "done" | "failed" | "skipped";
+    /** Optional explicit finish timestamp (defaults to now). */
+    finishedAt?: Date | null;
   }): Promise<void>;
+}
+
+/**
+ * Build the canonical §9.7 idempotency key for a checkpoint.
+ *
+ * Format: `${workflowId}|${runId}|${nodeId}|${attempt}`.
+ * When `workflowId`/`runId` are unavailable, falls back to the legacy
+ * `${executionId}|${nodeId}|${attempt}` form (still unique per attempt).
+ */
+export function buildCheckpointIdempotencyKey(opts: {
+  executionId: string;
+  workflowId?: string;
+  runId?: string;
+  nodeId: string;
+  attemptNumber: number;
+}): string {
+  const workflow = opts.workflowId ?? opts.executionId;
+  const run = opts.runId ?? opts.executionId;
+  return `${workflow}|${run}|${opts.nodeId}|${opts.attemptNumber}`;
 }
 
 // ─── DAG runner events ────────────────────────────────────────────────────────
@@ -304,4 +443,36 @@ export interface DAGRunnerOptions {
   writeApprovalGate?: (opts: { executionId: string; nodeId: string; config: ApprovalGateConfig; input: Record<string, unknown> }) => Promise<string>;
   /** Node lease store for multi-worker safety */
   leaseStore?: LeaseStore;
+  /**
+   * Maximum nesting depth for child workflows (architecture §9.1 default: 5).
+   *
+   * Top-level executions run at depth 0. A spawn that would push the depth
+   * past this cap is rejected with a node-level `failed` result instead of
+   * being enqueued.
+   */
+  maxChildWorkflowDepth?: number;
+  /**
+   * Maximum allowed `maxIterations` for bounded-loop nodes (architecture §9.1).
+   *
+   * Default tenants are capped at `MAX_LOOP_ITERATIONS_DEFAULT` (100); Pro
+   * tenants at `MAX_LOOP_ITERATIONS_PRO` (10,000). Unbounded loops are
+   * forbidden. The runner rejects any loop node whose `maxIterations`
+   * exceeds this cap with a node-level `failed` result.
+   *
+   * Defaults to `MAX_LOOP_ITERATIONS_DEFAULT`. The runner host should
+   * resolve the tenant's tier and pass the appropriate cap.
+   */
+  maxLoopIterations?: number;
+  /**
+   * Polling-based awaiter used when a `ChildWorkflowConfig` has `await: true`.
+   *
+   * Resolves to the child's terminal status (`success` | `failed` | any
+   * other terminal state). Implementations should poll the
+   * `workflow_executions` table and resolve as soon as the child reaches a
+   * terminal state (or time out).
+   */
+  awaitChildWorkflowCompletion?: (
+    childExecutionId: string,
+    opts?: { timeoutMs?: number; pollIntervalMs?: number },
+  ) => Promise<{ status: string; error?: string }>;
 }

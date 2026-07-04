@@ -30,6 +30,7 @@ import {
   startWorkflowExecution,
   writeAudit,
 } from "@longox/execution-service/workflow-runner";
+import { sendApiError } from "../middleware/error-handler";
 
 const router: IRouter = Router();
 
@@ -123,13 +124,11 @@ function captureRawBody(req: Request, _res: Response, next: () => void): void {
     return;
   }
   // JSON already parsed — cannot recover raw bytes.
-  _res.status(400).json({
-    error: {
-      code: "INVALID_BODY",
-      message:
-        "Webhook trigger requires the raw request body for HMAC verification. Ensure express.raw() is mounted before express.json() for this route.",
-      correlation_id: req.correlationId ?? null,
-    },
+  sendApiError(_res, 400, {
+    code: "INVALID_BODY",
+    message:
+      "Webhook trigger requires the raw request body for HMAC verification. Ensure express.raw() is mounted before express.json() for this route.",
+    correlationId: req.correlationId ?? null,
   });
 }
 
@@ -153,24 +152,20 @@ router.post(
     const timestamp = req.headers["x-webhook-timestamp"] as string | undefined;
 
     if (!signature || !timestamp) {
-      res.status(401).json({
-        error: {
-          code: "UNAUTHORIZED",
-          message: "Missing x-webhook-signature or x-webhook-timestamp header",
-          correlation_id: req.correlationId ?? null,
-        },
+      sendApiError(res, 401, {
+        code: "UNAUTHORIZED",
+        message: "Missing x-webhook-signature or x-webhook-timestamp header",
+        correlationId: req.correlationId ?? null,
       });
       return;
     }
 
     const rawBody = req.body as Buffer;
     if (!Buffer.isBuffer(rawBody)) {
-      res.status(400).json({
-        error: {
-          code: "INVALID_BODY",
-          message: "Raw body required for HMAC verification",
-          correlation_id: req.correlationId ?? null,
-        },
+      sendApiError(res, 400, {
+        code: "INVALID_BODY",
+        message: "Raw body required for HMAC verification",
+        correlationId: req.correlationId ?? null,
       });
       return;
     }
@@ -180,12 +175,10 @@ router.post(
     try {
       payload = JSON.parse(rawBody.toString("utf8")) as Record<string, unknown>;
     } catch {
-      res.status(400).json({
-        error: {
-          code: "INVALID_JSON",
-          message: "Webhook payload must be valid JSON",
-          correlation_id: req.correlationId ?? null,
-        },
+      sendApiError(res, 400, {
+        code: "INVALID_JSON",
+        message: "Webhook payload must be valid JSON",
+        correlationId: req.correlationId ?? null,
       });
       return;
     }
@@ -195,13 +188,18 @@ router.post(
     const endpointId = payload["endpoint_id"] as string | undefined;
 
     if (!workflowId && !workflowSlug) {
-      res.status(400).json({
-        error: {
-          code: "VALIDATION_ERROR",
-          message:
-            "Payload must include workflow_id (number) or workflow_slug (string)",
-          correlation_id: req.correlationId ?? null,
-        },
+      sendApiError(res, 400, {
+        code: "VALIDATION_ERROR",
+        message:
+          "Payload must include workflow_id (number) or workflow_slug (string)",
+        details: [
+          {
+            field: "workflow_id",
+            rule: "required",
+            message: "workflow_id or workflow_slug is required",
+          },
+        ],
+        correlationId: req.correlationId ?? null,
       });
       return;
     }
@@ -256,12 +254,11 @@ router.post(
         "webhook",
       );
 
-      res.status(401).json({
-        error: {
-          code: "UNAUTHORIZED",
-          message: `Webhook signature verification failed: ${verification.reason}`,
-          correlation_id: req.correlationId ?? null,
-        },
+      sendApiError(res, 401, {
+        code: "UNAUTHORIZED",
+        message: `Webhook signature verification failed: ${verification.reason}`,
+        details: [{ rule: "hmac", message: verification.reason }],
+        correlationId: req.correlationId ?? null,
       });
       return;
     }
@@ -285,12 +282,10 @@ router.post(
     }
 
     if (!workflow) {
-      res.status(404).json({
-        error: {
-          code: "NOT_FOUND",
-          message: "Workflow not found",
-          correlation_id: req.correlationId ?? null,
-        },
+      sendApiError(res, 404, {
+        code: "NOT_FOUND",
+        message: "Workflow not found",
+        correlationId: req.correlationId ?? null,
       });
       return;
     }

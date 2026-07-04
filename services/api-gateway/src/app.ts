@@ -5,7 +5,7 @@
 // Do NOT add new middleware here — add it to infrastructure/kong/kong.yaml.
 // ───────────────────────────────────────────────────────────────────────
 
-import express, { type ErrorRequestHandler } from "express";
+import express from "express";
 import pino from "pino-http";
 import cors from "cors";
 import { randomUUID } from "node:crypto";
@@ -35,6 +35,7 @@ import { isWorkOSEnabled } from "./lib/workos-auth";
 import { apiRateLimiter } from "./lib/rate-limiter";
 import { apiVersioningMiddleware } from "./lib/api-versioning";
 import { tierEnforcementMiddleware } from "./middleware/tier-enforcement.middleware";
+import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { auditLogRouter } from "@longox/audit-service";
 import { yoga } from "./graphql/index";
 import {
@@ -292,16 +293,11 @@ app.use(agentsRouter);
 // Already mounted above in the public section — the middleware inside
 // each endpoint handler enforces auth where required.
 
-// ─── Centralized error handler ──────────────────────────────────────────────────
-// Must be registered after all routes so it catches anything that falls through.
-const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
-  console.error("[api-gateway] Unhandled error:", err);
-  const status = err.status || err.statusCode || 500;
-  res.status(status).json({
-    error: status === 500 ? "Internal Server Error" : err.message,
-    requestId: (_req as any).correlationId,
-  });
-};
+// ─── Centralized error handler (architecture §13.3) ───────────────────────────
+// Mount the 404 fallback first so any unmatched route returns the standard
+// error envelope instead of Express's default HTML page. The errorHandler
+// must be the very last middleware so it catches anything thrown upstream.
+app.use(notFoundHandler);
 app.use(errorHandler);
 
 export default app;

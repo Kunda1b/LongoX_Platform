@@ -64,6 +64,24 @@ autoscaling:
   maxReplicas: 10
   targetCPUUtilization: 70
   targetMemoryUtilization: 80
+  # ── P1-16: queue-depth autoscaling ────────────────────────────────────────
+  # Scale on the BullMQ `waiting` depth so the worker pool grows when jobs
+  # pile up (CPU/memory alone under-react because BullMQ workers are
+  # I/O-bound waiting on Postgres / Redis). Requires the prometheus-adapter
+  # (or k8s-prometheus-adapter) to expose `bullmq_queue_waiting` as an
+  # external metric — see `infrastructure/kubernetes/base/queue-depth-hpa.yaml`
+  # for the adapter rule and the standalone HPA manifest.
+  customMetrics:
+    - type: External
+      external:
+        metric:
+          name: bullmq_queue_waiting
+          selector:
+            matchLabels:
+              queue: workflow-execution
+        target:
+          type: AverageValue
+          averageValue: "10"
 
 nodeSelector:
   nodegroup-type: on-demand

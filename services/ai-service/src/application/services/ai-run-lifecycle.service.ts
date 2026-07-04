@@ -259,6 +259,38 @@ export class AiRunLifecycleService {
       resolvedModel = routeResult.result.model;
 
       const outputText = routeResult.result.content;
+
+      // ─── §8.5: Tool guardrails — allow-list enforcement on tool calls ────
+      // If the model emitted any tool calls in the output, verify each tool
+      // is in the tenant's allow-list. Blocked tool calls are logged and
+      // stripped from the output.
+      if (input.guardrailIds && input.guardrailIds.length > 0) {
+        const toolCalls = (routeResult.result as any).toolCalls;
+        if (Array.isArray(toolCalls) && toolCalls.length > 0) {
+          const allowedTools = (input as any).allowedTools as string[] | undefined;
+          if (allowedTools && allowedTools.length > 0) {
+            const blockedTools = toolCalls.filter(
+              (tc: any) => !allowedTools.includes(tc.name ?? tc.function?.name ?? ""),
+            );
+            if (blockedTools.length > 0) {
+              guardrailResult.outputPassed = false;
+              guardrailResult.outputViolations.push({
+                type: "tool_allowlist",
+                detail: `Blocked ${blockedTools.length} tool call(s) not in allow-list: ${blockedTools.map((t: any) => t.name ?? t.function?.name ?? "unknown").join(", ")}`,
+                severity: "block",
+              });
+              guardrailResult.blocked = true;
+              await this.audit.record("ai.run.guardrail.violation", {
+                violationType: "tool_allowlist",
+                stage: "output",
+                severity: "block",
+                detail: `Blocked tools: ${blockedTools.map((t: any) => t.name ?? "unknown").join(", ")}`,
+              });
+            }
+          }
+        }
+      }
+
       const inputTokens = routeResult.result.inputTokens;
       const outputTokens = routeResult.result.outputTokens;
       const cost = routeResult.result.cost;

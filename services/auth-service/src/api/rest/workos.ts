@@ -35,9 +35,13 @@ import {
   verifyScimWebhook,
   type AdminPortalIntent,
   type MfaFactorType,
+  type WorkOSWebhookEvent,
+  type WorkOSDirectoryUser,
+  type WorkOSGroupMembership,
 } from "@longox/shared-auth/workos";
 import { issueSession } from "../../infrastructure/auth/jwt";
 import type { AuthUser } from "../../domain/user/user.entity";
+import { prisma } from "@longox/db/prisma";
 
 const router = Router();
 
@@ -333,9 +337,361 @@ router.post("/auth/sso", async (req, res): Promise<void> => {
 
 // ─── SCIM 2.0 directory sync webhook ──────────────────────────────────────────
 // WorkOS posts directory sync events here. We verify the signature, then
-// process the event (create/update/delete user memberships). The actual
-// membership sync lives in a follow-up task; this endpoint just verifies
-// the webhook and returns 200 so WorkOS doesn't retry.
+// process the event:
+//
+//   dsync.user.created      → create / update the local User row + a default
+//                             `viewer` Membership for the user's org.
+//   dsync.user.updated      → refresh the local User row from the directory.
+//   dsync.user.deleted      → mark the user's Memberships as `deactivated`.
+//   dsync.group.user_added  → map the WorkOS group to an RBAC role on the
+//                             user's Membership (group.name → RbacRole.name).
+//                             If no matching role exists, fall back to the
+//                             existing role (no-op).
+//   dsync.group.user_removed→ clear the role on the user's Membership (set
+//                             back to `viewer` if the user is still active).
+
+/**
+ * P1-21: Map a WorkOS group name to a platform RBAC role id within a tenant.
+ *
+ * Convention: the WorkOS group name (case-insensitive) maps directly to the
+ * `RbacRole.name` for the tenant. Common mappings:
+ *   - "Admin" / "Administrators" → "admin"
+ *   - "Editor" / "Editors"       → "editor"
+ *   - "Viewer" / "Viewers"       → "viewer"
+ *
+ * The fallback table below normalizes common variations; if no match is
+ * found we look up the role by exact (case-insensitive) name and finally
+ * fall back to `null` (caller decides what to do — usually keep the
+ * existing role).
+ */
+const GROUP_NAME_TO_ROLE: Record<string, string> = {
+  admin: "admin",
+  administrator: "admin",
+  administrators: "admin",
+  editor: "editor",
+  editors: "editor",
+  viewer: "viewer",
+  viewers: "viewer",
+  member: "viewer",
+  members: "viewer",
+};
+
+async function resolveRbacRoleIdForGroup(
+  tenantId: string,
+  groupName: string,
+): Promise<string | null> {
+  const normalized = groupName.trim().toLowerCase();
+  const targetRoleName = GROUP_NAME_TO_ROLE[normalized] ?? normalized;
+  const role = (await prisma.rbacRole.findFirst({
+    where: {
+      tenantId,
+      name: { equals: targetRoleName, mode: "insensitive" } as any,
+    } as any,
+    select: { id: true } as any,
+  })) as any;
+  return role?.id ?? null;
+}
+
+/**
+ * Resolve the tenant for a WorkOS organization id. The platform links a
+ * WorkOS organization to a Tenant by storing the WorkOS org id in the
+ * `tenants.slug` column (slug is unique per WorkOS org). If no tenant is
+ * found we return null — callers should log + skip rather than auto-
+ * creating a tenant (which requires billing/plan setup first).
+ */
+async function resolveTenantForWorkOSOrg(
+  organizationId: string,
+): Promise<{ id: string } | null> {
+  const tenant = (await prisma.tenant.findUnique({
+    where: { slug: organizationId },
+    select: { id: true } as any,
+  })) as any;
+  return tenant ?? null;
+}
+
+/**
+ * Resolve the local User for a WorkOS directory user. If the user doesn't
+ * exist yet, create a stub row (no password — they'll authenticate via
+ * SSO/SCIM only). Returns null if the directory user has no primary email.
+ */
+async function resolveOrCreateUserForDirectoryUser(
+  dirUser: WorkOSDirectoryUser,
+): Promise<{ id: string } | null> {
+  const primaryEmail = dirUser.emails?.find((e) => e.primary)?.value ?? dirUser.emails?.[0]?.value;
+  if (!primaryEmail) return null;
+
+  // Look up by WorkOS user id first (canonical), fall back to email.
+  const existing = (await prisma.user.findFirst({
+    where: {
+      OR: [
+        { workosUserId: dirUser.id } as any,
+        { email: primaryEmail.toLowerCase() } as any,
+      ],
+    } as any,
+    select: { id: true, workosUserId: true, email: true } as any,
+  })) as any;
+
+  if (existing) {
+    // Backfill the workosUserId if it was missing.
+    if (!existing.workosUserId) {
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: { workosUserId: dirUser.id } as any,
+      });
+    }
+    return { id: existing.id };
+  }
+
+  const name =
+    [dirUser.firstName, dirUser.lastName].filter(Boolean).join(" ").trim() ||
+    dirUser.username ||
+    primaryEmail;
+
+  const created = (await prisma.user.create({
+    data: {
+      email: primaryEmail.toLowerCase(),
+      // SCIM-provisioned users authenticate via SSO only — they have no
+      // password. We store a random unusable hash so the password column
+      // (NOT NULL) is satisfied without enabling password login.
+      passwordHash: `!scim!${Math.random().toString(36).slice(2)}`,
+      name,
+      workosUserId: dirUser.id,
+      status: dirUser.state === "inactive" ? "deactivated" : "active",
+    } as any,
+    select: { id: true } as any,
+  })) as any;
+  return { id: created.id };
+}
+
+/**
+ * Find a user's membership in a tenant. Creates a default `viewer`
+ * membership if none exists yet (e.g., the user was provisioned by a
+ * `dsync.group.user_added` event before their `dsync.user.created` event
+ * was processed).
+ */
+async function ensureMembership(
+  userId: string,
+  tenantId: string,
+  defaultRole: "viewer" | null = "viewer",
+): Promise<any> {
+  const existing = (await prisma.membership.findFirst({
+    where: { userId, tenantId } as any,
+  })) as any;
+  if (existing) return existing;
+
+  let defaultRoleId: string | null = null;
+  if (defaultRole) {
+    defaultRoleId = await resolveRbacRoleIdForGroup(tenantId, defaultRole);
+  }
+
+  return prisma.membership.create({
+    data: {
+      userId,
+      tenantId,
+      roleId: defaultRoleId,
+      status: "active",
+    } as any,
+  }) as Promise<any>;
+}
+
+/**
+ * Apply a group→role mapping to a user's membership. Called by the
+ * `dsync.group.user_added` handler. If the user has no membership yet,
+ * one is created with the resolved role. If the role can't be resolved
+ * (no matching RbacRole), the membership is still created with the
+ * `viewer` fallback so the user can at least access the tenant.
+ */
+async function applyGroupRoleToMembership(
+  userId: string,
+  tenantId: string,
+  groupName: string,
+): Promise<void> {
+  const membership = await ensureMembership(userId, tenantId, "viewer");
+  const roleId = await resolveRbacRoleIdForGroup(tenantId, groupName);
+  if (roleId && roleId !== membership.roleId) {
+    await prisma.membership.update({
+      where: { id: membership.id },
+      data: { roleId, status: "active" } as any,
+    });
+  }
+}
+
+/**
+ * Remove a group's role from a user's membership. Called by the
+ * `dsync.group.user_removed` handler. We downgrade the user to `viewer`
+ * (rather than deleting the membership entirely) so they keep tenant
+ * access — the WorkOS directory's own user-deleted event is what fully
+ * deactivates access.
+ */
+async function removeGroupRoleFromMembership(
+  userId: string,
+  tenantId: string,
+  _groupName: string,
+): Promise<void> {
+  const membership = await prisma.membership.findFirst({
+    where: { userId, tenantId } as any,
+  });
+  if (!membership) return;
+  const fallbackRoleId = await resolveRbacRoleIdForGroup(tenantId, "viewer");
+  await prisma.membership.update({
+    where: { id: (membership as any).id },
+    data: { roleId: fallbackRoleId } as any,
+  });
+}
+
+/**
+ * Process a verified SCIM webhook event. Returns a short summary that's
+ * included in the 200 response so WorkOS operators can see what happened
+ * without scanning server logs.
+ */
+async function processScimEvent(event: WorkOSWebhookEvent): Promise<{
+  processed: boolean;
+  action: string;
+  detail: Record<string, unknown>;
+}> {
+  switch (event.event) {
+    case "dsync.user.created":
+    case "dsync.user.updated": {
+      const dirUser = event.data as WorkOSDirectoryUser;
+      const tenant = await resolveTenantForWorkOSOrg(dirUser.organizationId);
+      if (!tenant) {
+        return {
+          processed: false,
+          action: event.event,
+          detail: {
+            reason: "tenant_not_found",
+            organizationId: dirUser.organizationId,
+          },
+        };
+      }
+      const user = await resolveOrCreateUserForDirectoryUser(dirUser);
+      if (!user) {
+        return {
+          processed: false,
+          action: event.event,
+          detail: { reason: "no_primary_email", directoryUserId: dirUser.id },
+        };
+      }
+      await ensureMembership(user.id, tenant.id, "viewer");
+      return {
+        processed: true,
+        action: event.event,
+        detail: { userId: user.id, tenantId: tenant.id },
+      };
+    }
+
+    case "dsync.user.deleted": {
+      const dirUser = event.data as WorkOSDirectoryUser;
+      // Deactivate the user across ALL tenants they belong to. WorkOS
+      // sent us a deletion event for the whole directory user, so the
+      // user should lose access everywhere.
+      const user = (await prisma.user.findFirst({
+        where: { workosUserId: dirUser.id } as any,
+        select: { id: true } as any,
+      })) as any;
+      if (!user) {
+        return {
+          processed: false,
+          action: event.event,
+          detail: { reason: "user_not_found", directoryUserId: dirUser.id },
+        };
+      }
+      await prisma.membership.updateMany({
+        where: { userId: user.id } as any,
+        data: { status: "deactivated" } as any,
+      });
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { status: "deactivated" } as any,
+      });
+      return {
+        processed: true,
+        action: event.event,
+        detail: { userId: user.id },
+      };
+    }
+
+    case "dsync.group.user_added": {
+      const gm = event.data as WorkOSGroupMembership;
+      const tenant = await resolveTenantForWorkOSOrg(gm.organizationId);
+      if (!tenant) {
+        return {
+          processed: false,
+          action: event.event,
+          detail: {
+            reason: "tenant_not_found",
+            organizationId: gm.organizationId,
+          },
+        };
+      }
+      const user = await resolveOrCreateUserForDirectoryUser(gm.user);
+      if (!user) {
+        return {
+          processed: false,
+          action: event.event,
+          detail: { reason: "no_primary_email" },
+        };
+      }
+      await applyGroupRoleToMembership(user.id, tenant.id, gm.group.name);
+      return {
+        processed: true,
+        action: event.event,
+        detail: {
+          userId: user.id,
+          tenantId: tenant.id,
+          groupName: gm.group.name,
+        },
+      };
+    }
+
+    case "dsync.group.user_removed": {
+      const gm = event.data as WorkOSGroupMembership;
+      const tenant = await resolveTenantForWorkOSOrg(gm.organizationId);
+      if (!tenant) {
+        return {
+          processed: false,
+          action: event.event,
+          detail: {
+            reason: "tenant_not_found",
+            organizationId: gm.organizationId,
+          },
+        };
+      }
+      const user = (await prisma.user.findFirst({
+        where: { workosUserId: gm.user.id } as any,
+        select: { id: true } as any,
+      })) as any;
+      if (!user) {
+        return {
+          processed: false,
+          action: event.event,
+          detail: { reason: "user_not_found" },
+        };
+      }
+      await removeGroupRoleFromMembership(user.id, tenant.id, gm.group.name);
+      return {
+        processed: true,
+        action: event.event,
+        detail: {
+          userId: user.id,
+          tenantId: tenant.id,
+          groupName: gm.group.name,
+        },
+      };
+    }
+
+    default: {
+      // Unknown event type — acknowledge so WorkOS doesn't retry, but
+      // mark as not-processed so operators can see in logs that we
+      // skipped something.
+      return {
+        processed: false,
+        action: event.event,
+        detail: { reason: "unknown_event_type" },
+      };
+    }
+  }
+}
 
 router.post("/auth/scim", async (req, res): Promise<void> => {
   const signature = req.headers["x-workos-signature"] as string | undefined;
@@ -358,11 +714,26 @@ router.post("/auth/scim", async (req, res): Promise<void> => {
       : JSON.stringify(req.body);
   try {
     const event = verifyScimWebhook(rawBody, signature);
-    // TODO: process the event (create/update memberships). Tracked as a
-    // follow-up task; for now we just acknowledge receipt so WorkOS
-    // doesn't retry.
-    console.log("[auth-service] SCIM event received:", event.event);
-    res.status(200).json({ received: true });
+    // P1-21: process the event (create/update memberships, map groups to RBAC roles).
+    let result: { processed: boolean; action: string; detail: Record<string, unknown> };
+    try {
+      result = await processScimEvent(event);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(
+        `[auth-service] SCIM event processing failed for "${event.event}":`,
+        message,
+      );
+      // We still return 200 so WorkOS doesn't retry — the event was
+      // successfully *received*, just not processed. Operators should
+      // alert on the error log.
+      result = {
+        processed: false,
+        action: event.event,
+        detail: { reason: "processing_error", error: message },
+      };
+    }
+    res.status(200).json({ received: true, ...result });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     res.status(401).json({
