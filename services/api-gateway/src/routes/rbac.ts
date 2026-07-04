@@ -1,14 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, sql, and, inArray, isNull } from "drizzle-orm";
-import {
-  db,
-  rolesTable,
-  permissionsTable,
-  rolePermissionsTable,
-  userRolesTable,
-  tenantsTable,
-  usersTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
@@ -113,35 +104,41 @@ async function ensureRbacSeed() {
   seeded = true;
 
   // 1. Upsert permissions — get existing, insert only missing ones
-  const existingPerms = await db.select().from(permissionsTable);
+  const existingPerms = (await prisma.rbacPermission.findMany()) as any[];
   const permMap: Record<string, string> = Object.fromEntries(
-    existingPerms.map((p) => [`${p.resource}:${p.action}`, p.id]),
+    existingPerms.map((p) => [`${p.resource ?? p.code}:${p.action ?? ""}`, p.id]),
   );
   const missingPerms = SYSTEM_PERMISSIONS.filter(
     (p) => !permMap[`${p.resource}:${p.action}`],
   );
-  if (missingPerms.length > 0) {
-    const inserted = await db
-      .insert(permissionsTable)
-      .values(missingPerms)
-      .returning();
-    for (const p of inserted) permMap[`${p.resource}:${p.action}`] = p.id;
+  for (const p of missingPerms) {
+    const created = (await prisma.rbacPermission.create({
+      data: {
+        code: `${p.resource}:${p.action}`,
+        description: p.description,
+        resource: p.resource,
+        action: p.action,
+      } as any,
+    })) as any;
+    permMap[`${p.resource}:${p.action}`] = created.id;
   }
 
   // 2. Upsert system roles — insert only roles that don't exist yet
-  const existingRoles = await db
-    .select()
-    .from(rolesTable)
-    .where(isNull(rolesTable.tenantId));
+  const existingRoles = (await prisma.rbacRole.findMany({
+    where: { tenantId: null },
+  })) as any[];
   const roleMap: Record<string, string> = Object.fromEntries(
     existingRoles.map((r) => [r.name, r.id]),
   );
   for (const roleDef of SYSTEM_ROLES) {
     if (!roleMap[roleDef.name]) {
-      const [inserted] = await db
-        .insert(rolesTable)
-        .values(roleDef)
-        .returning();
+      const inserted = (await prisma.rbacRole.create({
+        data: {
+          name: roleDef.name,
+          description: roleDef.description,
+          scope: "tenant",
+        } as any,
+      })) as any;
       roleMap[roleDef.name] = inserted.id;
     }
   }
@@ -156,11 +153,12 @@ async function ensureRbacSeed() {
       if (permId) assignments.push({ roleId, permissionId: permId });
     }
   }
-  if (assignments.length > 0) {
-    await db
-      .insert(rolePermissionsTable)
-      .values(assignments)
-      .onConflictDoNothing();
+  for (const a of assignments) {
+    await prisma.rolePermission
+      .create({ data: a })
+      .catch(() => {
+        // Ignore unique-constraint conflicts (onConflictDoNothing)
+      });
   }
 }
 
@@ -168,17 +166,16 @@ async function ensureRbacSeed() {
 
 router.get("/permissions", authorize({ resource: "users", action: "write" }), async (_req, res): Promise<void> => {
   await ensureRbacSeed();
-  const rows = await db
-    .select()
-    .from(permissionsTable)
-    .orderBy(permissionsTable.resource, permissionsTable.action);
+  const rows = (await prisma.rbacPermission.findMany({
+    orderBy: [{ resource: "asc" } as any, { action: "asc" } as any],
+  })) as any[];
   res.json(
     rows.map((p) => ({
       id: p.id,
-      resource: p.resource,
-      action: p.action,
+      resource: p.resource ?? (p.code?.split(":")[0] ?? ""),
+      action: p.action ?? (p.code?.split(":")[1] ?? ""),
       description: p.description ?? null,
-      createdAt: p.createdAt.toISOString(),
+      createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : new Date(p.createdAt).toISOString(),
     })),
   );
 });
@@ -189,27 +186,23 @@ router.get("/roles", authorize({ resource: "users", action: "write" }), async (r
   await ensureRbacSeed();
   const tenantId = req.query.tenantId ? String(req.query.tenantId) : undefined;
 
-  const rows = await db
-    .select()
-    .from(rolesTable)
-    .where(
-      tenantId !== undefined ? eq(rolesTable.tenantId, tenantId) : undefined,
-    )
-    .orderBy(rolesTable.id);
+  const rows = (await prisma.rbacRole.findMany({
+    where: tenantId !== undefined ? { tenantId } : undefined,
+    orderBy: { id: "asc" },
+  })) as any[];
 
   const withCounts = await Promise.all(
     rows.map(async (role) => {
-      const [{ count }] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(rolePermissionsTable)
-        .where(eq(rolePermissionsTable.roleId, role.id));
+      const count = await prisma.rolePermission.count({
+        where: { roleId: role.id },
+      });
       return {
         id: role.id,
         name: role.name,
-        description: role.description ?? null,
+        description: (role as any).description ?? null,
         tenantId: role.tenantId ?? null,
         permissionCount: count,
-        createdAt: role.createdAt.toISOString(),
+        createdAt: role.createdAt instanceof Date ? role.createdAt.toISOString() : new Date(role.createdAt).toISOString(),
       };
     }),
   );
@@ -227,58 +220,51 @@ router.post("/roles", authorize({ resource: "users", action: "write" }), async (
     res.status(400).json({ error: "name is required" });
     return;
   }
-  const [role] = await db
-    .insert(rolesTable)
-    .values({ name: name.trim(), description, tenantId })
-    .returning();
+  const role = (await prisma.rbacRole.create({
+    data: {
+      name: name.trim(),
+      description,
+      tenantId,
+      scope: "tenant",
+    } as any,
+  })) as any;
   res.status(201).json({
     id: role.id,
     name: role.name,
     description: role.description ?? null,
     tenantId: role.tenantId ?? null,
     permissionCount: 0,
-    createdAt: role.createdAt.toISOString(),
+    createdAt: role.createdAt instanceof Date ? role.createdAt.toISOString() : new Date(role.createdAt).toISOString(),
   });
 });
 
 router.get("/roles/:id", authorize({ resource: "users", action: "write" }), async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  const [role] = await db
-    .select()
-    .from(rolesTable)
-    .where(eq(rolesTable.id, id));
+  const role = (await prisma.rbacRole.findUnique({ where: { id } })) as any;
   if (!role) {
     res.status(404).json({ error: "Not found" });
     return;
   }
 
-  const permRows = await db
-    .select({
-      id: permissionsTable.id,
-      resource: permissionsTable.resource,
-      action: permissionsTable.action,
-      description: permissionsTable.description,
-      createdAt: permissionsTable.createdAt,
-    })
-    .from(rolePermissionsTable)
-    .innerJoin(
-      permissionsTable,
-      eq(rolePermissionsTable.permissionId, permissionsTable.id),
-    )
-    .where(eq(rolePermissionsTable.roleId, id));
+  const rolePerms = (await prisma.rolePermission.findMany({
+    where: { roleId: id },
+    include: { permission: true } as any,
+  })) as any[];
+
+  const permRows = rolePerms.map((rp) => rp.permission).filter(Boolean) as any[];
 
   res.json({
     id: role.id,
     name: role.name,
-    description: role.description ?? null,
+    description: (role as any).description ?? null,
     tenantId: role.tenantId ?? null,
-    createdAt: role.createdAt.toISOString(),
+    createdAt: role.createdAt instanceof Date ? role.createdAt.toISOString() : new Date(role.createdAt).toISOString(),
     permissions: permRows.map((p) => ({
       id: p.id,
-      resource: p.resource,
-      action: p.action,
+      resource: p.resource ?? (p.code?.split(":")[0] ?? ""),
+      action: p.action ?? (p.code?.split(":")[1] ?? ""),
       description: p.description ?? null,
-      createdAt: p.createdAt.toISOString(),
+      createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : new Date(p.createdAt).toISOString(),
     })),
   });
 });
@@ -294,36 +280,33 @@ router.patch("/roles/:id", authorize({ resource: "users", action: "write" }), as
   if (name !== undefined) updates.name = name.trim();
   if (description !== undefined) updates.description = description;
   if (tenantId !== undefined) updates.tenantId = tenantId;
-  const [role] = await db
-    .update(rolesTable)
-    .set(updates)
-    .where(eq(rolesTable.id, id))
-    .returning();
+  const role = (await prisma.rbacRole.update({
+    where: { id },
+    data: updates as any,
+  })) as any;
   if (!role) {
     res.status(404).json({ error: "Not found" });
     return;
   }
-  const [{ count }] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(rolePermissionsTable)
-    .where(eq(rolePermissionsTable.roleId, id));
+  const count = await prisma.rolePermission.count({
+    where: { roleId: id },
+  });
   res.json({
     id: role.id,
     name: role.name,
-    description: role.description ?? null,
+    description: (role as any).description ?? null,
     tenantId: role.tenantId ?? null,
     permissionCount: count,
-    createdAt: role.createdAt.toISOString(),
+    createdAt: role.createdAt instanceof Date ? role.createdAt.toISOString() : new Date(role.createdAt).toISOString(),
   });
 });
 
 router.delete("/roles/:id", authorize({ resource: "users", action: "write" }), async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  await db
-    .delete(rolePermissionsTable)
-    .where(eq(rolePermissionsTable.roleId, id));
-  await db.delete(userRolesTable).where(eq(userRolesTable.roleId, id));
-  await db.delete(rolesTable).where(eq(rolesTable.id, id));
+  await prisma.rolePermission.deleteMany({ where: { roleId: id } });
+  // userRolesTable → membership
+  await prisma.membership.deleteMany({ where: { roleId: id } as any });
+  await prisma.rbacRole.delete({ where: { id } });
   res.status(204).end();
 });
 
@@ -335,10 +318,11 @@ router.put(
   async (req, res): Promise<void> => {
     const roleId = String(req.params.id);
     const permissionId = String(req.params.permissionId);
-    await db
-      .insert(rolePermissionsTable)
-      .values({ roleId, permissionId })
-      .onConflictDoNothing();
+    await prisma.rolePermission
+      .create({ data: { roleId, permissionId } })
+      .catch(() => {
+        // Ignore unique-constraint conflicts (onConflictDoNothing)
+      });
     res.status(204).end();
   },
 );
@@ -349,14 +333,9 @@ router.delete(
   async (req, res): Promise<void> => {
     const roleId = String(req.params.id);
     const permissionId = String(req.params.permissionId);
-    await db
-      .delete(rolePermissionsTable)
-      .where(
-        and(
-          eq(rolePermissionsTable.roleId, roleId),
-          eq(rolePermissionsTable.permissionId, permissionId),
-        ),
-      );
+    await prisma.rolePermission.deleteMany({
+      where: { roleId, permissionId },
+    });
     res.status(204).end();
   },
 );
@@ -367,44 +346,34 @@ router.get("/user-roles", authorize({ resource: "users", action: "write" }), asy
   const userId = req.query.userId as string | undefined;
   const tenantId = req.query.tenantId ? String(req.query.tenantId) : undefined;
 
-  const rows = await db
-    .select({
-      id: userRolesTable.id,
-      userId: userRolesTable.userId,
-      roleId: userRolesTable.roleId,
-      roleName: rolesTable.name,
-      tenantId: userRolesTable.tenantId,
-      createdAt: userRolesTable.createdAt,
-    })
-    .from(userRolesTable)
-    .innerJoin(rolesTable, eq(userRolesTable.roleId, rolesTable.id))
-    .where(
-      userId
-        ? eq(userRolesTable.userId, userId)
-        : tenantId !== undefined
-          ? eq(userRolesTable.tenantId, tenantId)
-          : undefined,
-    )
-    .orderBy(userRolesTable.id);
+  const where: any = {};
+  if (userId) where.userId = userId;
+  else if (tenantId !== undefined) where.tenantId = tenantId;
+
+  const rows = (await prisma.membership.findMany({
+    where,
+    orderBy: { id: "asc" },
+    include: { role: { select: { id: true, name: true, description: true } } } as any,
+  })) as any[];
 
   const withTenants = await Promise.all(
     rows.map(async (r) => {
       let tenantName: string | null = null;
       if (r.tenantId) {
-        const [t] = await db
-          .select({ name: tenantsTable.name })
-          .from(tenantsTable)
-          .where(eq(tenantsTable.id, r.tenantId));
+        const t = (await prisma.tenant.findUnique({
+          where: { id: r.tenantId },
+          select: { name: true },
+        })) as any;
         tenantName = t?.name ?? null;
       }
       return {
         id: r.id,
         userId: r.userId,
         roleId: r.roleId,
-        roleName: r.roleName,
+        roleName: r.role?.name ?? "",
         tenantId: r.tenantId ?? null,
         tenantName,
-        createdAt: r.createdAt.toISOString(),
+        createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : new Date(r.createdAt).toISOString(),
       };
     }),
   );
@@ -422,20 +391,19 @@ router.post("/user-roles", authorize({ resource: "users", action: "write" }), as
     res.status(400).json({ error: "userId and roleId are required" });
     return;
   }
-  const [row] = await db
-    .insert(userRolesTable)
-    .values({ userId: userId.trim(), roleId, tenantId })
-    .returning();
-  const [role] = await db
-    .select({ name: rolesTable.name })
-    .from(rolesTable)
-    .where(eq(rolesTable.id, roleId));
+  const row = (await prisma.membership.create({
+    data: { userId: userId.trim(), roleId, tenantId } as any,
+  })) as any;
+  const role = (await prisma.rbacRole.findUnique({
+    where: { id: roleId },
+    select: { name: true },
+  })) as any;
   let tenantName: string | null = null;
   if (tenantId) {
-    const [t] = await db
-      .select({ name: tenantsTable.name })
-      .from(tenantsTable)
-      .where(eq(tenantsTable.id, tenantId));
+    const t = (await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { name: true },
+    })) as any;
     tenantName = t?.name ?? null;
   }
   res.status(201).json({
@@ -445,13 +413,15 @@ router.post("/user-roles", authorize({ resource: "users", action: "write" }), as
     roleName: role?.name ?? "",
     tenantId: row.tenantId ?? null,
     tenantName,
-    createdAt: row.createdAt.toISOString(),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : new Date(row.createdAt).toISOString(),
   });
 });
 
 router.delete("/user-roles/:id", authorize({ resource: "users", action: "write" }), async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  await db.delete(userRolesTable).where(eq(userRolesTable.id, id));
+  await prisma.membership.delete({ where: { id } }).catch(() => {
+    // Ignore if already deleted
+  });
   res.status(204).end();
 });
 
@@ -461,38 +431,33 @@ router.get("/members", authorize({ resource: "users", action: "read" }), async (
   await ensureRbacSeed();
   const tenantId = req.tenantId as string;
 
-  const members = await db
-    .select({
-      id: usersTable.id,
-      name: usersTable.name,
-      email: usersTable.email,
-      avatarUrl: usersTable.avatarUrl,
-      isActive: usersTable.isActive,
-      createdAt: usersTable.createdAt,
-      lastLoginAt: usersTable.lastLoginAt,
-    })
-    .from(usersTable)
-    .where(eq(usersTable.tenantId, tenantId))
-    .orderBy(usersTable.createdAt);
+  const members = (await prisma.user.findMany({
+    where: { tenantId } as any,
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      avatarUrl: true,
+      status: true,
+      createdAt: true,
+      lastLoginAt: true,
+    },
+  })) as any[];
 
   const userIds = members.map((m) => String(m.id));
-  const roleAssignments =
-    userIds.length > 0
-      ? await db
-          .select({
-            userId: userRolesTable.userId,
-            roleId: rolesTable.id,
-            roleName: rolesTable.name,
-            roleDescription: rolesTable.description,
-          })
-          .from(userRolesTable)
-          .innerJoin(rolesTable, eq(userRolesTable.roleId, rolesTable.id))
-          .where(inArray(userRolesTable.userId, userIds))
-      : [];
+  const roleAssignments: any[] = userIds.length
+    ? ((await prisma.membership.findMany({
+        where: { userId: { in: userIds } },
+        include: { role: { select: { id: true, name: true, description: true } } } as any,
+      })) as any[])
+    : [];
 
   const roleByUser: Record<string, { id: string; name: string; description: string | null }> = {};
   for (const r of roleAssignments) {
-    roleByUser[r.userId] = { id: r.roleId, name: r.roleName, description: r.roleDescription ?? null };
+    if (r.role) {
+      roleByUser[r.userId] = { id: r.role.id, name: r.role.name, description: r.role.description ?? null };
+    }
   }
 
   res.json(
@@ -501,9 +466,11 @@ router.get("/members", authorize({ resource: "users", action: "read" }), async (
       name: m.name,
       email: m.email,
       avatarUrl: m.avatarUrl ?? null,
-      isActive: m.isActive,
-      joinedAt: m.createdAt.toISOString(),
-      lastLoginAt: m.lastLoginAt?.toISOString() ?? null,
+      isActive: m.status === "active",
+      joinedAt: m.createdAt instanceof Date ? m.createdAt.toISOString() : new Date(m.createdAt).toISOString(),
+      lastLoginAt: m.lastLoginAt
+        ? (m.lastLoginAt instanceof Date ? m.lastLoginAt.toISOString() : new Date(m.lastLoginAt).toISOString())
+        : null,
       role: roleByUser[String(m.id)] ?? null,
     })),
   );
@@ -515,38 +482,37 @@ router.put("/members/:userId/role", authorize({ resource: "users", action: "writ
   const { roleId } = req.body as { roleId: string };
   const tenantId = req.tenantId as string;
 
-  const [user] = await db
-    .select({ id: usersTable.id })
-    .from(usersTable)
-    .where(and(eq(usersTable.id, String(userId)), eq(usersTable.tenantId, tenantId)));
+  const user = (await prisma.user.findFirst({
+    where: { id: String(userId), tenantId } as any,
+    select: { id: true },
+  })) as any;
 
   if (!user) {
     res.status(404).json({ error: "User not found in this workspace" });
     return;
   }
 
-  const [role] = await db.select().from(rolesTable).where(eq(rolesTable.id, roleId));
+  const role = (await prisma.rbacRole.findUnique({ where: { id: roleId } })) as any;
   if (!role) {
     res.status(404).json({ error: "Role not found" });
     return;
   }
 
-  await db.delete(userRolesTable).where(
-    and(eq(userRolesTable.userId, userId as string), eq(userRolesTable.tenantId, tenantId)),
-  );
+  await prisma.membership.deleteMany({
+    where: { userId: userId as string, tenantId } as any,
+  });
 
-  const [assignment] = await db
-    .insert(userRolesTable)
-    .values({ userId: userId as string, roleId, tenantId })
-    .returning();
+  const assignment = (await prisma.membership.create({
+    data: { userId: userId as string, roleId, tenantId } as any,
+  })) as any;
 
   res.json({
     userId,
     roleId: assignment.roleId,
     roleName: role.name,
-    roleDescription: role.description ?? null,
+    roleDescription: (role as any).description ?? null,
     tenantId: assignment.tenantId,
-    createdAt: assignment.createdAt.toISOString(),
+    createdAt: assignment.createdAt instanceof Date ? assignment.createdAt.toISOString() : new Date(assignment.createdAt).toISOString(),
   });
 });
 

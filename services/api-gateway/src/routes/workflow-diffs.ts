@@ -14,13 +14,7 @@
  */
 
 import { Router, type Request, type Response } from "express";
-import { eq, and, desc } from "drizzle-orm";
-import {
-  db,
-  workflowsTable,
-  workflowVersionsTable,
-  workflowDiffsTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authorize } from "@longox/shared-rbac";
 import { computeFullDiff, renderSemanticDiff } from "@longox/workflow-canvas";
 import type { WorkflowGraph } from "@longox/workflow-canvas";
@@ -36,11 +30,10 @@ router.get(
     const workflowId = String(req.params["id"] ?? "");
     const tenantId = req.user?.tenantId ?? null;
 
-    const [workflow] = await db
-      .select({ id: workflowsTable.id, tenantId: workflowsTable.tenantId })
-      .from(workflowsTable)
-      .where(eq(workflowsTable.id, workflowId))
-      .limit(1);
+    const workflow = (await prisma.workflow.findUnique({
+      where: { id: workflowId },
+      select: { id: true, tenantId: true },
+    })) as any;
 
     if (!workflow) {
       res.status(404).json({ error: "Workflow not found" });
@@ -52,20 +45,20 @@ router.get(
       return;
     }
 
-    const diffs = await db
-      .select({
-        id: workflowDiffsTable.id,
-        workflowId: workflowDiffsTable.workflowId,
-        fromVersionId: workflowDiffsTable.fromVersionId,
-        toVersionId: workflowDiffsTable.toVersionId,
-        patchHash: workflowDiffsTable.patchHash,
-        summary: workflowDiffsTable.summary,
-        createdBy: workflowDiffsTable.createdBy,
-        createdAt: workflowDiffsTable.createdAt,
-      })
-      .from(workflowDiffsTable)
-      .where(eq(workflowDiffsTable.workflowId, workflowId))
-      .orderBy(desc(workflowDiffsTable.createdAt));
+    const diffs = (await prisma.workflowDiff.findMany({
+      where: { workflowId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        workflowId: true,
+        fromVersionId: true,
+        toVersionId: true,
+        patchHash: true,
+        summary: true,
+        createdBy: true,
+        createdAt: true,
+      } as any,
+    })) as any[];
 
     // Enrich with version numbers
     const versionIds = [
@@ -75,18 +68,14 @@ router.get(
       ]),
     ];
 
-    const versions =
-      versionIds.length > 0
-        ? await db
-            .select({
-              id: workflowVersionsTable.id,
-              version: workflowVersionsTable.version,
-            })
-            .from(workflowVersionsTable)
-            .where(eq(workflowVersionsTable.workflowId, workflowId))
-        : [];
+    const versions = versionIds.length
+      ? ((await prisma.workflowVersion.findMany({
+          where: { workflowId },
+          select: { id: true, versionNumber: true } as any,
+        })) as any[])
+      : [];
 
-    const versionMap = new Map(versions.map((v) => [v.id, v.version]));
+    const versionMap = new Map(versions.map((v) => [v.id, v.versionNumber]));
 
     res.json(
       diffs.map((d) => ({
@@ -99,7 +88,7 @@ router.get(
         patchHash: d.patchHash,
         summary: d.summary,
         createdBy: d.createdBy,
-        createdAt: d.createdAt?.toISOString(),
+        createdAt: d.createdAt instanceof Date ? d.createdAt.toISOString() : (d.createdAt ? new Date(d.createdAt).toISOString() : null),
       })),
     );
   },
@@ -125,11 +114,10 @@ router.get(
     }
 
     // Check workflow access
-    const [workflow] = await db
-      .select({ id: workflowsTable.id, tenantId: workflowsTable.tenantId })
-      .from(workflowsTable)
-      .where(eq(workflowsTable.id, workflowId))
-      .limit(1);
+    const workflow = (await prisma.workflow.findUnique({
+      where: { id: workflowId },
+      select: { id: true, tenantId: true },
+    })) as any;
 
     if (!workflow) {
       res.status(404).json({ error: "Workflow not found" });
@@ -142,28 +130,16 @@ router.get(
     }
 
     // Load both versions
-    const [fromVer, toVer] = await Promise.all([
-      db
-        .select()
-        .from(workflowVersionsTable)
-        .where(
-          and(
-            eq(workflowVersionsTable.workflowId, workflowId),
-            eq(workflowVersionsTable.version, fromVersion),
-          ),
-        )
-        .limit(1),
-      db
-        .select()
-        .from(workflowVersionsTable)
-        .where(
-          and(
-            eq(workflowVersionsTable.workflowId, workflowId),
-            eq(workflowVersionsTable.version, toVersion),
-          ),
-        )
-        .limit(1),
+    const [fromVerRow, toVerRow] = await Promise.all([
+      (prisma.workflowVersion.findFirst({
+        where: { workflowId, versionNumber: fromVersion } as any,
+      })) as Promise<any>,
+      (prisma.workflowVersion.findFirst({
+        where: { workflowId, versionNumber: toVersion } as any,
+      })) as Promise<any>,
     ]);
+    const fromVer = fromVerRow ? [fromVerRow] : [];
+    const toVer = toVerRow ? [toVerRow] : [];
 
     if (!fromVer[0] || !toVer[0]) {
       res.status(404).json({ error: "One or both versions not found" });
@@ -171,17 +147,13 @@ router.get(
     }
 
     // Check if pre-computed diff exists
-    const [cached] = await db
-      .select()
-      .from(workflowDiffsTable)
-      .where(
-        and(
-          eq(workflowDiffsTable.workflowId, workflowId),
-          eq(workflowDiffsTable.fromVersionId, fromVer[0].id),
-          eq(workflowDiffsTable.toVersionId, toVer[0].id),
-        ),
-      )
-      .limit(1);
+    const cached = (await prisma.workflowDiff.findFirst({
+      where: {
+        workflowId,
+        fromVersionId: fromVer[0].id,
+        toVersionId: toVer[0].id,
+      },
+    })) as any;
 
     if (cached) {
       res.json({
@@ -189,10 +161,10 @@ router.get(
         fromVersion,
         toVersion,
         patchHash: cached.patchHash,
-        patch: cached.patch,
+        patch: (cached as any).patch ?? cached.patchJson,
         summary: cached.summary,
         createdBy: cached.createdBy,
-        createdAt: cached.createdAt?.toISOString(),
+        createdAt: cached.createdAt instanceof Date ? cached.createdAt.toISOString() : (cached.createdAt ? new Date(cached.createdAt).toISOString() : null),
       });
       return;
     }
@@ -229,11 +201,10 @@ router.get(
     const toVersion = parseInt(String(req.params["toVersion"] ?? "0"), 10);
     const tenantId = req.user?.tenantId ?? null;
 
-    const [workflow] = await db
-      .select({ id: workflowsTable.id, tenantId: workflowsTable.tenantId })
-      .from(workflowsTable)
-      .where(eq(workflowsTable.id, workflowId))
-      .limit(1);
+    const workflow = (await prisma.workflow.findUnique({
+      where: { id: workflowId },
+      select: { id: true, tenantId: true },
+    })) as any;
 
     if (!workflow) {
       res.status(404).json({ error: "Workflow not found" });
@@ -245,28 +216,16 @@ router.get(
       return;
     }
 
-    const [fromVer, toVer] = await Promise.all([
-      db
-        .select()
-        .from(workflowVersionsTable)
-        .where(
-          and(
-            eq(workflowVersionsTable.workflowId, workflowId),
-            eq(workflowVersionsTable.version, fromVersion),
-          ),
-        )
-        .limit(1),
-      db
-        .select()
-        .from(workflowVersionsTable)
-        .where(
-          and(
-            eq(workflowVersionsTable.workflowId, workflowId),
-            eq(workflowVersionsTable.version, toVersion),
-          ),
-        )
-        .limit(1),
+    const [fromVerRow, toVerRow] = await Promise.all([
+      (prisma.workflowVersion.findFirst({
+        where: { workflowId, versionNumber: fromVersion } as any,
+      })) as Promise<any>,
+      (prisma.workflowVersion.findFirst({
+        where: { workflowId, versionNumber: toVersion } as any,
+      })) as Promise<any>,
     ]);
+    const fromVer = fromVerRow ? [fromVerRow] : [];
+    const toVer = toVerRow ? [toVerRow] : [];
 
     if (!fromVer[0] || !toVer[0]) {
       res.status(404).json({ error: "One or both versions not found" });
@@ -290,13 +249,17 @@ router.get(
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
-function extractGraph(
-  version: typeof workflowVersionsTable.$inferSelect,
-): WorkflowGraph {
-  const nodes = Array.isArray(version.nodes) ? (version.nodes as any[]) : [];
+function extractGraph(version: any): WorkflowGraph {
+  const nodes = Array.isArray((version as any).nodes)
+    ? (version.nodes as any[])
+    : Array.isArray((version as any).graphJson)
+      ? (((version as any).graphJson as any)?.nodes ?? [])
+      : [];
   const edges = Array.isArray((version as any).edges)
     ? (version as any).edges
-    : [];
+    : Array.isArray((version as any).graphJson)
+      ? (((version as any).graphJson as any)?.edges ?? [])
+      : [];
   return { nodes, edges };
 }
 

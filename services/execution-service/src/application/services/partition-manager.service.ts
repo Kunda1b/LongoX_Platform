@@ -1,4 +1,4 @@
-import { db } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { RetentionPolicyService } from "./retention-policy.service";
 
 const MANAGED_TABLES = [
@@ -43,7 +43,7 @@ export class PartitionManagerService {
       `;
 
       try {
-        await db.execute(sql);
+        await prisma.$executeRawUnsafe(sql);
         created.push(partitionName);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -77,10 +77,9 @@ export class PartitionManagerService {
       ORDER BY child.relname
     `;
 
-    const result = await db.execute(sql);
-    const rows = result.rows ?? result;
+    const rows = (await prisma.$queryRawUnsafe(sql)) as any[];
 
-    return (rows as any[]).map((row: any) => ({
+    return rows.map((row: any) => ({
       partitionName: row.partition_name,
       tableName: row.table_name,
       rangeStart: row.partition_range ?? "",
@@ -114,7 +113,7 @@ export class PartitionManagerService {
 
   async dropPartition(partitionName: string): Promise<void> {
     const sql = `DROP TABLE IF EXISTS "${partitionName}"`;
-    await db.execute(sql);
+    await prisma.$executeRawUnsafe(sql);
   }
 
   async detachPartition(partitionName: string): Promise<void> {
@@ -123,7 +122,7 @@ export class PartitionManagerService {
       throw new Error(`Cannot determine parent table for ${partitionName}`);
     }
     const sql = `ALTER TABLE "${tableName}" DETACH PARTITION "${partitionName}"`;
-    await db.execute(sql);
+    await prisma.$executeRawUnsafe(sql);
   }
 
   private getPartitionRange(

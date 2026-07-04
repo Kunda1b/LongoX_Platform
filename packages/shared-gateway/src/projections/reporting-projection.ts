@@ -1,5 +1,4 @@
-import { db, reportingSnapshotsTable, reportingKPIsTable } from "@longox/db";
-import { eq, and, sql } from "drizzle-orm";
+import { prisma } from "@longox/db/prisma";
 import type { PlatformEvent } from "@longox/shared-events";
 
 export class ReportingProjection {
@@ -71,30 +70,37 @@ export class ReportingProjection {
     period: string,
   ): Promise<void> {
     try {
-      const [existing] = await db
-        .select()
-        .from(reportingKPIsTable)
-        .where(
-          and(
-            eq(reportingKPIsTable.kpiName, name),
-            eq(reportingKPIsTable.tenantId, String(tenantId)),
-            eq(reportingKPIsTable.period, period),
-          ),
-        )
-        .limit(1);
+      // Migrated per ADR-013 Phase 3: Drizzle queries on `reporting_kpis`
+      // collapsed into the generic `prisma.reportingReadModel` delegate.
+      // KPI identity = (tenantId, reportType="kpi:{name}", period). The KPI
+      // value is stored as a string in the JSON `data` column to preserve the
+      // legacy numeric-as-string semantics of `reporting_kpis.kpi_value`.
+      const reportType = `kpi:${name}`;
+      const existing = (await prisma.reportingReadModel.findFirst({
+        where: {
+          tenantId: String(tenantId),
+          reportType,
+          period,
+        } as any,
+      } as any)) as any;
 
       if (existing) {
-        const newValue = String(existing.kpiValue) + value;
-        await db
-          .update(reportingKPIsTable)
-          .set({ kpiValue: String(newValue) })
-          .where(eq(reportingKPIsTable.id, String(existing.id)));
+        const currentValue = Number(existing.data?.value ?? 0) || 0;
+        const newValue = String(currentValue + value);
+        await prisma.reportingReadModel.update({
+          where: { id: existing.id },
+          data: {
+            data: { name, value: newValue } as any,
+          } as any,
+        } as any);
       } else {
-        await db.insert(reportingKPIsTable).values({
-          kpiName: name,
-          kpiValue: String(value),
-          tenantId,
-          period,
+        await prisma.reportingReadModel.create({
+          data: {
+            tenantId: String(tenantId),
+            reportType,
+            period,
+            data: { name, value: String(value) } as any,
+          } as any,
         } as any);
       }
     } catch (err) {
@@ -135,18 +141,28 @@ export class ReportingProjection {
     };
 
     try {
-      await db.insert(reportingSnapshotsTable).values({
-        reportType: "event_snapshot",
-        tenantId,
-        period: "hour",
-        periodStart: new Date(events[0].timestamp),
-        periodEnd: new Date(events[events.length - 1].timestamp),
-        data,
-        summary: {
-          totalEvents: events.length,
-          uniqueAggregates: new Set(events.map((e) => e.aggregateId)).size,
-        },
-      });
+      // Migrated per ADR-013 Phase 3: Drizzle insert into
+      // `reporting_snapshots` collapsed into the generic
+      // `prisma.reportingReadModel` delegate. `periodStart`/`periodEnd` and
+      // `summary` are embedded in the JSON `data` column because the Prisma
+      // `ReportingReadModel` model only exposes (id, tenantId, reportType,
+      // data, period, computedAt).
+      await prisma.reportingReadModel.create({
+        data: {
+          tenantId: tenantId || "",
+          reportType: "event_snapshot",
+          period: "hour",
+          data: {
+            ...data,
+            periodStart: events[0].timestamp,
+            periodEnd: events[events.length - 1].timestamp,
+            summary: {
+              totalEvents: events.length,
+              uniqueAggregates: new Set(events.map((e) => e.aggregateId)).size,
+            },
+          } as any,
+        } as any,
+      } as any);
     } catch (err) {
       console.error("[ReportingProjection] Failed to flush snapshot:", err);
     }

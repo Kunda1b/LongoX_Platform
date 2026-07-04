@@ -16,14 +16,7 @@
 
 import { Router, type Request, type Response } from "express";
 import { randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
-import {
-  db,
-  usersTable,
-  tenantsTable,
-  userRolesTable,
-  rolesTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { signToken, authMiddleware } from "../lib/auth";
 import {
   getAuthKitUrl,
@@ -108,58 +101,51 @@ router.get(
     const { workosUser, accessToken, refreshToken, expiresAt } = session;
 
     // Upsert user in our database
-    const [dbUser] = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.email, workosUser.email.toLowerCase()))
-      .limit(1);
+    const dbUser = (await prisma.user.findUnique({
+      where: { email: workosUser.email.toLowerCase() },
+    })) as any;
 
     let userId: string;
     if (dbUser) {
-      await db
-        .update(usersTable)
-        .set({ lastLoginAt: new Date(), workosUserId: workosUser.id })
-        .where(eq(usersTable.id, dbUser.id));
+      await prisma.user.update({
+        where: { id: dbUser.id },
+        data: { lastLoginAt: new Date(), workosUserId: workosUser.id } as any,
+      });
       userId = dbUser.id;
     } else {
       // Auto-provision from WorkOS
-      const [tenant] = await db.select().from(tenantsTable).limit(1);
+      const tenant = (await prisma.tenant.findFirst()) as any;
       const name =
         [workosUser.firstName, workosUser.lastName].filter(Boolean).join(" ") ||
         workosUser.email.split("@")[0];
 
-      const [newUser] = await db
-        .insert(usersTable)
-        .values({
+      const newUser = (await prisma.user.create({
+        data: {
           email: workosUser.email.toLowerCase(),
           passwordHash: randomBytes(32).toString("hex"),
           name,
           tenantId: tenant?.id ?? null,
           role: "editor",
-          isActive: true,
+          status: "active",
           workosUserId: workosUser.id,
-        } as any)
-        .returning();
+        } as any,
+      })) as any;
       userId = newUser.id;
     }
 
-    const [finalUser] = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.id, userId))
-      .limit(1);
+    const finalUser = (await prisma.user.findUnique({
+      where: { id: userId },
+    })) as any;
 
-    const [roleRow] = await db
-      .select({ name: rolesTable.name })
-      .from(userRolesTable)
-      .innerJoin(rolesTable, eq(userRolesTable.roleId, rolesTable.id))
-      .where(eq(userRolesTable.userId, String(userId)))
-      .limit(1);
+    const roleRow = (await prisma.membership.findFirst({
+      where: { userId: String(userId) } as any,
+      include: { role: { select: { name: true } } } as any,
+    })) as any;
 
     const internalUser = mapWorkOSUser(workosUser, {
       dbUserId: userId,
       tenantId: finalUser?.tenantId ?? null,
-      role: roleRow?.name ?? finalUser?.role ?? "editor",
+      role: roleRow?.role?.name ?? (finalUser as any)?.role ?? "editor",
     });
 
     const jwt = signToken(internalUser);

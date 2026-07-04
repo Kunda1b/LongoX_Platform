@@ -1,5 +1,14 @@
-import { sql, desc } from "drizzle-orm";
-import { db, executionsTable, workflowsTable } from "@longox/db";
+/**
+ * Dashboard analytics query helpers.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3. Raw SQL aggregations
+ * are executed via `prisma.$queryRawUnsafe()` (per ADR-013 raw-SQL fallback
+ * pattern). Field references use the underlying Postgres column names
+ * (`started_at`, `status`, `workflow_name`) since these run against the
+ * `workflow_executions` and `workflows` tables directly.
+ */
+
+import { prisma } from "@longox/db/prisma";
 
 export type DashboardMetric =
   | "executions_over_time"
@@ -25,51 +34,45 @@ export interface DashboardQueryResult {
 }
 
 async function executionsOverTime(): Promise<QueryDataPoint[]> {
-  const rows = await db
-    .select({
-      day: sql<string>`to_char(date_trunc('day', ${executionsTable.startedAt}), 'YYYY-MM-DD')`,
-      value: sql<number>`count(*)::int`,
-    })
-    .from(executionsTable)
-    .groupBy(sql`date_trunc('day', ${executionsTable.startedAt})`)
-    .orderBy(sql`date_trunc('day', ${executionsTable.startedAt})`)
-    .limit(30);
-  return rows.map((r) => ({ label: r.day, value: r.value }));
+  const rows = await prisma.$queryRawUnsafe<{ day: string; value: number }[]>(`
+    SELECT to_char(date_trunc('day', started_at), 'YYYY-MM-DD') AS day,
+           count(*)::int AS value
+    FROM workflow_executions
+    GROUP BY date_trunc('day', started_at)
+    ORDER BY date_trunc('day', started_at)
+    LIMIT 30
+  `);
+  return rows.map((r) => ({ label: r.day, value: Number(r.value) }));
 }
 
 async function executionsByStatus(): Promise<QueryDataPoint[]> {
-  const rows = await db
-    .select({
-      label: executionsTable.status,
-      value: sql<number>`count(*)::int`,
-    })
-    .from(executionsTable)
-    .groupBy(executionsTable.status);
-  return rows.map((r) => ({ label: r.label, value: r.value }));
+  const rows = await prisma.$queryRawUnsafe<{ label: string; value: number }[]>(`
+    SELECT status AS label, count(*)::int AS value
+    FROM workflow_executions
+    GROUP BY status
+  `);
+  return rows.map((r) => ({ label: r.label, value: Number(r.value) }));
 }
 
 async function workflowStatusBreakdown(): Promise<QueryDataPoint[]> {
-  const rows = await db
-    .select({
-      label: workflowsTable.status,
-      value: sql<number>`count(*)::int`,
-    })
-    .from(workflowsTable)
-    .groupBy(workflowsTable.status);
-  return rows.map((r) => ({ label: r.label, value: r.value }));
+  const rows = await prisma.$queryRawUnsafe<{ label: string; value: number }[]>(`
+    SELECT status AS label, count(*)::int AS value
+    FROM workflows
+    GROUP BY status
+  `);
+  return rows.map((r) => ({ label: r.label, value: Number(r.value) }));
 }
 
 async function topWorkflows(): Promise<QueryDataPoint[]> {
-  const rows = await db
-    .select({
-      label: executionsTable.workflowName,
-      value: sql<number>`count(*)::int`,
-    })
-    .from(executionsTable)
-    .groupBy(executionsTable.workflowName)
-    .orderBy(desc(sql`count(*)`))
-    .limit(10);
-  return rows.map((r) => ({ label: r.label, value: r.value }));
+  const rows = await prisma.$queryRawUnsafe<{ label: string; value: number }[]>(`
+    SELECT workflow_name AS label, count(*)::int AS value
+    FROM workflow_executions
+    WHERE workflow_name IS NOT NULL
+    GROUP BY workflow_name
+    ORDER BY count(*) DESC
+    LIMIT 10
+  `);
+  return rows.map((r) => ({ label: r.label, value: Number(r.value) }));
 }
 
 export async function runDashboardQuery(

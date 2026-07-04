@@ -1,11 +1,12 @@
-import { eq, and, sql } from "drizzle-orm";
-import { db } from "@longox/db";
-import {
-  aiEvaluationRunsTable,
-  aiEvaluationRunResultsTable,
-  aiEvaluationDatasetEntriesTable,
-  promptsTable,
-} from "@longox/db";
+/**
+ * Evaluation run service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.aiEvalRun`, `prisma.aiEvalRunResult`, `prisma.aiEvalDatasetEntry`,
+ * and `prisma.aiPrompt` delegates with `as any` casts for legacy columns.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import { EvaluationService } from "../../../evaluation/evaluation-service";
 
 export interface CreateRunInput {
@@ -33,9 +34,8 @@ const evaluationService = new EvaluationService();
 
 export class EvaluationRunService {
   async createRun(input: CreateRunInput) {
-    const [run] = await db
-      .insert(aiEvaluationRunsTable)
-      .values({
+    const run = await prisma.aiEvalRun.create({
+      data: {
         datasetId: input.datasetId,
         promptId: input.promptId,
         promptVersion: input.promptVersion ?? null,
@@ -45,46 +45,42 @@ export class EvaluationRunService {
         totalEntries: 0,
         passedEntries: 0,
         failedEntries: 0,
-      })
-      .returning();
+      } as any,
+    });
     return run;
   }
 
   async startRun(runId: string) {
-    const [run] = await db
-      .update(aiEvaluationRunsTable)
-      .set({
+    const run = await prisma.aiEvalRun.update({
+      where: { id: runId } as any,
+      data: {
         status: "running",
         startedAt: new Date(),
-      })
-      .where(eq(aiEvaluationRunsTable.id, runId))
-      .returning();
+      } as any,
+    });
     return run;
   }
 
   async executeRun(runId: string) {
-    const [run] = await db
-      .select()
-      .from(aiEvaluationRunsTable)
-      .where(eq(aiEvaluationRunsTable.id, runId));
+    const run = await prisma.aiEvalRun.findUnique({
+      where: { id: runId } as any,
+    });
 
     if (!run) throw new Error(`Run ${runId} not found`);
 
-    const [prompt] = await db
-      .select()
-      .from(promptsTable)
-      .where(eq(promptsTable.id, run.promptId));
+    const prompt = await prisma.aiPrompt.findUnique({
+      where: { id: (run as any).promptId } as any,
+    });
 
-    if (!prompt) throw new Error(`Prompt ${run.promptId} not found`);
+    if (!prompt) throw new Error(`Prompt ${(run as any).promptId} not found`);
 
-    const entries = await db
-      .select()
-      .from(aiEvaluationDatasetEntriesTable)
-      .where(eq(aiEvaluationDatasetEntriesTable.datasetId, run.datasetId));
+    const entries = await prisma.aiEvalDatasetEntry.findMany({
+      where: { datasetId: (run as any).datasetId } as any,
+    });
 
     await this.startRun(runId);
 
-    for (const entry of entries) {
+    for (const entry of entries as any[]) {
       const result = evaluationService.evaluate(
         entry.expectedOutput ?? "",
         entry.expectedOutput ?? undefined,
@@ -111,9 +107,8 @@ export class EvaluationRunService {
     const score = evalResult.score;
     const passed = score >= 0.5;
 
-    const [row] = await db
-      .insert(aiEvaluationRunResultsTable)
-      .values({
+    const row = await prisma.aiEvalRunResult.create({
+      data: {
         runId,
         entryId: result.entryId,
         input: result.input,
@@ -123,39 +118,37 @@ export class EvaluationRunService {
         passed,
         metrics: (result.metrics ?? {}) as Record<string, unknown>,
         error: result.error ?? null,
-      })
-      .returning();
+      } as any,
+    });
     return row;
   }
 
   async completeRun(runId: string) {
-    const results = await db
-      .select()
-      .from(aiEvaluationRunResultsTable)
-      .where(eq(aiEvaluationRunResultsTable.runId, runId));
+    const results = await prisma.aiEvalRunResult.findMany({
+      where: { runId } as any,
+    });
 
     const totalEntries = results.length;
-    const passedEntries = results.filter((r) => r.passed).length;
+    const passedEntries = (results as any[]).filter((r) => r.passed).length;
     const failedEntries = totalEntries - passedEntries;
     const score =
       totalEntries > 0
         ? Math.round(
-            (results.reduce((sum, r) => sum + (r.score ?? 0), 0) /
+            ((results as any[]).reduce((sum, r) => sum + (r.score ?? 0), 0) /
               totalEntries) *
               100,
           ) / 100
         : 0;
 
-    const [run] = await db
-      .select()
-      .from(aiEvaluationRunsTable)
-      .where(eq(aiEvaluationRunsTable.id, runId));
+    const run = await prisma.aiEvalRun.findUnique({
+      where: { id: runId } as any,
+    });
 
-    const passed = score >= (run?.threshold ?? 70);
+    const passed = score >= ((run as any)?.threshold ?? 70);
 
-    const [updated] = await db
-      .update(aiEvaluationRunsTable)
-      .set({
+    const updated = await prisma.aiEvalRun.update({
+      where: { id: runId } as any,
+      data: {
         status: "completed",
         totalEntries,
         passedEntries,
@@ -163,40 +156,30 @@ export class EvaluationRunService {
         score,
         passed,
         completedAt: new Date(),
-      })
-      .where(eq(aiEvaluationRunsTable.id, runId))
-      .returning();
+      } as any,
+    });
     return updated;
   }
 
   async getRun(runId: string) {
-    const [run] = await db
-      .select()
-      .from(aiEvaluationRunsTable)
-      .where(eq(aiEvaluationRunsTable.id, runId));
+    const run = await prisma.aiEvalRun.findUnique({
+      where: { id: runId } as any,
+    });
     return run ?? null;
   }
 
   async getRunResults(runId: string) {
-    return db
-      .select()
-      .from(aiEvaluationRunResultsTable)
-      .where(eq(aiEvaluationRunResultsTable.runId, runId))
-      .orderBy(aiEvaluationRunResultsTable.id);
+    return prisma.aiEvalRunResult.findMany({
+      where: { runId } as any,
+      orderBy: { id: "asc" } as any,
+    });
   }
 
   async listRuns(datasetId?: string) {
-    const conditions = [];
-    if (datasetId) {
-      conditions.push(eq(aiEvaluationRunsTable.datasetId, datasetId));
-    }
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
-
-    return db
-      .select()
-      .from(aiEvaluationRunsTable)
-      .where(where)
-      .orderBy(aiEvaluationRunsTable.createdAt);
+    return prisma.aiEvalRun.findMany({
+      where: datasetId ? ({ datasetId } as any) : ({} as any),
+      orderBy: { createdAt: "asc" } as any,
+    });
   }
 }
 

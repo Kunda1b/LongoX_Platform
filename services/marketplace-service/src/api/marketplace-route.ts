@@ -5,9 +5,7 @@ import {
   SearchListingsQuery,
   InstallListingCommand,
 } from "../application/search-listings.query";
-import type { Request } from "express";
-import { db, revenueSharesTable, marketplaceInstallsTable, agentDeploymentsTable, marketplaceListingsTable, marketplaceReviewsTable } from "@longox/db";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { prisma } from "@longox/db/prisma";
 
 const router: IRouter = Router();
 const repository = new PostgresListingRepository();
@@ -121,15 +119,17 @@ router.post(
     const listingData = listing.toJSON();
 
     if (listingData.pricing && !listingData.pricing.free && listingData.authorId) {
-      await db.insert(revenueSharesTable).values({
-        listingId: listingData.id,
-        sellerTenantId: listingData.authorId,
-        platformPercentage: Number(platformSharePercent ?? 20),
-        sellerPercentage: 100 - Number(platformSharePercent ?? 20),
-        totalEarned: 0,
-        platformRevenue: 0,
-        sellerPayout: 0,
-        payoutStatus: "pending",
+      await prisma.revenueShare.create({
+        data: {
+          listingId: listingData.id,
+          sellerTenantId: listingData.authorId,
+          platformPercentage: Number(platformSharePercent ?? 20),
+          sellerPercentage: 100 - Number(platformSharePercent ?? 20),
+          totalEarned: 0,
+          platformRevenue: 0,
+          sellerPayout: 0,
+          payoutStatus: "pending",
+        } as any,
       });
     }
 
@@ -279,9 +279,8 @@ router.post(
       config?: Record<string, unknown>;
     };
 
-    const [deployment] = await db
-      .insert(agentDeploymentsTable)
-      .values({
+    const deployment = await prisma.agentDeployment.create({
+      data: {
         listingId: id,
         tenantId: req.user!.tenantId!,
         deployedBy: req.user!.id,
@@ -293,14 +292,14 @@ router.post(
           listingVersion: listingData.version,
           region: process.env["REGION_ID"] ?? "local",
         },
-      })
-      .returning();
+      } as any,
+    });
 
     res.status(201).json({
       success: true,
       listingId: id,
       deploymentId: deployment.id,
-      targetEnvironment: deployment.targetEnvironment,
+      targetEnvironment: (deployment as any).targetEnvironment,
       status: deployment.status,
       config: deployment.config,
     });
@@ -318,15 +317,13 @@ router.get(
       return;
     }
 
-    const shares = await db
-      .select()
-      .from(revenueSharesTable)
-      .where(eq(revenueSharesTable.listingId, id));
+    const shares = await prisma.revenueShare.findMany({
+      where: { listingId: id } as any,
+    });
 
-    const installs = await db
-      .select()
-      .from(marketplaceInstallsTable)
-      .where(eq(marketplaceInstallsTable.listingId, id));
+    const installs = await prisma.marketplaceInstall.findMany({
+      where: { listingId: id } as any,
+    });
 
     res.json({
       revenue: shares[0] ?? null,
@@ -346,14 +343,18 @@ router.put(
       return;
     }
 
-    const [updated] = await db
-      .update(revenueSharesTable)
-      .set({
-        payoutStatus: "completed",
-        lastPayoutAt: new Date(),
-      })
-      .where(eq(revenueSharesTable.id, id))
-      .returning();
+    let updated: any = null;
+    try {
+      updated = await prisma.revenueShare.update({
+        where: { id },
+        data: {
+          payoutStatus: "completed",
+          lastPayoutAt: new Date(),
+        } as any,
+      });
+    } catch {
+      updated = null;
+    }
 
     if (!updated) {
       res.status(404).json({ error: "Revenue share not found" });
@@ -371,21 +372,20 @@ router.get(
   async (req, res): Promise<void> => {
     const tenantId = req.user!.tenantId!;
 
-    const shares = await db
-      .select()
-      .from(revenueSharesTable)
-      .where(eq(revenueSharesTable.sellerTenantId, tenantId));
+    const shares = await prisma.revenueShare.findMany({
+      where: { sellerTenantId: tenantId } as any,
+    });
 
-    const totalEarned = shares.reduce((sum, s) => sum + Number(s.totalEarned ?? 0), 0);
-    const totalPayout = shares.reduce((sum, s) => sum + Number(s.sellerPayout ?? 0), 0);
-    const pendingPayouts = shares.filter((s) => s.payoutStatus === "pending");
+    const totalEarned = shares.reduce((sum, s: any) => sum + Number(s.totalEarned ?? 0), 0);
+    const totalPayout = shares.reduce((sum, s: any) => sum + Number(s.sellerPayout ?? 0), 0);
+    const pendingPayouts = shares.filter((s: any) => s.payoutStatus === "pending");
 
     res.json({
       totalListings: shares.length,
       totalEarned,
       totalPayout,
       pendingPayouts: pendingPayouts.length,
-      pendingAmount: pendingPayouts.reduce((sum, s) => sum + Number(s.sellerPayout ?? 0), 0),
+      pendingAmount: pendingPayouts.reduce((sum, s: any) => sum + Number(s.sellerPayout ?? 0), 0),
       shares,
     });
   },
@@ -403,16 +403,13 @@ router.get(
       return;
     }
 
-    const rows = await db
-      .select()
-      .from(marketplaceReviewsTable)
-      .where(
-        and(
-          eq(marketplaceReviewsTable.listingId, listingId),
-          eq(marketplaceReviewsTable.status, "approved"),
-        ),
-      )
-      .orderBy(desc(marketplaceReviewsTable.createdAt));
+    const rows = await prisma.marketplaceReview.findMany({
+      where: {
+        listingId,
+        status: "approved",
+      } as any,
+      orderBy: { createdAt: "desc" },
+    });
 
     res.json(rows);
   },
@@ -435,38 +432,31 @@ router.post(
       return;
     }
 
-    const [row] = await db
-      .insert(marketplaceReviewsTable)
-      .values({
+    const row = await prisma.marketplaceReview.create({
+      data: {
         listingId,
         tenantId: req.user!.tenantId!,
         userId: req.user!.id,
         rating: Number(rating),
         title: title ? String(title) : null,
         body: body ? String(body) : null,
-      })
-      .returning();
+      } as any,
+    });
 
-    const reviews = await db
-      .select({ avg: sql<number>`avg(${marketplaceReviewsTable.rating})` })
-      .from(marketplaceReviewsTable)
-      .where(
-        and(
-          eq(marketplaceReviewsTable.listingId, listingId),
-          eq(marketplaceReviewsTable.status, "approved"),
-        ),
-      );
+    const agg = await prisma.marketplaceReview.aggregate({
+      where: { listingId, status: "approved" } as any,
+      _avg: { rating: true },
+    });
+    const reviewCount = await prisma.marketplaceReview.count({
+      where: { listingId } as any,
+    });
 
-    const avgRating = reviews[0]?.avg ?? Number(rating);
-    const [{ count }] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(marketplaceReviewsTable)
-      .where(eq(marketplaceReviewsTable.listingId, listingId));
+    const avgRating = (agg._avg.rating ?? Number(rating)) as number;
 
-    await db
-      .update(marketplaceListingsTable)
-      .set({ rating: avgRating, reviewCount: count })
-      .where(eq(marketplaceListingsTable.id, listingId));
+    await prisma.marketplaceListing.update({
+      where: { id: listingId },
+      data: { rating: avgRating, reviewCount } as any,
+    });
 
     res.status(201).json(row);
   },
@@ -483,16 +473,12 @@ router.put(
       return;
     }
 
-    const [review] = await db
-      .select()
-      .from(marketplaceReviewsTable)
-      .where(
-        and(
-          eq(marketplaceReviewsTable.id, reviewId),
-          eq(marketplaceReviewsTable.userId, req.user!.id),
-        ),
-      )
-      .limit(1);
+    const review = await prisma.marketplaceReview.findFirst({
+      where: {
+        id: reviewId,
+        userId: req.user!.id,
+      } as any,
+    });
 
     if (!review) {
       res.status(404).json({ error: "Review not found or not owned by you" });
@@ -500,26 +486,26 @@ router.put(
     }
 
     const { rating, title, body } = req.body as Record<string, unknown>;
-    const [updated] = await db
-      .update(marketplaceReviewsTable)
-      .set({
-        rating: rating ? Number(rating) : review.rating,
-        title: title !== undefined ? String(title) : review.title,
-        body: body !== undefined ? String(body) : review.body,
+    const updated = await prisma.marketplaceReview.update({
+      where: { id: reviewId },
+      data: {
+        rating: rating ? Number(rating) : (review as any).rating,
+        title: title !== undefined ? String(title) : (review as any).title,
+        body: body !== undefined ? String(body) : (review as any).body,
         updatedAt: new Date(),
-      })
-      .where(eq(marketplaceReviewsTable.id, reviewId))
-      .returning();
+      } as any,
+    });
 
     if (rating) {
-      const [{ avg }] = await db
-        .select({ avg: sql<number>`avg(${marketplaceReviewsTable.rating})` })
-        .from(marketplaceReviewsTable)
-        .where(eq(marketplaceReviewsTable.listingId, review.listingId));
-      await db
-        .update(marketplaceListingsTable)
-        .set({ rating: avg })
-        .where(eq(marketplaceListingsTable.id, review.listingId));
+      const agg = await prisma.marketplaceReview.aggregate({
+        where: { listingId: review.listingId } as any,
+        _avg: { rating: true },
+      });
+      const avg = (agg._avg.rating ?? 0) as number;
+      await prisma.marketplaceListing.update({
+        where: { id: review.listingId },
+        data: { rating: avg } as any,
+      });
     }
 
     res.json(updated);
@@ -537,39 +523,33 @@ router.delete(
       return;
     }
 
-    const [review] = await db
-      .select()
-      .from(marketplaceReviewsTable)
-      .where(
-        and(
-          eq(marketplaceReviewsTable.id, reviewId),
-          eq(marketplaceReviewsTable.userId, req.user!.id),
-        ),
-      )
-      .limit(1);
+    const review = await prisma.marketplaceReview.findFirst({
+      where: {
+        id: reviewId,
+        userId: req.user!.id,
+      } as any,
+    });
 
     if (!review) {
       res.status(404).json({ error: "Review not found or not owned by you" });
       return;
     }
 
-    await db
-      .delete(marketplaceReviewsTable)
-      .where(eq(marketplaceReviewsTable.id, reviewId));
+    await prisma.marketplaceReview.delete({ where: { id: reviewId } });
 
-    const [{ avg }] = await db
-      .select({ avg: sql<number>`coalesce(avg(${marketplaceReviewsTable.rating}), 0)` })
-      .from(marketplaceReviewsTable)
-      .where(eq(marketplaceReviewsTable.listingId, review.listingId));
-    const [{ count }] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(marketplaceReviewsTable)
-      .where(eq(marketplaceReviewsTable.listingId, review.listingId));
+    const agg = await prisma.marketplaceReview.aggregate({
+      where: { listingId: review.listingId } as any,
+      _avg: { rating: true },
+    });
+    const avg = (agg._avg.rating ?? 0) as number;
+    const count = await prisma.marketplaceReview.count({
+      where: { listingId: review.listingId } as any,
+    });
 
-    await db
-      .update(marketplaceListingsTable)
-      .set({ rating: avg, reviewCount: count })
-      .where(eq(marketplaceListingsTable.id, review.listingId));
+    await prisma.marketplaceListing.update({
+      where: { id: review.listingId },
+      data: { rating: avg, reviewCount: count } as any,
+    });
 
     res.status(204).end();
   },
@@ -588,11 +568,7 @@ router.post(
       return;
     }
 
-    const [listing] = await db
-      .select()
-      .from(marketplaceListingsTable)
-      .where(eq(marketplaceListingsTable.id, id))
-      .limit(1);
+    const listing = await prisma.marketplaceListing.findUnique({ where: { id } });
 
     if (!listing) {
       res.status(404).json({ error: "Listing not found" });
@@ -604,10 +580,10 @@ router.post(
       return;
     }
 
-    await db
-      .update(marketplaceListingsTable)
-      .set({ status: "pending_review", updatedAt: new Date() })
-      .where(eq(marketplaceListingsTable.id, id));
+    await prisma.marketplaceListing.update({
+      where: { id },
+      data: { status: "pending_review", updatedAt: new Date() } as any,
+    });
 
     res.json({ id, status: "pending_review", message: "Listing submitted for review" });
   },
@@ -623,11 +599,7 @@ router.post(
       return;
     }
 
-    const [listing] = await db
-      .select()
-      .from(marketplaceListingsTable)
-      .where(eq(marketplaceListingsTable.id, id))
-      .limit(1);
+    const listing = await prisma.marketplaceListing.findUnique({ where: { id } });
 
     if (!listing) {
       res.status(404).json({ error: "Listing not found" });
@@ -639,10 +611,10 @@ router.post(
       return;
     }
 
-    await db
-      .update(marketplaceListingsTable)
-      .set({ status: "published", updatedAt: new Date() })
-      .where(eq(marketplaceListingsTable.id, id));
+    await prisma.marketplaceListing.update({
+      where: { id },
+      data: { status: "published", updatedAt: new Date() } as any,
+    });
 
     res.json({ id, status: "published", message: "Listing approved and published" });
   },
@@ -658,11 +630,7 @@ router.post(
       return;
     }
 
-    const [listing] = await db
-      .select()
-      .from(marketplaceListingsTable)
-      .where(eq(marketplaceListingsTable.id, id))
-      .limit(1);
+    const listing = await prisma.marketplaceListing.findUnique({ where: { id } });
 
     if (!listing) {
       res.status(404).json({ error: "Listing not found" });
@@ -676,10 +644,10 @@ router.post(
 
     const reason = String(req.body.reason ?? "Listing did not meet marketplace guidelines");
 
-    await db
-      .update(marketplaceListingsTable)
-      .set({ status: "draft", updatedAt: new Date() })
-      .where(eq(marketplaceListingsTable.id, id));
+    await prisma.marketplaceListing.update({
+      where: { id },
+      data: { status: "draft", updatedAt: new Date() } as any,
+    });
 
     res.json({ id, status: "draft", reason, message: "Listing rejected and returned to draft" });
   },
@@ -689,11 +657,10 @@ router.get(
   "/marketplace/reviews/pending",
   authorize({ resource: "templates", action: "read" }),
   async (req, res): Promise<void> => {
-    const rows = await db
-      .select()
-      .from(marketplaceReviewsTable)
-      .where(eq(marketplaceReviewsTable.status, "pending"))
-      .orderBy(marketplaceReviewsTable.createdAt);
+    const rows = await prisma.marketplaceReview.findMany({
+      where: { status: "pending" } as any,
+      orderBy: { createdAt: "asc" } as any,
+    });
 
     res.json(rows);
   },
@@ -716,17 +683,22 @@ router.post(
       return;
     }
 
-    const [updated] = await db
-      .update(marketplaceReviewsTable)
-      .set({
-        status: action === "approve" ? "approved" : "rejected",
-        rejectionReason: action === "reject" ? (reason ?? "Review did not meet guidelines") : null,
-        moderatedBy: req.user!.id,
-        moderatedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(marketplaceReviewsTable.id, reviewId))
-      .returning();
+    let updated: any = null;
+    try {
+      updated = await prisma.marketplaceReview.update({
+        where: { id: reviewId },
+        data: {
+          status: action === "approve" ? "approved" : "rejected",
+          moderationReason: action === "reject" ? (reason ?? "Review did not meet guidelines") : null,
+          rejectionReason: action === "reject" ? (reason ?? "Review did not meet guidelines") : null,
+          moderatedBy: req.user!.id,
+          moderatedAt: new Date(),
+          updatedAt: new Date(),
+        } as any,
+      });
+    } catch {
+      updated = null;
+    }
 
     if (!updated) {
       res.status(404).json({ error: "Review not found" });
@@ -743,11 +715,10 @@ router.get(
   "/marketplace/listings/pending",
   authorize({ resource: "templates", action: "read" }),
   async (req, res): Promise<void> => {
-    const rows = await db
-      .select()
-      .from(marketplaceListingsTable)
-      .where(eq(marketplaceListingsTable.status, "pending_review"))
-      .orderBy(marketplaceListingsTable.createdAt);
+    const rows = await prisma.marketplaceListing.findMany({
+      where: { status: "pending_review" } as any,
+      orderBy: { createdAt: "asc" } as any,
+    });
 
     res.json(rows);
   },

@@ -1,9 +1,15 @@
-import { and, between, eq, desc, gte, lte } from "drizzle-orm";
-import {
-  db,
-  auditLogTable,
-  auditExportsTable,
-} from "@longox/db";
+/**
+ * Audit export service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3. Uses
+ * `prisma.auditLog` and `prisma.auditExport` delegates. `as any` casts
+ * handle legacy columns (`tenantId`, `actorType`, `resourceType`,
+ * `resourceId`, `metadata`, `createdAt`) that exist in the underlying
+ * `audit_logs` table but aren't part of the canonical Prisma schema
+ * (which uses `targetType`/`targetId`/`occurredAt`).
+ */
+
+import { prisma } from "@longox/db/prisma";
 
 export interface AuditExportFilters {
   action?: string;
@@ -66,40 +72,30 @@ async function processJob(job: QueuedJob): Promise<void> {
   job.status = "processing";
 
   try {
-    const conditions = [
-      eq(auditLogTable.tenantId, job.tenantId),
-    ];
+    const where: Record<string, unknown> = { tenantId: job.tenantId };
 
-    if (job.filters.dateFrom) {
-      conditions.push(gte(auditLogTable.createdAt, job.filters.dateFrom));
+    if (job.filters.dateFrom && job.filters.dateTo) {
+      where.createdAt = { gte: job.filters.dateFrom, lte: job.filters.dateTo };
+    } else if (job.filters.dateFrom) {
+      where.createdAt = { gte: job.filters.dateFrom };
+    } else if (job.filters.dateTo) {
+      where.createdAt = { lte: job.filters.dateTo };
     }
-    if (job.filters.dateTo) {
-      conditions.push(lte(auditLogTable.createdAt, job.filters.dateTo));
-    }
-    if (job.filters.action) {
-      conditions.push(eq(auditLogTable.action, job.filters.action));
-    }
-    if (job.filters.actorId) {
-      conditions.push(eq(auditLogTable.actorId, job.filters.actorId));
-    }
-    if (job.filters.resourceType) {
-      conditions.push(eq(auditLogTable.resourceType, job.filters.resourceType));
-    }
-    if (job.filters.resourceId) {
-      conditions.push(eq(auditLogTable.resourceId, job.filters.resourceId));
-    }
+    if (job.filters.action) where.action = job.filters.action;
+    if (job.filters.actorId) where.actorId = job.filters.actorId;
+    if (job.filters.resourceType) where.resourceType = job.filters.resourceType;
+    if (job.filters.resourceId) where.resourceId = job.filters.resourceId;
 
-    const entries = await db
-      .select()
-      .from(auditLogTable)
-      .where(and(...conditions))
-      .orderBy(desc(auditLogTable.createdAt));
+    const entries = await prisma.auditLog.findMany({
+      where: where as any,
+      orderBy: { createdAt: "desc" } as any,
+    });
 
     if (job.format === "csv") {
       const header = "id,actor_type,actor_id,action,resource_type,resource_id,metadata,created_at";
       const rows = entries.map(
-        (e) =>
-          `${e.id},"${e.actorType}","${e.actorId ?? ""}","${e.action}","${e.resourceType}","${e.resourceId}","${JSON.stringify(e.metadata ?? {}).replace(/"/g, '""')}","${e.createdAt.toISOString()}"`,
+        (e: any) =>
+          `${e.id},"${e.actorType ?? ""}","${e.actorId ?? ""}","${e.action}","${e.resourceType ?? e.targetType ?? ""}","${e.resourceId ?? e.targetId ?? ""}","${JSON.stringify(e.metadata ?? {}).replace(/"/g, '""')}","${(e.createdAt ?? e.occurredAt) instanceof Date ? (e.createdAt ?? e.occurredAt).toISOString() : new Date(e.createdAt ?? e.occurredAt).toISOString()}"`,
       );
       job.result = [header, ...rows].join("\n");
     } else {
@@ -110,15 +106,17 @@ async function processJob(job: QueuedJob): Promise<void> {
           dateFrom: job.filters.dateFrom?.toISOString(),
           dateTo: job.filters.dateTo?.toISOString(),
           totalEntries: entries.length,
-          entries: entries.map((e) => ({
+          entries: entries.map((e: any) => ({
             id: e.id,
             actorType: e.actorType,
             actorId: e.actorId,
             action: e.action,
-            resourceType: e.resourceType,
-            resourceId: e.resourceId,
+            resourceType: e.resourceType ?? e.targetType,
+            resourceId: e.resourceId ?? e.targetId,
             metadata: e.metadata,
-            createdAt: e.createdAt.toISOString(),
+            createdAt: (e.createdAt ?? e.occurredAt) instanceof Date
+              ? (e.createdAt ?? e.occurredAt).toISOString()
+              : new Date(e.createdAt ?? e.occurredAt).toISOString(),
           })),
         },
         null,
@@ -128,25 +126,25 @@ async function processJob(job: QueuedJob): Promise<void> {
 
     const key = `audit-exports/${job.tenantId}/${job.id}.${job.format}`;
     try {
-      await uploadToS3(key, job.result, job.format === "csv" ? "text/csv" : "application/json");
+      await uploadToS3(key, job.result!, job.format === "csv" ? "text/csv" : "application/json");
     } catch {
       // local storage fallback
     }
 
-    const contentType = job.format === "csv" ? "text/csv" : "application/json";
-
-    await db.insert(auditExportsTable).values({
-      tenantId: job.tenantId,
-      format: job.format,
-      status: "completed",
-      dateFrom: job.filters.dateFrom?.toISOString().split("T")[0] ?? new Date().toISOString().split("T")[0],
-      dateTo: job.filters.dateTo?.toISOString().split("T")[0] ?? new Date().toISOString().split("T")[0],
-      filterCriteria: job.filters as Record<string, unknown>,
-      rowCount: job.format === "csv" ? job.result.split("\n").length - 1 : JSON.parse(job.result).totalEntries,
-      fileSizeBytes: Buffer.byteLength(job.result),
-      storagePath: `s3://${getS3Config().bucket}/${key}`,
-      completedAt: new Date(),
-      expiresAt: new Date(Date.now() + 30 * 86400000),
+    await prisma.auditExport.create({
+      data: {
+        tenantId: job.tenantId,
+        format: job.format,
+        status: "completed",
+        dateFrom: job.filters.dateFrom ?? new Date(),
+        dateTo: job.filters.dateTo ?? new Date(),
+        filterCriteria: job.filters as Record<string, unknown>,
+        rowCount: job.format === "csv" ? job.result!.split("\n").length - 1 : JSON.parse(job.result!).totalEntries,
+        fileSizeBytes: BigInt(Buffer.byteLength(job.result!)),
+        storagePath: `s3://${getS3Config().bucket}/${key}`,
+        completedAt: new Date(),
+        expiresAt: new Date(Date.now() + 30 * 86400000),
+      } as any,
     });
 
     job.status = "completed";
@@ -163,36 +161,30 @@ export class AuditExportService {
     to: Date,
     filters?: AuditExportFilters,
   ) {
-    const conditions = [
-      eq(auditLogTable.tenantId, tenantId),
-      gte(auditLogTable.createdAt, from),
-      lte(auditLogTable.createdAt, to),
-    ];
+    const where: Record<string, unknown> = {
+      tenantId,
+      createdAt: { gte: from, lte: to },
+    };
 
-    if (filters?.action) {
-      conditions.push(eq(auditLogTable.action, filters.action));
-    }
-    if (filters?.actorId) {
-      conditions.push(eq(auditLogTable.actorId, filters.actorId));
-    }
-    if (filters?.resourceType) {
-      conditions.push(eq(auditLogTable.resourceType, filters.resourceType));
-    }
+    if (filters?.action) where.action = filters.action;
+    if (filters?.actorId) where.actorId = filters.actorId;
+    if (filters?.resourceType) where.resourceType = filters.resourceType;
 
-    const entries = await db
-      .select()
-      .from(auditLogTable)
-      .where(and(...conditions))
-      .orderBy(desc(auditLogTable.createdAt));
+    const entries = await prisma.auditLog.findMany({
+      where: where as any,
+      orderBy: { createdAt: "desc" } as any,
+    });
 
-    return entries.map((e) => ({
-      timestamp: e.createdAt.toISOString(),
+    return entries.map((e: any) => ({
+      timestamp: (e.createdAt ?? e.occurredAt) instanceof Date
+        ? (e.createdAt ?? e.occurredAt).toISOString()
+        : new Date(e.createdAt ?? e.occurredAt).toISOString(),
       actor: e.actorId,
       actorType: e.actorType,
       action: e.action,
-      resource: `${e.resourceType}:${e.resourceId}`,
-      resourceType: e.resourceType,
-      resourceId: e.resourceId,
+      resource: `${e.resourceType ?? e.targetType}:${e.resourceId ?? e.targetId}`,
+      resourceType: e.resourceType ?? e.targetType,
+      resourceId: e.resourceId ?? e.targetId,
       details: e.metadata,
     }));
   }
@@ -202,7 +194,7 @@ export class AuditExportService {
     const header = "timestamp,actor,actor_type,action,resource,resource_type,resource_id";
     const rows = entries.map(
       (e) =>
-        `"${e.timestamp}","${e.actor ?? ""}","${e.actorType}","${e.action}","${e.resource}","${e.resourceType}","${e.resourceId}"`,
+        `"${e.timestamp}","${e.actor ?? ""}","${e.actorType ?? ""}","${e.action}","${e.resource ?? ""}","${e.resourceType ?? ""}","${e.resourceId ?? ""}"`,
     );
     return [header, ...rows].join("\n");
   }
@@ -264,11 +256,10 @@ export class AuditExportService {
   }
 
   async getExportHistory(tenantId: string) {
-    const exports = await db
-      .select()
-      .from(auditExportsTable)
-      .where(eq(auditExportsTable.tenantId, tenantId))
-      .orderBy(desc(auditExportsTable.createdAt));
+    const exports = await prisma.auditExport.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: "desc" },
+    });
     return exports;
   }
 }

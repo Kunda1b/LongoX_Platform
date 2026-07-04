@@ -1,5 +1,4 @@
-import { eq } from "drizzle-orm";
-import { db, retentionConfigTable, tenantSettingsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 
 /** ADR-012: Enterprise tenants may extend hot retention to 24 or 36 months. */
 export const ALLOWED_HOT_RETENTION_MONTHS = [13, 24, 36] as const;
@@ -51,36 +50,32 @@ function normalizeColdYears(years: number): number {
 
 export class RetentionPolicyService {
   async getPolicy(tenantId: string): Promise<RetentionPolicyConfig> {
-    const [settings] = await db
-      .select()
-      .from(tenantSettingsTable)
-      .where(eq(tenantSettingsTable.tenantId, tenantId))
-      .limit(1);
+    const settings = await prisma.tenantSettings.findUnique({
+      where: { tenantId },
+    });
 
     const hotMonths = normalizeHotMonths(
-      settings?.retentionHotMonths ?? DEFAULTS.hotRetentionMonths,
+      (settings as any)?.retentionHotMonths ?? DEFAULTS.hotRetentionMonths,
     );
     const coldYears = normalizeColdYears(
-      settings?.retentionColdYears ?? DEFAULTS.coldRetentionYears,
+      (settings as any)?.retentionColdYears ?? DEFAULTS.coldRetentionYears,
     );
 
-    const [archiveConfig] = await db
-      .select()
-      .from(retentionConfigTable)
-      .where(eq(retentionConfigTable.tenantId, tenantId))
-      .limit(1);
+    const archiveConfig = await prisma.retentionConfig.findUnique({
+      where: { tenantId },
+    });
 
     return {
       hotRetentionMonths: hotMonths,
       coldRetentionYears: coldYears,
       hotRetentionDays: monthsToDays(hotMonths),
       coldRetentionDays: yearsToDays(coldYears),
-      archiveEnabled: archiveConfig?.archiveEnabled ?? DEFAULTS.archiveEnabled,
-      archiveBucket: archiveConfig?.archiveBucket ?? DEFAULTS.archiveBucket,
+      archiveEnabled: (archiveConfig as any)?.archiveEnabled ?? DEFAULTS.archiveEnabled,
+      archiveBucket: (archiveConfig as any)?.archiveBucket ?? DEFAULTS.archiveBucket,
       coldQueryEnabled:
-        archiveConfig?.coldQueryEnabled ?? DEFAULTS.coldQueryEnabled,
+        (archiveConfig as any)?.coldQueryEnabled ?? DEFAULTS.coldQueryEnabled,
       partitionInterval:
-        (archiveConfig?.partitionInterval as RetentionPolicyConfig["partitionInterval"]) ??
+        ((archiveConfig as any)?.partitionInterval as RetentionPolicyConfig["partitionInterval"]) ??
         DEFAULTS.partitionInterval,
     };
   }
@@ -93,32 +88,32 @@ export class RetentionPolicyService {
 
     if (config.hotRetentionMonths !== undefined) {
       const hotMonths = normalizeHotMonths(config.hotRetentionMonths);
-      await db
-        .insert(tenantSettingsTable)
-        .values({
+      await prisma.tenantSettings.upsert({
+        where: { tenantId },
+        create: {
           tenantId,
           retentionHotMonths: hotMonths,
           retentionColdYears: current.coldRetentionYears,
-        })
-        .onConflictDoUpdate({
-          target: tenantSettingsTable.tenantId,
-          set: { retentionHotMonths: hotMonths },
-        });
+        } as any,
+        update: {
+          retentionHotMonths: hotMonths,
+        } as any,
+      });
     }
 
     if (config.coldRetentionYears !== undefined) {
       const coldYears = normalizeColdYears(config.coldRetentionYears);
-      await db
-        .insert(tenantSettingsTable)
-        .values({
+      await prisma.tenantSettings.upsert({
+        where: { tenantId },
+        create: {
           tenantId,
           retentionHotMonths: current.hotRetentionMonths,
           retentionColdYears: coldYears,
-        })
-        .onConflictDoUpdate({
-          target: tenantSettingsTable.tenantId,
-          set: { retentionColdYears: coldYears },
-        });
+        } as any,
+        update: {
+          retentionColdYears: coldYears,
+        } as any,
+      });
     }
 
     const archiveFields = {
@@ -133,9 +128,9 @@ export class RetentionPolicyService {
 
     if (hasArchiveUpdate) {
       const merged = await this.getPolicy(tenantId);
-      await db
-        .insert(retentionConfigTable)
-        .values({
+      await prisma.retentionConfig.upsert({
+        where: { tenantId },
+        create: {
           tenantId,
           hotRetentionDays: merged.hotRetentionDays,
           coldRetentionDays: merged.coldRetentionDays,
@@ -143,20 +138,16 @@ export class RetentionPolicyService {
           archiveBucket: config.archiveBucket ?? merged.archiveBucket,
           coldQueryEnabled: config.coldQueryEnabled ?? merged.coldQueryEnabled,
           partitionInterval: config.partitionInterval ?? merged.partitionInterval,
-        })
-        .onConflictDoUpdate({
-          target: retentionConfigTable.tenantId,
-          set: {
-            hotRetentionDays: merged.hotRetentionDays,
-            coldRetentionDays: merged.coldRetentionDays,
-            archiveEnabled: config.archiveEnabled ?? merged.archiveEnabled,
-            archiveBucket: config.archiveBucket ?? merged.archiveBucket,
-            coldQueryEnabled:
-              config.coldQueryEnabled ?? merged.coldQueryEnabled,
-            partitionInterval:
-              config.partitionInterval ?? merged.partitionInterval,
-          },
-        });
+        } as any,
+        update: {
+          hotRetentionDays: merged.hotRetentionDays,
+          coldRetentionDays: merged.coldRetentionDays,
+          archiveEnabled: config.archiveEnabled ?? merged.archiveEnabled,
+          archiveBucket: config.archiveBucket ?? merged.archiveBucket,
+          coldQueryEnabled: config.coldQueryEnabled ?? merged.coldQueryEnabled,
+          partitionInterval: config.partitionInterval ?? merged.partitionInterval,
+        } as any,
+      });
     }
 
     return this.getPolicy(tenantId);

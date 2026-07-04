@@ -14,7 +14,6 @@
     "@longox/db": "workspace:*",
     "@longox/shared-observability": "workspace:*",
     "@longox/shared-rbac": "workspace:*",
-    "drizzle-orm": "catalog:",
     "express": "^5.2.1",
     "typesense": "^3.0.6"
   },

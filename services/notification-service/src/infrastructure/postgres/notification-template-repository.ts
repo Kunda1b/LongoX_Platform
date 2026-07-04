@@ -1,4 +1,11 @@
-import { db, notificationTemplatesTable } from "@longox/db";
+/**
+ * Prisma-based notification template repository.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.notificationTemplate` delegate.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import type { NotificationTemplateRepository } from "../../domain/template/notification-template-repository";
 import type {
   NotificationTemplate,
@@ -6,9 +13,7 @@ import type {
 } from "../../domain/template/notification-template.entity";
 import { ensureNotificationSeed } from "./seed";
 
-function toDomain(
-  row: typeof notificationTemplatesTable.$inferSelect,
-): NotificationTemplate {
+function toDomain(row: any): NotificationTemplate {
   return {
     id: row.id,
     name: row.name,
@@ -25,26 +30,24 @@ export class PostgresNotificationTemplateRepository
 {
   async list(): Promise<NotificationTemplate[]> {
     await ensureNotificationSeed();
-    const rows = await db
-      .select()
-      .from(notificationTemplatesTable)
-      .orderBy(notificationTemplatesTable.id);
+    const rows = await prisma.notificationTemplate.findMany({
+      orderBy: { id: "asc" },
+    });
     return rows.map(toDomain);
   }
 
   async create(
     input: CreateNotificationTemplateInput,
   ): Promise<NotificationTemplate> {
-    const [row] = await db
-      .insert(notificationTemplatesTable)
-      .values({
+    const row = await prisma.notificationTemplate.create({
+      data: {
         name: input.name.trim(),
         channel: input.channel ?? "in_app",
         subject: input.subject,
         body: input.body.trim(),
-        variables: JSON.stringify(input.variables ?? []),
-      })
-      .returning();
+        variables: JSON.stringify(input.variables ?? []) as any,
+      } as any,
+    });
     return toDomain(row);
   }
 }

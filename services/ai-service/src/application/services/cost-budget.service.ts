@@ -1,5 +1,13 @@
-import { db, tokenBudgetsTable, tokenUsageTable } from "@longox/db";
-import { eq, and, sql, gte, lte } from "drizzle-orm";
+/**
+ * Cost budget service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.tokenBudget` and `prisma.tokenUsage` delegates with `as any`
+ * casts for legacy columns. Raw sum on `token_usage.cost` uses
+ * `prisma.$queryRawUnsafe()` because of the `sum(decimal)::float` cast.
+ */
+
+import { prisma } from "@longox/db/prisma";
 
 export class BudgetExceededError extends Error {
   constructor(
@@ -25,17 +33,14 @@ export interface BudgetUsage {
 
 export class CostBudgetService {
   async checkBudget(tenantId: string, estimatedCost: number): Promise<void> {
-    const budgets = await db
-      .select()
-      .from(tokenBudgetsTable)
-      .where(
-        and(
-          eq(tokenBudgetsTable.tenantId, tenantId),
-          eq(tokenBudgetsTable.isActive, true),
-        ),
-      );
+    const budgets = await prisma.tokenBudget.findMany({
+      where: {
+        tenantId,
+        isActive: true,
+      } as any,
+    });
 
-    for (const budget of budgets) {
+    for (const budget of budgets as any[]) {
       if (!budget.maxCost) continue;
 
       const now = new Date();
@@ -73,32 +78,26 @@ export class CostBudgetService {
     periodStart: Date,
     periodEnd: Date,
   ): Promise<number> {
-    const result = await db
-      .select({
-        totalCost: sql<number>`coalesce(sum(cost), 0)::float`,
-      })
-      .from(tokenUsageTable)
-      .where(
-        and(
-          eq(tokenUsageTable.tenantId, tenantId),
-          gte(tokenUsageTable.createdAt, periodStart),
-          lte(tokenUsageTable.createdAt, periodEnd),
-        ),
-      );
-
-    return result[0]?.totalCost ?? 0;
+    const rows: any[] = await prisma.$queryRawUnsafe(
+      `SELECT coalesce(sum(cost), 0)::float AS "totalCost"
+       FROM token_usage
+       WHERE tenant_id = $1 AND created_at >= $2 AND created_at <= $3`,
+      tenantId,
+      periodStart,
+      periodEnd,
+    );
+    return rows?.[0]?.totalCost ?? 0;
   }
 
   async getBudgetUsage(tenantId: string): Promise<BudgetUsage[]> {
-    const budgets = await db
-      .select()
-      .from(tokenBudgetsTable)
-      .where(eq(tokenBudgetsTable.tenantId, tenantId));
+    const budgets = await prisma.tokenBudget.findMany({
+      where: { tenantId } as any,
+    });
 
     const now = new Date();
     const results: BudgetUsage[] = [];
 
-    for (const budget of budgets) {
+    for (const budget of budgets as any[]) {
       if (!budget.maxCost) continue;
 
       let periodStart: Date;
@@ -128,10 +127,10 @@ export class CostBudgetService {
   }
 
   async setAlertThreshold(tenantId: string, threshold: number): Promise<void> {
-    await db
-      .update(tokenBudgetsTable)
-      .set({ notifyAtPercent: threshold })
-      .where(eq(tokenBudgetsTable.tenantId, tenantId));
+    await prisma.tokenBudget.updateMany({
+      where: { tenantId } as any,
+      data: { notifyAtPercent: threshold } as any,
+    });
   }
 }
 

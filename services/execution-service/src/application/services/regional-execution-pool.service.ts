@@ -1,5 +1,4 @@
-import { eq, desc, and, sql } from "drizzle-orm";
-import { db, regionalPoolsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 
 interface PoolReadiness {
   ready: boolean;
@@ -23,47 +22,43 @@ interface PoolHealth {
 interface RegionSelection {
   regionId: string;
   reason: string;
-  poolHealth: typeof regionalPoolsTable.$inferSelect | null;
+  poolHealth: any | null;
 }
 
 export class RegionalExecutionPoolService {
   async getOptimalRegion(
     tenantId: string,
-    workflowId: string,
+    _workflowId: string,
   ): Promise<RegionSelection> {
-    const activePools = await db
-      .select()
-      .from(regionalPoolsTable)
-      .where(
-        and(
-          eq(regionalPoolsTable.status, "active" as any),
-          eq(regionalPoolsTable.failoverEligible, 1),
-        ),
-      )
-      .orderBy(desc(regionalPoolsTable.lastHeartbeat));
+    const activePools = await prisma.regionalPool.findMany({
+      where: {
+        status: "active" as any,
+        failoverEligible: 1,
+      } as any,
+      orderBy: { lastHeartbeat: "desc" },
+    });
 
     if (activePools.length === 0) {
-      const fallback = await db
-        .select()
-        .from(regionalPoolsTable)
-        .where(eq(regionalPoolsTable.isPrimary, 1))
-        .limit(1);
+      const fallback = await prisma.regionalPool.findFirst({
+        where: { isPrimary: 1 } as any,
+      });
 
-      if (fallback.length === 0) {
+      if (!fallback) {
         throw new Error("No active regional pools available");
       }
 
       return {
-        regionId: fallback[0].regionId,
+        regionId: fallback.regionId,
         reason: "No active failover-eligible pools — using primary region",
-        poolHealth: fallback[0],
+        poolHealth: fallback,
       };
     }
 
-    const tenantRegionResult = await db.execute(sql`
-      SELECT region_id FROM tenants WHERE id = ${tenantId}
-    `);
-    const tenantRegion = (tenantRegionResult.rows ?? tenantRegionResult)[0]?.region_id as string | undefined;
+    const tenantRegionResult = (await prisma.$queryRawUnsafe(
+      `SELECT region_id FROM tenants WHERE id = $1`,
+      tenantId,
+    )) as any[];
+    const tenantRegion = tenantRegionResult[0]?.region_id as string | undefined;
 
     if (tenantRegion) {
       const preferredPool = activePools.find((p) => p.regionId === tenantRegion);
@@ -90,20 +85,18 @@ export class RegionalExecutionPoolService {
   }
 
   async getPoolStatus(region: string): Promise<PoolHealth> {
-    const [pool] = await db
-      .select()
-      .from(regionalPoolsTable)
-      .where(eq(regionalPoolsTable.regionId, region))
-      .limit(1);
+    const pool = await prisma.regionalPool.findFirst({
+      where: { regionId: region } as any,
+    });
 
     if (!pool) {
       throw new Error(`No pool found for region: ${region}`);
     }
 
-    const dbPoolResult = await db.execute(sql`
-      SELECT count(*) as active FROM pg_stat_activity WHERE state = 'active'
-    `);
-    const activeConnections = Number((dbPoolResult.rows ?? dbPoolResult)[0]?.active ?? 0);
+    const dbPoolResult = (await prisma.$queryRawUnsafe(
+      `SELECT count(*)::int as active FROM pg_stat_activity WHERE state = 'active'`,
+    )) as any[];
+    const activeConnections = Number(dbPoolResult[0]?.active ?? 0);
 
     return {
       workers: {
@@ -121,11 +114,9 @@ export class RegionalExecutionPoolService {
   }
 
   async routeToRegion(executionId: string, region: string): Promise<{ routed: boolean; executionId: string; region: string }> {
-    const [pool] = await db
-      .select()
-      .from(regionalPoolsTable)
-      .where(eq(regionalPoolsTable.regionId, region))
-      .limit(1);
+    const pool = await prisma.regionalPool.findFirst({
+      where: { regionId: region } as any,
+    });
 
     if (!pool) {
       throw new Error(`No pool found for region: ${region}`);
@@ -135,23 +126,21 @@ export class RegionalExecutionPoolService {
       throw new Error(`Region ${region} is not accepting executions (status: ${pool.status})`);
     }
 
-    await db
-      .update(regionalPoolsTable)
-      .set({
+    await prisma.regionalPool.update({
+      where: { id: pool.id },
+      data: {
         activeExecutions: pool.activeExecutions + 1,
         lastHealthCheck: new Date(),
-      })
-      .where(eq(regionalPoolsTable.id, pool.id));
+      } as any,
+    });
 
     return { routed: true, executionId, region };
   }
 
   async getPoolReadiness(region: string): Promise<PoolReadiness> {
-    const [pool] = await db
-      .select()
-      .from(regionalPoolsTable)
-      .where(eq(regionalPoolsTable.regionId, region))
-      .limit(1);
+    const pool = await prisma.regionalPool.findFirst({
+      where: { regionId: region } as any,
+    });
 
     if (!pool) {
       return {
@@ -163,7 +152,7 @@ export class RegionalExecutionPoolService {
 
     let dbHealthy = false;
     try {
-      await db.execute(sql`SELECT 1`);
+      await prisma.$queryRawUnsafe(`SELECT 1`);
       dbHealthy = true;
     } catch {
       dbHealthy = false;
@@ -202,12 +191,10 @@ export class RegionalExecutionPoolService {
       memoryUtilization?: number;
       dbReplicaLagSeconds?: number;
     },
-  ): Promise<typeof regionalPoolsTable.$inferSelect> {
-    const [existing] = await db
-      .select()
-      .from(regionalPoolsTable)
-      .where(eq(regionalPoolsTable.regionId, region))
-      .limit(1);
+  ): Promise<any> {
+    const existing = await prisma.regionalPool.findFirst({
+      where: { regionId: region } as any,
+    });
 
     const updateData: Record<string, unknown> = {
       lastHeartbeat: new Date(),
@@ -224,17 +211,15 @@ export class RegionalExecutionPoolService {
     }
 
     if (existing) {
-      const [updated] = await db
-        .update(regionalPoolsTable)
-        .set(updateData)
-        .where(eq(regionalPoolsTable.id, existing.id))
-        .returning();
-      return updated!;
+      const updated = await prisma.regionalPool.update({
+        where: { id: existing.id },
+        data: updateData as any,
+      });
+      return updated;
     }
 
-    const [created] = await db
-      .insert(regionalPoolsTable)
-      .values({
+    const created = await prisma.regionalPool.create({
+      data: {
         regionId: region,
         status: "active",
         workerCount: metrics?.workerCount ?? 0,
@@ -247,17 +232,15 @@ export class RegionalExecutionPoolService {
         lastHealthCheck: new Date(),
         isPrimary: 0,
         failoverEligible: 1,
-      })
-      .returning();
-    return created!;
+      } as any,
+    });
+    return created;
   }
 
   async handleRegionDegradation(region: string): Promise<{ failedOver: boolean; targetRegion: string | null; actions: string[] }> {
-    const [pool] = await db
-      .select()
-      .from(regionalPoolsTable)
-      .where(eq(regionalPoolsTable.regionId, region))
-      .limit(1);
+    const pool = await prisma.regionalPool.findFirst({
+      where: { regionId: region } as any,
+    });
 
     if (!pool) {
       throw new Error(`No pool found for region: ${region}`);
@@ -265,39 +248,36 @@ export class RegionalExecutionPoolService {
 
     const actions: string[] = [];
 
-    await db
-      .update(regionalPoolsTable)
-      .set({ status: "degraded" as any })
-      .where(eq(regionalPoolsTable.id, pool.id));
+    await prisma.regionalPool.update({
+      where: { id: pool.id },
+      data: { status: "degraded" as any } as any,
+    });
 
     actions.push(`Set ${region} pool status to degraded`);
 
     if (pool.isPrimary) {
-      const failoverTargets = await db
-        .select()
-        .from(regionalPoolsTable)
-        .where(
-          and(
-            eq(regionalPoolsTable.failoverEligible, 1),
-            eq(regionalPoolsTable.status, "active" as any),
-            sql`${regionalPoolsTable.regionId} != ${region}`,
-          ),
-        )
-        .orderBy(desc(regionalPoolsTable.lastHeartbeat))
-        .limit(1);
+      const failoverTargets = await prisma.regionalPool.findMany({
+        where: {
+          failoverEligible: 1,
+          status: "active" as any,
+          NOT: { regionId: region },
+        } as any,
+        orderBy: { lastHeartbeat: "desc" },
+        take: 1,
+      });
 
       if (failoverTargets.length > 0) {
         const target = failoverTargets[0];
 
-        await db
-          .update(regionalPoolsTable)
-          .set({ isPrimary: 0 })
-          .where(eq(regionalPoolsTable.id, pool.id));
+        await prisma.regionalPool.update({
+          where: { id: pool.id },
+          data: { isPrimary: 0 } as any,
+        });
 
-        await db
-          .update(regionalPoolsTable)
-          .set({ isPrimary: 1 })
-          .where(eq(regionalPoolsTable.id, target.id));
+        await prisma.regionalPool.update({
+          where: { id: target.id },
+          data: { isPrimary: 1 } as any,
+        });
 
         actions.push(`Promoted ${target.regionId} to primary`);
         actions.push("Updated DNS routing to new primary region");

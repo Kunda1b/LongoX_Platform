@@ -104,7 +104,7 @@ router.delete("/datasets/:id", authorize("ai:delete"), async (req, res): Promise
       res.status(404).json({ error: "Dataset not found" });
       return;
     }
-    res.json({ deleted: true, status: dataset.status });
+    res.json({ deleted: true, status: (dataset as any).status });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : "Internal error" });
   }

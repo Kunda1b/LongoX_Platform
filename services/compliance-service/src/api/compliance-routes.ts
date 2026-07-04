@@ -1,6 +1,16 @@
+/**
+ * Compliance REST routes.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3. Direct DB queries in
+ * this route use `prisma.gdprRequest` and `prisma.auditExport` delegates;
+ * business-logic calls are delegated to the service classes
+ * (`GdprService`, `AuditExportService`, `EvidenceRetentionService`,
+ * `SecurityIncidentService`, `DataResidencyService`) which were migrated
+ * separately. `as any` casts handle legacy columns not in the Prisma schema.
+ */
+
 import { Router, type IRouter } from "express";
-import { eq, and, desc } from "drizzle-orm";
-import { db, gdprRequestsTable, auditExportsTable, complianceEvidenceTable, securityIncidentsTable, securityIncidentEvidenceTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authorize } from "@longox/shared-rbac";
 import { GdprService } from "../application/services/gdpr.service";
 import { AuditExportService } from "../application/services/audit-export.service";
@@ -34,16 +44,10 @@ router.get(
   "/compliance/gdpr/exports",
   authorize({ resource: "compliance", action: "read" }),
   async (req, res): Promise<void> => {
-    const requests = await db
-      .select()
-      .from(gdprRequestsTable)
-      .where(
-        and(
-          eq(gdprRequestsTable.tenantId, req.tenantId!),
-          eq(gdprRequestsTable.requestType, "export"),
-        ),
-      )
-      .orderBy(desc(gdprRequestsTable.requestedAt));
+    const requests = await prisma.gdprRequest.findMany({
+      where: { tenantId: req.tenantId!, requestType: "export" } as any,
+      orderBy: { requestedAt: "desc" },
+    });
     res.json(requests);
   },
 );
@@ -83,16 +87,10 @@ router.get(
   "/compliance/gdpr/deletions",
   authorize({ resource: "compliance", action: "read" }),
   async (req, res): Promise<void> => {
-    const requests = await db
-      .select()
-      .from(gdprRequestsTable)
-      .where(
-        and(
-          eq(gdprRequestsTable.tenantId, req.tenantId!),
-          eq(gdprRequestsTable.requestType, "deletion"),
-        ),
-      )
-      .orderBy(desc(gdprRequestsTable.requestedAt));
+    const requests = await prisma.gdprRequest.findMany({
+      where: { tenantId: req.tenantId!, requestType: "deletion" } as any,
+      orderBy: { requestedAt: "desc" },
+    });
     res.json(requests);
   },
 );
@@ -131,23 +129,22 @@ router.post(
         result = await auditExport.exportToJson(req.tenantId!, from, to);
       }
 
-      const [exportRecord] = await db
-        .insert(auditExportsTable)
-        .values({
+      await prisma.auditExport.create({
+        data: {
           tenantId: req.tenantId!,
           format: format === "csv" ? "csv" : "json",
           status: "completed",
-          dateFrom: from.toISOString().split("T")[0],
-          dateTo: to.toISOString().split("T")[0],
+          dateFrom: from,
+          dateTo: to,
           filterCriteria: filters as Record<string, unknown>,
           rowCount: 0,
-          fileSizeBytes: Buffer.byteLength(result),
+          fileSizeBytes: BigInt(Buffer.byteLength(result)),
           storagePath: `audit-exports/${req.tenantId!}/${Date.now()}.${format}`,
           createdBy: String(req.user!.id),
           completedAt: new Date(),
           expiresAt: new Date(Date.now() + 30 * 86400000),
-        })
-        .returning();
+        } as any,
+      });
 
       res.setHeader("Content-Type", format === "csv" ? "text/csv" : "application/json");
       res.setHeader("Content-Disposition", `attachment; filename=audit-export.${format}`);
@@ -171,22 +168,16 @@ router.get(
   "/compliance/audit/exports/:id/download",
   authorize({ resource: "audit", action: "read" }),
   async (req, res): Promise<void> => {
-    const [exportRecord] = await db
-      .select()
-      .from(auditExportsTable)
-      .where(
-        and(
-          eq(auditExportsTable.id, String(req.params.id)),
-          eq(auditExportsTable.tenantId, req.tenantId!),
-        ),
-      );
+    const exportRecord = await prisma.auditExport.findFirst({
+      where: { id: String(req.params.id), tenantId: req.tenantId! } as any,
+    });
 
     if (!exportRecord) {
       res.status(404).json({ error: "Export not found" });
       return;
     }
 
-    res.json({ downloadUrl: exportRecord.storagePath, format: exportRecord.format });
+    res.json({ downloadUrl: (exportRecord as any).storagePath, format: (exportRecord as any).format });
   },
 );
 

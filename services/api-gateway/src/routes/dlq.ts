@@ -1,11 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq } from "drizzle-orm";
-import {
-  db,
-  dlqEntriesTable,
-  executionsTable,
-  workflowsTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { startWorkflowExecution, writeAudit } from "@longox/execution-service/workflow-runner";
 import { authorize, requireTenantContext } from "@longox/shared-rbac";
 
@@ -19,32 +13,36 @@ function actorFromRequest(req: {
     : { actorType: "system" };
 }
 
-function serializeDlq(row: typeof dlqEntriesTable.$inferSelect) {
+function serializeDlq(row: any) {
   return {
     id: row.id,
     executionId: row.executionId,
-    workflowId: row.workflowId,
-    workflowName: row.workflowName,
+    workflowId: (row as any).workflowId,
+    workflowName: (row as any).workflowName,
     nodeId: row.nodeId,
-    nodeName: row.nodeName,
-    nodeType: row.nodeType,
-    errorMessage: row.errorMessage,
-    attempts: row.attempts,
-    jobData: row.jobData ?? {},
-    createdAt: row.createdAt.toISOString(),
-    resolvedAt: row.resolvedAt?.toISOString() ?? null,
-    resolution: row.resolution ?? null,
+    nodeName: (row as any).nodeName,
+    nodeType: (row as any).nodeType,
+    errorMessage: (row as any).errorMessage ?? row.reason,
+    attempts: (row as any).attempts ?? 0,
+    jobData: (row as any).jobData ?? row.payloadJson ?? {},
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : new Date(row.createdAt).toISOString(),
+    resolvedAt: (row as any).resolvedAt
+      ? (row.resolvedAt instanceof Date ? row.resolvedAt.toISOString() : new Date(row.resolvedAt).toISOString())
+      : null,
+    resolution: (row as any).resolution ?? null,
   };
 }
 
-function serializeExecution(row: typeof executionsTable.$inferSelect) {
+function serializeExecution(row: any) {
   return {
     id: row.id,
     workflowId: row.workflowId,
-    workflowName: row.workflowName,
+    workflowName: (row as any).workflowName,
     status: row.status,
-    startedAt: row.startedAt.toISOString(),
-    finishedAt: row.finishedAt?.toISOString() ?? null,
+    startedAt: row.startedAt instanceof Date ? row.startedAt.toISOString() : new Date(row.startedAt).toISOString(),
+    finishedAt: row.finishedAt
+      ? (row.finishedAt instanceof Date ? row.finishedAt.toISOString() : new Date(row.finishedAt).toISOString())
+      : null,
     durationMs: row.durationMs ?? null,
     errorMessage: row.errorMessage ?? null,
   };
@@ -55,42 +53,35 @@ router.get("/dlq", authorize("executions.read"), requireTenantContext, async (re
   const status = req.query.status ? String(req.query.status) : undefined;
   const workflowId = req.query.workflowId ? String(req.query.workflowId) : undefined;
 
-  const conditions = [];
-  if (status) conditions.push(eq(dlqEntriesTable.status, status));
-  if (workflowId) conditions.push(eq(dlqEntriesTable.workflowId, workflowId));
+  const where: any = {};
+  if (status) where.status = status;
+  if (workflowId) where.workflowId = workflowId;
 
-  const rows = await db
-    .select()
-    .from(dlqEntriesTable)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(dlqEntriesTable.createdAt))
-    .limit(limit);
+  const rows = (await prisma.deadLetterQueue.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  })) as any[];
 
   res.json(rows.map(serializeDlq));
 });
 
 router.post("/dlq/:id/retry", authorize("executions.run"), requireTenantContext, async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  if (!Number.isInteger(id)) {
+  if (!Number.isInteger(Number(id))) {
     res.status(400).json({ error: "Invalid DLQ id" });
     return;
   }
 
-  const [entry] = await db
-    .select()
-    .from(dlqEntriesTable)
-    .where(eq(dlqEntriesTable.id, id))
-    .limit(1);
+  const entry = (await prisma.deadLetterQueue.findUnique({ where: { id } })) as any;
   if (!entry) {
     res.status(404).json({ error: "DLQ entry not found" });
     return;
   }
 
-  const [workflow] = await db
-    .select()
-    .from(workflowsTable)
-    .where(eq(workflowsTable.id, entry.workflowId))
-    .limit(1);
+  const workflow = (await prisma.workflow.findUnique({
+    where: { id: entry.workflowId },
+  })) as any;
   if (!workflow) {
     res.status(404).json({ error: "Workflow not found" });
     return;
@@ -106,10 +97,10 @@ router.post("/dlq/:id/retry", authorize("executions.run"), requireTenantContext,
     { _retriedDlqEntryId: entry.id, _retriedExecutionId: entry.executionId },
   );
 
-  await db
-    .update(dlqEntriesTable)
-    .set({ status: "retrying", resolution: `Retry execution ${execution.id}` })
-    .where(eq(dlqEntriesTable.id, id));
+  await prisma.deadLetterQueue.update({
+    where: { id },
+    data: { status: "retrying", resolution: `Retry execution ${execution.id}` } as any,
+  });
 
   await writeAudit(
     "dlq.retried",
@@ -125,21 +116,20 @@ router.post("/dlq/:id/retry", authorize("executions.run"), requireTenantContext,
 
 router.post("/dlq/:id/dismiss", authorize("executions.run"), requireTenantContext, async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  if (!Number.isInteger(id)) {
+  if (!Number.isInteger(Number(id))) {
     res.status(400).json({ error: "Invalid DLQ id" });
     return;
   }
 
   const actor = actorFromRequest(req);
-  const [entry] = await db
-    .update(dlqEntriesTable)
-    .set({
+  const entry = (await prisma.deadLetterQueue.update({
+    where: { id },
+    data: {
       status: "resolved",
       resolvedAt: new Date(),
       resolution: "Dismissed without retry",
-    })
-    .where(eq(dlqEntriesTable.id, id))
-    .returning();
+    } as any,
+  })) as any;
 
   if (!entry) {
     res.status(404).json({ error: "DLQ entry not found" });

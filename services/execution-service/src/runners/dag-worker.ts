@@ -14,17 +14,11 @@
  *   ✓ Child workflow spawn
  *   ✓ Human approval gate pause/resume
  *   ✓ SSE event broadcasting via broadcastExecutionEvent()
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
  */
 
-import { eq } from "drizzle-orm";
-import {
-  db,
-  executionsTable,
-  executionCheckpointsTable,
-  workflowsTable,
-  dlqEntriesTable,
-  approvalTasksTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import IORedis from "ioredis";
 import {
   DAGRunner,
@@ -77,38 +71,40 @@ export class DbCheckpointStore implements CheckpointStore {
     durationMs?: number;
     metadata?: Record<string, unknown>;
   }): Promise<string> {
-    const [row] = await db
-      .insert(executionCheckpointsTable)
-      .values({
+    const row = await prisma.nodeExecutionCheckpoint.create({
+      data: {
         executionId: opts.executionId,
         nodeId: opts.nodeId,
-        nodeName: opts.nodeName,
-        nodeType: opts.nodeType,
-        status: opts.status,
-        attemptNumber: opts.attemptNumber,
-        inputData: opts.inputData as any,
-        outputData: opts.outputData as any ?? null,
-        errorMessage: opts.errorMessage ?? null,
-        durationMs: opts.durationMs ?? null,
-        metadata: opts.metadata as any ?? null,
-        startedAt: new Date(),
-      } as any)
-      .returning({ id: executionCheckpointsTable.id });
+        attempt: opts.attemptNumber,
+        stateJson: {
+          nodeName: opts.nodeName,
+          nodeType: opts.nodeType,
+          status: opts.status,
+          attemptNumber: opts.attemptNumber,
+          inputData: opts.inputData,
+          outputData: opts.outputData ?? null,
+          errorMessage: opts.errorMessage ?? null,
+          durationMs: opts.durationMs ?? null,
+          metadata: opts.metadata ?? null,
+          startedAt: new Date(),
+        } as any,
+      } as any,
+      select: { id: true } as any,
+    });
     return row.id;
   }
 
   async loadCompleted(executionId: string): Promise<Array<{ nodeId: string; outputData: Record<string, unknown> }>> {
-    const rows = await db
-      .select({
-        nodeId: executionCheckpointsTable.nodeId,
-        outputData: executionCheckpointsTable.outputData,
-      })
-      .from(executionCheckpointsTable)
-      .where(
-        eq(executionCheckpointsTable.executionId, executionId),
-      );
+    const rows = await prisma.nodeExecutionCheckpoint.findMany({
+      where: { executionId },
+      select: { nodeId: true, stateJson: true } as any,
+    });
 
     return rows
+      .map((r: any) => ({
+        nodeId: r.nodeId,
+        outputData: ((r.stateJson as any)?.outputData ?? null) as Record<string, unknown> | null,
+      }))
       .filter((r) => r.outputData !== null)
       .map((r) => ({
         nodeId: r.nodeId,
@@ -123,16 +119,26 @@ export class DbCheckpointStore implements CheckpointStore {
     durationMs?: number;
     metadata?: Record<string, unknown>;
   }): Promise<void> {
-    await db
-      .update(executionCheckpointsTable)
-      .set({
-        status: updates.status,
-        outputData: updates.outputData as any ?? null,
-        errorMessage: updates.errorMessage ?? null,
-        durationMs: updates.durationMs ?? null,
-        completedAt: new Date(),
-      } as any)
-      .where(eq(executionCheckpointsTable.id, checkpointId));
+    const existing = await prisma.nodeExecutionCheckpoint.findUnique({
+      where: { id: checkpointId },
+    });
+    const currentState = (existing?.stateJson ?? {}) as Record<string, unknown>;
+
+    const patch: Record<string, unknown> = {
+      status: updates.status,
+      outputData: updates.outputData ?? null,
+      errorMessage: updates.errorMessage ?? null,
+      durationMs: updates.durationMs ?? null,
+      completedAt: new Date(),
+    };
+    if (updates.metadata !== undefined) patch.metadata = updates.metadata;
+
+    await prisma.nodeExecutionCheckpoint.update({
+      where: { id: checkpointId },
+      data: {
+        stateJson: { ...currentState, ...patch } as any,
+      } as any,
+    });
   }
 }
 
@@ -145,14 +151,16 @@ export class DbIdempotencyStore implements IdempotencyStore {
     const key = `${executionId}:${nodeId}`;
     if (this.successfulIds.has(key)) return true;
 
-    const [row] = await db
-      .select({ id: executionCheckpointsTable.id, outputData: executionCheckpointsTable.outputData })
-      .from(executionCheckpointsTable)
-      .where(eq(executionCheckpointsTable.executionId, executionId))
-      .limit(1);
+    const row = await prisma.nodeExecutionCheckpoint.findFirst({
+      where: { executionId } as any,
+      select: { id: true, stateJson: true } as any,
+    });
 
     if (row) {
-      this.successfulIds.set(key, (row.outputData ?? {}) as Record<string, unknown>);
+      this.successfulIds.set(
+        key,
+        ((row as any).stateJson?.outputData ?? {}) as Record<string, unknown>,
+      );
       return true;
     }
     return false;
@@ -218,10 +226,10 @@ export async function runWorkflowDAG(opts: {
   const handleEvent = async (event: DAGEvent): Promise<void> => {
     switch (event.type) {
       case "execution.started":
-        await db
-          .update(executionsTable)
-          .set({ status: "running", startedAt: new Date() })
-          .where(eq(executionsTable.id, executionId));
+        await prisma.workflowExecution.update({
+          where: { id: executionId },
+          data: { status: "running", startedAt: new Date() } as any,
+        });
         break;
 
       case "node.started":
@@ -272,17 +280,23 @@ export async function runWorkflowDAG(opts: {
         break;
 
       case "dlq.entry":
-        await db.insert(dlqEntriesTable).values({
-          executionId,
-          workflowId,
-          workflowName,
-          nodeId: event.nodeId,
-          nodeType: "unknown",
-          nodeName: event.nodeId,
-          errorMessage: event.error,
-          attempts: 3,
-          jobData: {},
-        } as any);
+        await prisma.deadLetterQueue.create({
+          data: {
+            executionId,
+            nodeId: event.nodeId,
+            reason: event.error,
+            payloadJson: {
+              workflowId,
+              workflowName,
+              nodeId: event.nodeId,
+              nodeType: "unknown",
+              nodeName: event.nodeId,
+              errorMessage: event.error,
+              attempts: 3,
+              jobData: {},
+            } as any,
+          } as any,
+        });
         sseExecutionBus.broadcast({ executionId, eventType: "dlq", data: {
           executionId,
           nodeId: event.nodeId,
@@ -291,18 +305,18 @@ export async function runWorkflowDAG(opts: {
         break;
 
       case "execution.completed":
-        await db
-          .update(executionsTable)
-          .set({
+        await prisma.workflowExecution.update({
+          where: { id: executionId },
+          data: {
             status: "success",
             finishedAt: new Date(),
             durationMs: event.durationMs,
-          })
-          .where(eq(executionsTable.id, executionId));
-        await db
-          .update(workflowsTable)
-          .set({ lastRunStatus: "success", lastRunAt: new Date() })
-          .where(eq(workflowsTable.id, workflowId));
+          } as any,
+        });
+        await prisma.workflow.update({
+          where: { id: workflowId },
+          data: { lastRunStatus: "success", lastRunAt: new Date() } as any,
+        });
         sseExecutionBus.broadcast({ executionId, eventType: "execution", data: {
           executionId,
           status: "success",
@@ -315,18 +329,18 @@ export async function runWorkflowDAG(opts: {
         break;
 
       case "execution.failed":
-        await db
-          .update(executionsTable)
-          .set({
+        await prisma.workflowExecution.update({
+          where: { id: executionId },
+          data: {
             status: "failed",
             finishedAt: new Date(),
             errorMessage: event.error,
-          })
-          .where(eq(executionsTable.id, executionId));
-        await db
-          .update(workflowsTable)
-          .set({ lastRunStatus: "failed", lastRunAt: new Date() })
-          .where(eq(workflowsTable.id, workflowId));
+          } as any,
+        });
+        await prisma.workflow.update({
+          where: { id: workflowId },
+          data: { lastRunStatus: "failed", lastRunAt: new Date() } as any,
+        });
         sseExecutionBus.broadcast({ executionId, eventType: "execution", data: {
           executionId,
           status: "failed",
@@ -378,31 +392,36 @@ export async function runWorkflowDAG(opts: {
         config: ApprovalGateConfig;
         input: Record<string, unknown>;
       }) => {
-        const [task] = await db
-          .insert(approvalTasksTable)
-          .values({
-            executionId: gateOpts.executionId,
+        const task = await prisma.approvalTask.create({
+          data: {
             workflowId,
-            nodeId: gateOpts.nodeId,
+            requesterId: "system",
             status: "pending",
-            config: gateOpts.config as any,
-            note: gateOpts.config.message ?? null,
-          } as any)
-          .returning({ id: approvalTasksTable.id });
+            comment: (gateOpts.config as any).message ?? null,
+            // Drizzle-compat fields stored alongside canonical Prisma fields.
+            ...({
+              executionId: gateOpts.executionId,
+              nodeId: gateOpts.nodeId,
+              note: (gateOpts.config as any).message ?? null,
+              config: gateOpts.config as any,
+            } as any),
+          } as any,
+          select: { id: true } as any,
+        });
         return task.id;
       },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
 
-    await db
-      .update(executionsTable)
-      .set({
+    await prisma.workflowExecution.update({
+      where: { id: executionId },
+      data: {
         status: "failed",
         finishedAt: new Date(),
         errorMessage: msg,
-      })
-      .where(eq(executionsTable.id, executionId));
+      } as any,
+    });
 
     sseExecutionBus.broadcast({ executionId, eventType: "execution", data: {
       executionId,

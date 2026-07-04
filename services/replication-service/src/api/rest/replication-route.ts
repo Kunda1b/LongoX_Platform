@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { authorize } from "@longox/shared-rbac";
 import { getRegionManager } from "@longox/shared-region";
-import { db, replicationConfigsTable, replicationLogTable, regionsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 
 const router: IRouter = Router();
 
@@ -44,20 +44,14 @@ router.post(
       return;
     }
 
-    const configs = await db
-      .select()
-      .from(replicationConfigsTable)
-      .where(
-        (() => {
-          const { eq, and } = require("drizzle-orm");
-          return and(
-            eq(replicationConfigsTable.sourceRegionId, manager.getLocalRegionId()),
-            eq(replicationConfigsTable.targetRegionId, regionId),
-            eq(replicationConfigsTable.entityType, entityType),
-            eq(replicationConfigsTable.isActive, true),
-          );
-        })(),
-      );
+    const configs = await prisma.replicationConfig.findMany({
+      where: {
+        sourceRegionId: manager.getLocalRegionId(),
+        targetRegionId: regionId,
+        entityType,
+        isActive: true,
+      } as any,
+    });
 
     if (configs.length === 0) {
       res.status(400).json({ error: "No active replication config for this region and entity type" });
@@ -68,13 +62,15 @@ router.post(
     const ids = entityIds ?? [];
 
     for (const entityId of ids) {
-      await db.insert(replicationLogTable).values({
-        configId: config.id,
-        entityId,
-        entityType,
-        sourceRegion: manager.getLocalRegionId(),
-        targetRegion: regionId,
-        status: "pending",
+      await prisma.replicationLog.create({
+        data: {
+          configId: config.id,
+          entityId,
+          entityType,
+          sourceRegion: manager.getLocalRegionId(),
+          targetRegion: regionId,
+          status: "pending",
+        } as any,
       });
     }
 
@@ -90,10 +86,9 @@ router.get(
   "/replication/configs",
   authorize({ resource: "admin", action: "read" }),
   async (_req, res): Promise<void> => {
-    const configs = await db
-      .select()
-      .from(replicationConfigsTable)
-      .orderBy(replicationConfigsTable.sourceRegionId);
+    const configs = await prisma.replicationConfig.findMany({
+      orderBy: { sourceRegionId: "asc" } as any,
+    });
 
     res.json(configs);
   },
@@ -118,9 +113,8 @@ router.post(
       return;
     }
 
-    const [config] = await db
-      .insert(replicationConfigsTable)
-      .values({
+    const config = await prisma.replicationConfig.create({
+      data: {
         sourceRegionId: String(sourceRegionId),
         targetRegionId: String(targetRegionId),
         entityType: String(entityType),
@@ -128,8 +122,8 @@ router.post(
         batchSize: Number(batchSize ?? 100),
         syncIntervalMs: Number(syncIntervalMs ?? 30000),
         conflictResolution: String(conflictResolution ?? "last-write-wins"),
-      })
-      .returning();
+      } as any,
+    });
 
     res.status(201).json(config);
   },
@@ -139,7 +133,7 @@ router.put(
   "/replication/configs/:id",
   authorize({ resource: "admin", action: "write" }),
   async (req, res): Promise<void> => {
-    const id = req.params.id;
+    const id = String(req.params.id);
     if (!id) {
       res.status(400).json({ error: "id is required" });
       return;
@@ -161,16 +155,15 @@ router.put(
       }
     }
 
-    const [updated] = await db
-      .update(replicationConfigsTable)
-      .set(filtered)
-      .where(
-        (() => {
-          const { eq } = require("drizzle-orm");
-          return eq(replicationConfigsTable.id, id);
-        })(),
-      )
-      .returning();
+    let updated: any = null;
+    try {
+      updated = await prisma.replicationConfig.update({
+        where: { id },
+        data: filtered as any,
+      });
+    } catch {
+      updated = null;
+    }
 
     if (!updated) {
       res.status(404).json({ error: "Config not found" });
@@ -188,21 +181,16 @@ router.get(
     const { status, entityType, limit: limitStr, offset: offsetStr } =
       req.query as Record<string, string | undefined>;
 
-    let query: any = db.select().from(replicationLogTable);
+    const where: Record<string, unknown> = {};
+    if (status) where.status = status;
+    if (entityType) where.entityType = entityType;
 
-    if (status) {
-      const { eq } = require("drizzle-orm");
-      query = query.where(eq(replicationLogTable.status, status));
-    }
-    if (entityType) {
-      const { eq } = require("drizzle-orm");
-      query = query.where(eq(replicationLogTable.entityType, entityType));
-    }
-
-    const rows = await query
-      .orderBy(replicationLogTable.createdAt)
-      .limit(Number(limitStr ?? 100))
-      .offset(Number(offsetStr ?? 0));
+    const rows = await prisma.replicationLog.findMany({
+      where: where as any,
+      orderBy: { createdAt: "asc" },
+      take: Number(limitStr ?? 100),
+      skip: Number(offsetStr ?? 0),
+    });
 
     res.json(rows);
   },
@@ -271,10 +259,8 @@ router.post(
       return;
     }
 
-    const { drPoliciesTable } = require("@longox/db");
-    const policyResults = await (db as any)
-      .insert(drPoliciesTable)
-      .values({
+    const policy = await prisma.drPolicy.create({
+      data: {
         name: String(name),
         description: description ? String(description) : null,
         primaryRegionId: String(primaryRegionId),
@@ -284,9 +270,8 @@ router.post(
         rtoSeconds: Number(rtoSeconds ?? 900),
         autoFailover: Boolean(autoFailover ?? false),
         healthThreshold: Number(healthThreshold ?? 0.3),
-      })
-      .returning();
-    const [policy] = policyResults;
+      } as any,
+    });
 
     res.status(201).json(policy);
   },
@@ -296,8 +281,7 @@ router.get(
   "/replication/dr-policies",
   authorize({ resource: "admin", action: "read" }),
   async (_req, res): Promise<void> => {
-    const { drPoliciesTable } = require("@longox/db");
-    const policies = await db.select().from(drPoliciesTable);
+    const policies = await prisma.drPolicy.findMany();
     res.json(policies);
   },
 );

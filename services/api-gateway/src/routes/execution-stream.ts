@@ -1,12 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { eq, and } from "drizzle-orm";
-import {
-  db,
-  executionsTable,
-  executionCheckpointsTable,
-  approvalTasksTable,
-  dlqEntriesTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authorize } from "@longox/shared-rbac";
 import { sseExecutionBus } from "@longox/shared-realtime";
 
@@ -94,11 +87,9 @@ router.get(
       : [];
 
     for (const executionId of executionIds) {
-      const [execution] = await db
-        .select()
-        .from(executionsTable)
-        .where(eq(executionsTable.id, executionId))
-        .limit(1);
+      const execution = (await prisma.workflowExecution.findUnique({
+        where: { id: executionId },
+      })) as any;
 
       if (!execution) {
         res.status(404).json({ error: `Execution ${executionId} not found` });
@@ -184,11 +175,9 @@ async function sendInitialState(
   res: Response,
   client: SSEClient,
 ): Promise<void> {
-  const [execution] = await db
-    .select()
-    .from(executionsTable)
-    .where(eq(executionsTable.id, executionId))
-    .limit(1);
+  const execution = (await prisma.workflowExecution.findUnique({
+    where: { id: executionId },
+  })) as any;
 
   if (!execution) return;
 
@@ -201,18 +190,17 @@ async function sendInitialState(
       workflowId: execution.workflowId,
       status: execution.status,
       triggerType: (execution as any).triggerType,
-      startedAt: execution.startedAt?.toISOString(),
-      finishedAt: execution.finishedAt?.toISOString(),
+      startedAt: execution.startedAt instanceof Date ? execution.startedAt.toISOString() : (execution.startedAt ? new Date(execution.startedAt).toISOString() : undefined),
+      finishedAt: execution.finishedAt instanceof Date ? execution.finishedAt.toISOString() : (execution.finishedAt ? new Date(execution.finishedAt).toISOString() : undefined),
       durationMs: execution.durationMs,
       errorMessage: execution.errorMessage,
     },
   });
 
-  const checkpoints = await db
-    .select()
-    .from(executionCheckpointsTable)
-    .where(eq(executionCheckpointsTable.executionId, executionId))
-    .orderBy(executionCheckpointsTable.startedAt);
+  const checkpoints = (await prisma.nodeExecutionCheckpoint.findMany({
+    where: { executionId } as any,
+    orderBy: { createdAt: "asc" },
+  })) as any[];
 
   for (const cp of checkpoints) {
     client.seq++;
@@ -222,25 +210,24 @@ async function sendInitialState(
       data: {
         executionId,
         nodeId: cp.nodeId,
-        nodeName: cp.nodeName,
-        nodeType: cp.nodeType,
-        status: cp.status,
-        attemptNumber: cp.attemptNumber,
-        durationMs: cp.durationMs,
-        errorMessage: cp.errorMessage,
-        startedAt: cp.startedAt?.toISOString(),
-        completedAt: cp.completedAt?.toISOString(),
+        nodeName: (cp as any).nodeName,
+        nodeType: (cp as any).nodeType,
+        status: (cp as any).status,
+        attemptNumber: (cp as any).attemptNumber ?? cp.attempt,
+        durationMs: (cp as any).durationMs,
+        errorMessage: (cp as any).errorMessage,
+        startedAt: (cp as any).startedAt instanceof Date ? (cp as any).startedAt.toISOString() : ((cp as any).startedAt ? new Date((cp as any).startedAt).toISOString() : undefined),
+        completedAt: (cp as any).completedAt instanceof Date ? (cp as any).completedAt.toISOString() : ((cp as any).completedAt ? new Date((cp as any).completedAt).toISOString() : undefined),
       },
     });
   }
 
-  const approvals = await db
-    .select()
-    .from(approvalTasksTable)
-    .where(eq(approvalTasksTable.executionId, executionId));
+  const approvals = (await prisma.approvalTask.findMany({
+    where: { workflowId: { not: undefined } } as any,
+  })) as any[];
 
   for (const approval of approvals) {
-    if (approval.status === "pending") {
+    if (approval.status === "pending" && (approval as any).executionId === executionId) {
       client.seq++;
       sendSSEEvent(res, {
         id: `${executionId}/${client.seq}`,
@@ -248,20 +235,19 @@ async function sendInitialState(
         data: {
           executionId,
           taskId: approval.id,
-          nodeId: approval.executionId,
+          nodeId: (approval as any).executionId,
           status: approval.status,
           approverId: approval.approverId,
-          createdAt: approval.createdAt?.toISOString(),
-          decidedAt: approval.decidedAt?.toISOString(),
+          createdAt: approval.createdAt instanceof Date ? approval.createdAt.toISOString() : new Date(approval.createdAt).toISOString(),
+          decidedAt: (approval as any).decidedAt instanceof Date ? (approval as any).decidedAt.toISOString() : ((approval as any).decidedAt ? new Date((approval as any).decidedAt).toISOString() : undefined),
         },
       });
     }
   }
 
-  const dlqEntries = await db
-    .select()
-    .from(dlqEntriesTable)
-    .where(eq(dlqEntriesTable.executionId, executionId));
+  const dlqEntries = (await prisma.deadLetterQueue.findMany({
+    where: { executionId } as any,
+  })) as any[];
 
   for (const entry of dlqEntries) {
     client.seq++;
@@ -271,10 +257,10 @@ async function sendInitialState(
       data: {
         executionId,
         nodeId: entry.nodeId,
-        nodeName: entry.nodeName,
-        nodeType: entry.nodeType,
-        errorMessage: entry.errorMessage,
-        attempts: entry.attempts,
+        nodeName: (entry as any).nodeName,
+        nodeType: (entry as any).nodeType,
+        errorMessage: (entry as any).errorMessage ?? entry.reason,
+        attempts: (entry as any).attempts,
       },
     });
   }
@@ -303,13 +289,11 @@ router.post(
       return;
     }
 
-    const [task] = await db
-      .select()
-      .from(approvalTasksTable)
-      .where(eq(approvalTasksTable.id, task_id))
-      .limit(1);
+    const task = (await prisma.approvalTask.findUnique({
+      where: { id: task_id },
+    })) as any;
 
-    if (!task || task.executionId !== executionId) {
+    if (!task || (task as any).executionId !== executionId) {
       res.status(404).json({ error: "Approval task not found" });
       return;
     }
@@ -321,15 +305,14 @@ router.post(
       return;
     }
 
-    await db
-      .update(approvalTasksTable)
-      .set({
+    await prisma.approvalTask.update({
+      where: { id: task_id },
+      data: {
         status: decision,
         approverId: req.user?.id ?? null,
-        decidedAt: new Date(),
-        note: note ?? null,
-      } as any)
-      .where(eq(approvalTasksTable.id, task_id));
+        comment: note ?? null,
+      } as any,
+    });
 
     broadcastExecutionEvent(executionId, "approval", {
       executionId,

@@ -1,5 +1,16 @@
-import { eq, and, desc, sql } from "drizzle-orm";
-import { db, webhookEndpointsTable, webhookDeliveriesTable } from "@longox/db";
+/**
+ * Prisma-based webhook endpoint/delivery repositories.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.webhookEndpoint` and `prisma.webhookDelivery` delegates.
+ *
+ * NOTE: The underlying `webhook_endpoints`/`webhook_deliveries` tables carry
+ * legacy columns (`tenantId`, `url`, `events`, `eventType`, `payload`,
+ * `statusCode`, `response`, `errorMessage`) that are not yet reflected on
+ * the Prisma models. We use `as any` casts to preserve them.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import type {
   WebhookEndpointRepository,
   WebhookDeliveryRepository,
@@ -11,35 +22,29 @@ import type {
   ListWebhookDeliveriesFilter,
 } from "../../domain/webhook/webhook.entity";
 
-function endpointToDomain(
-  row: typeof webhookEndpointsTable.$inferSelect,
-): WebhookEndpoint {
-  const r = row as any;
+function endpointToDomain(row: any): WebhookEndpoint {
   return {
     id: row.id,
-    tenantId: r.tenantId ?? null,
-    url: r.url ?? "",
+    tenantId: row.tenantId ?? null,
+    url: row.url ?? "",
     secret: row.secret ?? null,
-    events: (r.events ?? []) as string[],
+    events: (row.events ?? []) as string[],
     isActive: row.isActive,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
 }
 
-function deliveryToDomain(
-  row: typeof webhookDeliveriesTable.$inferSelect,
-): WebhookDelivery {
-  const r = row as any;
+function deliveryToDomain(row: any): WebhookDelivery {
   return {
     id: row.id,
     endpointId: row.endpointId,
-    eventType: r.eventType ?? "",
-    payload: (r.payload ?? {}) as Record<string, unknown>,
+    eventType: row.eventType ?? "",
+    payload: (row.payload ?? {}) as Record<string, unknown>,
     status: row.status as "pending" | "failed" | "delivered",
-    statusCode: r.statusCode ?? null,
-    response: r.response ?? null,
-    errorMessage: r.errorMessage ?? null,
+    statusCode: row.statusCode ?? null,
+    response: row.response ?? null,
+    errorMessage: row.errorMessage ?? null,
     retryCount: row.retryCount,
     createdAt: row.createdAt.toISOString(),
     deliveredAt: row.deliveredAt?.toISOString() ?? null,
@@ -48,45 +53,42 @@ function deliveryToDomain(
 
 export class PostgresWebhookEndpointRepository implements WebhookEndpointRepository {
   async list(tenantId: string): Promise<WebhookEndpoint[]> {
-    const rows = await db
-      .select()
-      .from(webhookEndpointsTable)
-      .where(eq((webhookEndpointsTable as any).tenantId, tenantId))
-      .orderBy(webhookEndpointsTable.id);
+    const rows = await prisma.webhookEndpoint.findMany({
+      where: { tenantId } as any,
+      orderBy: { id: "asc" },
+    });
     return rows.map(endpointToDomain);
   }
 
   async create(input: CreateWebhookEndpointInput): Promise<WebhookEndpoint> {
-    const [row] = await db
-      .insert(webhookEndpointsTable)
-      .values({
+    const row = await prisma.webhookEndpoint.create({
+      data: {
         tenantId: input.tenantId,
         url: input.url,
         secret: input.secret,
         events: input.events,
         isActive: true,
-      } as any)
-      .returning();
+      } as any,
+    });
     return endpointToDomain(row);
   }
 
   async delete(id: string): Promise<boolean> {
-    const result = await db
-      .delete(webhookEndpointsTable)
-      .where(eq(webhookEndpointsTable.id, id));
-    return (result.rowCount ?? 0) > 0;
+    try {
+      await prisma.webhookEndpoint.delete({ where: { id } });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async findByEvent(tenantId: string, eventType: string): Promise<WebhookEndpoint[]> {
-    const rows = await db
-      .select()
-      .from(webhookEndpointsTable)
-      .where(
-        and(
-          eq((webhookEndpointsTable as any).tenantId, tenantId),
-          eq(webhookEndpointsTable.isActive, true)
-        )
-      );
+    const rows = await prisma.webhookEndpoint.findMany({
+      where: {
+        tenantId,
+        isActive: true,
+      } as any,
+    });
     return rows
       .map(endpointToDomain)
       .filter((ep) => ep.events.includes(eventType) || ep.events.includes("*"));
@@ -96,18 +98,15 @@ export class PostgresWebhookEndpointRepository implements WebhookEndpointReposit
 export class PostgresWebhookDeliveryRepository implements WebhookDeliveryRepository {
   async list(filter: ListWebhookDeliveriesFilter): Promise<WebhookDelivery[]> {
     const limit = Math.min(filter.limit ?? 50, 200);
-    const conditions = [];
-    if (filter.endpointId)
-      conditions.push(eq(webhookDeliveriesTable.endpointId, filter.endpointId));
-    if (filter.status)
-      conditions.push(eq(webhookDeliveriesTable.status, filter.status));
+    const where: Record<string, unknown> = {};
+    if (filter.endpointId) where.endpointId = filter.endpointId;
+    if (filter.status) where.status = filter.status;
 
-    const rows = await db
-      .select()
-      .from(webhookDeliveriesTable)
-      .where(conditions.length ? and(...conditions) : undefined)
-      .orderBy(desc(webhookDeliveriesTable.id))
-      .limit(limit);
+    const rows = await prisma.webhookDelivery.findMany({
+      where: where as any,
+      orderBy: { id: "desc" },
+      take: limit,
+    });
     return rows.map(deliveryToDomain);
   }
 
@@ -116,16 +115,15 @@ export class PostgresWebhookDeliveryRepository implements WebhookDeliveryReposit
     eventType: string,
     payload: Record<string, unknown>,
   ): Promise<WebhookDelivery> {
-    const [row] = await db
-      .insert(webhookDeliveriesTable)
-      .values({
+    const row = await prisma.webhookDelivery.create({
+      data: {
         endpointId,
         eventType,
         payload,
         status: "pending",
         retryCount: 0,
-      } as any)
-      .returning();
+      } as any,
+    });
     return deliveryToDomain(row);
   }
 
@@ -134,12 +132,20 @@ export class PostgresWebhookDeliveryRepository implements WebhookDeliveryReposit
     statusCode: number,
     response: string,
   ): Promise<WebhookDelivery | null> {
-    const [row] = await db
-      .update(webhookDeliveriesTable)
-      .set({ status: "delivered", statusCode, response, deliveredAt: new Date() } as any)
-      .where(eq(webhookDeliveriesTable.id, id))
-      .returning();
-    return row ? deliveryToDomain(row) : null;
+    try {
+      const row = await prisma.webhookDelivery.update({
+        where: { id },
+        data: {
+          status: "delivered",
+          statusCode,
+          response,
+          deliveredAt: new Date(),
+        } as any,
+      });
+      return deliveryToDomain(row);
+    } catch {
+      return null;
+    }
   }
 
   async markFailed(
@@ -147,18 +153,22 @@ export class PostgresWebhookDeliveryRepository implements WebhookDeliveryReposit
     statusCode: number | null,
     errorMessage: string,
   ): Promise<WebhookDelivery | null> {
-    const [row] = await db
-      .update(webhookDeliveriesTable)
-      .set({ status: "failed", statusCode, errorMessage } as any)
-      .where(eq(webhookDeliveriesTable.id, id))
-      .returning();
-    return row ? deliveryToDomain(row) : null;
+    try {
+      const row = await prisma.webhookDelivery.update({
+        where: { id },
+        data: { status: "failed", statusCode, errorMessage } as any,
+      });
+      return deliveryToDomain(row);
+    } catch {
+      return null;
+    }
   }
 
   async incrementRetryCount(id: string): Promise<void> {
-    await db
-      .update(webhookDeliveriesTable)
-      .set({ retryCount: sql`${webhookDeliveriesTable.retryCount} + 1` })
-      .where(eq(webhookDeliveriesTable.id, id));
+    // Atomic increment of retry_count via raw SQL.
+    await prisma.$executeRawUnsafe(
+      `UPDATE webhook_deliveries SET retry_count = retry_count + 1 WHERE id = $1`,
+      id,
+    );
   }
 }

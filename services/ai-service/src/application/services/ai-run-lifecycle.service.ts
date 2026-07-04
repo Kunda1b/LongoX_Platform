@@ -1,11 +1,12 @@
-import {
-  db,
-  aiRoutingPoliciesTable,
-  aiGuardrailsTable,
-  aiGuardrailHitsTable,
-  tokenUsageTable,
-} from "@longox/db";
-import { eq, and } from "drizzle-orm";
+/**
+ * AI run lifecycle service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.aiRoutingPolicy`, `prisma.aiGuardrailHit` delegates with
+ * `as any` casts for legacy columns.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import { aiRouter } from "../../routing/ai-router";
 import type { ChatMessage } from "../../providers";
 import { CostBudgetService, BudgetExceededError } from "./cost-budget.service";
@@ -148,12 +149,14 @@ export class AiRunLifecycleService {
 
           for (const v of guardrailResult.inputViolations) {
             try {
-              await db.insert(aiGuardrailHitsTable).values({
-                guardrailId: input.guardrailIds[0],
-                violationType: v.type,
-                violationDetail: v.detail,
-                blocked: true,
-              } as any);
+              await prisma.aiGuardrailHit.create({
+                data: {
+                  guardrailId: input.guardrailIds[0],
+                  violationType: v.type,
+                  violationDetail: v.detail,
+                  blocked: true,
+                } as any,
+              });
             } catch {
               // non-fatal
             }
@@ -199,15 +202,12 @@ export class AiRunLifecycleService {
       let resolvedModel = input.model;
 
       if (input.routingPolicyId) {
-        const [policy] = await db
-          .select()
-          .from(aiRoutingPoliciesTable)
-          .where(
-            and(
-              eq(aiRoutingPoliciesTable.id, input.routingPolicyId),
-              eq(aiRoutingPoliciesTable.isEnabled, true),
-            ),
-          );
+        const policy = await prisma.aiRoutingPolicy.findFirst({
+          where: {
+            id: input.routingPolicyId,
+            isEnabled: true,
+          } as any,
+        });
 
         if (policy) {
           const routingResult = await aiRouter.route(
@@ -219,18 +219,18 @@ export class AiRunLifecycleService {
               responseFormat: input.responseFormat,
             },
             {
-              strategy: policy.strategy as any,
-              providerPreferences: (policy.providerPreferences ?? []) as any,
-              // Drizzle types jsonb columns as `unknown` (defaults to `{}`);
+              strategy: (policy as any).strategy as any,
+              providerPreferences: ((policy as any).providerPreferences ?? []) as any,
+              // Prisma types jsonb columns as `JsonValue` (defaults to `{}`);
               // cast to `string[] | undefined` to match the route options shape.
               modelAllowlist:
-                (policy.modelAllowlist as string[] | null | undefined) ??
+                ((policy as any).modelAllowlist as string[] | null | undefined) ??
                 undefined,
               modelDenylist:
-                (policy.modelDenylist as string[] | null | undefined) ??
+                ((policy as any).modelDenylist as string[] | null | undefined) ??
                 undefined,
-              fallbackEnabled: policy.fallbackEnabled,
-              maxRetries: policy.maxRetries,
+              fallbackEnabled: (policy as any).fallbackEnabled,
+              maxRetries: (policy as any).maxRetries,
             },
           );
 

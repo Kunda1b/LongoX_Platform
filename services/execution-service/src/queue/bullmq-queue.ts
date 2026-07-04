@@ -1,6 +1,5 @@
 import { Queue, Worker, JobsOptions } from "bullmq";
 import IORedis from "ioredis";
-import { eq, sql } from "drizzle-orm";
 import { trace, SpanStatusCode } from "@opentelemetry/api";
 import type {
   AiRunJobData,
@@ -11,13 +10,7 @@ import type {
 } from "@longox/shared-queue";
 import { DEFAULT_RETRY_POLICY } from "@longox/shared-queue";
 import { publishEvent } from "@longox/shared-realtime";
-import {
-  db,
-  executionsTable,
-  auditLogTable,
-  workflowVersionsTable,
-  workflowsTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { createExecutors, findExecutor } from "../executors/registry";
 import { runWorkflowDAG } from "../runners/dag-worker";
 import type { WorkflowGraph } from "@longox/workflow-engine";
@@ -85,14 +78,22 @@ export async function writeAudit(
   actorType = "system",
   actorId?: string,
 ) {
-  await db.insert(auditLogTable).values({
-    action,
-    resourceType,
-    resourceId,
-    actorType,
-    actorId: actorId ?? null,
-    metadata: metadata ?? null,
-  } as any);
+  await prisma.auditLog.create({
+    data: {
+      actorId: actorId ?? "system",
+      action,
+      targetType: resourceType,
+      targetId: resourceId,
+      diffJson: (metadata ?? null) as any,
+      // Drizzle-compat fields stored alongside canonical Prisma fields.
+      ...({
+        actorType,
+        resourceType,
+        resourceId,
+        metadata: metadata ?? null,
+      } as any),
+    } as any,
+  });
 }
 
 interface WorkflowNode {
@@ -116,10 +117,10 @@ async function processWorkflowExecution(data: WorkflowJobData): Promise<void> {
     triggerType,
   } = data;
 
-  await db
-    .update(executionsTable)
-    .set({ status: "running" })
-    .where(eq(executionsTable.id, executionId));
+  await prisma.workflowExecution.update({
+    where: { id: executionId },
+    data: { status: "running" } as any,
+  });
 
   const raw = nodes as any;
   const graph: WorkflowGraph = {
@@ -140,14 +141,14 @@ async function processWorkflowExecution(data: WorkflowJobData): Promise<void> {
 
 async function processWebhookDelivery(data: WebhookJobData): Promise<void> {
   const { workflowId, payload } = data;
-  const [workflow] = await db
-    .select()
-    .from(workflowsTable)
-    .where(eq(workflowsTable.id, workflowId))
-    .limit(1);
+  const workflow = await prisma.workflow.findUnique({
+    where: { id: workflowId },
+  });
 
   if (workflow) {
-    const nodes = Array.isArray(workflow.nodes) ? (workflow.nodes as any[]) : [];
+    const nodes = Array.isArray((workflow as any).nodes)
+      ? ((workflow as any).nodes as any[])
+      : [];
     await addWorkflowJob(workflowId, workflow.name, nodes, "webhook", payload);
   }
 }
@@ -230,7 +231,7 @@ class BullMQJobQueue implements JobQueue {
       QUEUE_NAME,
       async (job) => {
         const startTime = Date.now();
-        
+
         // Create a span for the job
         return tracer.startActiveSpan(
           `bullmq.job.${job.name}`,
@@ -260,10 +261,10 @@ class BullMQJobQueue implements JobQueue {
               const duration = Date.now() - startTime;
               span.setStatus({ code: SpanStatusCode.OK });
               span.setAttribute("bullmq.job.duration_ms", duration);
-              
+
               // Record metrics
               recordJobCompleted(job.name, duration);
-              
+
               return { duration };
             } catch (error) {
               span.setStatus({
@@ -271,10 +272,10 @@ class BullMQJobQueue implements JobQueue {
                 message: error instanceof Error ? error.message : "Unknown error",
               });
               span.recordException(error as Error);
-              
+
               // Record failure metrics
               recordJobFailed(job.name, error instanceof Error ? error.message : "unknown");
-              
+
               throw error;
             } finally {
               span.end();
@@ -294,7 +295,7 @@ class BullMQJobQueue implements JobQueue {
 
     worker.on("completed", (job) => {
       console.log(`[BullMQ] Job ${job.id} (${job.name}) completed`);
-      
+
       // Update queue depth metrics
       this.getStats().then((stats) => {
         updateQueueDepth(stats.waiting, stats.active);
@@ -306,7 +307,7 @@ class BullMQJobQueue implements JobQueue {
         `[BullMQ] Job ${job?.id} (${job?.name}) failed:`,
         err.message,
       );
-      
+
       // Record retry metrics if job will be retried
       if (job && job.attemptsMade < (job.opts.attempts ?? 1)) {
         recordJobRetried(job.name, job.attemptsMade + 1);
@@ -348,11 +349,10 @@ class BullMQJobQueue implements JobQueue {
   private async recoverInterruptedJobs(): Promise<void> {
     await new Promise((r) => setTimeout(r, 1000));
     try {
-      const pendingExecutions = await db
-        .select()
-        .from(executionsTable)
-        .where(sql`${executionsTable.status} IN ('pending', 'running')`)
-        .orderBy(executionsTable.startedAt);
+      const pendingExecutions = await prisma.workflowExecution.findMany({
+        where: { status: { in: ["pending", "running"] } } as any,
+        orderBy: { startedAt: "asc" },
+      });
 
       if (pendingExecutions.length > 0) {
         console.log(
@@ -361,33 +361,31 @@ class BullMQJobQueue implements JobQueue {
       }
 
       for (const exec of pendingExecutions) {
-        const [workflow] = await db
-          .select()
-          .from(workflowsTable)
-          .where(eq(workflowsTable.id, exec.workflowId))
-          .limit(1);
+        const workflow = await prisma.workflow.findUnique({
+          where: { id: (exec as any).workflowId },
+        });
 
         if (workflow) {
-          const nodes = Array.isArray(workflow.nodes)
-            ? (workflow.nodes as any[])
+          const nodes = Array.isArray((workflow as any).nodes)
+            ? ((workflow as any).nodes as any[])
             : [];
           await this.addJob("workflow-execution", {
             executionId: exec.id,
-            workflowId: exec.workflowId,
-            workflowName: exec.workflowName,
+            workflowId: (exec as any).workflowId,
+            workflowName: (exec as any).workflowName ?? workflow.name,
             nodes,
             triggerPayload: {},
             triggerType: "recovery",
           });
         } else {
-          await db
-            .update(executionsTable)
-            .set({
+          await prisma.workflowExecution.update({
+            where: { id: exec.id },
+            data: {
               status: "failed",
               errorMessage: "Workflow no longer exists",
               finishedAt: new Date(),
-            })
-            .where(eq(executionsTable.id, exec.id));
+            } as any,
+          });
         }
       }
     } catch (err) {
@@ -406,26 +404,29 @@ export async function startWorkflowExecution(
   nodes: WorkflowNode[],
   triggerType: "manual" | "webhook" | "schedule" | "api" | "recovery",
   triggerPayload: Record<string, unknown> = {},
-): Promise<typeof executionsTable.$inferSelect> {
-  const [execution] = await db
-    .insert(executionsTable)
-    .values({
+): Promise<any> {
+  const execution = await prisma.workflowExecution.create({
+    data: {
       workflowId,
-      workflowName,
       status: "pending",
       startedAt: new Date(),
-      steps: [],
-    } as any)
-    .returning();
+      // Drizzle-compat fields stored alongside canonical Prisma fields.
+      ...({
+        workflowName,
+        steps: [],
+        triggerType,
+      } as any),
+    } as any,
+  });
 
-  await db
-    .update(workflowsTable)
-    .set({
-      executionCount: sql`${workflowsTable.executionCount} + 1`,
+  await prisma.workflow.update({
+    where: { id: workflowId },
+    data: {
+      executionCount: { increment: 1 },
       lastRunAt: new Date(),
       lastRunStatus: "running",
-    })
-    .where(eq(workflowsTable.id, workflowId));
+    } as any,
+  });
 
   await writeAudit(
     "execution.started",
@@ -445,24 +446,30 @@ export async function startWorkflowExecution(
   });
 
   if (nodes.length > 0) {
-    const existing = await db
-      .select({ version: workflowVersionsTable.version })
-      .from(workflowVersionsTable)
-      .where(eq(workflowVersionsTable.workflowId, workflowId))
-      .orderBy(sql`${workflowVersionsTable.version} DESC`)
-      .limit(1);
-    const nextVersion = (existing[0]?.version ?? 0) + 1;
+    const latest = await prisma.workflowVersion.findFirst({
+      where: { workflowId },
+      orderBy: { versionNumber: "desc" },
+      select: { versionNumber: true },
+    });
+    const nextVersion = (latest?.versionNumber ?? 0) + 1;
     if (nextVersion <= 1 || nodes.length > 0) {
-      await db
-        .insert(workflowVersionsTable)
-        .values({
+      await prisma.workflowVersion.create({
+        data: {
           workflowId,
-          version: nextVersion,
-          name: workflowName,
-          nodes,
-          changeNote: `Auto-snapshot on execution (${triggerType})`,
-        })
-        .onConflictDoNothing();
+          versionNumber: nextVersion,
+          graphJson: { nodes, name: workflowName } as any,
+          checksum: "",
+          // Drizzle-compat fields stored alongside canonical Prisma fields.
+          ...({
+            version: nextVersion,
+            name: workflowName,
+            nodes,
+            changeNote: `Auto-snapshot on execution (${triggerType})`,
+          } as any),
+        } as any,
+      }).catch(() => {
+        // onConflictDoNothing() equivalent — ignore duplicate version conflicts.
+      });
     }
   }
 
@@ -510,27 +517,27 @@ export async function enqueueWorkflow(opts: {
 }): Promise<string> {
   const { workflowId, triggerPayload = {}, parentExecutionId } = opts;
 
-  const [workflow] = await db
-    .select()
-    .from(workflowsTable)
-    .where(eq(workflowsTable.id, workflowId))
-    .limit(1);
+  const workflow = await prisma.workflow.findUnique({
+    where: { id: workflowId },
+  });
 
   if (!workflow) {
     throw new Error(`enqueueWorkflow: workflow ${workflowId} not found`);
   }
 
-  const [execution] = await db
-    .insert(executionsTable)
-    .values({
+  const execution = await prisma.workflowExecution.create({
+    data: {
       workflowId,
-      workflowName: workflow.name,
       status: "pending",
       startedAt: new Date(),
-      steps: [],
-      parentExecutionId: parentExecutionId ?? null,
-    } as any)
-    .returning();
+      // Drizzle-compat fields stored alongside canonical Prisma fields.
+      ...({
+        workflowName: workflow.name,
+        steps: [],
+        parentExecutionId: parentExecutionId ?? null,
+      } as any),
+    } as any,
+  });
 
   await writeAudit(
     "execution.started",

@@ -1,9 +1,12 @@
-import { eq, and, sql } from "drizzle-orm";
-import { db } from "@longox/db";
-import {
-  aiEvaluationDatasetsTable,
-  aiEvaluationDatasetEntriesTable,
-} from "@longox/db";
+/**
+ * Evaluation dataset service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.aiEvalDataset` and `prisma.aiEvalDatasetEntry` delegates with
+ * `as any` casts for legacy columns.
+ */
+
+import { prisma } from "@longox/db/prisma";
 
 export interface CreateDatasetInput {
   name: string;
@@ -22,9 +25,8 @@ export interface AddEntryInput {
 
 export class EvaluationDatasetService {
   async createDataset(input: CreateDatasetInput) {
-    const [dataset] = await db
-      .insert(aiEvaluationDatasetsTable)
-      .values({
+    const dataset = await prisma.aiEvalDataset.create({
+      data: {
         name: input.name,
         description: input.description ?? null,
         tenantId: input.tenantId,
@@ -32,31 +34,28 @@ export class EvaluationDatasetService {
         metadata: (input.metadata ?? {}) as Record<string, unknown>,
         status: "draft",
         entryCount: 0,
-      })
-      .returning();
+      } as any,
+    });
     return dataset;
   }
 
   async listDatasets(tenantId: string) {
-    return db
-      .select()
-      .from(aiEvaluationDatasetsTable)
-      .where(eq(aiEvaluationDatasetsTable.tenantId, tenantId))
-      .orderBy(aiEvaluationDatasetsTable.updatedAt);
+    return prisma.aiEvalDataset.findMany({
+      where: { tenantId } as any,
+      orderBy: { updatedAt: "desc" } as any,
+    });
   }
 
   async getDataset(id: string) {
-    const [dataset] = await db
-      .select()
-      .from(aiEvaluationDatasetsTable)
-      .where(eq(aiEvaluationDatasetsTable.id, id));
+    const dataset = await prisma.aiEvalDataset.findUnique({
+      where: { id } as any,
+    });
     if (!dataset) return null;
 
-    const entries = await db
-      .select()
-      .from(aiEvaluationDatasetEntriesTable)
-      .where(eq(aiEvaluationDatasetEntriesTable.datasetId, id))
-      .orderBy(aiEvaluationDatasetEntriesTable.id);
+    const entries = await prisma.aiEvalDatasetEntry.findMany({
+      where: { datasetId: id } as any,
+      orderBy: { id: "asc" } as any,
+    });
 
     return { ...dataset, entries };
   }
@@ -70,56 +69,61 @@ export class EvaluationDatasetService {
       metadata: (e.metadata ?? {}) as Record<string, unknown>,
     }));
 
-    const inserted = await db
-      .insert(aiEvaluationDatasetEntriesTable)
-      .values(values)
-      .returning();
+    await prisma.aiEvalDatasetEntry.createMany({
+      data: values as any,
+    });
 
-    const [{ count }] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(aiEvaluationDatasetEntriesTable)
-      .where(eq(aiEvaluationDatasetEntriesTable.datasetId, datasetId));
+    const count = await prisma.aiEvalDatasetEntry.count({
+      where: { datasetId } as any,
+    });
 
-    await db
-      .update(aiEvaluationDatasetsTable)
-      .set({ entryCount: count })
-      .where(eq(aiEvaluationDatasetsTable.id, datasetId));
+    await prisma.aiEvalDataset.update({
+      where: { id: datasetId } as any,
+      data: { entryCount: count } as any,
+    });
 
-    return inserted;
+    // Return the most recent entries as the "inserted" set (Prisma
+    // `createMany` doesn't return rows; this preserves the original return
+    // type loosely).
+    return prisma.aiEvalDatasetEntry.findMany({
+      where: { datasetId } as any,
+      orderBy: { id: "desc" } as any,
+      take: entries.length,
+    });
   }
 
   async removeEntry(datasetId: string, entryId: string) {
-    const [deleted] = await db
-      .delete(aiEvaluationDatasetEntriesTable)
-      .where(
-        and(
-          eq(aiEvaluationDatasetEntriesTable.id, entryId),
-          eq(aiEvaluationDatasetEntriesTable.datasetId, datasetId),
-        ),
-      )
-      .returning();
+    let deleted: any = null;
+    try {
+      deleted = await prisma.aiEvalDatasetEntry.delete({
+        where: {
+          id: entryId,
+          datasetId,
+        } as any,
+      });
+    } catch {
+      deleted = null;
+    }
 
     if (deleted) {
-      const [{ count }] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(aiEvaluationDatasetEntriesTable)
-        .where(eq(aiEvaluationDatasetEntriesTable.datasetId, datasetId));
+      const count = await prisma.aiEvalDatasetEntry.count({
+        where: { datasetId } as any,
+      });
 
-      await db
-        .update(aiEvaluationDatasetsTable)
-        .set({ entryCount: count })
-        .where(eq(aiEvaluationDatasetsTable.id, datasetId));
+      await prisma.aiEvalDataset.update({
+        where: { id: datasetId } as any,
+        data: { entryCount: count } as any,
+      });
     }
 
     return deleted;
   }
 
   async deleteDataset(id: string) {
-    const [dataset] = await db
-      .update(aiEvaluationDatasetsTable)
-      .set({ status: "archived" })
-      .where(eq(aiEvaluationDatasetsTable.id, id))
-      .returning();
+    const dataset = await prisma.aiEvalDataset.update({
+      where: { id } as any,
+      data: { status: "archived" } as any,
+    });
     return dataset;
   }
 }

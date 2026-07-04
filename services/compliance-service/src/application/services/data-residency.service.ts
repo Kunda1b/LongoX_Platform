@@ -1,85 +1,84 @@
-import { eq } from "drizzle-orm";
-import { db, tenantsTable, regionsTable, regionPoliciesTable } from "@longox/db";
+/**
+ * Data residency service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3. Uses
+ * `prisma.tenant`, `prisma.region`, and `prisma.regionPolicy` delegates.
+ * `as any` casts handle legacy `plan` column on Tenant (Prisma uses
+ * `planId`) and other compatibility fields.
+ */
+
+import { prisma } from "@longox/db/prisma";
 
 export class DataResidencyService {
   async getTenantRegion(tenantId: string) {
-    const [tenant] = await db
-      .select()
-      .from(tenantsTable)
-      .where(eq(tenantsTable.id, tenantId));
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
 
     if (!tenant) throw new Error("Tenant not found");
 
-    const region = tenant.primaryRegion
-      ? await db
-          .select()
-          .from(regionsTable)
-          .where(eq(regionsTable.regionId, tenant.primaryRegion))
-          .then((r) => r[0] ?? null)
-      : null;
+    let region: any = null;
+    if (tenant.primaryRegion) {
+      region = await prisma.region.findFirst({
+        where: { regionId: tenant.primaryRegion },
+      });
+    }
 
     return {
       tenantId,
-      primaryRegion: tenant.primaryRegion,
-      allowedRegions: tenant.allowedRegions,
-      dataResidencyRequired: tenant.dataResidencyRequired,
+      primaryRegion: (tenant as any).primaryRegion,
+      allowedRegions: (tenant as any).allowedRegions,
+      dataResidencyRequired: (tenant as any).dataResidencyRequired,
       regionDetails: region,
     };
   }
 
   async setTenantRegion(tenantId: string, regionId: string) {
-    const [region] = await db
-      .select()
-      .from(regionsTable)
-      .where(eq(regionsTable.regionId, regionId));
+    const region = await prisma.region.findFirst({
+      where: { regionId },
+    });
 
     if (!region) throw new Error(`Region ${regionId} not found`);
 
-    const [tenant] = await db
-      .update(tenantsTable)
-      .set({
+    const tenant = await prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
         primaryRegion: regionId,
         dataResidencyRequired: true,
-      })
-      .where(eq(tenantsTable.id, tenantId))
-      .returning();
+      } as any,
+    });
 
     return tenant;
   }
 
   async validateDataAccess(tenantId: string, requestingRegion: string) {
-    const [tenant] = await db
-      .select()
-      .from(tenantsTable)
-      .where(eq(tenantsTable.id, tenantId));
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
 
     if (!tenant) throw new Error("Tenant not found");
 
-    if (!tenant.dataResidencyRequired) {
+    if (!(tenant as any).dataResidencyRequired) {
       return { allowed: true, reason: "Data residency not enforced" };
     }
 
-    const allowed = tenant.allowedRegions.includes(requestingRegion) || tenant.primaryRegion === requestingRegion;
+    const allowedRegions: string[] = (tenant as any).allowedRegions ?? [];
+    const allowed =
+      allowedRegions.includes(requestingRegion) ||
+      (tenant as any).primaryRegion === requestingRegion;
 
     return {
       allowed,
       reason: allowed ? "Region is permitted" : `Region ${requestingRegion} is not in allowed regions`,
-      primaryRegion: tenant.primaryRegion,
-      allowedRegions: tenant.allowedRegions,
+      primaryRegion: (tenant as any).primaryRegion,
+      allowedRegions,
     };
   }
 
   async getRegionPolicies(regionId: string) {
-    const policies = await db
-      .select()
-      .from(regionPoliciesTable)
-      .where(eq(regionPoliciesTable.region, regionId));
+    const policies = await prisma.regionPolicy.findMany({
+      where: { region: regionId },
+    });
 
-    const region = await db
-      .select()
-      .from(regionsTable)
-      .where(eq(regionsTable.regionId, regionId))
-      .then((r) => r[0] ?? null);
+    const region = await prisma.region.findFirst({
+      where: { regionId },
+    });
 
     if (!region) throw new Error(`Region ${regionId} not found`);
 
@@ -94,9 +93,9 @@ export class DataResidencyService {
 
     return {
       region: regionId,
-      regionName: region.name,
-      dataResidencyCompliant: region.dataResidencyCompliant,
-      policies: policies.map((p) => ({
+      regionName: (region as any).name,
+      dataResidencyCompliant: (region as any).dataResidencyCompliant,
+      policies: policies.map((p: any) => ({
         id: p.id,
         name: p.name,
         tier: p.tier,
@@ -106,40 +105,38 @@ export class DataResidencyService {
     };
   }
 
-  async enforceDataResidency(tenantId: string, dataType: string, data: unknown) {
-    const [tenant] = await db
-      .select()
-      .from(tenantsTable)
-      .where(eq(tenantsTable.id, tenantId));
+  async enforceDataResidency(tenantId: string, dataType: string, _data: unknown) {
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
 
     if (!tenant) throw new Error("Tenant not found");
 
-    const storageRegion = tenant.primaryRegion ?? "default";
-    const isCompliant = !tenant.dataResidencyRequired || (tenant.allowedRegions.includes(storageRegion) || storageRegion === tenant.primaryRegion);
+    const storageRegion = (tenant as any).primaryRegion ?? "default";
+    const allowedRegions: string[] = (tenant as any).allowedRegions ?? [];
+    const isCompliant =
+      !(tenant as any).dataResidencyRequired ||
+      allowedRegions.includes(storageRegion) ||
+      storageRegion === (tenant as any).primaryRegion;
 
     return {
       tenantId,
       dataType,
       storageRegion,
       isCompliant,
-      dataResidencyRequired: tenant.dataResidencyRequired,
+      dataResidencyRequired: (tenant as any).dataResidencyRequired,
       storedInCorrectRegion: isCompliant,
     };
   }
 
   async getComplianceRequirements(tenantId: string) {
-    const [tenant] = await db
-      .select()
-      .from(tenantsTable)
-      .where(eq(tenantsTable.id, tenantId));
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
 
     if (!tenant) throw new Error("Tenant not found");
 
-    const regionPolicies = tenant.primaryRegion
-      ? await this.getRegionPolicies(tenant.primaryRegion)
+    const regionPolicies = (tenant as any).primaryRegion
+      ? await this.getRegionPolicies((tenant as any).primaryRegion)
       : null;
 
-    const planTier = tenant.plan;
+    const planTier = (tenant as any).plan ?? "free";
 
     const requirements: Record<string, string[]> = {
       free: ["GDPR (if EU residents)", "Data protection"],
@@ -150,8 +147,8 @@ export class DataResidencyService {
     return {
       tenantId,
       plan: planTier,
-      primaryRegion: tenant.primaryRegion,
-      dataResidencyRequired: tenant.dataResidencyRequired,
+      primaryRegion: (tenant as any).primaryRegion,
+      dataResidencyRequired: (tenant as any).dataResidencyRequired,
       regionPolicies,
       applicableRequirements: requirements[planTier] ?? requirements.free,
     };

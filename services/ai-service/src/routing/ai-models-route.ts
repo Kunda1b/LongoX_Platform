@@ -1,6 +1,12 @@
+/**
+ * AI models routes.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.aiModel` delegate with `as any` casts for legacy columns.
+ */
+
 import { Router, type IRouter } from "express";
-import { eq, sql } from "drizzle-orm";
-import { db, aiModelsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
@@ -9,69 +15,69 @@ let seeded = false;
 async function ensureModels() {
   if (seeded) return;
   seeded = true;
-  const [{ count }] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(aiModelsTable);
+  const count = await prisma.aiModel.count();
   if (count > 0) return;
-  await db.insert(aiModelsTable).values([
-    {
-      provider: "openai",
-      name: "GPT-4o",
-      modelId: "gpt-4o",
-      contextWindow: 128000,
-      inputCostPerToken: "0.000005",
-      outputCostPerToken: "0.000015",
-      isEnabled: true,
-    },
-    {
-      provider: "openai",
-      name: "GPT-4o Mini",
-      modelId: "gpt-4o-mini",
-      contextWindow: 128000,
-      inputCostPerToken: "0.00000015",
-      outputCostPerToken: "0.0000006",
-      isEnabled: true,
-    },
-    {
-      provider: "anthropic",
-      name: "Claude 3.5 Sonnet",
-      modelId: "claude-3-5-sonnet-20241022",
-      contextWindow: 200000,
-      inputCostPerToken: "0.000003",
-      outputCostPerToken: "0.000015",
-      isEnabled: true,
-    },
-    {
-      provider: "anthropic",
-      name: "Claude 3 Haiku",
-      modelId: "claude-3-haiku-20240307",
-      contextWindow: 200000,
-      inputCostPerToken: "0.00000025",
-      outputCostPerToken: "0.00000125",
-      isEnabled: true,
-    },
-    {
-      provider: "google",
-      name: "Gemini 1.5 Pro",
-      modelId: "gemini-1.5-pro",
-      contextWindow: 1000000,
-      inputCostPerToken: "0.00000125",
-      outputCostPerToken: "0.000005",
-      isEnabled: true,
-    },
-    {
-      provider: "mistral",
-      name: "Mistral Large",
-      modelId: "mistral-large-latest",
-      contextWindow: 32000,
-      inputCostPerToken: "0.000002",
-      outputCostPerToken: "0.000006",
-      isEnabled: false,
-    },
-  ]);
+  await prisma.aiModel.createMany({
+    data: [
+      {
+        provider: "openai",
+        name: "GPT-4o",
+        modelId: "gpt-4o",
+        contextWindow: 128000,
+        inputCostPerToken: "0.000005",
+        outputCostPerToken: "0.000015",
+        isEnabled: true,
+      },
+      {
+        provider: "openai",
+        name: "GPT-4o Mini",
+        modelId: "gpt-4o-mini",
+        contextWindow: 128000,
+        inputCostPerToken: "0.00000015",
+        outputCostPerToken: "0.0000006",
+        isEnabled: true,
+      },
+      {
+        provider: "anthropic",
+        name: "Claude 3.5 Sonnet",
+        modelId: "claude-3-5-sonnet-20241022",
+        contextWindow: 200000,
+        inputCostPerToken: "0.000003",
+        outputCostPerToken: "0.000015",
+        isEnabled: true,
+      },
+      {
+        provider: "anthropic",
+        name: "Claude 3 Haiku",
+        modelId: "claude-3-haiku-20240307",
+        contextWindow: 200000,
+        inputCostPerToken: "0.00000025",
+        outputCostPerToken: "0.00000125",
+        isEnabled: true,
+      },
+      {
+        provider: "google",
+        name: "Gemini 1.5 Pro",
+        modelId: "gemini-1.5-pro",
+        contextWindow: 1000000,
+        inputCostPerToken: "0.00000125",
+        outputCostPerToken: "0.000005",
+        isEnabled: true,
+      },
+      {
+        provider: "mistral",
+        name: "Mistral Large",
+        modelId: "mistral-large-latest",
+        contextWindow: 32000,
+        inputCostPerToken: "0.000002",
+        outputCostPerToken: "0.000006",
+        isEnabled: false,
+      },
+    ] as any,
+  });
 }
 
-function fmt(row: typeof aiModelsTable.$inferSelect) {
+function fmt(row: any) {
   return {
     id: row.id,
     provider: row.provider,
@@ -88,19 +94,17 @@ function fmt(row: typeof aiModelsTable.$inferSelect) {
 
 router.get("/ai-models", authorize("ai:read"), async (_req, res): Promise<void> => {
   await ensureModels();
-  const rows = await db
-    .select()
-    .from(aiModelsTable)
-    .orderBy(aiModelsTable.provider, aiModelsTable.name);
+  const rows = await prisma.aiModel.findMany({
+    orderBy: [{ provider: "asc" } as any, { name: "asc" } as any],
+  });
   res.json(rows.map(fmt));
 });
 
 router.get("/ai-models/:id", authorize("ai:read"), async (req, res): Promise<void> => {
   await ensureModels();
-  const [row] = await db
-    .select()
-    .from(aiModelsTable)
-    .where(eq(aiModelsTable.id, String(req.params.id)));
+  const row = await prisma.aiModel.findUnique({
+    where: { id: String(req.params.id) } as any,
+  });
   if (!row) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -132,9 +136,8 @@ router.post("/ai-models", authorize("ai:write"), async (req, res): Promise<void>
     res.status(400).json({ error: "provider, name, modelId required" });
     return;
   }
-  const [row] = await db
-    .insert(aiModelsTable)
-    .values({
+  const row = await prisma.aiModel.create({
+    data: {
       provider: provider.trim(),
       name: name.trim(),
       modelId: modelId.trim(),
@@ -143,8 +146,8 @@ router.post("/ai-models", authorize("ai:write"), async (req, res): Promise<void>
       outputCostPerToken: String(outputCostPerToken),
       isEnabled,
       config,
-    })
-    .returning();
+    } as any,
+  });
   res.status(201).json(fmt(row));
 });
 
@@ -171,11 +174,10 @@ router.patch("/ai-models/:id", authorize("ai:write"), async (req, res): Promise<
     updates.outputCostPerToken = String(b.outputCostPerToken);
   if (b.isEnabled !== undefined) updates.isEnabled = b.isEnabled;
   if (b.config !== undefined) updates.config = b.config;
-  const [row] = await db
-    .update(aiModelsTable)
-    .set(updates)
-    .where(eq(aiModelsTable.id, id))
-    .returning();
+  const row = await prisma.aiModel.update({
+    where: { id } as any,
+    data: updates as any,
+  }).catch(() => null);
   if (!row) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -184,9 +186,9 @@ router.patch("/ai-models/:id", authorize("ai:write"), async (req, res): Promise<
 });
 
 router.delete("/ai-models/:id", authorize("ai:delete"), async (req, res): Promise<void> => {
-  await db
-    .delete(aiModelsTable)
-    .where(eq(aiModelsTable.id, String(req.params.id)));
+  await prisma.aiModel.delete({
+    where: { id: String(req.params.id) } as any,
+  }).catch(() => undefined);
   res.status(204).end();
 });
 

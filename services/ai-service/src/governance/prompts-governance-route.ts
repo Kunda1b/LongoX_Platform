@@ -1,6 +1,13 @@
+/**
+ * Prompt governance routes.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.aiPrompt`, `prisma.aiPromptVersion`, and `prisma.promptApproval`
+ * delegates with `as any` casts for legacy columns.
+ */
+
 import { Router, type IRouter } from "express";
-import { eq, and, desc } from "drizzle-orm";
-import { db, promptsTable, promptVersionsTable, promptApprovalsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { aiRouter } from "../routing/ai-router";
 import type { ChatMessage } from "../providers";
 import { authorize } from "@longox/shared-rbac";
@@ -9,13 +16,12 @@ const router: IRouter = Router();
 
 router.get("/prompts/:id/versions", authorize("ai:read"), async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  const rows = await db
-    .select()
-    .from(promptVersionsTable)
-    .where(eq(promptVersionsTable.promptId, id))
-    .orderBy(promptVersionsTable.version);
+  const rows = await prisma.aiPromptVersion.findMany({
+    where: { promptId: id } as any,
+    orderBy: { version: "asc" } as any,
+  });
   res.json(
-    rows.map((r) => ({
+    rows.map((r: any) => ({
       id: r.id,
       promptId: r.promptId,
       content: r.content,
@@ -34,47 +40,47 @@ router.post("/prompts/:id/publish", authorize("ai:write"), async (req, res): Pro
     comment?: string;
   };
 
-  const [prompt] = await db
-    .select()
-    .from(promptsTable)
-    .where(eq(promptsTable.id, id));
+  const prompt = await prisma.aiPrompt.findUnique({
+    where: { id } as any,
+  });
 
   if (!prompt) {
     res.status(404).json({ error: "Not found" });
     return;
   }
 
-  await db
-    .update(promptVersionsTable)
-    .set({ status: "approved" })
-    .where(eq(promptVersionsTable.promptId, id));
-
-  await db.insert(promptApprovalsTable).values({
-    promptId: id,
-    version: prompt.version,
-    requesterId: req.user?.id,
-    approverId: approverId ?? req.user?.id,
-    status: "approved",
-    comment,
-    decidedAt: new Date(),
+  await prisma.aiPromptVersion.updateMany({
+    where: { promptId: id } as any,
+    data: { status: "approved" } as any,
   });
 
-  const [row] = await db
-    .update(promptsTable)
-    .set({ status: "approved" })
-    .where(eq(promptsTable.id, id))
-    .returning();
+  await prisma.promptApproval.create({
+    data: {
+      promptId: id,
+      version: (prompt as any).version,
+      requesterId: req.user?.id,
+      approverId: approverId ?? req.user?.id,
+      status: "approved",
+      comment,
+      decidedAt: new Date(),
+    } as any,
+  });
+
+  const row = await prisma.aiPrompt.update({
+    where: { id } as any,
+    data: { status: "approved" } as any,
+  });
 
   res.json({
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    content: row.content,
-    version: row.version,
-    status: row.status,
-    tags: row.tags,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
+    id: (row as any).id,
+    name: (row as any).name,
+    description: (row as any).description,
+    content: (row as any).content,
+    version: (row as any).version,
+    status: (row as any).status,
+    tags: (row as any).tags,
+    createdAt: (row as any).createdAt.toISOString(),
+    updatedAt: (row as any).updatedAt.toISOString(),
   });
 });
 
@@ -87,119 +93,117 @@ router.post("/prompts/:id/rollback", authorize("ai:write"), async (req, res): Pr
     return;
   }
 
-  const [targetVersionRow] = await db
-    .select()
-    .from(promptVersionsTable)
-    .where(
-      and(
-        eq(promptVersionsTable.promptId, id),
-        eq(promptVersionsTable.version, targetVersion),
-      ),
-    );
+  const targetVersionRow = await prisma.aiPromptVersion.findFirst({
+    where: {
+      promptId: id,
+      version: targetVersion,
+    } as any,
+  });
 
   if (!targetVersionRow) {
     res.status(404).json({ error: `Version ${targetVersion} not found` });
     return;
   }
 
-  const [currentPrompt] = await db
-    .select({ version: promptsTable.version })
-    .from(promptsTable)
-    .where(eq(promptsTable.id, id));
+  const currentPrompt = await prisma.aiPrompt.findUnique({
+    where: { id } as any,
+  });
 
   if (!currentPrompt) {
     res.status(404).json({ error: "Prompt not found" });
     return;
   }
 
-  const newVersion = (currentPrompt.version ?? 1) + 1;
+  const newVersion = ((currentPrompt as any).version ?? 1) + 1;
 
-  await db.insert(promptVersionsTable).values({
-    promptId: id,
-    content: targetVersionRow.content,
-    version: newVersion,
-    status: "approved",
-    notes: `Rolled back from v${currentPrompt.version} to v${targetVersion}`,
-  });
-
-  const [row] = await db
-    .update(promptsTable)
-    .set({
-      content: targetVersionRow.content,
+  await prisma.aiPromptVersion.create({
+    data: {
+      promptId: id,
+      content: (targetVersionRow as any).content,
       version: newVersion,
       status: "approved",
-    })
-    .where(eq(promptsTable.id, id))
-    .returning();
+      notes: `Rolled back from v${(currentPrompt as any).version} to v${targetVersion}`,
+    } as any,
+  });
+
+  const row = await prisma.aiPrompt.update({
+    where: { id } as any,
+    data: {
+      content: (targetVersionRow as any).content,
+      version: newVersion,
+      status: "approved",
+    } as any,
+  });
 
   res.json({
-    id: row.id,
-    name: row.name,
-    content: row.content,
-    version: row.version,
-    status: row.status,
-    rolledBackFrom: currentPrompt.version,
+    id: (row as any).id,
+    name: (row as any).name,
+    content: (row as any).content,
+    version: (row as any).version,
+    status: (row as any).status,
+    rolledBackFrom: (currentPrompt as any).version,
     rolledBackTo: targetVersion,
   });
 });
 
 router.post("/prompts/:id/submit-for-review", authorize("ai:write"), async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  const [row] = await db
-    .update(promptsTable)
-    .set({ status: "review" })
-    .where(eq(promptsTable.id, id))
-    .returning();
+  const row = await prisma.aiPrompt.update({
+    where: { id } as any,
+    data: { status: "review" } as any,
+  }).catch(() => null);
   if (!row) {
     res.status(404).json({ error: "Not found" });
     return;
   }
 
-  await db.insert(promptApprovalsTable).values({
-    promptId: id,
-    version: row.version,
-    requesterId: req.user?.id,
-    status: "pending",
+  await prisma.promptApproval.create({
+    data: {
+      promptId: id,
+      version: (row as any).version,
+      requesterId: req.user?.id,
+      status: "pending",
+    } as any,
   });
 
-  res.json({ id: row.id, status: row.status, version: row.version });
+  res.json({ id: (row as any).id, status: (row as any).status, version: (row as any).version });
 });
 
 router.post("/prompts/:id/reject", authorize("ai:write"), async (req, res): Promise<void> => {
   const id = String(req.params.id);
   const { comment } = req.body as { comment?: string };
 
-  const [row] = await db
-    .update(promptsTable)
-    .set({ status: "draft" })
-    .where(eq(promptsTable.id, id))
-    .returning();
+  const row = await prisma.aiPrompt.update({
+    where: { id } as any,
+    data: { status: "draft" } as any,
+  }).catch(() => null);
   if (!row) {
     res.status(404).json({ error: "Not found" });
     return;
   }
 
-  await db.insert(promptApprovalsTable).values({
-    promptId: id,
-    version: row.version,
-    approverId: req.user?.id,
-    status: "rejected",
-    comment,
-    decidedAt: new Date(),
+  await prisma.promptApproval.create({
+    data: {
+      promptId: id,
+      version: (row as any).version,
+      approverId: req.user?.id,
+      status: "rejected",
+      comment,
+      decidedAt: new Date(),
+    } as any,
   });
 
-  res.json({ id: row.id, status: row.status });
+  res.json({ id: (row as any).id, status: (row as any).status });
 });
 
 router.get("/prompts/:id/approval-history", authorize("ai:read"), async (req, res): Promise<void> => {
   const id = String(req.params.id);
-  const rows = await db
-    .select()
-    .from(promptApprovalsTable)
-    .where(eq(promptApprovalsTable.promptId, id))
-    .orderBy(desc(promptApprovalsTable.createdAt));
+  const rows = await prisma.promptApproval.findMany({
+    where: { promptId: id } as any,
+    orderBy: { createdAt: "desc" } as any,
+  });
   res.json(
-    rows.map((r) => ({
+    rows.map((r: any) => ({
       id: r.id,
       promptId: r.promptId,
       version: r.version,
@@ -221,17 +225,16 @@ router.post("/prompts/:id/test", authorize("ai:run"), async (req, res): Promise<
     provider?: string;
   };
 
-  const [prompt] = await db
-    .select()
-    .from(promptsTable)
-    .where(eq(promptsTable.id, id));
+  const prompt = await prisma.aiPrompt.findUnique({
+    where: { id } as any,
+  });
 
   if (!prompt) {
     res.status(404).json({ error: "Not found" });
     return;
   }
 
-  let content = prompt.content;
+  let content = (prompt as any).content;
   if (variables) {
     for (const [key, value] of Object.entries(variables)) {
       content = content.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
@@ -248,7 +251,7 @@ router.post("/prompts/:id/test", authorize("ai:run"), async (req, res): Promise<
   try {
     const routingResult = await aiRouter.route(
       messages,
-      { model: modelId, temperature: prompt.temperature, maxTokens: prompt.maxTokens },
+      { model: modelId, temperature: (prompt as any).temperature, maxTokens: (prompt as any).maxTokens },
       provider ? { providerPreferences: [provider as any] } : undefined,
     );
 
@@ -256,7 +259,7 @@ router.post("/prompts/:id/test", authorize("ai:run"), async (req, res): Promise<
 
     res.json({
       promptId: id,
-      version: prompt.version,
+      version: (prompt as any).version,
       provider: routingResult.provider,
       model: routingResult.result.model,
       renderedContent: content,

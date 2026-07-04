@@ -1,11 +1,12 @@
-import { eq, sql, gte, and } from "drizzle-orm";
-import {
-  db,
-  usageEventsTable,
-  executionsTable,
-  workflowsTable,
-  connectorsTable,
-} from "@longox/db";
+/**
+ * Prisma-based usage repository.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.usageEvent`, `prisma.workflowExecution`, `prisma.workflow`,
+ * `prisma.connector` delegates with `as any` casts for legacy columns.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import type { UsageRepository } from "../../domain/usage/usage-repository";
 import type {
   UsageEvent,
@@ -21,20 +22,17 @@ export class PostgresUsageRepository implements UsageRepository {
   ): Promise<UsageEvent[]> {
     const limit = Math.min(filter.limit ?? 50, 200);
 
-    const conditions = [eq(usageEventsTable.tenantId, tenantId)];
-    if (filter.workflowId)
-      conditions.push(eq(usageEventsTable.workflowId, filter.workflowId));
-    if (filter.eventType)
-      conditions.push(eq(usageEventsTable.eventType, filter.eventType));
+    const where: Record<string, unknown> = { tenantId };
+    if (filter.workflowId) where.workflowId = filter.workflowId;
+    if (filter.eventType) where.eventType = filter.eventType;
 
-    const rows = await db
-      .select()
-      .from(usageEventsTable)
-      .where(and(...conditions))
-      .orderBy(sql`${usageEventsTable.createdAt} desc`)
-      .limit(limit);
+    const rows = await prisma.usageEvent.findMany({
+      where: where as any,
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    });
 
-    return rows.map((e) => ({
+    return rows.map((e: any) => ({
       id: e.id,
       workflowId: e.workflowId ?? null,
       workflowName: e.workflowName ?? null,
@@ -46,47 +44,33 @@ export class PostgresUsageRepository implements UsageRepository {
   }
 
   async getMetrics(tenantId: string, monthStart: Date): Promise<UsageMetrics> {
-    const [allExecs] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(executionsTable)
-      .where(eq(executionsTable.tenantId, tenantId));
-    const [monthExecs] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(executionsTable)
-      .where(
-        and(
-          eq(executionsTable.tenantId, tenantId),
-          gte(executionsTable.startedAt, monthStart),
-        ),
-      );
-    const [allWorkflows] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(workflowsTable)
-      .where(eq(workflowsTable.tenantId, tenantId));
-    const [activeWorkflows] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(workflowsTable)
-      .where(
-        and(
-          eq(workflowsTable.tenantId, tenantId),
-          eq(workflowsTable.status, "active"),
-        ),
-      );
-    const [allConnectors] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(connectorsTable);
-    const [installedConnectors] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(connectorsTable)
-      .where(eq(connectorsTable.isInstalled, true));
+    const allExecs = await prisma.workflowExecution.count({
+      where: { tenantId } as any,
+    });
+    const monthExecs = await prisma.workflowExecution.count({
+      where: {
+        tenantId,
+        startedAt: { gte: monthStart },
+      } as any,
+    });
+    const allWorkflows = await prisma.workflow.count({
+      where: { tenantId } as any,
+    });
+    const activeWorkflows = await prisma.workflow.count({
+      where: { tenantId, status: "active" } as any,
+    });
+    const allConnectors = await prisma.connector.count();
+    const installedConnectors = await prisma.connector.count({
+      where: { isInstalled: true } as any,
+    });
 
     return {
-      totalExecutions: allExecs.count,
-      executionsThisMonth: monthExecs.count,
-      totalWorkflows: allWorkflows.count,
-      activeWorkflows: activeWorkflows.count,
-      totalConnectors: allConnectors.count,
-      usedConnectors: installedConnectors.count,
+      totalExecutions: allExecs,
+      executionsThisMonth: monthExecs,
+      totalWorkflows: allWorkflows,
+      activeWorkflows,
+      totalConnectors: allConnectors,
+      usedConnectors: installedConnectors,
     };
   }
 
@@ -95,19 +79,22 @@ export class PostgresUsageRepository implements UsageRepository {
     periodStart: Date,
     periodEnd?: Date,
   ): Promise<UsageEventQuantity[]> {
-    const conditions = [
-      eq(usageEventsTable.tenantId, tenantId),
-      gte(usageEventsTable.createdAt, periodStart),
-    ];
-    if (periodEnd)
-      conditions.push(sql`${usageEventsTable.createdAt} <= ${periodEnd}`);
+    const where: Record<string, unknown> = {
+      tenantId,
+      createdAt: { gte: periodStart },
+    };
+    if (periodEnd) {
+      (where.createdAt as Record<string, unknown>).lte = periodEnd;
+    }
 
-    return db
-      .select({
-        eventType: usageEventsTable.eventType,
-        quantity: usageEventsTable.quantity,
-      })
-      .from(usageEventsTable)
-      .where(and(...conditions));
+    const rows = await prisma.usageEvent.findMany({
+      where: where as any,
+      select: {
+        eventType: true,
+        quantity: true,
+      } as any,
+    });
+
+    return rows as unknown as UsageEventQuantity[];
   }
 }

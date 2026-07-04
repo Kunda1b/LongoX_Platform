@@ -1,14 +1,11 @@
-import { eq, and, gte, lte, or, ilike, sql } from "drizzle-orm";
-import {
-  db,
-  workflowsTable,
-  appsTable,
-  templatesTable,
-  connectorsTable,
-  executionsTable,
-  auditLogTable,
-  promptsTable,
-} from "@longox/db";
+/**
+ * Prisma-based search repository.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.$queryRawUnsafe()` for FTS queries and Prisma delegates for basic lookups.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import type { SearchRepository } from "../../domain/search/search-repository";
 import type {
   SearchResult,
@@ -42,40 +39,50 @@ export class PostgresSearchRepository implements SearchRepository {
     }
 
     if (types.includes("workflows")) {
-      const rows = await db.execute(
-        sql`
-          SELECT id, name, description, status, trigger_type,
-            ts_rank(to_tsvector(${FTS_CONFIG}, COALESCE(name, '') || ' ' || COALESCE(description, '')), to_tsquery(${FTS_CONFIG}, ${tsq})) as rank
+      const rows: any[] = await prisma.$queryRawUnsafe(
+        `SELECT id, name, description, status, trigger_type,
+            ts_rank(to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(description, '')), to_tsquery($1, $2)) as rank
           FROM workflows
-          WHERE to_tsvector(${FTS_CONFIG}, COALESCE(name, '') || ' ' || COALESCE(description, '')) @@ to_tsquery(${FTS_CONFIG}, ${tsq})
+          WHERE to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(description, '')) @@ to_tsquery($1, $2)
           ORDER BY rank DESC
-          LIMIT ${limitPerType}
-        `,
+          LIMIT $3`,
+        FTS_CONFIG,
+        tsq,
+        limitPerType,
       );
-      for (const r of rows.rows as any[]) {
+      for (const r of rows) {
         results.push({
-          id: r.id, type: "workflow", title: r.name,
+          id: r.id,
+          type: "workflow",
+          title: r.name,
           description: r.description ?? null,
           url: `/workflows/${r.id}`,
-          metadata: { status: r.status, triggerType: r.trigger_type, rank: r.rank },
+          metadata: {
+            status: r.status,
+            triggerType: r.trigger_type,
+            rank: r.rank,
+          },
         });
       }
     }
 
     if (types.includes("apps")) {
-      const rows = await db.execute(
-        sql`
-          SELECT id, name, description, type, status,
-            ts_rank(to_tsvector(${FTS_CONFIG}, COALESCE(name, '') || ' ' || COALESCE(description, '')), to_tsquery(${FTS_CONFIG}, ${tsq})) as rank
+      const rows: any[] = await prisma.$queryRawUnsafe(
+        `SELECT id, name, description, type, status,
+            ts_rank(to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(description, '')), to_tsquery($1, $2)) as rank
           FROM apps
-          WHERE to_tsvector(${FTS_CONFIG}, COALESCE(name, '') || ' ' || COALESCE(description, '')) @@ to_tsquery(${FTS_CONFIG}, ${tsq})
+          WHERE to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(description, '')) @@ to_tsquery($1, $2)
           ORDER BY rank DESC
-          LIMIT ${limitPerType}
-        `,
+          LIMIT $3`,
+        FTS_CONFIG,
+        tsq,
+        limitPerType,
       );
-      for (const r of rows.rows as any[]) {
+      for (const r of rows) {
         results.push({
-          id: r.id, type: "app", title: r.name,
+          id: r.id,
+          type: "app",
+          title: r.name,
           description: r.description ?? null,
           url: `/apps/${r.id}`,
           metadata: { type: r.type, status: r.status, rank: r.rank },
@@ -84,19 +91,22 @@ export class PostgresSearchRepository implements SearchRepository {
     }
 
     if (types.includes("templates")) {
-      const rows = await db.execute(
-        sql`
-          SELECT id, name, description, category,
-            ts_rank(to_tsvector(${FTS_CONFIG}, COALESCE(name, '') || ' ' || COALESCE(description, '')), to_tsquery(${FTS_CONFIG}, ${tsq})) as rank
+      const rows: any[] = await prisma.$queryRawUnsafe(
+        `SELECT id, name, description, category,
+            ts_rank(to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(description, '')), to_tsquery($1, $2)) as rank
           FROM templates
-          WHERE to_tsvector(${FTS_CONFIG}, COALESCE(name, '') || ' ' || COALESCE(description, '')) @@ to_tsquery(${FTS_CONFIG}, ${tsq})
+          WHERE to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(description, '')) @@ to_tsquery($1, $2)
           ORDER BY rank DESC
-          LIMIT ${limitPerType}
-        `,
+          LIMIT $3`,
+        FTS_CONFIG,
+        tsq,
+        limitPerType,
       );
-      for (const r of rows.rows as any[]) {
+      for (const r of rows) {
         results.push({
-          id: r.id, type: "template", title: r.name,
+          id: r.id,
+          type: "template",
+          title: r.name,
           description: r.description ?? null,
           url: `/templates`,
           metadata: { category: r.category, rank: r.rank },
@@ -105,22 +115,29 @@ export class PostgresSearchRepository implements SearchRepository {
     }
 
     if (types.includes("connectors")) {
-      const rows = await db.execute(
-        sql`
-          SELECT id, name, description, category, is_installed,
-            ts_rank(to_tsvector(${FTS_CONFIG}, COALESCE(name, '') || ' ' || COALESCE(description, '')), to_tsquery(${FTS_CONFIG}, ${tsq})) as rank
+      const rows: any[] = await prisma.$queryRawUnsafe(
+        `SELECT id, name, description, category, is_installed,
+            ts_rank(to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(description, '')), to_tsquery($1, $2)) as rank
           FROM connectors
-          WHERE to_tsvector(${FTS_CONFIG}, COALESCE(name, '') || ' ' || COALESCE(description, '')) @@ to_tsquery(${FTS_CONFIG}, ${tsq})
+          WHERE to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(description, '')) @@ to_tsquery($1, $2)
           ORDER BY rank DESC
-          LIMIT ${limitPerType}
-        `,
+          LIMIT $3`,
+        FTS_CONFIG,
+        tsq,
+        limitPerType,
       );
-      for (const r of rows.rows as any[]) {
+      for (const r of rows) {
         results.push({
-          id: r.id, type: "connector", title: r.name,
+          id: r.id,
+          type: "connector",
+          title: r.name,
           description: r.description ?? null,
           url: `/connectors`,
-          metadata: { category: r.category, isInstalled: r.is_installed, rank: r.rank },
+          metadata: {
+            category: r.category,
+            isInstalled: r.is_installed,
+            rank: r.rank,
+          },
         });
       }
     }
@@ -137,83 +154,97 @@ export class PostgresSearchRepository implements SearchRepository {
     const results: SearchResult[] = [];
 
     if (types.includes("workflows")) {
-      const rows = await db
-        .select()
-        .from(workflowsTable)
-        .where(
-          or(
-            ilike(workflowsTable.name, pattern),
-            ilike(workflowsTable.description, pattern),
-          ),
-        )
-        .limit(limitPerType);
-      for (const r of rows)
+      const rows = await prisma.workflow.findMany({
+        where: {
+          OR: [
+            { name: { contains: query, mode: "insensitive" } },
+            { description: { contains: query, mode: "insensitive" } },
+          ],
+        },
+        take: limitPerType,
+      });
+      for (const r of rows as any[]) {
         results.push({
-          id: r.id, type: "workflow", title: r.name,
+          id: r.id,
+          type: "workflow",
+          title: r.name,
           description: r.description ?? null,
           url: `/workflows/${r.id}`,
-          metadata: { status: r.status, triggerType: r.triggerType },
+          metadata: {
+            status: r.status,
+            triggerType: (r as any).triggerType,
+          },
         });
+      }
     }
 
     if (types.includes("apps")) {
-      const rows = await db
-        .select()
-        .from(appsTable)
-        .where(
-          or(
-            ilike(appsTable.name, pattern),
-            ilike(appsTable.description, pattern),
-          ),
-        )
-        .limit(limitPerType);
-      for (const r of rows)
+      const rows = await prisma.app.findMany({
+        where: {
+          OR: [
+            { name: { contains: query, mode: "insensitive" } },
+            { description: { contains: query, mode: "insensitive" } },
+          ],
+        },
+        take: limitPerType,
+      });
+      for (const r of rows as any[]) {
         results.push({
-          id: r.id, type: "app", title: r.name,
+          id: r.id,
+          type: "app",
+          title: r.name,
           description: r.description ?? null,
           url: `/apps/${r.id}`,
-          metadata: { type: r.type, status: r.status },
+          metadata: { type: (r as any).type, status: (r as any).status },
         });
+      }
     }
 
     if (types.includes("templates")) {
-      const rows = await db
-        .select()
-        .from(templatesTable)
-        .where(
-          or(
-            ilike(templatesTable.name, pattern),
-            ilike(templatesTable.description, pattern),
-          ),
-        )
-        .limit(limitPerType);
-      for (const r of rows)
+      const rows = await prisma.template.findMany({
+        where: {
+          OR: [
+            { name: { contains: query, mode: "insensitive" } },
+            { description: { contains: query, mode: "insensitive" } },
+          ],
+        },
+        take: limitPerType,
+      });
+      for (const r of rows as any[]) {
         results.push({
-          id: r.id, type: "template", title: r.name,
+          id: r.id,
+          type: "template",
+          title: r.name,
           description: r.description ?? null,
           url: `/templates`,
-          metadata: { category: r.category },
+          metadata: { category: (r as any).category },
         });
+      }
     }
 
     if (types.includes("connectors")) {
-      const rows = await db
-        .select()
-        .from(connectorsTable)
-        .where(
-          or(
-            ilike(connectorsTable.name, pattern),
-            ilike(connectorsTable.description, pattern),
-          ),
-        )
-        .limit(limitPerType);
-      for (const r of rows)
+      const rows = await prisma.connector.findMany({
+        where: {
+          OR: [
+            { name: { contains: query, mode: "insensitive" } },
+            { description: { contains: query, mode: "insensitive" } },
+          ],
+        },
+        take: limitPerType,
+      });
+      for (const r of rows as any[]) {
         results.push({
-          id: r.id, type: "connector", title: r.name,
+          id: r.id,
+          type: "connector",
+          title: r.name,
           description: r.description ?? null,
           url: `/connectors`,
-          metadata: { category: r.category, isInstalled: r.isInstalled },
+          metadata: {
+            category: (r as any).category,
+            isInstalled: (r as any).isInstalled,
+          },
         });
+      }
     }
 
     return results;
@@ -230,53 +261,46 @@ export class PostgresSearchRepository implements SearchRepository {
     },
     limit: number = 20,
   ): Promise<SearchResult[]> {
-    const conditions = [eq(executionsTable.tenantId, tenantId)];
-
-    if (filters?.status) {
-      conditions.push(eq(executionsTable.status, filters.status));
-    }
-    if (filters?.workflowId) {
-      conditions.push(eq(executionsTable.workflowId, filters.workflowId));
-    }
-    if (filters?.startDate) {
-      conditions.push(gte(executionsTable.startedAt, filters.startDate));
-    }
-    if (filters?.endDate) {
-      conditions.push(lte(executionsTable.startedAt, filters.endDate));
-    }
-
     const tsq = toTsQuery(query);
     if (tsq) {
       try {
-        const queryBuilder = sql`
+        let sqlStr = `
           SELECT e.id, e.workflow_id, w.name as workflow_name,
             e.status, e.started_at, e.finished_at, e.duration_ms, e.error_message,
-            ts_rank(to_tsvector(${FTS_CONFIG}, COALESCE(w.name, '')), to_tsquery(${FTS_CONFIG}, ${tsq})) as rank
+            ts_rank(to_tsvector($1, COALESCE(w.name, '')), to_tsquery($1, $2)) as rank
           FROM executions e
           LEFT JOIN workflows w ON e.workflow_id = w.id
-          WHERE e.tenant_id = ${tenantId}
+          WHERE e.tenant_id = $3
         `;
+        const params: any[] = [FTS_CONFIG, tsq, tenantId];
+        let paramIdx = 4;
         if (filters?.status) {
-          queryBuilder.append(sql` AND e.status = ${filters.status}`);
+          sqlStr += ` AND e.status = $${paramIdx++}`;
+          params.push(filters.status);
         }
         if (filters?.workflowId) {
-          queryBuilder.append(sql` AND e.workflow_id = ${filters.workflowId}`);
+          sqlStr += ` AND e.workflow_id = $${paramIdx++}`;
+          params.push(filters.workflowId);
         }
-        queryBuilder.append(sql`
-          AND to_tsvector(${FTS_CONFIG}, COALESCE(w.name, '')) @@ to_tsquery(${FTS_CONFIG}, ${tsq})
+        sqlStr += `
+          AND to_tsvector($1, COALESCE(w.name, '')) @@ to_tsquery($1, $2)
           ORDER BY rank DESC
-          LIMIT ${limit}
-        `);
-        const rows = await db.execute(queryBuilder);
-        return (rows.rows as any[]).map((r) => ({
-          id: r.id, type: "execution",
+          LIMIT $${paramIdx++}
+        `;
+        params.push(limit);
+        const rows: any[] = await prisma.$queryRawUnsafe(sqlStr, ...params);
+        return rows.map((r) => ({
+          id: r.id,
+          type: "execution",
           title: r.workflow_name ?? "Unknown Workflow",
           description: r.error_message ?? null,
           url: `/executions/${r.id}`,
           metadata: {
-            status: r.status, workflowId: r.workflow_id,
+            status: r.status,
+            workflowId: r.workflow_id,
             durationMs: r.duration_ms,
-            startedAt: r.started_at, finishedAt: r.finished_at,
+            startedAt: r.started_at,
+            finishedAt: r.finished_at,
           },
         }));
       } catch {
@@ -284,30 +308,34 @@ export class PostgresSearchRepository implements SearchRepository {
       }
     }
 
-    const pattern = `%${query}%`;
-    const rows = await db
-      .select({
-        id: executionsTable.id,
-        workflowId: executionsTable.workflowId,
-        workflowName: workflowsTable.name,
-        status: executionsTable.status,
-        startedAt: executionsTable.startedAt,
-        finishedAt: executionsTable.finishedAt,
-        durationMs: executionsTable.durationMs,
-        errorMessage: executionsTable.errorMessage,
-      })
-      .from(executionsTable)
-      .leftJoin(workflowsTable, eq(executionsTable.workflowId, workflowsTable.id))
-      .where(and(...conditions, ilike(workflowsTable.name, pattern)))
-      .limit(limit);
+    const where: Record<string, unknown> = { tenantId };
+    if (filters?.status) where.status = filters.status;
+    if (filters?.workflowId) where.workflowId = filters.workflowId;
+    if (filters?.startDate || filters?.endDate) {
+      where.startedAt = {
+        ...(filters?.startDate ? { gte: filters.startDate } : {}),
+        ...(filters?.endDate ? { lte: filters.endDate } : {}),
+      };
+    }
 
-    return rows.map((r) => ({
-      id: r.id, type: "execution",
-      title: r.workflowName ?? "Unknown Workflow",
+    const rows = await prisma.workflowExecution.findMany({
+      where: {
+        ...where,
+        workflow: { name: { contains: query, mode: "insensitive" } },
+      } as any,
+      include: { workflow: { select: { name: true } } },
+      take: limit,
+    });
+
+    return rows.map((r: any) => ({
+      id: r.id,
+      type: "execution",
+      title: r.workflow?.name ?? "Unknown Workflow",
       description: r.errorMessage ?? null,
       url: `/executions/${r.id}`,
       metadata: {
-        status: r.status, workflowId: r.workflowId,
+        status: r.status,
+        workflowId: r.workflowId,
         durationMs: r.durationMs,
         startedAt: r.startedAt?.toISOString(),
         finishedAt: r.finishedAt?.toISOString(),
@@ -330,33 +358,42 @@ export class PostgresSearchRepository implements SearchRepository {
     const tsq = toTsQuery(query);
     if (tsq) {
       try {
-        const queryBuilder = sql`
+        let sqlStr = `
           SELECT id, action, resource_type, resource_id, actor_id, actor_type, metadata, created_at,
-            ts_rank(to_tsvector(${FTS_CONFIG}, COALESCE(action, '') || ' ' || COALESCE(resource_type, '') || ' ' || COALESCE(actor_id, '')), to_tsquery(${FTS_CONFIG}, ${tsq})) as rank
+            ts_rank(to_tsvector($1, COALESCE(action, '') || ' ' || COALESCE(resource_type, '') || ' ' || COALESCE(actor_id, '')), to_tsquery($1, $2)) as rank
           FROM audit_log
-          WHERE tenant_id = ${tenantId}
+          WHERE tenant_id = $3
         `;
+        const params: any[] = [FTS_CONFIG, tsq, tenantId];
+        let paramIdx = 4;
         if (filters?.action) {
-          queryBuilder.append(sql` AND action = ${filters.action}`);
+          sqlStr += ` AND action = $${paramIdx++}`;
+          params.push(filters.action);
         }
         if (filters?.resource) {
-          queryBuilder.append(sql` AND resource_type = ${filters.resource}`);
+          sqlStr += ` AND resource_type = $${paramIdx++}`;
+          params.push(filters.resource);
         }
-        queryBuilder.append(sql`
-          AND to_tsvector(${FTS_CONFIG}, COALESCE(action, '') || ' ' || COALESCE(resource_type, '') || ' ' || COALESCE(actor_id, '')) @@ to_tsquery(${FTS_CONFIG}, ${tsq})
+        sqlStr += `
+          AND to_tsvector($1, COALESCE(action, '') || ' ' || COALESCE(resource_type, '') || ' ' || COALESCE(actor_id, '')) @@ to_tsquery($1, $2)
           ORDER BY rank DESC
-          LIMIT ${limit}
-        `);
-        const rows = await db.execute(queryBuilder);
-        return (rows.rows as any[]).map((r) => ({
-          id: r.id, type: "audit_log",
+          LIMIT $${paramIdx++}
+        `;
+        params.push(limit);
+        const rows: any[] = await prisma.$queryRawUnsafe(sqlStr, ...params);
+        return rows.map((r) => ({
+          id: r.id,
+          type: "audit_log",
           title: `${r.action} ${r.resource_type}`,
           description: r.metadata ? JSON.stringify(r.metadata) : null,
           url: `/audit-logs/${r.id}`,
           metadata: {
-            action: r.action, resource: r.resource_type,
-            resourceId: r.resource_id, actorId: r.actor_id,
-            actorType: r.actor_type, timestamp: r.created_at,
+            action: r.action,
+            resource: r.resource_type,
+            resourceId: r.resource_id,
+            actorId: r.actor_id,
+            actorType: r.actor_type,
+            timestamp: r.created_at,
           },
         }));
       } catch {
@@ -364,27 +401,31 @@ export class PostgresSearchRepository implements SearchRepository {
       }
     }
 
-    const conditions = [eq(auditLogTable.tenantId, tenantId)];
-    if (filters?.action) conditions.push(eq(auditLogTable.action, filters.action));
-    if (filters?.resource) conditions.push(eq(auditLogTable.resourceType, filters.resource));
-    if (filters?.userId) conditions.push(eq(auditLogTable.actorId, filters.userId.toString()));
-    if (filters?.startDate) conditions.push(gte(auditLogTable.createdAt, filters.startDate));
-    if (filters?.endDate) conditions.push(lte(auditLogTable.createdAt, filters.endDate));
+    const where: Record<string, unknown> = { tenantId };
+    if (filters?.action) where.action = filters.action;
+    if (filters?.resource) where.resourceType = filters.resource;
+    if (filters?.userId) where.actorId = filters.userId.toString();
+    if (filters?.startDate || filters?.endDate) {
+      where.createdAt = {
+        ...(filters?.startDate ? { gte: filters.startDate } : {}),
+        ...(filters?.endDate ? { lte: filters.endDate } : {}),
+      };
+    }
 
-    const rows = await db
-      .select()
-      .from(auditLogTable)
-      .where(and(...conditions))
-      .limit(limit);
-    return rows.map((r) => ({
-      id: r.id, type: "audit_log",
+    const rows = await prisma.auditLog.findMany({ where, take: limit });
+    return rows.map((r: any) => ({
+      id: r.id,
+      type: "audit_log",
       title: `${r.action} ${r.resourceType}`,
       description: r.metadata ? JSON.stringify(r.metadata) : null,
       url: `/audit-logs/${r.id}`,
       metadata: {
-        action: r.action, resource: r.resourceType,
-        resourceId: r.resourceId, actorId: r.actorId,
-        actorType: r.actorType, timestamp: r.createdAt?.toISOString(),
+        action: r.action,
+        resource: r.resourceType,
+        resourceId: r.resourceId,
+        actorId: r.actorId,
+        actorType: r.actorType,
+        timestamp: r.createdAt?.toISOString(),
       },
     }));
   }
@@ -398,43 +439,54 @@ export class PostgresSearchRepository implements SearchRepository {
     const tsq = toTsQuery(query);
     if (tsq) {
       try {
-        const queryBuilder = sql`
+        let sqlStr = `
           SELECT id, name, content, model, created_at,
-            ts_rank(to_tsvector(${FTS_CONFIG}, COALESCE(name, '') || ' ' || COALESCE(content, '')), to_tsquery(${FTS_CONFIG}, ${tsq})) as rank
+            ts_rank(to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(content, '')), to_tsquery($1, $2)) as rank
           FROM prompts
-          WHERE to_tsvector(${FTS_CONFIG}, COALESCE(name, '') || ' ' || COALESCE(content, '')) @@ to_tsquery(${FTS_CONFIG}, ${tsq})
+          WHERE to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(content, '')) @@ to_tsquery($1, $2)
         `;
+        const params: any[] = [FTS_CONFIG, tsq];
+        let paramIdx = 3;
         if (filters?.model) {
-          queryBuilder.append(sql` AND model = ${filters.model}`);
+          sqlStr += ` AND model = $${paramIdx++}`;
+          params.push(filters.model);
         }
-        queryBuilder.append(sql`
+        sqlStr += `
           ORDER BY rank DESC
-          LIMIT ${limit}
-        `);
-        const rows = await db.execute(queryBuilder);
-        return (rows.rows as any[]).map((r) => ({
-          id: r.id, type: "prompt", title: r.name,
+          LIMIT $${paramIdx++}
+        `;
+        params.push(limit);
+        const rows: any[] = await prisma.$queryRawUnsafe(sqlStr, ...params);
+        return rows.map((r) => ({
+          id: r.id,
+          type: "prompt",
+          title: r.name,
           description: r.content?.substring(0, 200) ?? null,
           url: `/prompts/${r.id}`,
-          metadata: { model: r.model, createdAt: r.created_at, rank: r.rank },
+          metadata: {
+            model: r.model,
+            createdAt: r.created_at,
+            rank: r.rank,
+          },
         }));
       } catch {
         /* fall through */
       }
     }
 
-    const conditions: any[] = [];
-    if (filters?.model) conditions.push(eq(promptsTable.model, filters.model));
-    const rows = await db
-      .select()
-      .from(promptsTable)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .limit(limit);
-    return rows.map((r) => ({
-      id: r.id, type: "prompt", title: r.name,
+    const where: Record<string, unknown> = {};
+    if (filters?.model) where.model = filters.model;
+    const rows = await prisma.aiPrompt.findMany({ where, take: limit });
+    return rows.map((r: any) => ({
+      id: r.id,
+      type: "prompt",
+      title: r.name,
       description: r.content?.substring(0, 200) ?? null,
       url: `/prompts/${r.id}`,
-      metadata: { model: r.model, createdAt: r.createdAt?.toISOString() },
+      metadata: {
+        model: r.model,
+        createdAt: r.createdAt?.toISOString(),
+      },
     }));
   }
 }

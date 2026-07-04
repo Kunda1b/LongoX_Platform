@@ -1,6 +1,14 @@
-import { and, eq, gte, lte, desc } from "drizzle-orm";
+/**
+ * Evidence retention service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3. Uses
+ * `prisma.complianceEvidence` delegate with `as any` casts for legacy
+ * date-string columns (`retentionUntil` is a Date in Prisma but the
+ * original code wrote an ISO date string).
+ */
+
 import { createHash } from "node:crypto";
-import { db, complianceEvidenceTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 
 const DEFAULT_RETENTION_DAYS: Record<string, number> = {
   audit_log: 365,
@@ -37,9 +45,8 @@ export class EvidenceRetentionService {
     const retentionUntil = new Date();
     retentionUntil.setDate(retentionUntil.getDate() + retentionDays);
 
-    const [evidence] = await db
-      .insert(complianceEvidenceTable)
-      .values({
+    const evidence = await prisma.complianceEvidence.create({
+      data: {
         tenantId: metadata?.tenantId ?? "",
         evidenceType: eventType,
         title: data.title,
@@ -48,65 +55,53 @@ export class EvidenceRetentionService {
         hash,
         source: data.source,
         severity: data.severity ?? "info",
-        retentionUntil: retentionUntil.toISOString().split("T")[0],
+        retentionUntil,
         expiresAt: retentionUntil,
-      })
-      .returning();
+      } as any,
+    });
     return evidence;
   }
 
   async verifyEvidence(id: string) {
-    const [evidence] = await db
-      .select()
-      .from(complianceEvidenceTable)
-      .where(eq(complianceEvidenceTable.id, id));
+    const evidence = await prisma.complianceEvidence.findUnique({ where: { id } });
 
     if (!evidence) throw new Error("Evidence not found");
 
-    const computedHash = this.computeHash(evidence.payload);
+    const computedHash = this.computeHash((evidence as any).payload);
     return {
-      id: evidence.id,
-      hash: evidence.hash,
+      id: (evidence as any).id,
+      hash: (evidence as any).hash,
       computedHash,
-      valid: evidence.hash === computedHash,
-      createdAt: evidence.createdAt,
+      valid: (evidence as any).hash === computedHash,
+      createdAt: (evidence as any).createdAt,
     };
   }
 
   async getEvidence(id: string) {
-    const [evidence] = await db
-      .select()
-      .from(complianceEvidenceTable)
-      .where(eq(complianceEvidenceTable.id, id));
+    const evidence = await prisma.complianceEvidence.findUnique({ where: { id } });
 
     if (!evidence) throw new Error("Evidence not found");
     return evidence;
   }
 
   async queryEvidence(filters: EvidenceFilters) {
-    const conditions = [];
+    const where: Record<string, unknown> = {};
 
-    if (filters.evidenceType) {
-      conditions.push(eq(complianceEvidenceTable.evidenceType, filters.evidenceType));
-    }
-    if (filters.source) {
-      conditions.push(eq(complianceEvidenceTable.source, filters.source));
-    }
-    if (filters.severity) {
-      conditions.push(eq(complianceEvidenceTable.severity, filters.severity));
-    }
-    if (filters.from) {
-      conditions.push(gte(complianceEvidenceTable.createdAt, filters.from));
-    }
-    if (filters.to) {
-      conditions.push(lte(complianceEvidenceTable.createdAt, filters.to));
+    if (filters.evidenceType) where.evidenceType = filters.evidenceType;
+    if (filters.source) where.source = filters.source;
+    if (filters.severity) where.severity = filters.severity;
+    if (filters.from && filters.to) {
+      where.createdAt = { gte: filters.from, lte: filters.to };
+    } else if (filters.from) {
+      where.createdAt = { gte: filters.from };
+    } else if (filters.to) {
+      where.createdAt = { lte: filters.to };
     }
 
-    const results = await db
-      .select()
-      .from(complianceEvidenceTable)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(complianceEvidenceTable.createdAt));
+    const results = await prisma.complianceEvidence.findMany({
+      where: where as any,
+      orderBy: { createdAt: "desc" },
+    });
 
     return results;
   }
@@ -117,26 +112,17 @@ export class EvidenceRetentionService {
 
   async purgeExpiredEvidence() {
     const now = new Date();
-    const expired = await db
-      .select({ id: complianceEvidenceTable.id })
-      .from(complianceEvidenceTable)
-      .where(
-        and(
-          lte(complianceEvidenceTable.expiresAt, now),
-        ),
-      );
+    const expired = await prisma.complianceEvidence.findMany({
+      where: { expiresAt: { lte: now } } as any,
+      select: { id: true },
+    });
 
     if (expired.length === 0) return { purgedCount: 0 };
 
-    const ids = expired.map((e) => e.id);
-    await db
-      .delete(complianceEvidenceTable)
-      .where(
-        and(
-          lte(complianceEvidenceTable.expiresAt, now),
-        ),
-      );
+    const result = await prisma.complianceEvidence.deleteMany({
+      where: { expiresAt: { lte: now } } as any,
+    });
 
-    return { purgedCount: ids.length };
+    return { purgedCount: Number(result.count) };
   }
 }

@@ -1,13 +1,17 @@
-import {
-  db,
-  billingAccountsTable,
-  billingPlansTable,
-  meteringEventsTable,
-  workflowsTable,
-  dashboardsTable,
-  membershipsTable,
-} from "@longox/db";
-import { eq, and, gte, sql } from "drizzle-orm";
+/**
+ * Entitlement service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.billingAccount`, `prisma.billingPlan`, `prisma.meteringEvent`,
+ * `prisma.workflow`, `prisma.dashboard`, `prisma.membership` delegates with
+ * `as any` casts for legacy columns.
+ *
+ * Aggregation queries that involve `sum(quantity::numeric)` on the
+ * `metering_events` table use `prisma.$queryRawUnsafe()` because Prisma's
+ * groupBy cannot natively express the numeric-to-string cast.
+ */
+
+import { prisma } from "@longox/db/prisma";
 
 export class PlanLimitExceeded extends Error {
   constructor(
@@ -44,21 +48,17 @@ export interface UsageAgainstPlan {
 
 export class EntitlementService {
   async getPlan(tenantId: string): Promise<PlanLimits | null> {
-    const [account] = await db
-      .select()
-      .from(billingAccountsTable)
-      .where(eq(billingAccountsTable.tenantId, tenantId))
-      .limit(1);
+    const account = await prisma.billingAccount.findFirst({
+      where: { tenantId } as any,
+    });
 
-    if (!account?.planId) {
+    if (!(account as any)?.planId) {
       return this.getDefaultFreeLimits();
     }
 
-    const [plan] = await db
-      .select()
-      .from(billingPlansTable)
-      .where(eq(billingPlansTable.id, account.planId))
-      .limit(1);
+    const plan = await prisma.billingPlan.findUnique({
+      where: { id: (account as any).planId },
+    });
 
     if (!plan) {
       return this.getDefaultFreeLimits();
@@ -78,66 +78,62 @@ export class EntitlementService {
   }
 
   async getUsageAgainstPlan(tenantId: string): Promise<UsageAgainstPlan> {
-    const [workflowCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(workflowsTable)
-      .where(eq(workflowsTable.tenantId, tenantId));
+    const workflowCount = await prisma.workflow.count({
+      where: { tenantId } as any,
+    });
 
-    const [envCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(sql`environments`);
+    // `environments` table — count via raw SQL because the legacy Prisma
+    // schema does not yet expose an Environment model that supports the
+    // global count semantics expected here.
+    const envRows: any[] = await prisma.$queryRawUnsafe(
+      `SELECT count(*)::int AS count FROM environments`,
+    );
+    const envCount = Number(envRows?.[0]?.count ?? 0);
 
-    const [connectorCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(sql`tenant_connector_installs`)
-      .where(eq(sql`tenant_connector_installs.tenant_id`, tenantId));
+    const connectorCount = await prisma.tenantConnectorInstall.count({
+      where: { tenantId } as any,
+    });
 
-    const [dashboardCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(dashboardsTable)
-      .where(eq(dashboardsTable.tenantId, tenantId));
+    const dashboardCount = await prisma.dashboard.count({
+      where: { tenantId } as any,
+    });
 
-    const [memberCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(membershipsTable)
-      .where(eq(membershipsTable.tenantId, tenantId));
+    const memberCount = await prisma.membership.count({
+      where: { tenantId } as any,
+    });
 
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const [aiTokenResult] = await db
-      .select({ total: sql<string>`coalesce(sum(${meteringEventsTable.quantity}), '0')` })
-      .from(meteringEventsTable)
-      .where(
-        and(
-          eq(meteringEventsTable.tenantId, tenantId),
-          eq(meteringEventsTable.eventType, "ai.token"),
-          gte(meteringEventsTable.timestamp, monthStart),
-        ),
-      );
+    const aiTokenRows: any[] = await prisma.$queryRawUnsafe(
+      `SELECT coalesce(sum(quantity), '0')::text AS total
+       FROM metering_events
+       WHERE tenant_id = $1 AND event_type = 'ai.token' AND timestamp >= $2`,
+      tenantId,
+      monthStart,
+    );
+    const aiTokenTotal = aiTokenRows?.[0]?.total ?? "0";
 
-    const [ragResult] = await db
-      .select({ total: sql<string>`coalesce(sum(${meteringEventsTable.quantity}), '0')` })
-      .from(meteringEventsTable)
-      .where(
-        and(
-          eq(meteringEventsTable.tenantId, tenantId),
-          eq(meteringEventsTable.eventType, "rag.query"),
-          gte(meteringEventsTable.timestamp, monthStart),
-        ),
-      );
+    const ragRows: any[] = await prisma.$queryRawUnsafe(
+      `SELECT coalesce(sum(quantity), '0')::text AS total
+       FROM metering_events
+       WHERE tenant_id = $1 AND event_type = 'rag.query' AND timestamp >= $2`,
+      tenantId,
+      monthStart,
+    );
+    const ragTotal = ragRows?.[0]?.total ?? "0";
 
     const plan = await this.getPlan(tenantId);
     const limits = plan ?? this.getDefaultFreeLimits();
 
     return {
-      workflows: { current: workflowCount?.count ?? 0, limit: limits.maxWorkflows },
-      environments: { current: envCount?.count ?? 0, limit: limits.maxEnvironments },
-      connectors: { current: connectorCount?.count ?? 0, limit: limits.maxConnectors },
-      aiTokens: { current: Number(aiTokenResult?.total ?? "0"), limit: limits.maxAiTokens },
-      ragQueries: { current: Number(ragResult?.total ?? "0"), limit: limits.maxRagQueries },
-      dashboards: { current: dashboardCount?.count ?? 0, limit: limits.maxDashboards },
-      members: { current: memberCount?.count ?? 0, limit: limits.maxMembers },
+      workflows: { current: workflowCount, limit: limits.maxWorkflows },
+      environments: { current: envCount, limit: limits.maxEnvironments },
+      connectors: { current: connectorCount, limit: limits.maxConnectors },
+      aiTokens: { current: Number(aiTokenTotal), limit: limits.maxAiTokens },
+      ragQueries: { current: Number(ragTotal), limit: limits.maxRagQueries },
+      dashboards: { current: dashboardCount, limit: limits.maxDashboards },
+      members: { current: memberCount, limit: limits.maxMembers },
     };
   }
 

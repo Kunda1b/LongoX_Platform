@@ -1,12 +1,14 @@
+/**
+ * Stripe service (infrastructure layer).
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.billingAccount`, `prisma.billingPlan`, `prisma.tenant`
+ * delegates with `as any` casts for legacy columns.
+ */
+
 import type Stripe from "stripe";
 import { getStripe, getFrontendUrl } from "./client";
-import {
-  db,
-  billingAccountsTable,
-  billingPlansTable,
-  tenantsTable,
-} from "@longox/db";
-import { eq, and } from "drizzle-orm";
+import { prisma } from "@longox/db/prisma";
 
 export interface CreateCheckoutInput {
   tenantId: string;
@@ -41,14 +43,12 @@ export class StripeService {
     email: string,
     name: string,
   ): Promise<string> {
-    const [existing] = await db
-      .select()
-      .from(billingAccountsTable)
-      .where(eq(billingAccountsTable.tenantId, String(tenantId)))
-      .limit(1);
+    const existing = await prisma.billingAccount.findFirst({
+      where: { tenantId: String(tenantId) } as any,
+    });
 
-    if (existing?.stripeCustomerId) {
-      return existing.stripeCustomerId;
+    if ((existing as any)?.stripeCustomerId) {
+      return (existing as any).stripeCustomerId;
     }
 
     const stripe = getStripe();
@@ -59,16 +59,18 @@ export class StripeService {
     });
 
     if (existing) {
-      await db
-        .update(billingAccountsTable)
-        .set({ stripeCustomerId: customer.id } as any)
-        .where(eq(billingAccountsTable.id, String(existing.id)));
+      await prisma.billingAccount.update({
+        where: { id: String((existing as any).id) },
+        data: { stripeCustomerId: customer.id } as any,
+      });
     } else {
-      await db.insert(billingAccountsTable).values({
-        tenantId,
-        stripeCustomerId: customer.id,
-        status: "active",
-      } as any);
+      await prisma.billingAccount.create({
+        data: {
+          tenantId,
+          stripeCustomerId: customer.id,
+          status: "active",
+        } as any,
+      });
     }
 
     return customer.id;
@@ -79,16 +81,12 @@ export class StripeService {
     userEmail: string,
     userName: string,
   ): Promise<CheckoutSessionResult> {
-    const [plan] = await db
-      .select()
-      .from(billingPlansTable)
-      .where(
-        and(
-          eq(billingPlansTable.id, String(input.planId)),
-          eq(billingPlansTable.isActive, true),
-        ),
-      )
-      .limit(1);
+    const plan = await prisma.billingPlan.findFirst({
+      where: {
+        id: String(input.planId),
+        isActive: true,
+      } as any,
+    });
 
     if (!plan) {
       throw new Error("Plan not found or inactive");
@@ -147,19 +145,17 @@ export class StripeService {
   }
 
   async createPortalSession(tenantId: string): Promise<PortalSessionResult> {
-    const [account] = await db
-      .select()
-      .from(billingAccountsTable)
-      .where(eq(billingAccountsTable.tenantId, String(tenantId)))
-      .limit(1);
+    const account = await prisma.billingAccount.findFirst({
+      where: { tenantId: String(tenantId) } as any,
+    });
 
-    if (!account?.stripeCustomerId) {
+    if (!(account as any)?.stripeCustomerId) {
       throw new Error("No Stripe customer found for this tenant");
     }
 
     const stripe = getStripe();
     const session = await stripe.billingPortal.sessions.create({
-      customer: account.stripeCustomerId,
+      customer: (account as any).stripeCustomerId,
       return_url: `${getFrontendUrl()}/billing`,
     });
 
@@ -169,18 +165,14 @@ export class StripeService {
   async getSubscriptionStatus(
     tenantId: string,
   ): Promise<SubscriptionStatus | null> {
-    const [account] = await db
-      .select()
-      .from(billingAccountsTable)
-      .where(eq(billingAccountsTable.tenantId, String(tenantId)))
-      .limit(1);
+    const account = await prisma.billingAccount.findFirst({
+      where: { tenantId: String(tenantId) } as any,
+    });
 
-    if (!account?.stripeSubscriptionId) {
-      const [tenant] = await db
-        .select()
-        .from(tenantsTable)
-        .where(eq(tenantsTable.id, String(tenantId)))
-        .limit(1);
+    if (!(account as any)?.stripeSubscriptionId) {
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: String(tenantId) },
+      });
 
       return {
         status: "none",
@@ -189,9 +181,9 @@ export class StripeService {
         plan: tenant
           ? {
               id: "",
-              name: tenant.plan,
-              displayName: tenant.plan.charAt(0).toUpperCase() + tenant.plan.slice(1),
-              tier: tenant.plan,
+              name: tenant.planId,
+              displayName: tenant.planId.charAt(0).toUpperCase() + tenant.planId.slice(1),
+              tier: tenant.planId,
             }
           : null,
       };
@@ -199,16 +191,14 @@ export class StripeService {
 
     const stripe = getStripe();
     const subscription = await stripe.subscriptions.retrieve(
-      account.stripeSubscriptionId,
+      (account as any).stripeSubscriptionId,
     );
 
     let plan = null;
-    if (account.planId) {
-      const [planRecord] = await db
-        .select()
-        .from(billingPlansTable)
-        .where(eq(billingPlansTable.id, String(account.planId)))
-        .limit(1);
+    if ((account as any).planId) {
+      const planRecord = await prisma.billingPlan.findUnique({
+        where: { id: String((account as any).planId) },
+      });
       if (planRecord) {
         plan = {
           id: planRecord.id,
@@ -274,30 +264,30 @@ export class StripeService {
   ): Promise<void> {
     const subscriptionId = session.subscription as string | null;
 
-    await db
-      .update(billingAccountsTable)
-      .set({
+    await prisma.billingAccount.update({
+      where: { tenantId: String(tenantId) } as any,
+      data: {
         stripeSubscriptionId: subscriptionId,
         stripeSubscriptionStatus: "incomplete",
         stripePriceId: session.metadata?.["priceId"] ?? null,
-        planId,
+        planId: String(planId),
         billingCycle,
         status: "active",
-      } as any)
-      .where(eq(billingAccountsTable.tenantId, String(tenantId)));
+      } as any,
+    });
 
-    await db
-      .update(tenantsTable)
-      .set({ plan: (await this.getPlanTier(planId)) ?? "free" } as any)
-      .where(eq(tenantsTable.id, String(tenantId)));
+    const tier = await this.getPlanTier(planId);
+    await prisma.tenant.update({
+      where: { id: String(tenantId) },
+      data: { planId: tier ?? "free" } as any,
+    });
   }
 
   private async getPlanTier(planId: number): Promise<string | null> {
-    const [plan] = await db
-      .select({ tier: billingPlansTable.tier })
-      .from(billingPlansTable)
-      .where(eq(billingPlansTable.id, String(planId)))
-      .limit(1);
+    const plan = await prisma.billingPlan.findUnique({
+      where: { id: String(planId) },
+      select: { tier: true },
+    });
     return plan?.tier ?? null;
   }
 
@@ -313,9 +303,9 @@ export class StripeService {
     const stripe = getStripe();
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
-    await db
-      .update(billingAccountsTable)
-      .set({
+    await prisma.billingAccount.update({
+      where: { tenantId: String(tenantId) } as any,
+      data: {
         stripeSubscriptionId: subscriptionId,
         stripeSubscriptionStatus: subscription.status,
         currentPeriodStart: new Date(
@@ -323,8 +313,8 @@ export class StripeService {
         ),
         currentPeriodEnd: new Date(subscription.current_period_end * 1000),
         status: "active",
-      } as any)
-      .where(eq(billingAccountsTable.tenantId, String(tenantId)));
+      } as any,
+    });
   }
 
   private async handleSubscriptionUpdated(
@@ -333,9 +323,9 @@ export class StripeService {
     const tenantId = subscription.metadata?.tenantId;
     if (!tenantId) return;
 
-    await db
-      .update(billingAccountsTable)
-      .set({
+    await prisma.billingAccount.update({
+      where: { tenantId: String(tenantId) } as any,
+      data: {
         stripeSubscriptionStatus: subscription.status,
         currentPeriodStart: new Date(
           subscription.current_period_start * 1000,
@@ -346,8 +336,8 @@ export class StripeService {
           subscription.status === "active" || subscription.status === "trialing"
             ? "active"
             : "past_due",
-      } as any)
-      .where(eq(billingAccountsTable.tenantId, String(tenantId)));
+      } as any,
+    });
   }
 
   private async handleSubscriptionDeleted(
@@ -356,20 +346,20 @@ export class StripeService {
     const tenantId = subscription.metadata?.tenantId;
     if (!tenantId) return;
 
-    await db
-      .update(billingAccountsTable)
-      .set({
+    await prisma.billingAccount.update({
+      where: { tenantId: String(tenantId) } as any,
+      data: {
         stripeSubscriptionStatus: "canceled",
         status: "canceled",
         stripeSubscriptionId: null,
         planId: null,
-      } as any)
-      .where(eq(billingAccountsTable.tenantId, String(tenantId)));
+      } as any,
+    });
 
-    await db
-      .update(tenantsTable)
-      .set({ plan: "free" } as any)
-      .where(eq(tenantsTable.id, String(tenantId)));
+    await prisma.tenant.update({
+      where: { id: String(tenantId) },
+      data: { planId: "free" } as any,
+    });
   }
 
   private async handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
@@ -381,13 +371,13 @@ export class StripeService {
     const tenantId = subscription.metadata?.tenantId;
     if (!tenantId) return;
 
-    await db
-      .update(billingAccountsTable)
-      .set({
+    await prisma.billingAccount.update({
+      where: { tenantId: String(tenantId) } as any,
+      data: {
         stripeSubscriptionStatus: "active",
         status: "active",
-      } as any)
-      .where(eq(billingAccountsTable.tenantId, String(tenantId)));
+      } as any,
+    });
   }
 
   private async handleInvoicePaymentFailed(
@@ -401,12 +391,12 @@ export class StripeService {
     const tenantId = subscription.metadata?.tenantId;
     if (!tenantId) return;
 
-    await db
-      .update(billingAccountsTable)
-      .set({
+    await prisma.billingAccount.update({
+      where: { tenantId: String(tenantId) } as any,
+      data: {
         stripeSubscriptionStatus: "past_due",
         status: "past_due",
-      } as any)
-      .where(eq(billingAccountsTable.tenantId, String(tenantId)));
+      } as any,
+    });
   }
 }

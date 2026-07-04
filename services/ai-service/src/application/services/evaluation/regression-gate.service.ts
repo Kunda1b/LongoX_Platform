@@ -1,10 +1,12 @@
-import { eq, desc } from "drizzle-orm";
-import { db } from "@longox/db";
-import {
-  aiEvaluationRunsTable,
-  aiEvaluationDatasetsTable,
-  promptsTable,
-} from "@longox/db";
+/**
+ * Regression gate service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.aiEvalRun`, `prisma.aiEvalDataset`, and `prisma.aiPrompt`
+ * delegates with `as any` casts for legacy columns.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import { evaluationRunService } from "./evaluation-run.service";
 
 export interface RegressionResult {
@@ -34,21 +36,18 @@ export class RegressionGateService {
     candidateVersion: number,
     options?: { datasetId?: string; threshold?: number },
   ): Promise<RegressionResult> {
-    const [prompt] = await db
-      .select()
-      .from(promptsTable)
-      .where(eq(promptsTable.id, promptId));
+    const prompt = await prisma.aiPrompt.findUnique({
+      where: { id: promptId } as any,
+    });
 
     if (!prompt) throw new Error(`Prompt ${promptId} not found`);
 
     let datasetId = options?.datasetId;
 
     if (!datasetId) {
-      const [dataset] = await db
-        .select()
-        .from(aiEvaluationDatasetsTable)
-        .where(eq(aiEvaluationDatasetsTable.promptId, promptId))
-        .limit(1);
+      const dataset = await prisma.aiEvalDataset.findFirst({
+        where: { promptId } as any,
+      });
 
       if (dataset) {
         datasetId = dataset.id;
@@ -71,7 +70,7 @@ export class RegressionGateService {
       tenantId: prompt.id,
     });
 
-    const completedRun = await evaluationRunService.executeRun(run.id);
+    const completedRun: any = await evaluationRunService.executeRun(run.id);
 
     const baselineScore = await this.getStoredBaselineScore(promptId);
 
@@ -138,12 +137,10 @@ export class RegressionGateService {
   }
 
   async setBaseline(promptId: string, version: number) {
-    const [lastRun] = await db
-      .select()
-      .from(aiEvaluationRunsTable)
-      .where(eq(aiEvaluationRunsTable.promptId, promptId))
-      .orderBy(desc(aiEvaluationRunsTable.createdAt))
-      .limit(1);
+    const lastRun = await prisma.aiEvalRun.findFirst({
+      where: { promptId } as any,
+      orderBy: { createdAt: "desc" } as any,
+    });
 
     if (!lastRun) {
       throw new Error(
@@ -154,7 +151,7 @@ export class RegressionGateService {
     return {
       promptId,
       version,
-      baselineScore: lastRun.score,
+      baselineScore: (lastRun as any).score,
       runId: lastRun.id,
     };
   }
@@ -167,14 +164,12 @@ export class RegressionGateService {
   private async getStoredBaselineScore(
     promptId: string,
   ): Promise<number | null> {
-    const [lastRun] = await db
-      .select()
-      .from(aiEvaluationRunsTable)
-      .where(eq(aiEvaluationRunsTable.promptId, promptId))
-      .orderBy(desc(aiEvaluationRunsTable.createdAt))
-      .limit(1);
+    const lastRun = await prisma.aiEvalRun.findFirst({
+      where: { promptId } as any,
+      orderBy: { createdAt: "desc" } as any,
+    });
 
-    return lastRun?.score ?? null;
+    return (lastRun as any)?.score ?? null;
   }
 }
 

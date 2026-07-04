@@ -1,5 +1,13 @@
-import { eq, and, desc } from "drizzle-orm";
-import { db, emailMessagesTable } from "@longox/db";
+/**
+ * Prisma-based email repository.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.emailMessage` delegate with `as any` casts for legacy
+ * columns (`from`, `htmlBody`, `templateName`, `errorMessage`, `metadata`)
+ * that are not yet reflected on the Prisma model.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import type { EmailRepository } from "../../domain/email/email-repository";
 import type {
   EmailMessage,
@@ -7,9 +15,7 @@ import type {
   ListEmailsFilter,
 } from "../../domain/email/email.entity";
 
-function toDomain(
-  row: typeof emailMessagesTable.$inferSelect,
-): EmailMessage {
+function toDomain(row: any): EmailMessage {
   return {
     id: row.id,
     to: row.to,
@@ -29,23 +35,20 @@ function toDomain(
 export class PostgresEmailRepository implements EmailRepository {
   async list(filter: ListEmailsFilter): Promise<EmailMessage[]> {
     const limit = Math.min(filter.limit ?? 50, 200);
-    const conditions = [];
-    if (filter.status)
-      conditions.push(eq(emailMessagesTable.status, filter.status));
+    const where: Record<string, unknown> = {};
+    if (filter.status) where.status = filter.status;
 
-    const rows = await db
-      .select()
-      .from(emailMessagesTable)
-      .where(conditions.length ? and(...conditions) : undefined)
-      .orderBy(desc(emailMessagesTable.id))
-      .limit(limit);
+    const rows = await prisma.emailMessage.findMany({
+      where: where as any,
+      orderBy: { id: "desc" },
+      take: limit,
+    });
     return rows.map(toDomain);
   }
 
   async create(input: SendEmailInput): Promise<EmailMessage> {
-    const [row] = await db
-      .insert(emailMessagesTable)
-      .values({
+    const row = await prisma.emailMessage.create({
+      data: {
         to: input.to,
         from: input.from ?? "noreply@longox.com",
         subject: input.subject,
@@ -54,26 +57,32 @@ export class PostgresEmailRepository implements EmailRepository {
         templateName: input.templateName,
         status: "pending",
         metadata: input.metadata,
-      } as any)
-      .returning();
+      } as any,
+    });
     return toDomain(row);
   }
 
   async markSent(id: string): Promise<EmailMessage | null> {
-    const [row] = await db
-      .update(emailMessagesTable)
-      .set({ status: "sent", sentAt: new Date() })
-      .where(eq(emailMessagesTable.id, id))
-      .returning();
-    return row ? toDomain(row) : null;
+    try {
+      const row = await prisma.emailMessage.update({
+        where: { id },
+        data: { status: "sent", sentAt: new Date() } as any,
+      });
+      return toDomain(row);
+    } catch {
+      return null;
+    }
   }
 
   async markFailed(id: string, errorMessage: string): Promise<EmailMessage | null> {
-    const [row] = await db
-      .update(emailMessagesTable)
-      .set({ status: "failed", errorMessage })
-      .where(eq(emailMessagesTable.id, id))
-      .returning();
-    return row ? toDomain(row) : null;
+    try {
+      const row = await prisma.emailMessage.update({
+        where: { id },
+        data: { status: "failed", errorMessage } as any,
+      });
+      return toDomain(row);
+    } catch {
+      return null;
+    }
   }
 }

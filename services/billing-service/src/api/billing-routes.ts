@@ -1,11 +1,18 @@
+/**
+ * Billing REST routes.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.billingAccount`, `prisma.invoice`, `prisma.invoiceLine`,
+ * `prisma.billingPlan` delegates with `as any` casts for legacy columns.
+ */
+
 import { Router, type IRouter } from "express";
 import { authorize, requireTenantContext } from "@longox/shared-rbac";
 import { MeteringService } from "../application/services/metering.service";
 import { StripeService } from "../application/services/stripe.service";
 import { EntitlementService } from "../application/services/entitlement.service";
 import { OverageService } from "../application/services/overage.service";
-import { db, invoicesTable, invoiceLinesTable, billingAccountsTable, billingPlansTable } from "@longox/db";
-import { eq, and } from "drizzle-orm";
+import { prisma } from "@longox/db/prisma";
 import { getFrontendUrl } from "../infrastructure/stripe/client";
 
 const router: IRouter = Router();
@@ -121,22 +128,19 @@ router.get("/billing/invoices", authorize("billing.read"), requireTenantContext,
   const tenantId = req.user!.tenantId!;
 
   try {
-    const [account] = await db
-      .select()
-      .from(billingAccountsTable)
-      .where(eq(billingAccountsTable.tenantId, tenantId))
-      .limit(1);
+    const account = await prisma.billingAccount.findFirst({
+      where: { tenantId } as any,
+    });
 
     if (!account) {
       res.json([]);
       return;
     }
 
-    const invoices = await db
-      .select()
-      .from(invoicesTable)
-      .where(eq(invoicesTable.billingAccountId, account.id))
-      .orderBy(invoicesTable.createdAt);
+    const invoices = await prisma.invoice.findMany({
+      where: { billingAccountId: account.id } as any,
+      orderBy: { createdAt: "asc" },
+    });
 
     res.json(invoices);
   } catch (err) {
@@ -150,15 +154,12 @@ router.get("/billing/invoices/:id/lines", authorize("billing.read"), requireTena
   const invoiceId = req.params.id as string;
 
   try {
-    const lines = await db
-      .select()
-      .from(invoiceLinesTable)
-      .where(
-        and(
-          eq(invoiceLinesTable.tenantId, tenantId),
-          eq(invoiceLinesTable.invoiceId, invoiceId),
-        ),
-      );
+    const lines = await prisma.invoiceLine.findMany({
+      where: {
+        tenantId,
+        invoiceId,
+      } as any,
+    });
 
     res.json(lines);
   } catch (err) {
@@ -171,22 +172,18 @@ router.get("/billing/plan", authorize("billing.read"), requireTenantContext, asy
   const tenantId = req.user!.tenantId!;
 
   try {
-    const [account] = await db
-      .select()
-      .from(billingAccountsTable)
-      .where(eq(billingAccountsTable.tenantId, tenantId))
-      .limit(1);
+    const account = await prisma.billingAccount.findFirst({
+      where: { tenantId } as any,
+    });
 
-    if (!account?.planId) {
+    if (!(account as any)?.planId) {
       res.json({ plan: null, limits: await entitlementService.getPlan(tenantId) });
       return;
     }
 
-    const [plan] = await db
-      .select()
-      .from(billingPlansTable)
-      .where(eq(billingPlansTable.id, account.planId))
-      .limit(1);
+    const plan = await prisma.billingPlan.findUnique({
+      where: { id: (account as any).planId },
+    });
 
     const limits = await entitlementService.getPlan(tenantId);
 

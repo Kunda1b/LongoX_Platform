@@ -5,15 +5,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/schema/index.ts",
     "./prisma": "./src/prisma/index.ts"
   },
   "scripts": {
-    "generate": "drizzle-kit generate --config ./drizzle.config.ts",
-    "migrate": "drizzle-kit migrate --config ./drizzle.config.ts",
-    "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
-    "studio": "drizzle-kit studio --config ./drizzle.config.ts",
     "prisma:generate": "prisma generate --schema ./prisma/schema.prisma",
     "prisma:migrate:dev": "prisma migrate dev --schema ./prisma/schema.prisma",
     "prisma:migrate:deploy": "prisma migrate deploy --schema ./prisma/schema.prisma",
@@ -23,18 +17,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@opentelemetry/api": "^1.9.0",
     "@paralleldrive/cuid2": "^2.3.1",
     "@prisma/client": "^6.0.0",
-    "drizzle-orm": "catalog:",
-    "drizzle-zod": "^0.8.3",
-    "pg": "^8.21.0",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@types/pg": "^8.20.0",
-    "drizzle-kit": "^0.31.10",
     "prisma": "^6.0.0"
   }
 }

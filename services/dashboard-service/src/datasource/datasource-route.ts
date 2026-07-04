@@ -1,20 +1,26 @@
+/**
+ * Datasource management routes (dashboard-service local copy).
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3. Uses
+ * `prisma.dataSource` delegate with `as any` casts for legacy `config`
+ * column (Prisma canonical name is `configJson`).
+ */
+
 import { Router, type IRouter } from "express";
-import { eq, and as andOp } from "drizzle-orm";
-import { db, dataSourcesTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
 router.get("/datasources", authorize("dashboards:read"), async (req, res): Promise<void> => {
   const tenantId = (req as any).user?.tenantId;
-  const conditions = [];
-  if (tenantId) conditions.push(eq(dataSourcesTable.tenantId, tenantId));
+  const where: Record<string, unknown> = {};
+  if (tenantId) where.tenantId = tenantId;
 
-  const sources = await db
-    .select()
-    .from(dataSourcesTable)
-    .where(conditions.length ? andOp(...conditions) : undefined)
-    .orderBy(dataSourcesTable.name);
+  const sources = await prisma.dataSource.findMany({
+    where: where as any,
+    orderBy: { name: "asc" },
+  });
 
   res.json(sources);
 });
@@ -27,15 +33,15 @@ router.post("/datasources", authorize("dashboards:write"), async (req, res): Pro
     return;
   }
 
-  const [source] = await db
-    .insert(dataSourcesTable)
-    .values({
+  const source = await prisma.dataSource.create({
+    data: {
       tenantId: (req as any).user?.tenantId ?? null,
       name: String(name),
       kind: String(kind),
+      configJson: (config ?? {}) as Record<string, unknown>,
       config: (config ?? {}) as Record<string, unknown>,
-    })
-    .returning();
+    } as any,
+  });
 
   res.status(201).json(source);
 });
@@ -47,10 +53,7 @@ router.delete("/datasources/:id", authorize("dashboards:delete"), async (req, re
     return;
   }
 
-  const [deleted] = await db
-    .delete(dataSourcesTable)
-    .where(eq(dataSourcesTable.id, id))
-    .returning();
+  const deleted = await prisma.dataSource.delete({ where: { id } }).catch(() => null);
   if (!deleted) {
     res.status(404).json({ error: "Data source not found" });
     return;
@@ -66,11 +69,7 @@ router.post("/datasources/:id/test", authorize("dashboards:write"), async (req, 
     return;
   }
 
-  const [source] = await db
-    .select()
-    .from(dataSourcesTable)
-    .where(eq(dataSourcesTable.id, id))
-    .limit(1);
+  const source = await prisma.dataSource.findUnique({ where: { id } });
   if (!source) {
     res.status(404).json({ error: "Data source not found" });
     return;
@@ -79,8 +78,8 @@ router.post("/datasources/:id/test", authorize("dashboards:write"), async (req, 
   const startMs = Date.now();
   try {
     const result = await testConnection(
-      source.kind,
-      source.config as Record<string, unknown>,
+      (source as any).kind,
+      ((source as any).configJson ?? (source as any).config) as Record<string, unknown>,
     );
     res.json({ success: true, latencyMs: Date.now() - startMs, result });
   } catch (err) {

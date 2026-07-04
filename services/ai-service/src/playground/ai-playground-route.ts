@@ -1,6 +1,12 @@
+/**
+ * AI playground routes.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.aiPlaygroundSession` delegate with `as any` casts for legacy columns.
+ */
+
 import { Router, type IRouter } from "express";
-import { eq, and, desc } from "drizzle-orm";
-import { db, aiPlaygroundSessionsTable, aiModelsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { aiRouter } from "../routing/ai-router";
 import type { ChatMessage } from "../providers";
 import { authorize } from "@longox/shared-rbac";
@@ -51,9 +57,8 @@ router.post("/ai/playground/run", authorize("ai:run"), async (req, res): Promise
 
     const latencyMs = Date.now() - startedAt;
 
-    const [session] = await db
-      .insert(aiPlaygroundSessionsTable)
-      .values({
+    const session = await prisma.aiPlaygroundSession.create({
+      data: {
         tenantId,
         userId: req.user?.id,
         prompt: prompt.trim(),
@@ -68,11 +73,11 @@ router.post("/ai/playground/run", authorize("ai:run"), async (req, res): Promise
         temperature: String(temperature),
         maxTokens,
         status: "completed",
-      })
-      .returning();
+      } as any,
+    });
 
     res.json({
-      id: session.id,
+      id: (session as any).id,
       provider: routingResult.provider,
       model: routingResult.result.model,
       response: routingResult.result.content,
@@ -84,24 +89,26 @@ router.post("/ai/playground/run", authorize("ai:run"), async (req, res): Promise
       },
       cost: routingResult.result.cost,
       latencyMs,
-      createdAt: session.createdAt.toISOString(),
+      createdAt: (session as any).createdAt.toISOString(),
     });
   } catch (err) {
     const latencyMs = Date.now() - startedAt;
     const errorMessage = err instanceof Error ? err.message : String(err);
 
-    await db.insert(aiPlaygroundSessionsTable).values({
-      tenantId,
-      userId: req.user?.id,
-      prompt: prompt.trim(),
-      systemPrompt,
-      modelId: modelId ?? "unknown",
-      provider: provider ?? "unknown",
-      latencyMs,
-      temperature: String(temperature),
-      maxTokens,
-      status: "failed",
-      errorMessage,
+    await prisma.aiPlaygroundSession.create({
+      data: {
+        tenantId,
+        userId: req.user?.id,
+        prompt: prompt.trim(),
+        systemPrompt,
+        modelId: modelId ?? "unknown",
+        provider: provider ?? "unknown",
+        latencyMs,
+        temperature: String(temperature),
+        maxTokens,
+        status: "failed",
+        errorMessage,
+      } as any,
     }).catch(() => {});
 
     res.status(500).json({ error: `AI run failed: ${errorMessage}` });
@@ -195,15 +202,14 @@ router.get("/ai/playground/sessions", authorize("ai:read"), async (req, res): Pr
   }
 
   const limit = Math.min(Number(req.query.limit ?? 20), 100);
-  const rows = await db
-    .select()
-    .from(aiPlaygroundSessionsTable)
-    .where(eq(aiPlaygroundSessionsTable.tenantId, tenantId))
-    .orderBy(desc(aiPlaygroundSessionsTable.createdAt))
-    .limit(limit);
+  const rows = await prisma.aiPlaygroundSession.findMany({
+    where: { tenantId } as any,
+    orderBy: { createdAt: "desc" } as any,
+    take: limit,
+  });
 
   res.json(
-    rows.map((r) => ({
+    rows.map((r: any) => ({
       id: r.id,
       prompt: r.prompt,
       systemPrompt: r.systemPrompt,

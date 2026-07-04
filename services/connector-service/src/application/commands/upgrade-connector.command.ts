@@ -1,5 +1,11 @@
-import { db, tenantConnectorInstallsTable } from "@longox/db";
-import { eq, and } from "drizzle-orm";
+/**
+ * Upgrade connector command.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.tenantConnectorInstall` delegate with `as any` casts.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import type { ConnectorRepository } from "../../domain";
 import { ConnectorInstallation } from "../../domain";
 
@@ -13,19 +19,21 @@ export class UpgradeConnectorCommand {
   constructor(private connectorRepo: ConnectorRepository) {}
 
   async execute(input: UpgradeConnectorInput): Promise<ConnectorInstallation> {
-    const [row] = await db
-      .update(tenantConnectorInstallsTable)
-      .set({
-        connectorVersionId: input.newVersionId,
-        updatedAt: new Date(),
-      } as any)
-      .where(
-        and(
-          eq(tenantConnectorInstallsTable.id, input.installationId),
-          eq(tenantConnectorInstallsTable.tenantId, input.tenantId)
-        )
-      )
-      .returning();
+    let row: any;
+    try {
+      row = await prisma.tenantConnectorInstall.update({
+        where: {
+          id: input.installationId,
+          tenantId: input.tenantId,
+        } as any,
+        data: {
+          connectorVersionId: input.newVersionId,
+          updatedAt: new Date(),
+        } as any,
+      });
+    } catch {
+      row = null;
+    }
 
     if (!row) {
       throw new Error(`Installation ${input.installationId} not found`);

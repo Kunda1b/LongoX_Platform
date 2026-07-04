@@ -1,5 +1,12 @@
-import { db, ragDocumentsTable, ragChunksTable, ragKnowledgeBasesTable } from "@longox/db";
-import { eq, sql } from "drizzle-orm";
+/**
+ * Document ingestion service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.knowledgeBase`, `prisma.knowledgeDocument`, and
+ * `prisma.vectorEmbedding` delegates with `as any` casts for legacy columns.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import { ChunkingService, chunkingService } from "./chunking.service";
 import { EmbeddingService, embeddingService } from "./embedding.service";
 
@@ -25,142 +32,142 @@ export class DocumentIngestionService {
   async ingestDocument(kbId: string, data: DocumentInput): Promise<DocumentResult> {
     const contentHash = this.hashContent(data.content);
 
-    const [doc] = await db.insert(ragDocumentsTable).values({
-      knowledgeBaseId: kbId,
-      filename: data.filename,
-      sourceType: data.sourceType,
-      contentType: data.contentType ?? null,
-      contentHash,
-      status: "indexing",
-      metadata: {},
-    }).returning();
+    const doc = await prisma.knowledgeDocument.create({
+      data: {
+        knowledgeBaseId: kbId,
+        filename: data.filename,
+        sourceType: data.sourceType,
+        contentType: data.contentType ?? null,
+        contentHash,
+        status: "indexing",
+        metadata: {},
+      } as any,
+    });
 
-    const docId = doc.id;
+    const docId = (doc as any).id;
 
     try {
-      const kb = await db
-        .select({ chunkSize: ragKnowledgeBasesTable.chunkSize, chunkOverlap: ragKnowledgeBasesTable.chunkOverlap, chunkStrategy: ragKnowledgeBasesTable.chunkStrategy })
-        .from(ragKnowledgeBasesTable)
-        .where(eq(ragKnowledgeBasesTable.id, kbId))
-        .then((r) => r[0]);
+      const kb = await prisma.knowledgeBase.findUnique({
+        where: { id: kbId } as any,
+      });
 
       const chunks = await this.chunking.chunkDocument(
         data.content,
-        kb?.chunkStrategy ?? "recursive",
-        kb?.chunkSize ?? 512,
-        kb?.chunkOverlap ?? 64,
+        ((kb as any)?.chunkStrategy ?? "recursive") as any,
+        (kb as any)?.chunkSize ?? 512,
+        (kb as any)?.chunkOverlap ?? 64,
       );
 
       const chunkTexts = chunks.map((c) => c.content);
       const embeddings = await this.embedding.generateEmbeddings(chunkTexts);
 
       if (chunks.length > 0) {
-        await db.insert(ragChunksTable).values(
-          chunks.map((chunk, i) => ({
-            documentId: docId,
-            knowledgeBaseId: kbId,
-            chunkIndex: chunk.index,
-            content: chunk.content,
-            embedding: embeddings[i]?.vector ?? null,
-            tokens: chunk.tokens,
-            metadata: {},
-          })),
+        // VectorEmbedding has an `Unsupported("vector(1536)")` field, so
+        // Prisma Client does not expose `create`/`createMany` for this model.
+        // Use a parameterized multi-row raw INSERT to write embeddings.
+        const valuesSql: string[] = [];
+        const params: unknown[] = [];
+        chunks.forEach((chunk, i) => {
+          const vec = embeddings[i]?.vector;
+          const vectorLit = vec ? `'[${vec.join(",")}]'::vector` : "NULL";
+          const base = params.length;
+          valuesSql.push(
+            `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, ${vectorLit}, $${base + 5}, $${base + 6}::jsonb)`,
+          );
+          params.push(docId, kbId, chunk.index, chunk.content, chunk.tokens, "{}");
+        });
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO rag_chunks (document_id, knowledge_base_id, chunk_index, content, embedding, tokens, metadata)
+           VALUES ${valuesSql.join(", ")}`,
+          ...params,
         );
       }
 
-      await db
-        .update(ragDocumentsTable)
-        .set({ status: "indexed", pageCount: chunks.length })
-        .where(eq(ragDocumentsTable.id, docId));
+      await prisma.knowledgeDocument.update({
+        where: { id: docId } as any,
+        data: { status: "indexed", pageCount: chunks.length } as any,
+      });
 
-      const [{ count: chunkCount }] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(ragChunksTable)
-        .where(eq(ragChunksTable.documentId, docId));
+      const chunkCount = await prisma.vectorEmbedding.count({
+        where: { documentId: docId } as any,
+      });
 
-      const [{ docCount }] = await db
-        .select({ docCount: sql<number>`count(*)::int` })
-        .from(ragChunksTable)
-        .where(eq(ragChunksTable.knowledgeBaseId, kbId));
+      const docCount = await prisma.vectorEmbedding.count({
+        where: { knowledgeBaseId: kbId } as any,
+      });
 
-      await db
-        .update(ragKnowledgeBasesTable)
-        .set({ status: "active", documentCount: docCount })
-        .where(eq(ragKnowledgeBasesTable.id, kbId));
+      await prisma.knowledgeBase.update({
+        where: { id: kbId } as any,
+        data: { status: "active", documentCount: docCount } as any,
+      });
 
       return { documentId: docId, chunkCount, status: "indexed" };
     } catch (err) {
-      await db
-        .update(ragDocumentsTable)
-        .set({ status: "error", errorMessage: String(err) })
-        .where(eq(ragDocumentsTable.id, docId));
+      await prisma.knowledgeDocument.update({
+        where: { id: docId } as any,
+        data: { status: "error", errorMessage: String(err) } as any,
+      });
 
-      await db
-        .update(ragKnowledgeBasesTable)
-        .set({ status: "error" })
-        .where(eq(ragKnowledgeBasesTable.id, kbId));
+      await prisma.knowledgeBase.update({
+        where: { id: kbId } as any,
+        data: { status: "error" } as any,
+      });
 
       return { documentId: docId, chunkCount: 0, status: "error" };
     }
   }
 
   async deleteDocument(docId: string): Promise<void> {
-    const doc = await db
-      .select({ knowledgeBaseId: ragDocumentsTable.knowledgeBaseId })
-      .from(ragDocumentsTable)
-      .where(eq(ragDocumentsTable.id, docId))
-      .then((r) => r[0]);
+    const doc = await prisma.knowledgeDocument.findUnique({
+      where: { id: docId } as any,
+    });
 
     if (!doc) return;
 
-    await db.delete(ragChunksTable).where(eq(ragChunksTable.documentId, docId));
-    await db.delete(ragDocumentsTable).where(eq(ragDocumentsTable.id, docId));
+    await prisma.vectorEmbedding.deleteMany({
+      where: { documentId: docId } as any,
+    });
+    await prisma.knowledgeDocument.delete({
+      where: { id: docId } as any,
+    });
 
-    const [{ count }] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(ragChunksTable)
-      .where(eq(ragChunksTable.knowledgeBaseId, doc.knowledgeBaseId));
+    const count = await prisma.vectorEmbedding.count({
+      where: { knowledgeBaseId: (doc as any).knowledgeBaseId } as any,
+    });
 
-    await db
-      .update(ragKnowledgeBasesTable)
-      .set({ documentCount: count })
-      .where(eq(ragKnowledgeBasesTable.id, doc.knowledgeBaseId));
+    await prisma.knowledgeBase.update({
+      where: { id: (doc as any).knowledgeBaseId } as any,
+      data: { documentCount: count } as any,
+    });
   }
 
   async reindexDocument(docId: string): Promise<DocumentResult> {
-    const doc = await db
-      .select({
-        id: ragDocumentsTable.id,
-        knowledgeBaseId: ragDocumentsTable.knowledgeBaseId,
-        filename: ragDocumentsTable.filename,
-        contentType: ragDocumentsTable.contentType,
-        sourceType: ragDocumentsTable.sourceType,
-      })
-      .from(ragDocumentsTable)
-      .where(eq(ragDocumentsTable.id, docId))
-      .then((r) => r[0]);
+    const doc = await prisma.knowledgeDocument.findUnique({
+      where: { id: docId } as any,
+    });
 
     if (!doc) throw new Error(`Document ${docId} not found`);
 
-    const chunks = await db
-      .select({ content: ragChunksTable.content })
-      .from(ragChunksTable)
-      .where(eq(ragChunksTable.documentId, docId))
-      .orderBy(ragChunksTable.chunkIndex);
+    const chunks = await prisma.vectorEmbedding.findMany({
+      where: { documentId: docId } as any,
+      orderBy: { chunkIndex: "asc" } as any,
+    });
 
     if (chunks.length === 0) {
       throw new Error(`Document ${docId} has no chunks to reindex`);
     }
 
-    const fullContent = chunks.map((c) => c.content).join("\n\n");
+    const fullContent = chunks.map((c: any) => c.content).join("\n\n");
 
-    await db.delete(ragChunksTable).where(eq(ragChunksTable.documentId, docId));
+    await prisma.vectorEmbedding.deleteMany({
+      where: { documentId: docId } as any,
+    });
 
-    return this.ingestDocument(doc.knowledgeBaseId, {
-      filename: doc.filename,
+    return this.ingestDocument((doc as any).knowledgeBaseId, {
+      filename: (doc as any).filename,
       content: fullContent,
-      sourceType: doc.sourceType as DocumentInput["sourceType"],
-      contentType: doc.contentType ?? undefined,
+      sourceType: (doc as any).sourceType as DocumentInput["sourceType"],
+      contentType: (doc as any).contentType ?? undefined,
     });
   }
 

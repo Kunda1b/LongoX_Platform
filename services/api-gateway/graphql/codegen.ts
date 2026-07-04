@@ -22,13 +22,8 @@ const config: CodegenConfig = {
         useTypeImports: true,
         contextType: "../../lib/context#GraphQLContext",
         mappers: {
-          Tenant: "@longox/db#TenantRecord",
-          // Workflow and Execution mappers removed — `@longox/db` does not
-          // export types named `Workflow` or `Execution`. The codegen
-          // generates inline types from the SDL instead. To re-add mappers,
-          // first export the types from `@longox/db` (e.g. via
-          // `export type Workflow = typeof workflowsTable.$inferSelect;`)
-          // and then re-add them here.
+          // All mappers removed — @longox/db no longer exports Drizzle types.
+          // The codegen generates inline types from the SDL instead.
         },
       },
     },

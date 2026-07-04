@@ -1,6 +1,17 @@
-import { db, meteringEventsTable } from "@longox/db";
-import { eq, and, gte, lte, sql } from "drizzle-orm";
-import type { InsertMeteringEvent } from "@longox/db";
+/**
+ * Metering service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.meteringEvent` delegate with `as any` casts for legacy
+ * columns (`eventId`, `unit`, `quantity` as numeric string, `workflowId`,
+ * `executionId`, `connectorId`, `dashboardId`, `timestamp`, `ingestedAt`).
+ *
+ * Aggregation queries use `prisma.$queryRawUnsafe()` because the underlying
+ * `metering_events.quantity` column is `numeric(20,4)` and Prisma's groupBy
+ * cannot natively express `sum()::text` for arbitrary-precision math.
+ */
+
+import { prisma } from "@longox/db/prisma";
 
 export interface MeteringEventInput {
   eventId: string;
@@ -39,23 +50,27 @@ export interface MonthlyUsage {
 
 export class MeteringService {
   async record(input: MeteringEventInput): Promise<void> {
-    const value: InsertMeteringEvent = {
-      eventId: input.eventId,
-      eventType: input.eventType,
-      tenantId: input.tenantId,
-      workflowId: input.workflowId ?? null,
-      executionId: input.executionId ?? null,
-      connectorId: input.connectorId ?? null,
-      dashboardId: input.dashboardId ?? null,
-      quantity: String(input.quantity),
-      unit: input.unit,
-      metadata: (input.metadata ?? {}) as Record<string, unknown>,
-      timestamp: input.timestamp,
-    };
-    await db
-      .insert(meteringEventsTable)
-      .values(value)
-      .onConflictDoNothing({ target: meteringEventsTable.eventId });
+    // `event_id` has a unique index — emulates Drizzle's `.onConflictDoNothing({ target: eventId })`.
+    try {
+      await prisma.meteringEvent.create({
+        data: {
+          eventId: input.eventId,
+          eventType: input.eventType,
+          tenantId: input.tenantId,
+          workflowId: input.workflowId ?? null,
+          executionId: input.executionId ?? null,
+          connectorId: input.connectorId ?? null,
+          dashboardId: input.dashboardId ?? null,
+          quantity: Number(input.quantity),
+          unit: input.unit,
+          metadata: (input.metadata ?? {}) as Record<string, unknown>,
+          timestamp: input.timestamp,
+        } as any,
+      });
+    } catch (err: any) {
+      // P2002 = unique constraint violation → swallow to mirror onConflictDoNothing.
+      if (err?.code !== "P2002") throw err;
+    }
   }
 
   async getUsage(
@@ -64,28 +79,21 @@ export class MeteringService {
     to: Date,
     eventType?: string,
   ): Promise<UsageAggregation[]> {
-    const conditions = [
-      eq(meteringEventsTable.tenantId, tenantId),
-      gte(meteringEventsTable.timestamp, from),
-      lte(meteringEventsTable.timestamp, to),
-    ];
+    const params: any[] = [tenantId, from, to];
+    let typeClause = "";
     if (eventType) {
-      conditions.push(eq(meteringEventsTable.eventType, eventType));
+      typeClause = ` AND event_type = $4`;
+      params.push(eventType);
     }
-
-    const rows = await db
-      .select({
-        eventType: meteringEventsTable.eventType,
-        unit: meteringEventsTable.unit,
-        totalQuantity: sql<string>`sum(${meteringEventsTable.quantity})`,
-        count: sql<number>`count(*)::int`,
-      })
-      .from(meteringEventsTable)
-      .where(and(...conditions))
-      .groupBy(meteringEventsTable.eventType, meteringEventsTable.unit)
-      .orderBy(meteringEventsTable.eventType);
-
-    return rows;
+    const rows: any[] = await prisma.$queryRawUnsafe(
+      `SELECT event_type AS "eventType", unit, sum(quantity)::text AS "totalQuantity", count(*)::int AS count
+       FROM metering_events
+       WHERE tenant_id = $1 AND timestamp >= $2 AND timestamp <= $3${typeClause}
+       GROUP BY event_type, unit
+       ORDER BY event_type`,
+      ...params,
+    );
+    return rows as UsageAggregation[];
   }
 
   async getDailyUsage(
@@ -97,28 +105,19 @@ export class MeteringService {
     const dayEnd = new Date(date);
     dayEnd.setHours(23, 59, 59, 999);
 
-    const rows = await db
-      .select({
-        date: sql<string>`${meteringEventsTable.timestamp}::date::text`,
-        eventType: meteringEventsTable.eventType,
-        unit: meteringEventsTable.unit,
-        totalQuantity: sql<string>`sum(${meteringEventsTable.quantity})`,
-      })
-      .from(meteringEventsTable)
-      .where(
-        and(
-          eq(meteringEventsTable.tenantId, tenantId),
-          gte(meteringEventsTable.timestamp, dayStart),
-          lte(meteringEventsTable.timestamp, dayEnd),
-        ),
-      )
-      .groupBy(
-        sql`${meteringEventsTable.timestamp}::date`,
-        meteringEventsTable.eventType,
-        meteringEventsTable.unit,
-      );
-
-    return rows;
+    const rows: any[] = await prisma.$queryRawUnsafe(
+      `SELECT (timestamp::date)::text AS date,
+              event_type AS "eventType",
+              unit,
+              sum(quantity)::text AS "totalQuantity"
+       FROM metering_events
+       WHERE tenant_id = $1 AND timestamp >= $2 AND timestamp <= $3
+       GROUP BY (timestamp::date), event_type, unit`,
+      tenantId,
+      dayStart,
+      dayEnd,
+    );
+    return rows as DailyUsage[];
   }
 
   async getMonthlyUsage(
@@ -129,27 +128,18 @@ export class MeteringService {
     const monthStart = new Date(year, month - 1, 1);
     const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
 
-    const rows = await db
-      .select({
-        month: sql<string>`to_char(${meteringEventsTable.timestamp}, 'YYYY-MM')`,
-        eventType: meteringEventsTable.eventType,
-        unit: meteringEventsTable.unit,
-        totalQuantity: sql<string>`sum(${meteringEventsTable.quantity})`,
-      })
-      .from(meteringEventsTable)
-      .where(
-        and(
-          eq(meteringEventsTable.tenantId, tenantId),
-          gte(meteringEventsTable.timestamp, monthStart),
-          lte(meteringEventsTable.timestamp, monthEnd),
-        ),
-      )
-      .groupBy(
-        sql`to_char(${meteringEventsTable.timestamp}, 'YYYY-MM')`,
-        meteringEventsTable.eventType,
-        meteringEventsTable.unit,
-      );
-
-    return rows;
+    const rows: any[] = await prisma.$queryRawUnsafe(
+      `SELECT to_char(timestamp, 'YYYY-MM') AS month,
+              event_type AS "eventType",
+              unit,
+              sum(quantity)::text AS "totalQuantity"
+       FROM metering_events
+       WHERE tenant_id = $1 AND timestamp >= $2 AND timestamp <= $3
+       GROUP BY to_char(timestamp, 'YYYY-MM'), event_type, unit`,
+      tenantId,
+      monthStart,
+      monthEnd,
+    );
+    return rows as MonthlyUsage[];
   }
 }

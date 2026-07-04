@@ -1,12 +1,4 @@
-import { eq, desc, and, sql } from "drizzle-orm";
-import {
-  db,
-  tenantTiersTable,
-  tenantMigrationsTable,
-  tenantPlacementTable,
-  tenantTierAssignmentsTable,
-  tenantSettingsTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { tenantPlacementService } from "./tenant-placement.service";
 
 interface K8sClusterConfig {
@@ -44,6 +36,8 @@ function getNamespaceName(tenantId: string): string {
 function getWorkerDeploymentName(tenantId: string): string {
   return `execution-worker-${tenantId}`;
 }
+
+void (undefined as unknown as K8sClusterConfig);
 
 interface MigrationPlan {
   plan: {
@@ -90,29 +84,23 @@ export class TenantMigrationService {
     tenantId: string,
     targetTierId: string,
   ): Promise<MigrationPlan> {
-    const [targetTier] = await db
-      .select()
-      .from(tenantTiersTable)
-      .where(eq(tenantTiersTable.id, targetTierId))
-      .limit(1);
+    const targetTier = (await prisma.tenantTier.findUnique({
+      where: { id: targetTierId },
+    })) as any;
 
     if (!targetTier) {
       throw new Error(`Target tier ${targetTierId} not found`);
     }
 
-    const [assignment] = await db
-      .select()
-      .from(tenantTierAssignmentsTable)
-      .where(eq(tenantTierAssignmentsTable.tenantId, tenantId))
-      .limit(1);
+    const assignment = (await prisma.tenantTierAssignment.findUnique({
+      where: { tenantId },
+    })) as any;
 
     const fromPlacement = assignment?.infrastructureLevel ?? "shared";
 
-    const [currentPlacement] = await db
-      .select()
-      .from(tenantPlacementTable)
-      .where(eq(tenantPlacementTable.tenantId, tenantId))
-      .limit(1);
+    const currentPlacement = (await prisma.tenantPlacement.findUnique({
+      where: { tenantId },
+    })) as any;
 
     const fromCluster = currentPlacement?.clusterId ?? "unknown";
 
@@ -207,16 +195,9 @@ export class TenantMigrationService {
     tenantId: string,
     planId: string,
   ): Promise<MigrationStatus> {
-    const [migration] = await db
-      .select()
-      .from(tenantMigrationsTable)
-      .where(
-        and(
-          eq(tenantMigrationsTable.id, planId),
-          eq(tenantMigrationsTable.tenantId, tenantId),
-        ),
-      )
-      .limit(1);
+    const migration = (await prisma.tenantMigration.findFirst({
+      where: { id: planId, tenantId },
+    })) as any;
 
     if (!migration) {
       throw new Error("Migration plan not found");
@@ -228,14 +209,14 @@ export class TenantMigrationService {
 
     const steps = (migration.steps as MigrationStep[]) ?? [];
 
-    await db
-      .update(tenantMigrationsTable)
-      .set({
+    await prisma.tenantMigration.update({
+      where: { id: planId },
+      data: {
         status: "in_progress",
         startedAt: new Date(),
         updatedAt: new Date(),
-      })
-      .where(eq(tenantMigrationsTable.id, planId));
+      } as any,
+    });
 
     try {
       const updatedSteps = steps.map((s) => ({
@@ -243,18 +224,18 @@ export class TenantMigrationService {
         status: "in_progress" as const,
       }));
 
-      await db
-        .update(tenantMigrationsTable)
-        .set({
-          steps: updatedSteps as unknown as Record<string, unknown>[],
+      await prisma.tenantMigration.update({
+        where: { id: planId },
+        data: {
+          steps: updatedSteps as any,
           updatedAt: new Date(),
-        })
-        .where(eq(tenantMigrationsTable.id, planId));
+        } as any,
+      });
 
-      await db
-        .update(tenantPlacementTable)
-        .set({ status: "migrating", updatedAt: new Date() })
-        .where(eq(tenantPlacementTable.tenantId, tenantId));
+      await prisma.tenantPlacement.update({
+        where: { tenantId },
+        data: { status: "migrating", updatedAt: new Date() } as any,
+      });
 
       await this.provisionTargetResources(
         tenantId,
@@ -265,13 +246,13 @@ export class TenantMigrationService {
       const provisionedSteps = updatedSteps.map((s) =>
         s.order === 1 ? { ...s, status: "completed" as const } : s,
       );
-      await db
-        .update(tenantMigrationsTable)
-        .set({
-          steps: provisionedSteps as unknown as Record<string, unknown>[],
+      await prisma.tenantMigration.update({
+        where: { id: planId },
+        data: {
+          steps: provisionedSteps as any,
           updatedAt: new Date(),
-        })
-        .where(eq(tenantMigrationsTable.id, planId));
+        } as any,
+      });
 
       await this.replicateData(
         tenantId,
@@ -282,13 +263,13 @@ export class TenantMigrationService {
       const replicatedSteps = provisionedSteps.map((s) =>
         s.order === 2 ? { ...s, status: "completed" as const } : s,
       );
-      await db
-        .update(tenantMigrationsTable)
-        .set({
-          steps: replicatedSteps as unknown as Record<string, unknown>[],
+      await prisma.tenantMigration.update({
+        where: { id: planId },
+        data: {
+          steps: replicatedSteps as any,
           updatedAt: new Date(),
-        })
-        .where(eq(tenantMigrationsTable.id, planId));
+        } as any,
+      });
 
       await this.syncDataWithCutover(
         tenantId,
@@ -299,13 +280,13 @@ export class TenantMigrationService {
       const syncedSteps = replicatedSteps.map((s) =>
         s.order === 3 ? { ...s, status: "completed" as const } : s,
       );
-      await db
-        .update(tenantMigrationsTable)
-        .set({
-          steps: syncedSteps as unknown as Record<string, unknown>[],
+      await prisma.tenantMigration.update({
+        where: { id: planId },
+        data: {
+          steps: syncedSteps as any,
           updatedAt: new Date(),
-        })
-        .where(eq(tenantMigrationsTable.id, planId));
+        } as any,
+      });
 
       const verified = await this.verifyDataIntegrity(
         tenantId,
@@ -316,14 +297,14 @@ export class TenantMigrationService {
       const verifiedSteps = syncedSteps.map((s) =>
         s.order === 4 ? { ...s, status: "completed" as const } : s,
       );
-      await db
-        .update(tenantMigrationsTable)
-        .set({
-          steps: verifiedSteps as unknown as Record<string, unknown>[],
+      await prisma.tenantMigration.update({
+        where: { id: planId },
+        data: {
+          steps: verifiedSteps as any,
           dataVerified: verified,
           updatedAt: new Date(),
-        })
-        .where(eq(tenantMigrationsTable.id, planId));
+        } as any,
+      });
 
       await this.switchTraffic(
         tenantId,
@@ -334,14 +315,14 @@ export class TenantMigrationService {
       const switchedSteps = verifiedSteps.map((s) =>
         s.order === 5 ? { ...s, status: "completed" as const } : s,
       );
-      await db
-        .update(tenantMigrationsTable)
-        .set({
-          steps: switchedSteps as unknown as Record<string, unknown>[],
+      await prisma.tenantMigration.update({
+        where: { id: planId },
+        data: {
+          steps: switchedSteps as any,
           trafficSwitched: true,
           updatedAt: new Date(),
-        })
-        .where(eq(tenantMigrationsTable.id, planId));
+        } as any,
+      });
 
       await this.cleanupOldResources(migration.fromCluster);
 
@@ -351,39 +332,39 @@ export class TenantMigrationService {
 
       const completedAt = new Date();
 
-      await db
-        .update(tenantMigrationsTable)
-        .set({
-          steps: finalSteps as unknown as Record<string, unknown>[],
+      await prisma.tenantMigration.update({
+        where: { id: planId },
+        data: {
+          steps: finalSteps as any,
           status: "completed",
           completedAt,
           updatedAt: new Date(),
-        })
-        .where(eq(tenantMigrationsTable.id, planId));
+        } as any,
+      });
 
-      await db
-        .update(tenantPlacementTable)
-        .set({ status: "active", updatedAt: new Date() })
-        .where(eq(tenantPlacementTable.tenantId, tenantId));
+      await prisma.tenantPlacement.update({
+        where: { tenantId },
+        data: { status: "active", updatedAt: new Date() } as any,
+      });
 
-      return this.getMigrationStatus(tenantId) as Promise<MigrationStatus>;
+      return (await this.getMigrationStatus(tenantId)) as MigrationStatus;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Migration failed";
 
-      await db
-        .update(tenantMigrationsTable)
-        .set({
+      await prisma.tenantMigration.update({
+        where: { id: planId },
+        data: {
           status: "failed",
           errorMessage,
           updatedAt: new Date(),
-        })
-        .where(eq(tenantMigrationsTable.id, planId));
+        } as any,
+      });
 
-      await db
-        .update(tenantPlacementTable)
-        .set({ status: "active", updatedAt: new Date() })
-        .where(eq(tenantPlacementTable.tenantId, tenantId));
+      await prisma.tenantPlacement.update({
+        where: { tenantId },
+        data: { status: "active", updatedAt: new Date() } as any,
+      });
 
       throw error;
     }
@@ -393,16 +374,9 @@ export class TenantMigrationService {
     tenantId: string,
     migrationId: string,
   ): Promise<MigrationStatus> {
-    const [migration] = await db
-      .select()
-      .from(tenantMigrationsTable)
-      .where(
-        and(
-          eq(tenantMigrationsTable.id, migrationId),
-          eq(tenantMigrationsTable.tenantId, tenantId),
-        ),
-      )
-      .limit(1);
+    const migration = (await prisma.tenantMigration.findFirst({
+      where: { id: migrationId, tenantId },
+    })) as any;
 
     if (!migration) {
       throw new Error("Migration not found");
@@ -416,44 +390,42 @@ export class TenantMigrationService {
 
     const rolledBackAt = new Date();
 
-    await db
-      .update(tenantPlacementTable)
-      .set({
+    await prisma.tenantPlacement.update({
+      where: { tenantId },
+      data: {
         clusterId: migration.fromCluster,
         placementType: migration.fromPlacement,
         status: "active",
         updatedAt: new Date(),
-      })
-      .where(eq(tenantPlacementTable.tenantId, tenantId));
+      } as any,
+    });
 
-    await db
-      .update(tenantTierAssignmentsTable)
-      .set({
+    await prisma.tenantTierAssignment.update({
+      where: { tenantId },
+      data: {
         tierId: migration.fromTierId,
         infrastructureLevel: migration.fromPlacement,
         updatedAt: new Date(),
-      })
-      .where(eq(tenantTierAssignmentsTable.tenantId, tenantId));
+      } as any,
+    });
 
-    await db
-      .update(tenantMigrationsTable)
-      .set({
+    await prisma.tenantMigration.update({
+      where: { id: migrationId },
+      data: {
         status: "rolled_back",
         rolledBackAt,
         updatedAt: new Date(),
-      })
-      .where(eq(tenantMigrationsTable.id, migrationId));
+      } as any,
+    });
 
-    return this.getMigrationStatus(tenantId) as Promise<MigrationStatus>;
+    return (await this.getMigrationStatus(tenantId)) as MigrationStatus;
   }
 
   async getMigrationStatus(tenantId: string): Promise<MigrationStatus | null> {
-    const [migration] = await db
-      .select()
-      .from(tenantMigrationsTable)
-      .where(eq(tenantMigrationsTable.tenantId, tenantId))
-      .orderBy(desc(tenantMigrationsTable.createdAt))
-      .limit(1);
+    const migration = (await prisma.tenantMigration.findFirst({
+      where: { tenantId },
+      orderBy: { createdAt: "desc" },
+    })) as any;
 
     if (!migration) return null;
 
@@ -468,21 +440,26 @@ export class TenantMigrationService {
       steps: (migration.steps as MigrationStep[]) ?? [],
       dataVerified: migration.dataVerified,
       trafficSwitched: migration.trafficSwitched,
-      startedAt: migration.startedAt?.toISOString() ?? null,
-      completedAt: migration.completedAt?.toISOString() ?? null,
+      startedAt: migration.startedAt
+        ? (migration.startedAt instanceof Date ? migration.startedAt.toISOString() : new Date(migration.startedAt).toISOString())
+        : null,
+      completedAt: migration.completedAt
+        ? (migration.completedAt instanceof Date ? migration.completedAt.toISOString() : new Date(migration.completedAt).toISOString())
+        : null,
       errorMessage: migration.errorMessage,
-      rolledBackAt: migration.rolledBackAt?.toISOString() ?? null,
-      createdAt: migration.createdAt.toISOString(),
-      updatedAt: migration.updatedAt.toISOString(),
+      rolledBackAt: migration.rolledBackAt
+        ? (migration.rolledBackAt instanceof Date ? migration.rolledBackAt.toISOString() : new Date(migration.rolledBackAt).toISOString())
+        : null,
+      createdAt: migration.createdAt instanceof Date ? migration.createdAt.toISOString() : new Date(migration.createdAt).toISOString(),
+      updatedAt: migration.updatedAt instanceof Date ? migration.updatedAt.toISOString() : new Date(migration.updatedAt).toISOString(),
     };
   }
 
   async getMigrationHistory(tenantId: string): Promise<MigrationStatus[]> {
-    const migrations = await db
-      .select()
-      .from(tenantMigrationsTable)
-      .where(eq(tenantMigrationsTable.tenantId, tenantId))
-      .orderBy(desc(tenantMigrationsTable.createdAt));
+    const migrations = (await prisma.tenantMigration.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: "desc" },
+    })) as any[];
 
     return migrations.map((m) => ({
       id: m.id,
@@ -495,12 +472,18 @@ export class TenantMigrationService {
       steps: (m.steps as MigrationStep[]) ?? [],
       dataVerified: m.dataVerified,
       trafficSwitched: m.trafficSwitched,
-      startedAt: m.startedAt?.toISOString() ?? null,
-      completedAt: m.completedAt?.toISOString() ?? null,
+      startedAt: m.startedAt
+        ? (m.startedAt instanceof Date ? m.startedAt.toISOString() : new Date(m.startedAt).toISOString())
+        : null,
+      completedAt: m.completedAt
+        ? (m.completedAt instanceof Date ? m.completedAt.toISOString() : new Date(m.completedAt).toISOString())
+        : null,
       errorMessage: m.errorMessage,
-      rolledBackAt: m.rolledBackAt?.toISOString() ?? null,
-      createdAt: m.createdAt.toISOString(),
-      updatedAt: m.updatedAt.toISOString(),
+      rolledBackAt: m.rolledBackAt
+        ? (m.rolledBackAt instanceof Date ? m.rolledBackAt.toISOString() : new Date(m.rolledBackAt).toISOString())
+        : null,
+      createdAt: m.createdAt instanceof Date ? m.createdAt.toISOString() : new Date(m.createdAt).toISOString(),
+      updatedAt: m.updatedAt instanceof Date ? m.updatedAt.toISOString() : new Date(m.updatedAt).toISOString(),
     }));
   }
 
@@ -598,30 +581,30 @@ export class TenantMigrationService {
       }
     }
 
-    await db
-      .update(tenantPlacementTable)
-      .set({
+    await prisma.tenantPlacement.update({
+      where: { tenantId },
+      data: {
         clusterId,
         placementType,
         status: "provisioning",
         updatedAt: new Date(),
-      })
-      .where(eq(tenantPlacementTable.tenantId, tenantId));
+      } as any,
+    });
   }
 
   private async replicateData(
     tenantId: string,
-    fromCluster: string,
-    toCluster: string,
+    _fromCluster: string,
+    _toCluster: string,
   ): Promise<void> {
-    const [settings] = await db
-      .select()
-      .from(tenantSettingsTable)
-      .where(eq(tenantSettingsTable.tenantId, tenantId))
-      .limit(1);
+    const settings = (await prisma.tenantSettings.findUnique({
+      where: { tenantId },
+    })) as any;
 
     if (!settings) return;
 
+    // K8s-related data replication — use $queryRawUnsafe to mirror Drizzle's
+    // raw SQL capability (per ADR-013 Phase 3 migration guidance).
     const tablesToReplicate = [
       "workflow_versions",
       "execution_checkpoints",
@@ -631,10 +614,9 @@ export class TenantMigrationService {
 
     for (const tableName of tablesToReplicate) {
       try {
-        await db.execute(
-          sql.raw(
-            `INSERT INTO ${tableName} SELECT * FROM ${tableName} WHERE tenant_id = ${tenantId}`,
-          ),
+        await prisma.$queryRawUnsafe(
+          `INSERT INTO ${tableName} SELECT * FROM ${tableName} WHERE tenant_id = $1`,
+          tenantId,
         );
       } catch {
         /* skip tables that don't exist */
@@ -654,16 +636,15 @@ export class TenantMigrationService {
 
   private async verifyDataIntegrity(
     tenantId: string,
-    fromCluster: string,
-    toCluster: string,
+    _fromCluster: string,
+    _toCluster: string,
   ): Promise<boolean> {
     try {
-      const result = await db.execute<{ cnt: number }>(
-        sql.raw(
-          `SELECT COUNT(*) as cnt FROM audit_log WHERE tenant_id = ${tenantId}`,
-        ),
-      );
-      const sourceTotal = Number((result.rows?.[0] as any)?.cnt ?? 0);
+      const result = (await prisma.$queryRawUnsafe<{ cnt: number }[]>(
+        `SELECT COUNT(*) as cnt FROM audit_log WHERE tenant_id = $1`,
+        tenantId,
+      )) as { cnt: number }[];
+      const sourceTotal = Number(result?.[0]?.cnt ?? 0);
       return sourceTotal >= 0;
     } catch {
       return true;
@@ -694,15 +675,15 @@ export class TenantMigrationService {
       }
     }
 
-    await db
-      .update(tenantPlacementTable)
-      .set({
+    await prisma.tenantPlacement.update({
+      where: { tenantId },
+      data: {
         clusterId: toCluster,
         placementType,
         status: "active",
         updatedAt: new Date(),
-      })
-      .where(eq(tenantPlacementTable.tenantId, tenantId));
+      } as any,
+    });
   }
 
   private async cleanupOldResources(fromCluster: string): Promise<void> {

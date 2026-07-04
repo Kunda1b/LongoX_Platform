@@ -1,5 +1,11 @@
-import { eq, and as andOp, gte, lte, sql, desc } from "drizzle-orm";
-import { db, usageEventsTable } from "@longox/db";
+/**
+ * Prisma-based metering repository.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.usageEvent` delegate.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import { MeteringEvent } from "../domain/metering-event.entity";
 import { UsageAggregate } from "../domain/usage-aggregate.entity";
 import type { MeteringRepository } from "../domain/metering-repository";
@@ -12,13 +18,22 @@ import type {
   AggregatePeriod,
 } from "../domain/usage-aggregate.entity";
 
+type UsageEventRow = {
+  id: string;
+  tenantId: string | null;
+  workflowId: string | null;
+  workflowName: string | null;
+  eventType: string;
+  quantity: number;
+  metadata: unknown;
+  createdAt: Date;
+};
+
 export class PostgresMeteringRepository implements MeteringRepository {
-  private eventToDomain(
-    row: typeof usageEventsTable.$inferSelect,
-  ): MeteringEvent {
+  private eventToDomain(row: UsageEventRow): MeteringEvent {
     return new MeteringEvent({
       id: row.id,
-      tenantId: row.tenantId ?? 0,
+      tenantId: (row.tenantId as string) ?? ("" as unknown as string),
       eventType: (row.eventType as EventType) ?? "api.call",
       quantity: row.quantity,
       unit: "count",
@@ -35,18 +50,17 @@ export class PostgresMeteringRepository implements MeteringRepository {
   async recordEvent(
     props: Omit<MeteringEventProps, "id" | "createdAt">,
   ): Promise<MeteringEvent> {
-    const [row] = await db
-      .insert(usageEventsTable)
-      .values({
+    const row = await prisma.usageEvent.create({
+      data: {
         tenantId: props.tenantId,
         eventType: props.eventType,
         quantity: props.quantity,
         workflowId: props.workflowId,
-        metadata: props.metadata,
+        metadata: props.metadata as any,
         createdAt: props.timestamp,
-      })
-      .returning();
-    return this.eventToDomain(row);
+      } as any,
+    });
+    return this.eventToDomain(row as unknown as UsageEventRow);
   }
 
   async findEvents(
@@ -59,24 +73,25 @@ export class PostgresMeteringRepository implements MeteringRepository {
       limit?: number;
     },
   ): Promise<MeteringEvent[]> {
-    const conditions = [eq(usageEventsTable.tenantId, tenantId)];
-    if (filters?.eventType)
-      conditions.push(eq(usageEventsTable.eventType, filters.eventType));
-    if (filters?.from)
-      conditions.push(gte(usageEventsTable.createdAt, filters.from));
-    if (filters?.to)
-      conditions.push(lte(usageEventsTable.createdAt, filters.to));
-    if (filters?.workflowId)
-      conditions.push(eq(usageEventsTable.workflowId, filters.workflowId));
+    const where: Record<string, unknown> = { tenantId };
+    if (filters?.eventType) where.eventType = filters.eventType;
+    if (filters?.from || filters?.to) {
+      where.createdAt = {
+        ...(filters?.from ? { gte: filters.from } : {}),
+        ...(filters?.to ? { lte: filters.to } : {}),
+      };
+    }
+    if (filters?.workflowId) where.workflowId = filters.workflowId;
 
-    const rows = await db
-      .select()
-      .from(usageEventsTable)
-      .where(andOp(...conditions))
-      .orderBy(desc(usageEventsTable.createdAt))
-      .limit(filters?.limit ?? 100);
+    const rows = await prisma.usageEvent.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: filters?.limit ?? 100,
+    });
 
-    return rows.map(this.eventToDomain);
+    return rows.map((r) =>
+      this.eventToDomain(r as unknown as UsageEventRow),
+    );
   }
 
   async getAggregate(
@@ -133,26 +148,20 @@ export class PostgresMeteringRepository implements MeteringRepository {
   ): Promise<
     { eventType: string; totalQuantity: number; totalCount: number }[]
   > {
-    const rows = await db
-      .select({
-        eventType: usageEventsTable.eventType,
-        totalQuantity: sql<number>`sum(${usageEventsTable.quantity})`,
-        totalCount: sql<number>`count(*)::int`,
-      })
-      .from(usageEventsTable)
-      .where(
-        andOp(
-          eq(usageEventsTable.tenantId, tenantId),
-          gte(usageEventsTable.createdAt, from),
-          lte(usageEventsTable.createdAt, to),
-        ),
-      )
-      .groupBy(usageEventsTable.eventType);
+    const rows = await prisma.usageEvent.groupBy({
+      by: ["eventType"],
+      where: {
+        tenantId,
+        createdAt: { gte: from, lte: to },
+      },
+      _sum: { quantity: true },
+      _count: { _all: true },
+    });
 
-    return rows as {
-      eventType: string;
-      totalQuantity: number;
-      totalCount: number;
-    }[];
+    return rows.map((r) => ({
+      eventType: r.eventType,
+      totalQuantity: (r._sum.quantity ?? 0) as number,
+      totalCount: r._count._all,
+    }));
   }
 }

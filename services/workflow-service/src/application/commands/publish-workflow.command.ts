@@ -4,20 +4,10 @@
  * Creates a new workflow version, computes the RFC 6902 JSON Patch diff
  * against the previous version, and persists both to the database.
  *
- * Diff persistence:
- *   - workflow_versions.nodes / edges — full graph snapshot
- *   - workflow_diffs.patch          — RFC 6902 JSON Patch (from prev → this)
- *   - workflow_diffs.summary        — semantic change counts + descriptions
- *   - workflow_diffs.patch_hash     — deduplication hash
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
  */
 
-import { eq, and, sql } from "drizzle-orm";
-import {
-  db,
-  workflowsTable,
-  workflowVersionsTable,
-  workflowDiffsTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { computeFullDiff } from "@longox/workflow-canvas";
 import type { WorkflowGraph } from "@longox/workflow-canvas";
 
@@ -62,16 +52,9 @@ export async function publishWorkflow(
 
   // ── 1. Verify workflow ownership ────────────────────────────────────────────
 
-  const [workflow] = await db
-    .select()
-    .from(workflowsTable)
-    .where(
-      and(
-        eq(workflowsTable.id, workflowId),
-        eq(workflowsTable.tenantId, tenantId),
-      ),
-    )
-    .limit(1);
+  const workflow = await prisma.workflow.findFirst({
+    where: { id: workflowId, tenantId },
+  });
 
   if (!workflow) {
     throw Object.assign(new Error("Workflow not found"), { statusCode: 404 });
@@ -79,23 +62,21 @@ export async function publishWorkflow(
 
   // ── 2. Load latest version for diff & optimistic lock ───────────────────────
 
-  const [latestVersion] = await db
-    .select()
-    .from(workflowVersionsTable)
-    .where(eq(workflowVersionsTable.workflowId, workflowId))
-    .orderBy(sql`${workflowVersionsTable.version} DESC`)
-    .limit(1);
+  const latestVersion = await prisma.workflowVersion.findFirst({
+    where: { workflowId },
+    orderBy: { versionNumber: "desc" },
+  });
 
-  const nextVersionNumber = (latestVersion?.version ?? 0) + 1;
+  const nextVersionNumber = (latestVersion?.versionNumber ?? 0) + 1;
 
   if (
     expectedDraftVersion !== undefined &&
     latestVersion !== undefined &&
-    latestVersion.version !== expectedDraftVersion
+    latestVersion?.versionNumber !== expectedDraftVersion
   ) {
     throw Object.assign(
       new Error(
-        `Version conflict: expected draft version ${expectedDraftVersion} but current is ${latestVersion.version}`,
+        `Version conflict: expected draft version ${expectedDraftVersion} but current is ${latestVersion?.versionNumber}`,
       ),
       { statusCode: 409 },
     );
@@ -119,7 +100,7 @@ export async function publishWorkflow(
   if (latestVersion && (latestVersion as any).checksum === checksum) {
     return {
       versionId: latestVersion.id,
-      versionNumber: latestVersion.version,
+      versionNumber: latestVersion?.versionNumber,
       checksum,
       diffId: null,
       publishedAt:
@@ -129,18 +110,16 @@ export async function publishWorkflow(
 
   // ── 4. Insert new version ───────────────────────────────────────────────────
 
-  const [newVersion] = await db
-    .insert(workflowVersionsTable)
-    .values({
+  const newVersion = await prisma.workflowVersion.create({
+    data: {
       workflowId,
-      version: nextVersionNumber,
-      name: workflow.name,
-      nodes: graph.nodes as any,
-      changeNote: changeNote ?? `v${nextVersionNumber}`,
-      published: true,
-      publishedBy: publishedBy ?? null,
-    } as any)
-    .returning();
+      versionNumber: nextVersionNumber,
+      graphJson: graph as any,
+      checksum: checksum,
+      releaseNotes: changeNote ?? `v${nextVersionNumber}`,
+      createdById: publishedBy ?? null,
+    } as any,
+  });
 
   // ── 5. Compute and persist diff ─────────────────────────────────────────────
 
@@ -148,25 +127,24 @@ export async function publishWorkflow(
 
   if (latestVersion) {
     const prevGraph: WorkflowGraph = {
-      nodes: Array.isArray(latestVersion.nodes)
-        ? (latestVersion.nodes as any[])
+      nodes: Array.isArray(latestVersion.graphJson)
+        ? (latestVersion.graphJson as any[])
         : [],
-      edges: Array.isArray((latestVersion as any).edges)
-        ? (latestVersion as any).edges
+      edges: Array.isArray((latestVersion as any).graphJson?.edges ?? [])
+        ? (latestVersion as any).graphJson?.edges ?? []
         : [],
     };
 
     const diff = computeFullDiff(
       prevGraph,
       graph,
-      latestVersion.version,
+      latestVersion?.versionNumber,
       nextVersionNumber,
     );
 
     if (diff.patch.length > 0) {
-      const [diffRow] = await db
-        .insert(workflowDiffsTable)
-        .values({
+      const diffRow = await prisma.workflowDiff.create({
+        data: {
           workflowId,
           fromVersionId: latestVersion.id,
           toVersionId: newVersion.id,
@@ -198,8 +176,8 @@ export async function publishWorkflow(
             ),
           } as any,
           createdBy: publishedBy ?? null,
-        })
-        .returning();
+        } as any,
+      });
 
       diffId = diffRow.id;
     }
@@ -207,14 +185,14 @@ export async function publishWorkflow(
 
   // ── 6. Update workflow status ───────────────────────────────────────────────
 
-  await db
-    .update(workflowsTable)
-    .set({
+  await prisma.workflow.update({
+    where: { id: workflowId },
+    data: {
       status: "active",
       currentVersionId: newVersion.id,
       updatedAt: new Date(),
-    } as any)
-    .where(eq(workflowsTable.id, workflowId));
+    } as any,
+  });
 
   return {
     versionId: newVersion.id,

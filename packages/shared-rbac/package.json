@@ -7,8 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@longox/db": "workspace:*",
-    "drizzle-orm": "catalog:"
+    "@longox/db": "workspace:*"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

@@ -1,4 +1,4 @@
-import { db, retentionConfigTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { RetentionPolicyService } from "./retention-policy.service";
 import { PartitionManagerService } from "./partition-manager.service";
 import { ArchiveExportService } from "./archive-export.service";
@@ -19,9 +19,7 @@ export class RetentionSchedulerService {
   }
 
   async runDaily(): Promise<void> {
-    const tenants = await db
-      .select()
-      .from(retentionConfigTable);
+    const tenants = await prisma.retentionConfig.findMany();
 
     for (const tenant of tenants) {
       try {

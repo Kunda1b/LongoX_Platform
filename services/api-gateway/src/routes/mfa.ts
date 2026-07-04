@@ -1,7 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { createHash, randomBytes } from "node:crypto";
-import { eq, and } from "drizzle-orm";
-import { db, userMfaTable, usersTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authMiddleware, signToken } from "../lib/auth";
 import { authorize } from "@longox/shared-rbac";
 
@@ -53,13 +52,9 @@ router.post(
   async (req: Request, res: Response): Promise<void> => {
     const userId = req.user!.id;
 
-    const [existing] = await db
-      .select()
-      .from(userMfaTable)
-      .where(
-        and(eq(userMfaTable.userId, userId), eq(userMfaTable.method, "totp")),
-      )
-      .limit(1);
+    const existing = (await prisma.userMfa.findFirst({
+      where: { userId, method: "totp" },
+    })) as any;
 
     if (existing?.enabled) {
       res.status(400).json({ error: "MFA is already enabled" });
@@ -69,22 +64,22 @@ router.post(
     const secret = existing?.secret ?? generateTotpSecret();
 
     if (!existing) {
-      await db
-        .insert(userMfaTable)
-        .values({
+      await prisma.userMfa.create({
+        data: {
           userId,
           method: "totp",
           secret,
           enabled: false,
-        })
-        .onConflictDoNothing();
+        } as any,
+      }).catch(() => {
+        // Conflict (already exists) — ignore, matching onConflictDoNothing.
+      });
     }
 
-    const [user] = await db
-      .select({ email: usersTable.email })
-      .from(usersTable)
-      .where(eq(usersTable.id, userId))
-      .limit(1);
+    const user = (await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    })) as any;
 
     res.json({
       secret,
@@ -106,13 +101,9 @@ router.post(
       return;
     }
 
-    const [mfa] = await db
-      .select()
-      .from(userMfaTable)
-      .where(
-        and(eq(userMfaTable.userId, userId), eq(userMfaTable.method, "totp")),
-      )
-      .limit(1);
+    const mfa = (await prisma.userMfa.findFirst({
+      where: { userId, method: "totp" },
+    })) as any;
 
     if (!mfa) {
       res
@@ -126,10 +117,10 @@ router.post(
       return;
     }
 
-    await db
-      .update(userMfaTable)
-      .set({ enabled: true, verifiedAt: new Date() })
-      .where(eq(userMfaTable.id, mfa.id));
+    await prisma.userMfa.update({
+      where: { id: mfa.id },
+      data: { enabled: true, verifiedAt: new Date() },
+    });
 
     res.json({ success: true, message: "MFA enabled successfully" });
   },
@@ -146,17 +137,9 @@ router.post(
       return;
     }
 
-    const [mfa] = await db
-      .select()
-      .from(userMfaTable)
-      .where(
-        and(
-          eq(userMfaTable.userId, userId),
-          eq(userMfaTable.method, "totp"),
-          eq(userMfaTable.enabled, true),
-        ),
-      )
-      .limit(1);
+    const mfa = (await prisma.userMfa.findFirst({
+      where: { userId, method: "totp", enabled: true },
+    })) as any;
 
     if (!mfa) {
       res.json({ verified: true });
@@ -174,11 +157,9 @@ router.delete(
   async (req: Request, res: Response): Promise<void> => {
     const userId = req.user!.id;
 
-    await db
-      .delete(userMfaTable)
-      .where(
-        and(eq(userMfaTable.userId, userId), eq(userMfaTable.method, "totp")),
-      );
+    await prisma.userMfa.deleteMany({
+      where: { userId, method: "totp" },
+    });
 
     res.json({ success: true, message: "MFA disabled" });
   },
@@ -190,18 +171,16 @@ router.get(
   async (req: Request, res: Response): Promise<void> => {
     const userId = req.user!.id;
 
-    const [mfa] = await db
-      .select()
-      .from(userMfaTable)
-      .where(
-        and(eq(userMfaTable.userId, userId), eq(userMfaTable.method, "totp")),
-      )
-      .limit(1);
+    const mfa = (await prisma.userMfa.findFirst({
+      where: { userId, method: "totp" },
+    })) as any;
 
     res.json({
       enabled: mfa?.enabled ?? false,
       method: mfa?.method ?? null,
-      verifiedAt: mfa?.verifiedAt?.toISOString() ?? null,
+      verifiedAt: mfa?.verifiedAt
+        ? (mfa.verifiedAt instanceof Date ? mfa.verifiedAt.toISOString() : new Date(mfa.verifiedAt).toISOString())
+        : null,
     });
   },
 );

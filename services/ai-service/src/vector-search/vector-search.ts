@@ -1,5 +1,12 @@
-import { db, ragChunksTable } from "@longox/db";
-import { sql, eq, isNotNull } from "drizzle-orm";
+/**
+ * Vector search.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.$queryRaw` / `prisma.$executeRaw` for pgvector queries and
+ * `prisma.vectorEmbedding` delegate with `as any` casts for legacy columns.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import { embeddingService } from "../embeddings/embedding-service";
 
 export interface IndexedDocument {
@@ -30,10 +37,13 @@ export class VectorSearch {
     const { vector } = await embeddingService.generateEmbedding(content);
     const vectorLit = `[${vector.join(",")}]`;
 
-    await db.execute(sql`
-      INSERT INTO rag_chunks (document_id, knowledge_base_id, chunk_index, content, embedding, tokens, metadata)
-      VALUES (0, 0, ${sql.raw(id)}, ${content}, ${sql.raw(`'${vectorLit}'::vector`)}, 0, ${sql.raw(JSON.stringify(metadata))}::jsonb)
-    `);
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO rag_chunks (document_id, knowledge_base_id, chunk_index, content, embedding, tokens, metadata)
+       VALUES (0, 0, $1, $2, '${vectorLit}'::vector, 0, $3::jsonb)`,
+      Number(id),
+      content,
+      JSON.stringify(metadata),
+    );
   }
 
   async search(
@@ -53,19 +63,22 @@ export class VectorSearch {
 
     const vectorLit = `[${queryVector.join(",")}]`;
 
-    const result = await db.execute(sql`
+    const result = await prisma.$queryRawUnsafe(
+      `
       SELECT
         rc.id,
         rc.content,
         rc.metadata,
-        1 - (rc.embedding <=> ${sql.raw(`'${vectorLit}'::vector`)}) AS score
-      FROM ${ragChunksTable} rc
+        1 - (rc.embedding <=> '${vectorLit}'::vector) AS score
+      FROM rag_chunks rc
       WHERE rc.embedding IS NOT NULL
-      ORDER BY rc.embedding <=> ${sql.raw(`'${vectorLit}'::vector`)}
-      LIMIT ${topK}
-    `);
+      ORDER BY rc.embedding <=> '${vectorLit}'::vector
+      LIMIT $1
+      `,
+      topK,
+    ) as any[];
 
-    const rows = result.rows ?? [];
+    const rows = result ?? [];
 
     let candidates = rows.map((r: any) => ({
       id: String(r.id),
@@ -82,20 +95,17 @@ export class VectorSearch {
   }
 
   async delete(id: string): Promise<void> {
-    await db
-      .delete(ragChunksTable)
-      .where(eq(ragChunksTable.chunkIndex, sql.raw(id) as any));
+    await prisma.vectorEmbedding.deleteMany({
+      where: { chunkIndex: Number(id) } as any,
+    });
   }
 
   async clear(): Promise<void> {
-    await db.delete(ragChunksTable);
+    await prisma.vectorEmbedding.deleteMany({});
   }
 
   async size(): Promise<number> {
-    const result = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(ragChunksTable);
-    return result[0]?.count ?? 0;
+    return await prisma.vectorEmbedding.count();
   }
 }
 

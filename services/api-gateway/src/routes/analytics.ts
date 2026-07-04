@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
-import { gte, desc } from "drizzle-orm";
-import { db, executionsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authorize, requireTenantContext } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
@@ -21,11 +20,10 @@ router.get("/analytics/executions", authorize("analytics.read"), requireTenantCo
   start.setUTCHours(0, 0, 0, 0);
   start.setUTCDate(start.getUTCDate() - days + 1);
 
-  const rows = await db
-    .select()
-    .from(executionsTable)
-    .where(gte(executionsTable.startedAt, start))
-    .orderBy(executionsTable.startedAt);
+  const rows = (await prisma.workflowExecution.findMany({
+    where: { startedAt: { gte: start } },
+    orderBy: { startedAt: "asc" },
+  })) as any[];
 
   const buckets = new Map<
     string,
@@ -52,10 +50,9 @@ router.get("/analytics/executions", authorize("analytics.read"), requireTenantCo
 });
 
 router.get("/analytics/workflows", authorize("analytics.read"), requireTenantContext, async (_req, res): Promise<void> => {
-  const rows = await db
-    .select()
-    .from(executionsTable)
-    .orderBy(desc(executionsTable.startedAt));
+  const rows = (await prisma.workflowExecution.findMany({
+    orderBy: { startedAt: "desc" },
+  })) as any[];
 
   const stats = new Map<
     string,

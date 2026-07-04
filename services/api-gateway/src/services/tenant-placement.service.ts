@@ -1,5 +1,4 @@
-import { eq, and } from "drizzle-orm";
-import { db, tenantTiersTable, tenantPlacementTable, tenantTierAssignmentsTable, regionsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 
 interface PlacementResult {
   clusterId: string;
@@ -19,21 +18,13 @@ interface AvailableRegion {
 
 export class TenantPlacementService {
   async determinePlacement(tenantId: string, tierId: string): Promise<PlacementResult> {
-    const [tier] = await db
-      .select()
-      .from(tenantTiersTable)
-      .where(eq(tenantTiersTable.id, tierId))
-      .limit(1);
+    const tier = (await prisma.tenantTier.findUnique({
+      where: { id: tierId },
+    })) as any;
 
     if (!tier) {
       throw new Error(`Tier ${tierId} not found`);
     }
-
-    const [assignment] = await db
-      .select()
-      .from(tenantTierAssignmentsTable)
-      .where(eq(tenantTierAssignmentsTable.tenantId, tenantId))
-      .limit(1);
 
     const region = await this.getRegionForTenant(tenantId, tier);
     const placement = await this.getClusterForTenant(tenantId, region.id, tierId);
@@ -51,56 +42,45 @@ export class TenantPlacementService {
   }
 
   async getPlacement(tenantId: string): Promise<PlacementResult | null> {
-    const [placement] = await db
-      .select()
-      .from(tenantPlacementTable)
-      .where(eq(tenantPlacementTable.tenantId, tenantId))
-      .limit(1);
+    const placement = (await prisma.tenantPlacement.findUnique({
+      where: { tenantId },
+    })) as any;
 
     if (!placement) return null;
 
-    const [region] = await db
-      .select()
-      .from(regionsTable)
-      .where(eq(regionsTable.id, placement.regionId))
-      .limit(1);
+    const region = (await prisma.region.findUnique({
+      where: { id: placement.regionId },
+    })) as any;
 
     return {
       clusterId: placement.clusterId,
       namespace: placement.namespace,
       regionId: placement.regionId,
       regionName: region?.name ?? "unknown",
-      placementType: placement.placementType,
-      isolationGroup: placement.isolationGroup,
-      networkCidr: placement.networkCidr,
+      placementType: (placement as any).placementType,
+      isolationGroup: (placement as any).isolationGroup,
+      networkCidr: (placement as any).networkCidr,
     };
   }
 
   async getAvailableRegions(tierId: string): Promise<AvailableRegion[]> {
-    const [tier] = await db
-      .select()
-      .from(tenantTiersTable)
-      .where(eq(tenantTiersTable.id, tierId))
-      .limit(1);
+    const tier = (await prisma.tenantTier.findUnique({
+      where: { id: tierId },
+    })) as any;
 
     if (!tier) return [];
 
-    const allowedRegionIds = tier.regionsAllowed;
+    const allowedRegionIds: string[] = tier.regionsAllowed ?? [];
+
+    const allRegions = (await prisma.region.findMany({
+      where: { isActive: true } as any,
+    })) as any[];
 
     if (allowedRegionIds.length === 0) {
-      const allRegions = await db
-        .select()
-        .from(regionsTable)
-        .where(eq(regionsTable.isActive, true));
       return allRegions.map((r) => ({ id: r.id, regionId: r.regionId, name: r.name }));
     }
 
-    const regions = await db
-      .select()
-      .from(regionsTable)
-      .where(and(eq(regionsTable.isActive, true)));
-
-    return regions
+    return allRegions
       .filter((r) => allowedRegionIds.includes(r.regionId))
       .map((r) => ({ id: r.id, regionId: r.regionId, name: r.name }));
   }
@@ -109,27 +89,24 @@ export class TenantPlacementService {
     tenantId: string,
     regionId: string,
     tierId: string,
-  ): Promise<{ clusterId: string; region: typeof regionsTable.$inferSelect }> {
-    const [region] = await db
-      .select()
-      .from(regionsTable)
-      .where(eq(regionsTable.id, regionId))
-      .limit(1);
+  ): Promise<{ clusterId: string; region: any }> {
+    const region = (await prisma.region.findUnique({
+      where: { id: regionId },
+    })) as any;
 
     if (!region) {
       throw new Error(`Region ${regionId} not found`);
     }
 
-    const [tier] = await db
-      .select()
-      .from(tenantTiersTable)
-      .where(eq(tenantTiersTable.id, tierId))
-      .limit(1);
+    const tier = (await prisma.tenantTier.findUnique({
+      where: { id: tierId },
+    })) as any;
 
     if (!tier) {
       throw new Error(`Tier ${tierId} not found`);
     }
 
+    void tenantId;
     const clusterId = `eks-${region.regionId}-${tier.infrastructureLevel === "shared" ? "shared" : "dedicated"}`;
 
     return { clusterId, region };
@@ -138,40 +115,40 @@ export class TenantPlacementService {
   async assignDedicatedNamespace(
     tenantId: string,
     clusterId: string,
-    region: typeof regionsTable.$inferSelect,
+    region: any,
   ): Promise<PlacementResult> {
     const namespace = `tenant-${tenantId}-ns`;
 
-    const [existing] = await db
-      .select()
-      .from(tenantPlacementTable)
-      .where(eq(tenantPlacementTable.tenantId, tenantId))
-      .limit(1);
+    const existing = (await prisma.tenantPlacement.findUnique({
+      where: { tenantId },
+    })) as any;
 
     if (existing) {
-      await db
-        .update(tenantPlacementTable)
-        .set({
+      await prisma.tenantPlacement.update({
+        where: { tenantId },
+        data: {
           placementType: "dedicated-namespace",
           clusterId,
           namespace,
-          regionId: region.id,
+          region: region.id,
           isolationGroup: `ig-${clusterId}`,
           status: "active",
           provisionedAt: new Date(),
           updatedAt: new Date(),
-        })
-        .where(eq(tenantPlacementTable.tenantId, tenantId));
+        } as any,
+      });
     } else {
-      await db.insert(tenantPlacementTable).values({
-        tenantId,
-        placementType: "dedicated-namespace",
-        clusterId,
-        namespace,
-        regionId: region.id,
-        isolationGroup: `ig-${clusterId}`,
-        status: "active",
-        provisionedAt: new Date(),
+      await prisma.tenantPlacement.create({
+        data: {
+          tenantId,
+          placementType: "dedicated-namespace",
+          clusterId,
+          namespace,
+          region: region.id,
+          isolationGroup: `ig-${clusterId}`,
+          status: "active",
+          provisionedAt: new Date(),
+        } as any,
       });
     }
 
@@ -188,42 +165,42 @@ export class TenantPlacementService {
 
   async assignDedicatedCluster(
     tenantId: string,
-    region: typeof regionsTable.$inferSelect,
+    region: any,
   ): Promise<PlacementResult> {
     const clusterId = `eks-${region.regionId}-dedicated-${tenantId}`;
     const tenantHash = Array.from(tenantId).reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) | 0, 0);
     const networkCidr = `10.${Math.abs(tenantHash) % 256}.0.0/16`;
 
-    const [existing] = await db
-      .select()
-      .from(tenantPlacementTable)
-      .where(eq(tenantPlacementTable.tenantId, tenantId))
-      .limit(1);
+    const existing = (await prisma.tenantPlacement.findUnique({
+      where: { tenantId },
+    })) as any;
 
     if (existing) {
-      await db
-        .update(tenantPlacementTable)
-        .set({
+      await prisma.tenantPlacement.update({
+        where: { tenantId },
+        data: {
           placementType: "dedicated-cluster",
           clusterId,
-          regionId: region.id,
+          region: region.id,
           networkCidr,
           isolationGroup: `ig-${clusterId}`,
           status: "active",
           provisionedAt: new Date(),
           updatedAt: new Date(),
-        })
-        .where(eq(tenantPlacementTable.tenantId, tenantId));
+        } as any,
+      });
     } else {
-      await db.insert(tenantPlacementTable).values({
-        tenantId,
-        placementType: "dedicated-cluster",
-        clusterId,
-        regionId: region.id,
-        networkCidr,
-        isolationGroup: `ig-${clusterId}`,
-        status: "active",
-        provisionedAt: new Date(),
+      await prisma.tenantPlacement.create({
+        data: {
+          tenantId,
+          placementType: "dedicated-cluster",
+          clusterId,
+          region: region.id,
+          networkCidr,
+          isolationGroup: `ig-${clusterId}`,
+          status: "active",
+          provisionedAt: new Date(),
+        } as any,
       });
     }
 
@@ -240,37 +217,37 @@ export class TenantPlacementService {
 
   private async placeInShared(
     tenantId: string,
-    region: typeof regionsTable.$inferSelect,
+    region: any,
     placement: { clusterId: string },
   ): Promise<PlacementResult> {
-    const [existing] = await db
-      .select()
-      .from(tenantPlacementTable)
-      .where(eq(tenantPlacementTable.tenantId, tenantId))
-      .limit(1);
+    const existing = (await prisma.tenantPlacement.findUnique({
+      where: { tenantId },
+    })) as any;
 
     if (existing) {
-      await db
-        .update(tenantPlacementTable)
-        .set({
+      await prisma.tenantPlacement.update({
+        where: { tenantId },
+        data: {
           placementType: "shared",
           clusterId: placement.clusterId,
           namespace: "shared",
-          regionId: region.id,
+          region: region.id,
           status: "active",
           provisionedAt: new Date(),
           updatedAt: new Date(),
-        })
-        .where(eq(tenantPlacementTable.tenantId, tenantId));
+        } as any,
+      });
     } else {
-      await db.insert(tenantPlacementTable).values({
-        tenantId,
-        placementType: "shared",
-        clusterId: placement.clusterId,
-        namespace: "shared",
-        regionId: region.id,
-        status: "active",
-        provisionedAt: new Date(),
+      await prisma.tenantPlacement.create({
+        data: {
+          tenantId,
+          placementType: "shared",
+          clusterId: placement.clusterId,
+          namespace: "shared",
+          region: region.id,
+          status: "active",
+          provisionedAt: new Date(),
+        } as any,
       });
     }
 
@@ -286,19 +263,14 @@ export class TenantPlacementService {
   }
 
   private async getRegionForTenant(
-    tenantId: string,
-    tier: typeof tenantTiersTable.$inferSelect,
-  ): Promise<typeof regionsTable.$inferSelect> {
-    const [assignment] = await db
-      .select()
-      .from(tenantTierAssignmentsTable)
-      .where(eq(tenantTierAssignmentsTable.tenantId, tenantId))
-      .limit(1);
-
-    const allowedRegionIds = tier.regionsAllowed;
-    let query = db.select().from(regionsTable).where(eq(regionsTable.isActive, true));
-
-    const allRegions = await query.orderBy(regionsTable.priority);
+    _tenantId: string,
+    tier: any,
+  ): Promise<any> {
+    const allowedRegionIds: string[] = tier.regionsAllowed ?? [];
+    const allRegions = (await prisma.region.findMany({
+      where: { isActive: true } as any,
+      orderBy: { priority: "asc" } as any,
+    })) as any[];
 
     let region = allRegions[0];
     if (allowedRegionIds.length > 0) {

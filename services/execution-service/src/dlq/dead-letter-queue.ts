@@ -1,5 +1,4 @@
-import { db, dlqEntriesTable } from "@longox/db";
-import { eq, and, desc } from "drizzle-orm";
+import { prisma } from "@longox/db/prisma";
 
 export interface DLQEntry {
   executionId: string;
@@ -15,21 +14,22 @@ export interface DLQEntry {
 
 export class DeadLetterQueue {
   async addEntry(entry: DLQEntry): Promise<string> {
-    const [inserted] = await db
-      .insert(dlqEntriesTable)
-      .values({
+    const inserted = await prisma.deadLetterQueue.create({
+      data: {
         executionId: entry.executionId,
-        workflowId: entry.workflowId,
-        workflowName: entry.workflowName,
         nodeId: entry.nodeId,
-        nodeName: entry.nodeName,
-        nodeType: entry.nodeType,
-        errorMessage: entry.errorMessage,
-        attempts: entry.attempts,
-        jobData: entry.jobData,
-      })
-      .returning();
-
+        reason: entry.errorMessage,
+        payloadJson: {
+          workflowId: entry.workflowId,
+          workflowName: entry.workflowName,
+          nodeName: entry.nodeName,
+          nodeType: entry.nodeType,
+          errorMessage: entry.errorMessage,
+          attempts: entry.attempts,
+          jobData: entry.jobData,
+        } as any,
+      } as any,
+    });
     return inserted.id;
   }
 
@@ -37,49 +37,48 @@ export class DeadLetterQueue {
     workflowId?: string,
     status?: string,
     limit: number = 50,
-  ): Promise<(typeof dlqEntriesTable.$inferSelect)[]> {
-    const conditions: ReturnType<typeof eq>[] = [];
-    if (workflowId) conditions.push(eq(dlqEntriesTable.workflowId, workflowId));
-    if (status) conditions.push(eq(dlqEntriesTable.status, status));
+  ): Promise<any[]> {
+    const where: Record<string, unknown> = {};
+    if (status) where.status = status;
+    // workflowId is stored inside payloadJson (Drizzle compat) — when a
+    // workflowId filter is supplied we fall back to filtering in-memory.
+    const rows = await prisma.deadLetterQueue.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    });
 
-    return db
-      .select()
-      .from(dlqEntriesTable)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(dlqEntriesTable.createdAt))
-      .limit(limit);
+    if (!workflowId) return rows;
+    return rows.filter((r: any) =>
+      r.payloadJson?.workflowId === workflowId ||
+      (r as any).workflowId === workflowId,
+    );
   }
 
-  async getEntry(
-    id: string,
-  ): Promise<typeof dlqEntriesTable.$inferSelect | null> {
-    const [entry] = await db
-      .select()
-      .from(dlqEntriesTable)
-      .where(eq(dlqEntriesTable.id, id))
-      .limit(1);
+  async getEntry(id: string): Promise<any | null> {
+    const entry = await prisma.deadLetterQueue.findUnique({ where: { id } });
     return entry ?? null;
   }
 
   async markRetrying(id: string): Promise<void> {
-    await db
-      .update(dlqEntriesTable)
-      .set({ status: "retrying" })
-      .where(eq(dlqEntriesTable.id, id));
+    await prisma.deadLetterQueue.update({
+      where: { id },
+      data: { status: "retrying" } as any,
+    });
   }
 
   async markResolved(id: string): Promise<void> {
-    await db
-      .update(dlqEntriesTable)
-      .set({ status: "resolved" })
-      .where(eq(dlqEntriesTable.id, id));
+    await prisma.deadLetterQueue.update({
+      where: { id },
+      data: { status: "resolved" } as any,
+    });
   }
 
   async markArchived(id: string): Promise<void> {
-    await db
-      .update(dlqEntriesTable)
-      .set({ status: "archived" })
-      .where(eq(dlqEntriesTable.id, id));
+    await prisma.deadLetterQueue.update({
+      where: { id },
+      data: { status: "archived" } as any,
+    });
   }
 
   async getStats(workflowId?: string): Promise<{

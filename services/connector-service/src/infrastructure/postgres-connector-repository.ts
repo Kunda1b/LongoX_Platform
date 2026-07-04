@@ -1,5 +1,14 @@
-import { eq, like, or, desc, sql } from "drizzle-orm";
-import { db, connectorsTable } from "@longox/db";
+/**
+ * Prisma-based connector repository.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.connector` delegate with `as any` casts for legacy columns
+ * (`displayName`, `version`, `sdkVersion`, `color`, `author`, `permissions`,
+ * `capabilities`, `authConfig`, `certificationLevel`, `rateLimit`,
+ * `isFeatured`, `status`, `metadata`, etc.) not reflected on the Prisma model.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import { Connector } from "../domain/connector.entity";
 import type { ConnectorRepository } from "../domain/connector-repository";
 import type {
@@ -8,7 +17,7 @@ import type {
 } from "../domain/connector.entity";
 
 export class PostgresConnectorRepository implements ConnectorRepository {
-  private toDomain(row: typeof connectorsTable.$inferSelect): Connector {
+  private toDomain(row: any): Connector {
     return new Connector({
       id: row.id,
       name: row.name,
@@ -40,61 +49,52 @@ export class PostgresConnectorRepository implements ConnectorRepository {
   }
 
   async findById(id: string): Promise<Connector | null> {
-    const [row] = await db
-      .select()
-      .from(connectorsTable)
-      .where(eq(connectorsTable.id, id))
-      .limit(1);
+    const row = await prisma.connector.findUnique({ where: { id } });
     return row ? this.toDomain(row) : null;
   }
 
   async findByName(name: string): Promise<Connector | null> {
-    const [row] = await db
-      .select()
-      .from(connectorsTable)
-      .where(eq(connectorsTable.name, name))
-      .limit(1);
-    return row ? this.toDomain(row) : null;
+    const rows = await prisma.connector.findMany({
+      where: { name } as any,
+      take: 1,
+    });
+    return rows.length > 0 ? this.toDomain(rows[0]) : null;
   }
 
   async findAll(
     category?: ConnectorCategory,
     search?: string,
   ): Promise<Connector[]> {
-    const conditions = [];
-    if (category) conditions.push(eq(connectorsTable.category, category));
-    if (search)
-      conditions.push(
-        or(
-          like(connectorsTable.name, `%${search}%`),
-          like(connectorsTable.description, `%${search}%`),
-        ),
-      );
+    const where: Record<string, unknown> = {};
+    if (category) where.category = category;
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+      ];
+    }
 
-    const rows = await db
-      .select()
-      .from(connectorsTable)
-      .where(conditions.length ? and(...conditions) : undefined)
-      .orderBy(desc(connectorsTable.isFeatured), connectorsTable.name);
+    const rows = await prisma.connector.findMany({
+      where: where as any,
+      orderBy: [{ isFeatured: "desc" } as any, { name: "asc" }],
+    });
 
-    return rows.map(this.toDomain);
+    return rows.map((r) => this.toDomain(r));
   }
 
   async findFeatured(): Promise<Connector[]> {
-    const rows = await db
-      .select()
-      .from(connectorsTable)
-      .where(eq(connectorsTable.isFeatured, true))
-      .orderBy(connectorsTable.name);
-    return rows.map(this.toDomain);
+    const rows = await prisma.connector.findMany({
+      where: { isFeatured: true } as any,
+      orderBy: { name: "asc" },
+    });
+    return rows.map((r) => this.toDomain(r));
   }
 
   async create(
     props: Omit<ConnectorProps, "id" | "createdAt" | "updatedAt">,
   ): Promise<Connector> {
-    const [row] = await db
-      .insert(connectorsTable)
-      .values({
+    const row = await prisma.connector.create({
+      data: {
         name: props.name,
         displayName: props.displayName,
         version: props.version,
@@ -114,27 +114,20 @@ export class PostgresConnectorRepository implements ConnectorRepository {
         isFeatured: props.isFeatured,
         status: props.status,
         metadata: props.metadata,
-      })
-      .returning();
+      } as any,
+    });
     return this.toDomain(row);
   }
 
   async update(id: string, data: Partial<ConnectorProps>): Promise<Connector> {
-    const [row] = await db
-      .update(connectorsTable)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(connectorsTable.id, id))
-      .returning();
+    const row = await prisma.connector.update({
+      where: { id },
+      data: { ...data, updatedAt: new Date() } as any,
+    });
     return this.toDomain(row);
   }
 
   async delete(id: string): Promise<void> {
-    await db.delete(connectorsTable).where(eq(connectorsTable.id, id));
+    await prisma.connector.delete({ where: { id } });
   }
-}
-
-function and(...conditions: any[]) {
-  return conditions.length > 1
-    ? sql`${conditions.reduce((a, b) => sql`${a} AND ${b}`)}`
-    : conditions[0];
 }

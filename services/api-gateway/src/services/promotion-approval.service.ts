@@ -1,13 +1,4 @@
-import { eq, and, desc, sql } from "drizzle-orm";
-import {
-  db,
-  workflowPromotionsTable,
-  environmentReleasesTable,
-  workflowVersionsTable,
-  workflowsTable,
-  environmentsTable,
-  auditLogTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 
 interface RequestPromotionInput {
   workflowId: string;
@@ -94,21 +85,21 @@ async function writeAuditLog(
   resourceId: string,
   metadata: Record<string, unknown> = {},
 ): Promise<void> {
-  await db.insert(auditLogTable).values({
-    tenantId: tenantId ?? "",
-    actorType: "user",
-    actorId,
-    action,
-    resourceType,
-    resourceId,
-    metadata,
+  await prisma.auditLog.create({
+    data: {
+      actorId,
+      action,
+      targetType: resourceType,
+      targetId: resourceId,
+      diffJson: { ...metadata, tenantId: tenantId ?? "", actorType: "user" } as any,
+    } as any,
   });
 }
 
 export class PromotionApprovalService {
   async requestPromotion(input: RequestPromotionInput): Promise<{
-    promotion: typeof workflowPromotionsTable.$inferSelect;
-    release: typeof environmentReleasesTable.$inferSelect | null;
+    promotion: any;
+    release: any | null;
     requiresApproval: boolean;
   }> {
     if (input.toEnvironment === "production") {
@@ -121,34 +112,27 @@ export class PromotionApprovalService {
         }
       }
     }
-    const [workflow] = await db
-      .select()
-      .from(workflowsTable)
-      .where(eq(workflowsTable.id, input.workflowId))
-      .limit(1);
+    const workflow = (await prisma.workflow.findUnique({
+      where: { id: input.workflowId },
+    })) as any;
 
     if (!workflow) throw new Error("Workflow not found");
 
-    const [latestVersion] = await db
-      .select()
-      .from(workflowVersionsTable)
-      .where(eq(workflowVersionsTable.workflowId, input.workflowId))
-      .orderBy(desc(workflowVersionsTable.version))
-      .limit(1);
+    const latestVersion = (await prisma.workflowVersion.findFirst({
+      where: { workflowId: input.workflowId },
+      orderBy: { versionNumber: "desc" },
+    })) as any;
 
-    const [targetEnv] = await db
-      .select()
-      .from(environmentsTable)
-      .where(eq(environmentsTable.name, input.toEnvironment))
-      .limit(1);
+    const targetEnv = (await prisma.environment.findFirst({
+      where: { name: input.toEnvironment } as any,
+    })) as any;
 
     const requiresApproval = input.approvalRequired ?? false;
     const status = requiresApproval ? "pending" : "promoted";
     const promotedBy = input.promotedBy ?? "system";
 
-    const [promotion] = await db
-      .insert(workflowPromotionsTable)
-      .values({
+    const promotion = (await prisma.workflowPromotion.create({
+      data: {
         workflowId: input.workflowId,
         workflowName: workflow.name,
         fromEnvironment: input.fromEnvironment,
@@ -156,57 +140,53 @@ export class PromotionApprovalService {
         status,
         promotedBy,
         notes: input.notes ?? null,
-      })
-      .returning();
+      },
+    })) as any;
 
-    const nodes = workflow.nodes ?? [];
+    const nodes = (workflow as any).nodes ?? [];
     const artifactChecksum = computeChecksum(nodes);
 
     let diffReview: DiffReview | null = null;
     if (requiresApproval) {
-      const [sourceEnv] = await db
-        .select()
-        .from(environmentsTable)
-        .where(eq(environmentsTable.name, input.fromEnvironment))
-        .limit(1);
+      const sourceEnv = (await prisma.environment.findFirst({
+        where: { name: input.fromEnvironment } as any,
+      })) as any;
 
-      const [targetVersion] = sourceEnv
-        ? await db
-            .select()
-            .from(environmentReleasesTable)
-            .where(
-              and(
-                eq(environmentReleasesTable.environmentId, sourceEnv.id),
-                eq(environmentReleasesTable.artifactId, input.workflowId),
-                eq(environmentReleasesTable.status, "completed"),
-              ),
-            )
-            .orderBy(desc(environmentReleasesTable.createdAt))
-            .limit(1)
-        : [];
+      const targetVersion = sourceEnv
+        ? ((await prisma.environmentRelease.findFirst({
+            where: {
+              environmentId: sourceEnv.id,
+              artifactType: "workflow",
+              sourceVersionId: input.workflowId,
+              status: "completed",
+            } as any,
+            orderBy: { createdAt: "desc" },
+          })) as any)
+        : null;
 
       const sourceNodes = targetVersion?.diffReview
         ? ((targetVersion.diffReview as DiffReview)?.toVersion ?? null)
         : null;
 
-      const fromNodes = sourceNodes ? [] : (workflow.nodes ?? []);
+      const fromNodes = sourceNodes ? [] : ((workflow as any).nodes ?? []);
       diffReview = computeDiff(fromNodes, nodes);
     }
 
-    let release: typeof environmentReleasesTable.$inferSelect | null = null;
+    let release: any = null;
 
     if (!requiresApproval) {
-      await db.insert(workflowVersionsTable).values({
-        workflowId: input.workflowId,
-        version: (latestVersion?.version ?? 0) + 1,
-        name: workflow.name,
-        nodes: nodes as Record<string, unknown>[],
-        changeNote: `Promoted from ${input.fromEnvironment} to ${input.toEnvironment}`,
+      await prisma.workflowVersion.create({
+        data: {
+          workflowId: input.workflowId,
+          versionNumber: ((latestVersion?.versionNumber ?? 0) as number) + 1,
+          name: workflow.name,
+          graphJson: nodes as any,
+          changeNote: `Promoted from ${input.fromEnvironment} to ${input.toEnvironment}`,
+        } as any,
       });
 
-      [release] = await db
-        .insert(environmentReleasesTable)
-        .values({
+      release = (await prisma.environmentRelease.create({
+        data: {
           environmentId: targetEnv?.id,
           releaseType: "workflow",
           artifactType: "workflow",
@@ -218,12 +198,11 @@ export class PromotionApprovalService {
           approvalRequired: false,
           deployedBy: promotedBy,
           notes: input.notes ?? null,
-        })
-        .returning();
+        } as any,
+      })) as any;
     } else {
-      [release] = await db
-        .insert(environmentReleasesTable)
-        .values({
+      release = (await prisma.environmentRelease.create({
+        data: {
           environmentId: targetEnv?.id,
           releaseType: "workflow",
           artifactType: "workflow",
@@ -233,11 +212,11 @@ export class PromotionApprovalService {
           toEnvironment: input.toEnvironment,
           status: "pending",
           approvalRequired: true,
-          diffReview: diffReview as Record<string, unknown> | null,
+          diffReview: diffReview as any,
           deployedBy: promotedBy,
           notes: input.notes ?? null,
-        })
-        .returning();
+        } as any,
+      })) as any;
     }
 
     await writeAuditLog(
@@ -262,66 +241,59 @@ export class PromotionApprovalService {
     approvedBy: string,
     note?: string,
   ): Promise<{
-    promotion: typeof workflowPromotionsTable.$inferSelect;
-    release: typeof environmentReleasesTable.$inferSelect;
+    promotion: any;
+    release: any;
   }> {
-    const [promotion] = await db
-      .select()
-      .from(workflowPromotionsTable)
-      .where(eq(workflowPromotionsTable.id, promotionId))
-      .limit(1);
+    const promotion = (await prisma.workflowPromotion.findUnique({
+      where: { id: promotionId },
+    })) as any;
 
     if (!promotion) throw new Error("Promotion not found");
     if (promotion.status !== "pending")
       throw new Error("Promotion is not in pending status");
 
-    const [workflow] = await db
-      .select()
-      .from(workflowsTable)
-      .where(eq(workflowsTable.id, promotion.workflowId))
-      .limit(1);
+    const workflow = (await prisma.workflow.findUnique({
+      where: { id: promotion.workflowId },
+    })) as any;
 
     if (!workflow) throw new Error("Workflow not found");
 
-    const [latestVersion] = await db
-      .select()
-      .from(workflowVersionsTable)
-      .where(eq(workflowVersionsTable.workflowId, promotion.workflowId))
-      .orderBy(desc(workflowVersionsTable.version))
-      .limit(1);
+    const latestVersion = (await prisma.workflowVersion.findFirst({
+      where: { workflowId: promotion.workflowId },
+      orderBy: { versionNumber: "desc" },
+    })) as any;
 
-    const [targetEnv] = await db
-      .select()
-      .from(environmentsTable)
-      .where(eq(environmentsTable.name, promotion.toEnvironment))
-      .limit(1);
+    const targetEnv = (await prisma.environment.findFirst({
+      where: { name: promotion.toEnvironment } as any,
+    })) as any;
 
     const now = new Date();
-    const nodes = workflow.nodes ?? [];
+    const nodes = (workflow as any).nodes ?? [];
     const artifactChecksum = computeChecksum(nodes);
 
-    await db
-      .update(workflowPromotionsTable)
-      .set({
+    await prisma.workflowPromotion.update({
+      where: { id: promotionId },
+      data: {
         status: "approved",
         approvedBy,
         approvedAt: now,
-      })
-      .where(eq(workflowPromotionsTable.id, promotionId));
-
-    await db.insert(workflowVersionsTable).values({
-      workflowId: promotion.workflowId,
-      version: (latestVersion?.version ?? 0) + 1,
-      name: workflow.name,
-      nodes: nodes as Record<string, unknown>[],
-      changeNote:
-        note ??
-        `Promoted from ${promotion.fromEnvironment} to ${promotion.toEnvironment}`,
+      } as any,
     });
 
-    const [release] = await db
-      .insert(environmentReleasesTable)
-      .values({
+    await prisma.workflowVersion.create({
+      data: {
+        workflowId: promotion.workflowId,
+        versionNumber: ((latestVersion?.versionNumber ?? 0) as number) + 1,
+        name: workflow.name,
+        graphJson: nodes as any,
+        changeNote:
+          note ??
+          `Promoted from ${promotion.fromEnvironment} to ${promotion.toEnvironment}`,
+      } as any,
+    });
+
+    const release = (await prisma.environmentRelease.create({
+      data: {
         environmentId: targetEnv?.id,
         releaseType: "workflow",
         artifactType: "workflow",
@@ -335,14 +307,12 @@ export class PromotionApprovalService {
         approvedAt: now,
         deployedBy: approvedBy,
         notes: note ?? null,
-      })
-      .returning();
+      } as any,
+    })) as any;
 
-    const [updatedPromotion] = await db
-      .select()
-      .from(workflowPromotionsTable)
-      .where(eq(workflowPromotionsTable.id, promotionId))
-      .limit(1);
+    const updatedPromotion = (await prisma.workflowPromotion.findUnique({
+      where: { id: promotionId },
+    })) as any;
 
     await writeAuditLog(
       workflow.tenantId,
@@ -365,46 +335,39 @@ export class PromotionApprovalService {
     reason: string,
     rejectedBy: string,
   ): Promise<{
-    promotion: typeof workflowPromotionsTable.$inferSelect;
-    release: typeof environmentReleasesTable.$inferSelect;
+    promotion: any;
+    release: any;
   }> {
-    const [promotion] = await db
-      .select()
-      .from(workflowPromotionsTable)
-      .where(eq(workflowPromotionsTable.id, promotionId))
-      .limit(1);
+    const promotion = (await prisma.workflowPromotion.findUnique({
+      where: { id: promotionId },
+    })) as any;
 
     if (!promotion) throw new Error("Promotion not found");
     if (promotion.status !== "pending")
       throw new Error("Promotion is not in pending status");
 
-    const [workflow] = await db
-      .select()
-      .from(workflowsTable)
-      .where(eq(workflowsTable.id, promotion.workflowId))
-      .limit(1);
+    const workflow = (await prisma.workflow.findUnique({
+      where: { id: promotion.workflowId },
+    })) as any;
 
     const now = new Date();
 
-    await db
-      .update(workflowPromotionsTable)
-      .set({
+    await prisma.workflowPromotion.update({
+      where: { id: promotionId },
+      data: {
         status: "rejected",
         approvedBy: rejectedBy,
         rejectionReason: reason,
         rejectedAt: now,
-      })
-      .where(eq(workflowPromotionsTable.id, promotionId));
+      } as any,
+    });
 
-    const [targetEnv] = await db
-      .select()
-      .from(environmentsTable)
-      .where(eq(environmentsTable.name, promotion.toEnvironment))
-      .limit(1);
+    const targetEnv = (await prisma.environment.findFirst({
+      where: { name: promotion.toEnvironment } as any,
+    })) as any;
 
-    const [release] = await db
-      .insert(environmentReleasesTable)
-      .values({
+    const release = (await prisma.environmentRelease.create({
+      data: {
         environmentId: targetEnv?.id,
         releaseType: "workflow",
         artifactType: "workflow",
@@ -416,14 +379,12 @@ export class PromotionApprovalService {
         approvedBy: rejectedBy,
         deployedBy: rejectedBy,
         notes: reason,
-      })
-      .returning();
+      } as any,
+    })) as any;
 
-    const [updatedPromotion] = await db
-      .select()
-      .from(workflowPromotionsTable)
-      .where(eq(workflowPromotionsTable.id, promotionId))
-      .limit(1);
+    const updatedPromotion = (await prisma.workflowPromotion.findUnique({
+      where: { id: promotionId },
+    })) as any;
 
     await writeAuditLog(
       workflow?.tenantId ?? null,
@@ -444,39 +405,30 @@ export class PromotionApprovalService {
     promotionId: string,
     rolledBackBy: string,
   ): Promise<{
-    promotion: typeof workflowPromotionsTable.$inferSelect;
-    release: typeof environmentReleasesTable.$inferSelect;
+    promotion: any;
+    release: any;
   }> {
-    const [promotion] = await db
-      .select()
-      .from(workflowPromotionsTable)
-      .where(eq(workflowPromotionsTable.id, promotionId))
-      .limit(1);
+    const promotion = (await prisma.workflowPromotion.findUnique({
+      where: { id: promotionId },
+    })) as any;
 
     if (!promotion) throw new Error("Promotion not found");
 
-    const [workflow] = await db
-      .select()
-      .from(workflowsTable)
-      .where(eq(workflowsTable.id, promotion.workflowId))
-      .limit(1);
+    const workflow = (await prisma.workflow.findUnique({
+      where: { id: promotion.workflowId },
+    })) as any;
 
-    const now = new Date();
+    await prisma.workflowPromotion.update({
+      where: { id: promotionId },
+      data: { status: "rolled_back" } as any,
+    });
 
-    await db
-      .update(workflowPromotionsTable)
-      .set({ status: "rolled_back" })
-      .where(eq(workflowPromotionsTable.id, promotionId));
+    const targetEnv = (await prisma.environment.findFirst({
+      where: { name: promotion.toEnvironment } as any,
+    })) as any;
 
-    const [targetEnv] = await db
-      .select()
-      .from(environmentsTable)
-      .where(eq(environmentsTable.name, promotion.toEnvironment))
-      .limit(1);
-
-    const [release] = await db
-      .insert(environmentReleasesTable)
-      .values({
+    const release = (await prisma.environmentRelease.create({
+      data: {
         environmentId: targetEnv?.id,
         releaseType: "workflow",
         artifactType: "workflow",
@@ -486,14 +438,12 @@ export class PromotionApprovalService {
         status: "rolled_back",
         rollbackOf: promotionId,
         deployedBy: rolledBackBy,
-      })
-      .returning();
+      } as any,
+    })) as any;
 
-    const [updatedPromotion] = await db
-      .select()
-      .from(workflowPromotionsTable)
-      .where(eq(workflowPromotionsTable.id, promotionId))
-      .limit(1);
+    const updatedPromotion = (await prisma.workflowPromotion.findUnique({
+      where: { id: promotionId },
+    })) as any;
 
     await writeAuditLog(
       workflow?.tenantId ?? null,

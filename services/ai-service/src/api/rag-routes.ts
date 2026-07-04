@@ -1,6 +1,13 @@
+/**
+ * RAG routes.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.knowledgeBase`, `prisma.knowledgeDocument`, and
+ * `prisma.vectorEmbedding` delegates with `as any` casts for legacy columns.
+ */
+
 import { Router, type IRouter } from "express";
-import { eq, sql } from "drizzle-orm";
-import { db, ragKnowledgeBasesTable, ragDocumentsTable, ragChunksTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authorize, requireTenantContext } from "@longox/shared-rbac";
 import {
   documentIngestionService,
@@ -10,7 +17,7 @@ import {
 
 const router: IRouter = Router();
 
-function fmtKB(row: typeof ragKnowledgeBasesTable.$inferSelect) {
+function fmtKB(row: any) {
   return {
     id: row.id,
     name: row.name,
@@ -27,7 +34,7 @@ function fmtKB(row: typeof ragKnowledgeBasesTable.$inferSelect) {
   };
 }
 
-function fmtDoc(row: typeof ragDocumentsTable.$inferSelect) {
+function fmtDoc(row: any) {
   return {
     id: row.id,
     knowledgeBaseId: row.knowledgeBaseId,
@@ -62,39 +69,37 @@ router.post("/api/rag/knowledge-bases", authorize("ai:write"), requireTenantCont
     res.status(400).json({ error: "tenant context required" });
     return;
   }
-  const [row] = await db.insert(ragKnowledgeBasesTable).values({
-    name: name.trim(),
-    description: description ?? null,
-    embeddingModel: embeddingModel ?? "text-embedding-3-small",
-    chunkStrategy: (chunkStrategy ?? "recursive") as any,
-    chunkSize: chunkSize ?? 512,
-    chunkOverlap: chunkOverlap ?? 64,
-    tenantId,
-    status: "active",
-    documentCount: 0,
-  }).returning();
+  const row = await prisma.knowledgeBase.create({
+    data: {
+      name: name.trim(),
+      description: description ?? null,
+      embeddingModel: embeddingModel ?? "text-embedding-3-small",
+      chunkStrategy: (chunkStrategy ?? "recursive") as any,
+      chunkSize: chunkSize ?? 512,
+      chunkOverlap: chunkOverlap ?? 64,
+      tenantId,
+      status: "active",
+      documentCount: 0,
+    } as any,
+  });
   res.status(201).json(fmtKB(row));
 });
 
 router.get("/api/rag/knowledge-bases", authorize("ai:read"), requireTenantContext, async (req, res): Promise<void> => {
   const tenantId = (req as any).tenantId;
-  const rows = await db
-    .select()
-    .from(ragKnowledgeBasesTable)
-    .where(eq(ragKnowledgeBasesTable.tenantId, tenantId))
-    .orderBy(ragKnowledgeBasesTable.id);
+  const rows = await prisma.knowledgeBase.findMany({
+    where: { tenantId } as any,
+    orderBy: { id: "asc" } as any,
+  });
   res.json(rows.map(fmtKB));
 });
 
 router.get("/api/rag/knowledge-bases/:id", authorize("ai:read"), requireTenantContext, async (req, res): Promise<void> => {
   const tenantId = (req as any).tenantId;
-  const [row] = await db
-    .select()
-    .from(ragKnowledgeBasesTable)
-    .where(
-      eq(ragKnowledgeBasesTable.id, String(req.params.id)),
-    );
-  if (!row || row.tenantId !== tenantId) {
+  const row = await prisma.knowledgeBase.findUnique({
+    where: { id: String(req.params.id) } as any,
+  });
+  if (!row || (row as any).tenantId !== tenantId) {
     res.status(404).json({ error: "Not found" });
     return;
   }
@@ -104,28 +109,32 @@ router.get("/api/rag/knowledge-bases/:id", authorize("ai:read"), requireTenantCo
 router.delete("/api/rag/knowledge-bases/:id", authorize("ai:delete"), requireTenantContext, async (req, res): Promise<void> => {
   const tenantId = (req as any).tenantId;
   const kbId = String(req.params.id);
-  const [kb] = await db
-    .select()
-    .from(ragKnowledgeBasesTable)
-    .where(eq(ragKnowledgeBasesTable.id, kbId));
-  if (!kb || kb.tenantId !== tenantId) {
+  const kb = await prisma.knowledgeBase.findUnique({
+    where: { id: kbId } as any,
+  });
+  if (!kb || (kb as any).tenantId !== tenantId) {
     res.status(404).json({ error: "Not found" });
     return;
   }
-  await db.delete(ragChunksTable).where(eq(ragChunksTable.knowledgeBaseId, kbId));
-  await db.delete(ragDocumentsTable).where(eq(ragDocumentsTable.knowledgeBaseId, kbId));
-  await db.delete(ragKnowledgeBasesTable).where(eq(ragKnowledgeBasesTable.id, kbId));
+  await prisma.vectorEmbedding.deleteMany({
+    where: { knowledgeBaseId: kbId } as any,
+  });
+  await prisma.knowledgeDocument.deleteMany({
+    where: { knowledgeBaseId: kbId } as any,
+  });
+  await prisma.knowledgeBase.delete({
+    where: { id: kbId } as any,
+  });
   res.status(204).end();
 });
 
 router.post("/api/rag/knowledge-bases/:id/documents", authorize("ai:write"), requireTenantContext, async (req, res): Promise<void> => {
   const tenantId = (req as any).tenantId;
   const kbId = String(req.params.id);
-  const [kb] = await db
-    .select()
-    .from(ragKnowledgeBasesTable)
-    .where(eq(ragKnowledgeBasesTable.id, kbId));
-  if (!kb || kb.tenantId !== tenantId) {
+  const kb = await prisma.knowledgeBase.findUnique({
+    where: { id: kbId } as any,
+  });
+  if (!kb || (kb as any).tenantId !== tenantId) {
     res.status(404).json({ error: "Knowledge base not found" });
     return;
   }
@@ -151,19 +160,17 @@ router.post("/api/rag/knowledge-bases/:id/documents", authorize("ai:write"), req
 router.get("/api/rag/knowledge-bases/:id/documents", authorize("ai:read"), requireTenantContext, async (req, res): Promise<void> => {
   const tenantId = (req as any).tenantId;
   const kbId = String(req.params.id);
-  const [kb] = await db
-    .select()
-    .from(ragKnowledgeBasesTable)
-    .where(eq(ragKnowledgeBasesTable.id, kbId));
-  if (!kb || kb.tenantId !== tenantId) {
+  const kb = await prisma.knowledgeBase.findUnique({
+    where: { id: kbId } as any,
+  });
+  if (!kb || (kb as any).tenantId !== tenantId) {
     res.status(404).json({ error: "Not found" });
     return;
   }
-  const rows = await db
-    .select()
-    .from(ragDocumentsTable)
-    .where(eq(ragDocumentsTable.knowledgeBaseId, kbId))
-    .orderBy(ragDocumentsTable.id);
+  const rows = await prisma.knowledgeDocument.findMany({
+    where: { knowledgeBaseId: kbId } as any,
+    orderBy: { id: "asc" } as any,
+  });
   res.json(rows.map(fmtDoc));
 });
 
@@ -171,11 +178,10 @@ router.delete("/api/rag/knowledge-bases/:id/documents/:docId", authorize("ai:wri
   const tenantId = (req as any).tenantId;
   const kbId = String(req.params.id);
   const docId = String(req.params.docId);
-  const [kb] = await db
-    .select()
-    .from(ragKnowledgeBasesTable)
-    .where(eq(ragKnowledgeBasesTable.id, kbId));
-  if (!kb || kb.tenantId !== tenantId) {
+  const kb = await prisma.knowledgeBase.findUnique({
+    where: { id: kbId } as any,
+  });
+  if (!kb || (kb as any).tenantId !== tenantId) {
     res.status(404).json({ error: "Not found" });
     return;
   }
@@ -186,11 +192,10 @@ router.delete("/api/rag/knowledge-bases/:id/documents/:docId", authorize("ai:wri
 router.post("/api/rag/knowledge-bases/:id/search", authorize("ai:read"), requireTenantContext, async (req, res): Promise<void> => {
   const tenantId = (req as any).tenantId;
   const kbId = String(req.params.id);
-  const [kb] = await db
-    .select()
-    .from(ragKnowledgeBasesTable)
-    .where(eq(ragKnowledgeBasesTable.id, kbId));
-  if (!kb || kb.tenantId !== tenantId) {
+  const kb = await prisma.knowledgeBase.findUnique({
+    where: { id: kbId } as any,
+  });
+  if (!kb || (kb as any).tenantId !== tenantId) {
     res.status(404).json({ error: "Not found" });
     return;
   }
@@ -214,11 +219,10 @@ router.post("/api/rag/knowledge-bases/:id/search", authorize("ai:read"), require
 router.post("/api/rag/knowledge-bases/:id/query", authorize("ai:write"), requireTenantContext, async (req, res): Promise<void> => {
   const tenantId = (req as any).tenantId;
   const kbId = String(req.params.id);
-  const [kb] = await db
-    .select()
-    .from(ragKnowledgeBasesTable)
-    .where(eq(ragKnowledgeBasesTable.id, kbId));
-  if (!kb || kb.tenantId !== tenantId) {
+  const kb = await prisma.knowledgeBase.findUnique({
+    where: { id: kbId } as any,
+  });
+  if (!kb || (kb as any).tenantId !== tenantId) {
     res.status(404).json({ error: "Not found" });
     return;
   }
@@ -253,20 +257,19 @@ router.post("/api/rag/knowledge-bases/:id/query", authorize("ai:write"), require
 router.post("/api/rag/knowledge-bases/:id/reindex", authorize("ai:write"), requireTenantContext, async (req, res): Promise<void> => {
   const tenantId = (req as any).tenantId;
   const kbId = String(req.params.id);
-  const [kb] = await db
-    .select()
-    .from(ragKnowledgeBasesTable)
-    .where(eq(ragKnowledgeBasesTable.id, kbId));
-  if (!kb || kb.tenantId !== tenantId) {
+  const kb = await prisma.knowledgeBase.findUnique({
+    where: { id: kbId } as any,
+  });
+  if (!kb || (kb as any).tenantId !== tenantId) {
     res.status(404).json({ error: "Not found" });
     return;
   }
-  const docs = await db
-    .select({ id: ragDocumentsTable.id })
-    .from(ragDocumentsTable)
-    .where(eq(ragDocumentsTable.knowledgeBaseId, kbId));
+  const docs = await prisma.knowledgeDocument.findMany({
+    where: { knowledgeBaseId: kbId } as any,
+    select: { id: true } as any,
+  });
   const results = [];
-  for (const doc of docs) {
+  for (const doc of docs as any[]) {
     const result = await documentIngestionService.reindexDocument(doc.id);
     results.push(result);
   }

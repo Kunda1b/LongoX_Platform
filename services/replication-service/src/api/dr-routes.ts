@@ -2,8 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { authorize } from "@longox/shared-rbac";
 import { BackupRestoreService } from "../application/services/backup-restore.service";
 import { ReleaseRollbackService } from "../application/services/release-rollback.service";
-import { db, regionalPoolsTable, backupRecordsTable, restoreRecordsTable } from "@longox/db";
-import { eq } from "drizzle-orm";
+import { prisma } from "@longox/db/prisma";
 
 const router: IRouter = Router();
 const backupRestore = new BackupRestoreService();
@@ -134,11 +133,7 @@ router.get(
       return;
     }
     try {
-      const [record] = await db
-        .select()
-        .from(restoreRecordsTable)
-        .where(eq(restoreRecordsTable.id, id))
-        .limit(1);
+      const record = await prisma.restoreRecord.findUnique({ where: { id } });
       if (!record) {
         res.status(404).json({ error: "Restore record not found" });
         return;
@@ -209,7 +204,7 @@ router.get(
   authorize({ resource: "tenants", action: "admin" }),
   async (_req: Request, res: Response): Promise<void> => {
     try {
-      const pools = await db.select().from(regionalPoolsTable);
+      const pools = await prisma.regionalPool.findMany();
       res.json(pools);
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });

@@ -1,16 +1,21 @@
+/**
+ * Billing plans REST routes.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.billingPlan` delegate.
+ */
+
 import { Router, type IRouter } from "express";
 import { authorize } from "@longox/shared-rbac";
-import { db, billingPlansTable } from "@longox/db";
-import { eq } from "drizzle-orm";
+import { prisma } from "@longox/db/prisma";
 
 const router: IRouter = Router();
 
 router.get("/billing/plans", authorize("billing.read"), async (_req, res): Promise<void> => {
-  const plans = await db
-    .select()
-    .from(billingPlansTable)
-    .where(eq(billingPlansTable.isActive, true))
-    .orderBy(billingPlansTable.sortOrder);
+  const plans = await prisma.billingPlan.findMany({
+    where: { isActive: true },
+    orderBy: { sortOrder: "asc" },
+  });
 
   res.json(
     plans.map((p) => ({

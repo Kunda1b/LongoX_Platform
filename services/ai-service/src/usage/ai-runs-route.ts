@@ -1,6 +1,14 @@
+/**
+ * AI runs route (legacy /usage path).
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.tokenUsage` and `prisma.usageEvent` delegates with `as any`
+ * casts for legacy columns.
+ */
+
 import { Router, type IRouter } from "express";
 import OpenAI from "openai";
-import { db, tokenUsageTable, usageEventsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { withSpan, addSpanAttributes } from "@longox/shared-observability";
 import { recordAiRequest, recordAiRequestFailed } from "../telemetry/metrics";
 import { authorize } from "@longox/shared-rbac";
@@ -92,26 +100,30 @@ router.post("/ai/runs", authorize("ai:run"), async (req, res): Promise<void> => 
 
     // Record token usage (non-fatal)
     try {
-      await db.insert(tokenUsageTable).values({
-        modelName: model,
-        provider: "openai",
-        workflowId: workflowId ?? null,
-        inputTokens,
-        outputTokens,
-        cost: String(cost.toFixed(8)),
-      } as any);
+      await prisma.tokenUsage.create({
+        data: {
+          modelName: model,
+          provider: "openai",
+          workflowId: workflowId ?? null,
+          inputTokens,
+          outputTokens,
+          cost: String(cost.toFixed(8)),
+        } as any,
+      });
     } catch {
       /* non-fatal */
     }
 
     // Record usage metering event (non-fatal)
     try {
-      await db.insert(usageEventsTable).values({
-        workflowId: workflowId ?? null,
-        eventType: "ai.run.completed",
-        quantity: inputTokens + outputTokens,
-        metadata: { model, inputTokens, outputTokens, durationMs, cost },
-      } as any);
+      await prisma.usageEvent.create({
+        data: {
+          workflowId: workflowId ?? null,
+          eventType: "ai.run.completed",
+          quantity: inputTokens + outputTokens,
+          metadata: { model, inputTokens, outputTokens, durationMs, cost },
+        } as any,
+      });
     } catch {
       /* non-fatal */
     }
@@ -153,14 +165,13 @@ router.post("/ai/runs", authorize("ai:run"), async (req, res): Promise<void> => 
 // GET /api/ai/runs — list recent runs (from token_usage table as a proxy)
 router.get("/ai/runs", authorize("ai:read"), async (req, res): Promise<void> => {
   const limit = Math.min(Number(req.query.limit ?? 20), 100);
-  const rows = await db
-    .select()
-    .from(tokenUsageTable)
-    .orderBy(tokenUsageTable.createdAt)
-    .limit(limit);
+  const rows = await prisma.tokenUsage.findMany({
+    orderBy: { createdAt: "asc" } as any,
+    take: limit,
+  });
 
   res.json(
-    rows.map((r) => ({
+    rows.map((r: any) => ({
       id: r.id,
       modelName: r.modelName,
       provider: r.provider,

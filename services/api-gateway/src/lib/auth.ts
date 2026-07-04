@@ -2,8 +2,7 @@
 
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { eq } from "drizzle-orm";
-import { db, usersTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import type { AuthUser } from "@longox/shared-auth";
 
 // Re-export AuthUser so existing `import { AuthUser } from "../lib/auth"` calls
@@ -101,13 +100,12 @@ export async function authMiddleware(
 
   // Verify the user account is still active in our database.
   // This catches deactivated users even if their token has not expired.
-  const [dbUser] = await db
-    .select({ id: usersTable.id, isActive: usersTable.isActive })
-    .from(usersTable)
-    .where(eq(usersTable.id, user.id))
-    .limit(1);
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { id: true, status: true },
+  });
 
-  if (!dbUser || !dbUser.isActive) {
+  if (!dbUser || dbUser.status !== "active") {
     res.status(401).json({ error: "Account disabled or not found" });
     return;
   }

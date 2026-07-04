@@ -1,5 +1,11 @@
-import { db, billingPlansTable } from "@longox/db";
-import { eq } from "drizzle-orm";
+/**
+ * Billing seed script.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.billingPlan` delegate with `upsert()` for idempotency.
+ */
+
+import { prisma } from "@longox/db/prisma";
 
 const PLANS = [
   {
@@ -98,20 +104,11 @@ const PLANS = [
 
 async function seedPlans(): Promise<void> {
   for (const plan of PLANS) {
-    const [existing] = await db
-      .select()
-      .from(billingPlansTable)
-      .where(eq(billingPlansTable.name, plan.name))
-      .limit(1);
-
-    if (existing) {
-      await db
-        .update(billingPlansTable)
-        .set(plan)
-        .where(eq(billingPlansTable.name, plan.name));
-    } else {
-      await db.insert(billingPlansTable).values(plan);
-    }
+    await prisma.billingPlan.upsert({
+      where: { name: plan.name },
+      update: plan as any,
+      create: plan as any,
+    });
   }
   console.log("Billing plans seeded: Starter, Growth, Business");
 }

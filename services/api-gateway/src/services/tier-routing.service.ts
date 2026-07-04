@@ -1,5 +1,4 @@
-import { eq } from "drizzle-orm";
-import { db, tenantsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 
 export interface TierRoutingConfig {
   dbPool: string;
@@ -63,10 +62,9 @@ export function getRateLimitsForTier(tier: number): { perMin: number; burst: num
 }
 
 export async function getTenantTier(tenantId: string): Promise<number> {
-  const [tenant] = await db
-    .select({ tier: tenantsTable.tier })
-    .from(tenantsTable)
-    .where(eq(tenantsTable.id, tenantId))
-    .limit(1);
+  const tenant = (await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { tier: true } as any,
+  })) as any;
   return tenant?.tier ?? 1;
 }

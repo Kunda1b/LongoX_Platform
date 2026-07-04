@@ -15,8 +15,7 @@
  */
 
 import { Router, type Request, type Response } from "express";
-import { eq } from "drizzle-orm";
-import { db, usersTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { verifyScimWebhook, type WorkOSDirectoryUser } from "../lib/workos-auth";
 
 const router = Router();
@@ -100,33 +99,33 @@ async function handleUserCreated(dirUser: WorkOSDirectoryUser): Promise<void> {
     return;
   }
 
-  const existing = await db
-    .select({ id: usersTable.id })
-    .from(usersTable)
-    .where(eq(usersTable.email, email.toLowerCase()))
-    .limit(1);
+  const existing = (await prisma.user.findUnique({
+    where: { email: email.toLowerCase() },
+    select: { id: true },
+  })) as any;
 
-  if (existing.length > 0) {
+  if (existing) {
     // User already exists (e.g., registered before SCIM was enabled).
     // Update workosUserId if not already set.
-    await db
-      .update(usersTable)
-      .set({ workosUserId: dirUser.id } as any)
-      .where(eq(usersTable.id, existing[0].id));
+    await prisma.user.update({
+      where: { id: existing.id },
+      data: { workosUserId: dirUser.id } as any,
+    });
     return;
   }
 
   const name = [dirUser.firstName, dirUser.lastName].filter(Boolean).join(" ") ||
     email.split("@")[0];
 
-  await db.insert(usersTable).values({
-    email: email.toLowerCase(),
-    passwordHash: "scim-provisioned",
-    name,
-    role: "editor",
-    isActive: dirUser.state === "active",
-    workosUserId: dirUser.id,
-  } as any);
+  await prisma.user.create({
+    data: {
+      email: email.toLowerCase(),
+      passwordHash: "scim-provisioned",
+      name,
+      status: dirUser.state === "active" ? "active" : "deactivated",
+      workosUserId: dirUser.id,
+    } as any,
+  });
 
   console.info(`[SCIM] Provisioned user: ${email}`);
 }
@@ -135,11 +134,10 @@ async function handleUserUpdated(dirUser: WorkOSDirectoryUser): Promise<void> {
   const email = await getPrimaryEmail(dirUser);
   if (!email) return;
 
-  const [existing] = await db
-    .select({ id: usersTable.id })
-    .from(usersTable)
-    .where(eq(usersTable.email, email.toLowerCase()))
-    .limit(1);
+  const existing = (await prisma.user.findUnique({
+    where: { email: email.toLowerCase() },
+    select: { id: true },
+  })) as any;
 
   if (!existing) {
     // User not found locally — create them.
@@ -150,14 +148,14 @@ async function handleUserUpdated(dirUser: WorkOSDirectoryUser): Promise<void> {
   const name = [dirUser.firstName, dirUser.lastName].filter(Boolean).join(" ") ||
     email.split("@")[0];
 
-  await db
-    .update(usersTable)
-    .set({
+  await prisma.user.update({
+    where: { id: existing.id },
+    data: {
       name,
-      isActive: dirUser.state === "active",
+      status: dirUser.state === "active" ? "active" : "deactivated",
       workosUserId: dirUser.id,
-    } as any)
-    .where(eq(usersTable.id, existing.id));
+    } as any,
+  });
 
   console.info(`[SCIM] Updated user: ${email} state=${dirUser.state}`);
 }
@@ -166,10 +164,10 @@ async function handleUserDeleted(dirUser: WorkOSDirectoryUser): Promise<void> {
   const email = await getPrimaryEmail(dirUser);
   if (!email) return;
 
-  await db
-    .update(usersTable)
-    .set({ isActive: false })
-    .where(eq(usersTable.email, email.toLowerCase()));
+  await prisma.user.update({
+    where: { email: email.toLowerCase() },
+    data: { status: "deactivated" } as any,
+  });
 
   console.info(`[SCIM] Deactivated user: ${email}`);
 }

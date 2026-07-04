@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc } from "drizzle-orm";
-import { db, schedulesTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { PostgresScheduleRepository } from "../infrastructure";
 import {
   CreateScheduleCommand,
@@ -14,7 +13,7 @@ const createSchedule = new CreateScheduleCommand(scheduleRepo);
 const updateSchedule = new UpdateScheduleCommand(scheduleRepo);
 const deleteSchedule = new DeleteScheduleCommand(scheduleRepo);
 
-function serializeSchedule(row: typeof schedulesTable.$inferSelect) {
+function serializeSchedule(row: any) {
   return {
     id: row.id,
     tenantId: row.tenantId,
@@ -25,17 +24,17 @@ function serializeSchedule(row: typeof schedulesTable.$inferSelect) {
     cronExpression: row.cronExpression ?? null,
     timezone: row.timezone,
     status: row.status,
-    startAt: row.startAt.toISOString(),
-    endAt: row.endAt?.toISOString() ?? null,
-    lastRunAt: row.lastRunAt?.toISOString() ?? null,
-    nextRunAt: row.nextRunAt?.toISOString() ?? null,
+    startAt: row.startAt instanceof Date ? row.startAt.toISOString() : row.startAt,
+    endAt: row.endAt ? (row.endAt instanceof Date ? row.endAt.toISOString() : row.endAt) : null,
+    lastRunAt: row.lastRunAt ? (row.lastRunAt instanceof Date ? row.lastRunAt.toISOString() : row.lastRunAt) : null,
+    nextRunAt: row.nextRunAt ? (row.nextRunAt instanceof Date ? row.nextRunAt.toISOString() : row.nextRunAt) : null,
     maxRuns: row.maxRuns ?? null,
     runCount: row.runCount,
     retryOnFailure: row.retryOnFailure,
     maxRetries: row.maxRetries,
     metadata: row.metadata ?? {},
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -45,13 +44,16 @@ router.get("/schedules", async (req, res): Promise<void> => {
   const status = req.query.status as string | undefined;
   const limit = Math.min(Number(req.query.limit) || 50, 200);
 
-  let query = db.select().from(schedulesTable).$dynamic();
-  if (tenantId) query = query.where(eq(schedulesTable.tenantId, tenantId));
-  if (workflowId)
-    query = query.where(eq(schedulesTable.workflowId, workflowId));
-  if (status) query = query.where(eq(schedulesTable.status, status));
+  const where: Record<string, unknown> = {};
+  if (tenantId) where.tenantId = tenantId;
+  if (workflowId) where.workflowId = workflowId;
+  if (status) where.status = status;
 
-  const rows = await query.orderBy(desc(schedulesTable.createdAt)).limit(limit);
+  const rows = await prisma.schedule.findMany({
+    where: where as any,
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
   res.json(rows.map(serializeSchedule));
 });
 
@@ -74,11 +76,7 @@ router.get("/schedules/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [row] = await db
-    .select()
-    .from(schedulesTable)
-    .where(eq(schedulesTable.id, id))
-    .limit(1);
+  const row = await prisma.schedule.findUnique({ where: { id } });
   if (!row) {
     res.status(404).json({ error: "Schedule not found" });
     return;
@@ -170,11 +168,10 @@ router.post("/schedules/:id/pause", async (req, res): Promise<void> => {
     return;
   }
 
-  const [row] = await db
-    .update(schedulesTable)
-    .set({ status: "paused", updatedAt: new Date() })
-    .where(eq(schedulesTable.id, id))
-    .returning();
+  const row = await prisma.schedule.update({
+    where: { id },
+    data: { status: "paused", updatedAt: new Date() } as any,
+  }).catch(() => null);
 
   if (!row) {
     res.status(404).json({ error: "Schedule not found" });
@@ -190,11 +187,10 @@ router.post("/schedules/:id/activate", async (req, res): Promise<void> => {
     return;
   }
 
-  const [row] = await db
-    .update(schedulesTable)
-    .set({ status: "active", updatedAt: new Date() })
-    .where(eq(schedulesTable.id, id))
-    .returning();
+  const row = await prisma.schedule.update({
+    where: { id },
+    data: { status: "active", updatedAt: new Date() } as any,
+  }).catch(() => null);
 
   if (!row) {
     res.status(404).json({ error: "Schedule not found" });

@@ -12,11 +12,9 @@
   },
   "dependencies": {
     "@longox/db": "workspace:*",
-    "@longox/db": "workspace:*",
     "@longox/shared-region": "workspace:*",
     "@longox/shared-logger": "workspace:*",
     "@longox/shared-rbac": "workspace:*",
-    "drizzle-orm": "catalog:",
     "express": "^5.2.1"
   },
   "devDependencies": {
