@@ -33,7 +33,7 @@ router.get(
   ["/api/workflows/:id/diffs", "/api/v1/workflows/:id/diffs"],
   authorize("workflows:read"),
   async (req: Request, res: Response): Promise<void> => {
-    const workflowId = parseInt(String(req.params["id"] ?? "0"), 10);
+    const workflowId = String(req.params["id"] ?? "");
     const tenantId = req.user?.tenantId ?? null;
 
     const [workflow] = await db
@@ -114,7 +114,7 @@ router.get(
   ],
   authorize("workflows:read"),
   async (req: Request, res: Response): Promise<void> => {
-    const workflowId = parseInt(String(req.params["id"] ?? "0"), 10);
+    const workflowId = String(req.params["id"] ?? "");
     const fromVersion = parseInt(String(req.params["fromVersion"] ?? "0"), 10);
     const toVersion = parseInt(String(req.params["toVersion"] ?? "0"), 10);
     const tenantId = req.user?.tenantId ?? null;
@@ -224,7 +224,7 @@ router.get(
   ],
   authorize("workflows:read"),
   async (req: Request, res: Response): Promise<void> => {
-    const workflowId = parseInt(String(req.params["id"] ?? "0"), 10);
+    const workflowId = String(req.params["id"] ?? "");
     const fromVersion = parseInt(String(req.params["fromVersion"] ?? "0"), 10);
     const toVersion = parseInt(String(req.params["toVersion"] ?? "0"), 10);
     const tenantId = req.user?.tenantId ?? null;

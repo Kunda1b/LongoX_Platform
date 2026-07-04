@@ -191,7 +191,7 @@ router.post(
       return;
     }
 
-    const workflowId = payload["workflow_id"] as number | undefined;
+    const workflowId = payload["workflow_id"] as string | undefined;
     const workflowSlug = payload["workflow_slug"] as string | undefined;
     const endpointId = payload["endpoint_id"] as string | undefined;
 
@@ -221,7 +221,7 @@ router.post(
           secret: webhookEndpointsTable.secret,
         })
         .from(webhookEndpointsTable)
-        .where(eq(webhookEndpointsTable.id, Number(endpointId)))
+        .where(eq(webhookEndpointsTable.id, String(endpointId)))
         .limit(1);
       if (row) {
         endpoint = {

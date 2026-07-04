@@ -462,7 +462,7 @@ export function TemplatePreviewDialog({
           <ReactFlowProvider>
             <PreviewContent
               template={template}
-              onUse={() => onUse(template.id)}
+              onUse={() => onUse(template.id as any)}
               isUsing={isUsing}
             />
           </ReactFlowProvider>

@@ -92,7 +92,7 @@ export const resolvers = {
 
     workflow: async (_p: unknown, args: Record<string, unknown>, ctx: Record<string, unknown>) => {
       const u = user(ctx);
-      const [r] = await db.select().from(workflowsTable).where(and(eq(workflowsTable.id, Number(args.id)), eq(workflowsTable.tenantId, u.tenantId)));
+      const [r] = await db.select().from(workflowsTable).where(and(eq(workflowsTable.id, String(args.id)), eq(workflowsTable.tenantId, u.tenantId)));
       return r ? { id: String(r.id), tenantId: String(r.tenantId), name: r.name, status: toGqlStatus(r.status), currentVersionId: null, tags: [] } : null;
     },
 
@@ -102,7 +102,7 @@ export const resolvers = {
       const offset = args.after ? dec(args.after as string) : 0;
       const filter = args.filter as Record<string, unknown> | undefined;
       const conds = [eq(executionsTable.tenantId, u.tenantId)];
-      if (filter?.workflowId) conds.push(eq(executionsTable.workflowId, Number(filter.workflowId)));
+      if (filter?.workflowId) conds.push(eq(executionsTable.workflowId, String(filter.workflowId)));
       if (filter?.status) conds.push(eq(executionsTable.status, (filter.status as string).toLowerCase()));
 
       const rows = await db.select().from(executionsTable).where(and(...conds)).orderBy(desc(executionsTable.startedAt)).limit(limit).offset(offset);
@@ -117,7 +117,7 @@ export const resolvers = {
 
     execution: async (_p: unknown, args: Record<string, unknown>, ctx: Record<string, unknown>) => {
       const u = user(ctx);
-      const [r] = await db.select().from(executionsTable).where(and(eq(executionsTable.id, Number(args.id)), eq(executionsTable.tenantId, u.tenantId)));
+      const [r] = await db.select().from(executionsTable).where(and(eq(executionsTable.id, String(args.id)), eq(executionsTable.tenantId, u.tenantId)));
       return r ? { id: String(r.id), workflowVersionId: String(r.workflowId), status: toGqlStatus(r.status, "pending"), startedAt: r.startedAt.toISOString(), finishedAt: r.finishedAt?.toISOString() ?? null, stepResults: [], checkpoints: [] } : null;
     },
 
@@ -128,7 +128,7 @@ export const resolvers = {
     },
 
     connector: async (_p: unknown, args: Record<string, unknown>) => {
-      const [r] = await db.select().from(connectorsTable).where(eq(connectorsTable.id, Number(args.id)));
+      const [r] = await db.select().from(connectorsTable).where(eq(connectorsTable.id, String(args.id)));
       if (!r) return null;
       const versions = await db.select().from(connectorVersionsTable).where(eq(connectorVersionsTable.connectorId, r.id)).orderBy(desc(connectorVersionsTable.createdAt));
       return { id: String(r.id), slug: r.name, name: r.displayName ?? r.name, trustLevel: (r.certificationLevel ?? "community").toUpperCase(), versions: versions.map((v) => ({ id: String(v.id), version: v.semver, supported: !v.isDeprecated })) };
@@ -154,7 +154,7 @@ export const resolvers = {
     publishWorkflow: async (_p: unknown, args: Record<string, unknown>, ctx: Record<string, unknown>) => {
       const u = user(ctx);
       const input = args.input as Record<string, unknown>;
-      const wid = Number(input.workflowId);
+      const wid = String(input.workflowId);
       const [wf] = await db.select().from(workflowsTable).where(eq(workflowsTable.id, wid));
       if (!wf) throw new Error("Workflow not found");
 
@@ -178,7 +178,7 @@ export const resolvers = {
 
     installConnector: async (_p: unknown, args: Record<string, unknown>) => {
       const input = args.input as Record<string, unknown>;
-      const [r] = await db.select().from(connectorsTable).where(eq(connectorsTable.id, Number(input.connectorId)));
+      const [r] = await db.select().from(connectorsTable).where(eq(connectorsTable.id, String(input.connectorId)));
       if (!r) throw new Error("Connector not found");
       return { connector: { id: String(r.id), slug: r.name, name: r.displayName ?? r.name, trustLevel: (r.certificationLevel ?? "community").toUpperCase(), versions: [] }, credentials: null };
     },
@@ -186,7 +186,7 @@ export const resolvers = {
     promoteEnvironment: async (_p: unknown, args: Record<string, unknown>, ctx: Record<string, unknown>) => {
       const u = user(ctx);
       const input = args.input as Record<string, unknown>;
-      const [p] = await db.insert(workflowPromotionsTable).values({ workflowId: Number(input.workflowId), workflowName: `workflow-${String(input.workflowId)}`, fromEnvironment: input.sourceEnvironment as string, toEnvironment: input.targetEnvironment as string, status: "promoted", promotedBy: String(u.id) }).returning();
+      const [p] = await db.insert(workflowPromotionsTable).values({ workflowId: String(input.workflowId), workflowName: `workflow-${String(input.workflowId)}`, fromEnvironment: input.sourceEnvironment as string, toEnvironment: input.targetEnvironment as string, status: "promoted", promotedBy: String(u.id) }).returning();
       return { promotion: { id: String(p.id), workflowId: String(p.workflowId), sourceEnvironment: p.fromEnvironment, targetEnvironment: p.toEnvironment, versionId: String(input.versionId), promotedBy: String(u.id), promotedAt: p.createdAt.toISOString(), status: p.status } };
     },
   },
@@ -195,26 +195,26 @@ export const resolvers = {
     tenants: async (parent: Record<string, unknown>) => {
       const rows = await db
         .select({ tenantId: membershipsTable.tenantId, roleId: membershipsTable.roleId, status: membershipsTable.status })
-        .from(membershipsTable).where(eq(membershipsTable.userId, Number(parent.id)));
+        .from(membershipsTable).where(eq(membershipsTable.userId, String(parent.id)));
       return rows.map((r) => ({ userId: String(parent.id), tenantId: String(r.tenantId), role: { id: "", name: "member", permissions: [] }, status: (r.status ?? "active").toUpperCase() as "ACTIVE" | "INVITED" | "DEACTIVATED" }));
     },
   },
 
   Tenant: {
     memberships: async (parent: Record<string, unknown>) => {
-      const rows = await db.select().from(membershipsTable).where(eq(membershipsTable.tenantId, Number(parent.id)));
+      const rows = await db.select().from(membershipsTable).where(eq(membershipsTable.tenantId, String(parent.id)));
       return rows.map((r) => ({ userId: String(r.userId), tenantId: String(r.tenantId), role: { id: "", name: "member", permissions: [] }, status: (r.status ?? "active").toUpperCase() as "ACTIVE" | "INVITED" | "DEACTIVATED" }));
     },
   },
 
   Workflow: {
     currentVersion: async (parent: Record<string, unknown>) => {
-      const [v] = await db.select().from(workflowVersionsTable).where(eq(workflowVersionsTable.workflowId, Number(parent.id))).orderBy(desc(workflowVersionsTable.version)).limit(1);
+      const [v] = await db.select().from(workflowVersionsTable).where(eq(workflowVersionsTable.workflowId, String(parent.id))).orderBy(desc(workflowVersionsTable.version)).limit(1);
       return v ? { id: String(v.id), versionNumber: v.version, graph: { nodes: Array.isArray(v.nodes) ? v.nodes : [], edges: [], variables: [], policies: [] }, checksum: `${String(parent.id)}-v${v.version}`, createdBy: String(v.workflowId), publishedAt: v.createdAt.toISOString() } : null;
     },
     versions: async (parent: Record<string, unknown>, args: Record<string, unknown>) => {
       const limit = clamp(args.first as number | null);
-      const rows = await db.select().from(workflowVersionsTable).where(eq(workflowVersionsTable.workflowId, Number(parent.id))).orderBy(desc(workflowVersionsTable.version)).limit(limit);
+      const rows = await db.select().from(workflowVersionsTable).where(eq(workflowVersionsTable.workflowId, String(parent.id))).orderBy(desc(workflowVersionsTable.version)).limit(limit);
       return {
         edges: rows.map((v) => ({ node: { id: String(v.id), versionNumber: v.version, graph: { nodes: Array.isArray(v.nodes) ? v.nodes : [], edges: [], variables: [], policies: [] }, checksum: `${String(parent.id)}-v${v.version}`, createdBy: String(v.workflowId), publishedAt: v.createdAt.toISOString() }, cursor: enc(v.id) })),
         pageInfo: { hasNextPage: rows.length === limit, hasPreviousPage: false, startCursor: rows.length > 0 ? enc(rows[0].id) : null, endCursor: rows.length > 0 ? enc(rows[rows.length - 1].id) : null },
@@ -224,14 +224,14 @@ export const resolvers = {
 
   Dashboard: {
     currentVersion: async (parent: Record<string, unknown>) => {
-      const [v] = await db.select().from(dashboardVersionsTable).where(eq(dashboardVersionsTable.dashboardId, Number(parent.id))).orderBy(desc(dashboardVersionsTable.versionNumber)).limit(1);
+      const [v] = await db.select().from(dashboardVersionsTable).where(eq(dashboardVersionsTable.dashboardId, String(parent.id))).orderBy(desc(dashboardVersionsTable.versionNumber)).limit(1);
       return v ? { id: String(v.id), versionNumber: v.versionNumber, layout: v.layoutJson, widgets: [], checksum: v.checksum ?? "" } : null;
     },
   },
 
   Template: {
     versions: async (parent: Record<string, unknown>) => {
-      const rows = await db.select().from(templateVersionsTable).where(eq(templateVersionsTable.templateId, Number(parent.id))).orderBy(desc(templateVersionsTable.createdAt));
+      const rows = await db.select().from(templateVersionsTable).where(eq(templateVersionsTable.templateId, String(parent.id))).orderBy(desc(templateVersionsTable.createdAt));
       return rows.map((v) => ({ id: String(v.id), versionNumber: v.version, templateId: String(v.templateId), createdAt: v.createdAt.toISOString() }));
     },
   },

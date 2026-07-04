@@ -217,13 +217,13 @@ export default function ConnectorsPage() {
                   )}
                   {installed && installation && (
                     <>
-                      <Button size="sm" variant="outline" className="flex-1" onClick={() => handleConfigure(installation.id)}>
+                      <Button size="sm" variant="outline" className="flex-1" onClick={() => handleConfigure(installation.id as any)}>
                         <Settings className="mr-2 h-4 w-4" /> Configure
                       </Button>
-                      <Button size="sm" variant="outline" className="flex-1" onClick={() => handleUpgrade(installation.id)}>
+                      <Button size="sm" variant="outline" className="flex-1" onClick={() => handleUpgrade(installation.id as any)}>
                         <ArrowUpCircle className="mr-2 h-4 w-4" /> Upgrade
                       </Button>
-                      <Button size="sm" variant="destructive" onClick={() => handleRemove(installation.id)}>
+                      <Button size="sm" variant="destructive" onClick={() => handleRemove(installation.id as any)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </>

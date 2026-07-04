@@ -21,7 +21,7 @@ export class AnalyticsProjection {
         payload: event.payload,
         metadata: event.metadata,
         timestamp: new Date(event.timestamp),
-      });
+      } as any);
     } catch (err) {
       console.error("[AnalyticsProjection] Failed to record event:", err);
     }
@@ -72,7 +72,7 @@ export class AnalyticsProjection {
       tenantId,
       period,
       recordedAt: new Date(event.timestamp),
-    });
+    } as any);
   }
 
   private async updateWorkflowAnalytics(event: PlatformEvent): Promise<void> {
@@ -90,7 +90,7 @@ export class AnalyticsProjection {
         .from(workflowAnalyticsTable)
         .where(
           and(
-            eq(workflowAnalyticsTable.workflowId, workflowId),
+            eq(workflowAnalyticsTable.workflowId, String(workflowId)),
             eq(workflowAnalyticsTable.period, period),
           ),
         )
@@ -117,7 +117,7 @@ export class AnalyticsProjection {
         await db
           .update(workflowAnalyticsTable)
           .set(updates)
-          .where(eq(workflowAnalyticsTable.id, existing.id));
+          .where(eq(workflowAnalyticsTable.id, String(existing.id)));
       } else {
         await db.insert(workflowAnalyticsTable).values({
           workflowId,
@@ -127,7 +127,7 @@ export class AnalyticsProjection {
           failureCount: event.type === "execution.failed" ? 1 : 0,
           period,
           recordedAt: new Date(event.timestamp),
-        });
+        } as any);
       }
     } catch (err) {
       console.error("[AnalyticsProjection] Failed to update workflow analytics:", err);
@@ -169,7 +169,7 @@ export class AnalyticsProjection {
             outputTokens: (existing.outputTokens ?? 0) + outputTokens,
             totalCost: String(Number(existing.totalCost ?? 0) + cost),
           })
-          .where(eq(aiAnalyticsTable.id, existing.id));
+          .where(eq(aiAnalyticsTable.id, String(existing.id)));
       } else {
         await db.insert(aiAnalyticsTable).values({
           tenantId,
@@ -182,7 +182,7 @@ export class AnalyticsProjection {
           avgLatencyMs: String((event.payload.latencyMs as number) ?? 0),
           period,
           recordedAt: new Date(event.timestamp),
-        });
+        } as any);
       }
     } catch (err) {
       console.error("[AnalyticsProjection] Failed to update AI analytics:", err);

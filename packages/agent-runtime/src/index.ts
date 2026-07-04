@@ -218,10 +218,10 @@ export class AgentRuntime {
       goal,
       steps: [
         { id: "1", description: "Analyze the task", status: "pending" },
-        { id: 2, description: "Execute the task", status: "pending" },
-        { id: 3, description: "Verify the result", status: "pending" },
+        { id: "2", description: "Execute the task", status: "pending" },
+        { id: "3", description: "Verify the result", status: "pending" },
       ],
-      currentStep: 0,
+      currentStep: "",
       completedSteps: [],
     };
   }

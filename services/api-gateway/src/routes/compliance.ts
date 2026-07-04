@@ -15,7 +15,7 @@ router.get(
       endDate?: string;
     };
 
-    const conditions = [eq(auditLogTable.tenantId, req.tenantId ?? 0)];
+    const conditions = [eq(auditLogTable.tenantId, req.tenantId ?? "")];
 
     if (startDate) {
       conditions.push(gte(auditLogTable.createdAt, new Date(startDate)));
@@ -52,7 +52,7 @@ router.get(
   "/compliance/audit/stats",
   authorize({ resource: "audit", action: "read" }),
   async (req: Request, res: Response): Promise<void> => {
-    const tenantId = req.tenantId ?? 0;
+    const tenantId = req.tenantId ?? "";
 
     const totalEntries = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -92,7 +92,7 @@ router.get(
   "/compliance/retention",
   authorize({ resource: "compliance", action: "read" }),
   async (req: Request, res: Response): Promise<void> => {
-    const tenantId = req.tenantId ?? 0;
+    const tenantId = req.tenantId ?? "";
     const [tenant] = await db
       .select()
       .from(tenantsTable)
@@ -115,7 +115,7 @@ router.patch(
   "/compliance/retention",
   authorize({ resource: "compliance", action: "write" }),
   async (req: Request, res: Response): Promise<void> => {
-    const tenantId = req.tenantId ?? 0;
+    const tenantId = req.tenantId ?? "";
     const {
       auditLogRetentionDays,
       executionRetentionDays,
@@ -159,7 +159,7 @@ router.post(
   "/compliance/gdpr/export",
   authorize({ resource: "compliance", action: "read" }),
   async (req: Request, res: Response): Promise<void> => {
-    const tenantId = req.tenantId ?? 0;
+    const tenantId = req.tenantId ?? "";
     const userId = req.user?.id;
 
     if (!userId) {
@@ -256,7 +256,7 @@ router.post(
   "/api/v1/compliance/gdpr/export",
   authorize({ resource: "compliance", action: "read" }),
   async (req: Request, res: Response): Promise<void> => {
-    const tenantId = req.tenantId ?? 0;
+    const tenantId = req.tenantId ?? "";
     const userId = req.user?.id;
 
     if (!userId) {
@@ -352,7 +352,7 @@ router.post(
     const [deletionRequest] = await db
       .insert(gdprRequestsTable)
       .values({
-        tenantId: req.tenantId ?? 0,
+        tenantId: req.tenantId ?? "",
         userId,
         requestType: "deletion",
         status: "completed",

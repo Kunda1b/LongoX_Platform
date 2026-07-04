@@ -53,7 +53,7 @@ function makeManifest(): ConnectorManifest {
 
 function makeState(overrides?: Partial<LifecycleState>): LifecycleState {
   return {
-    installationId: 1,
+    installationId: "1",
     connectorId: "1",
     connectorName: "test",
     tenantId: "1",
@@ -73,8 +73,8 @@ function makeState(overrides?: Partial<LifecycleState>): LifecycleState {
 describe("LifecycleEngine", () => {
   it("createInitialState sets correct defaults", () => {
     const manifest = makeManifest();
-    const state = lifecycleEngine.createInitialState(manifest, 42);
-    expect(state.installationId).toBe(0);
+    const state = lifecycleEngine.createInitialState(manifest, "42");
+    expect(state.installationId).toBe("");
     expect(state.connectorName).toBe("test");
     expect(state.tenantId).toBe(42);
     expect(state.currentEvent).toBe("installing");
@@ -172,14 +172,14 @@ describe("LifecycleEngine", () => {
   });
 
   it("getState returns stored state", async () => {
-    const state = makeState({ installationId: 999 });
+    const state = makeState({ installationId: "999" });
     await lifecycleEngine.transition(state, "installed");
-    const retrieved = lifecycleEngine.getState(999);
+    const retrieved = lifecycleEngine.getState("999");
     expect(retrieved).toBeDefined();
     expect(retrieved!.currentEvent).toBe("installed");
   });
 
   it("getState returns undefined for unknown id", () => {
-    expect(lifecycleEngine.getState(-1)).toBeUndefined();
+    expect(lifecycleEngine.getState("")).toBeUndefined();
   });
 });

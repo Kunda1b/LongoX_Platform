@@ -18,7 +18,7 @@ interface AvailableRegion {
 }
 
 export class TenantPlacementService {
-  async determinePlacement(tenantId: string, tierId: number): Promise<PlacementResult> {
+  async determinePlacement(tenantId: string, tierId: string): Promise<PlacementResult> {
     const [tier] = await db
       .select()
       .from(tenantTiersTable)
@@ -76,7 +76,7 @@ export class TenantPlacementService {
     };
   }
 
-  async getAvailableRegions(tierId: number): Promise<AvailableRegion[]> {
+  async getAvailableRegions(tierId: string): Promise<AvailableRegion[]> {
     const [tier] = await db
       .select()
       .from(tenantTiersTable)
@@ -108,7 +108,7 @@ export class TenantPlacementService {
   async getClusterForTenant(
     tenantId: string,
     regionId: string,
-    tierId: number,
+    tierId: string,
   ): Promise<{ clusterId: string; region: typeof regionsTable.$inferSelect }> {
     const [region] = await db
       .select()
@@ -191,7 +191,8 @@ export class TenantPlacementService {
     region: typeof regionsTable.$inferSelect,
   ): Promise<PlacementResult> {
     const clusterId = `eks-${region.regionId}-dedicated-${tenantId}`;
-    const networkCidr = `10.${(tenantId % 256)}.0.0/16`;
+    const tenantHash = Array.from(tenantId).reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) | 0, 0);
+    const networkCidr = `10.${Math.abs(tenantHash) % 256}.0.0/16`;
 
     const [existing] = await db
       .select()

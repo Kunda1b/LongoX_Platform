@@ -220,20 +220,20 @@ export class ReleaseRollbackService {
       .orderBy(desc(releaseSnapshotsTable.createdAt));
   }
 
-  async getRollbackStatus(rollbackId: number): Promise<typeof releaseSnapshotsTable.$inferSelect | null> {
+  async getRollbackStatus(rollbackId: string): Promise<typeof releaseSnapshotsTable.$inferSelect | null> {
     const [record] = await db
       .select()
       .from(releaseSnapshotsTable)
-      .where(eq(releaseSnapshotsTable.id, rollbackId))
+      .where(eq(releaseSnapshotsTable.id, String(rollbackId)))
       .limit(1);
     return record ?? null;
   }
 
-  async cancelRollback(rollbackId: number): Promise<{ cancelled: boolean }> {
+  async cancelRollback(rollbackId: string): Promise<{ cancelled: boolean }> {
     const [record] = await db
       .select()
       .from(releaseSnapshotsTable)
-      .where(eq(releaseSnapshotsTable.id, rollbackId))
+      .where(eq(releaseSnapshotsTable.id, String(rollbackId)))
       .limit(1);
 
     if (!record) {

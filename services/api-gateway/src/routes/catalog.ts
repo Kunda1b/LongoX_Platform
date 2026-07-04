@@ -93,7 +93,7 @@ router.get("/connectors", authorize({ resource: "connectors", action: "read" }),
       resourceTypes: ["connector"],
       limit: 100,
     });
-    const ids = searchResult.results.map((r) => parseInt(r.resourceId, 10));
+    const ids = searchResult.results.map((r) => r.resourceId);
     if (ids.length > 0) {
       conditions.push(inArray(connectorsTable.id, ids));
     } else {
@@ -239,7 +239,7 @@ router.get("/apps", authorize({ resource: "apps", action: "read" }), async (req,
       resourceTypes: ["app"],
       limit: 100,
     });
-    const ids = searchResult.results.map((r) => parseInt(r.resourceId, 10));
+    const ids = searchResult.results.map((r) => r.resourceId);
     if (ids.length > 0) {
       conditions.push(inArray(appsTable.id, ids));
     } else {
@@ -362,7 +362,7 @@ router.post("/credentials", authorize({ resource: "credentials", action: "write"
     .insert(credentialsTable)
     .values({
       name: body.name.trim(),
-      connectorId: Number(body.connectorId),
+      connectorId: String(body.connectorId),
       connectorName: body.connectorName.trim(),
       fields: body.fields ?? [],
     })

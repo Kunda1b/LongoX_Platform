@@ -358,7 +358,7 @@ export function WorkflowDetail() {
 
       <div className="flex-1 mt-4 min-h-0">
         <WorkflowBuilder
-          workflowId={workflow.id}
+          workflowId={workflow.id as any}
           initialNodes={workflow.nodes ?? []}
           nodeTypesList={nodeTypes}
           onSaved={handleSaved}

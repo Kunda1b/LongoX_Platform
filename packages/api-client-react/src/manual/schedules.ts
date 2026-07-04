@@ -233,7 +233,7 @@ export function useUpdateSchedule<TError = ErrorType<unknown>>(
 }
 
 export function useDeleteSchedule<TError = ErrorType<unknown>>(
-  options?: UseMutationOptions<void, TError, number>,
+  options?: UseMutationOptions<void, TError, string>,
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -247,7 +247,7 @@ export function useDeleteSchedule<TError = ErrorType<unknown>>(
 }
 
 export function usePauseSchedule<TError = ErrorType<unknown>>(
-  options?: UseMutationOptions<Schedule, TError, number>,
+  options?: UseMutationOptions<Schedule, TError, string>,
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -261,7 +261,7 @@ export function usePauseSchedule<TError = ErrorType<unknown>>(
 }
 
 export function useActivateSchedule<TError = ErrorType<unknown>>(
-  options?: UseMutationOptions<Schedule, TError, number>,
+  options?: UseMutationOptions<Schedule, TError, string>,
 ) {
   const queryClient = useQueryClient();
   return useMutation({

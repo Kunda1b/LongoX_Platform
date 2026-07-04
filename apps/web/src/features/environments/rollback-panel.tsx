@@ -30,7 +30,7 @@ interface Promotion {
 export function RollbackPanel() {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
-  const [rollingBack, setRollingBack] = useState<number | null>(null);
+  const [rollingBack, setRollingBack] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -43,7 +43,7 @@ export function RollbackPanel() {
   }, []);
 
   const handleRollback = async (promotionId: number) => {
-    setRollingBack(promotionId);
+    setRollingBack(String(promotionId));
     try {
       const res = await fetch("/api/environments/rollback", {
         method: "POST",
@@ -55,7 +55,7 @@ export function RollbackPanel() {
         throw new Error(err.error ?? "Rollback failed");
       }
       toast({ title: "Rollback successful" });
-      setPromotions((prev) => prev.filter((p) => p.id !== promotionId));
+      setPromotions((prev) => prev.filter((p) => p.id !== String(promotionId)));
     } catch (err) {
       toast({
         title: err instanceof Error ? err.message : "Rollback failed",
@@ -119,11 +119,11 @@ export function RollbackPanel() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleRollback(p.id)}
-                  disabled={rollingBack === p.id}
+                  onClick={() => handleRollback(p.id as any)}
+                  disabled={rollingBack === String(p.id)}
                 >
                   <Undo2 className="h-3 w-3 mr-1" />
-                  {rollingBack === p.id ? "Rolling back..." : "Rollback"}
+                  {rollingBack === String(p.id) ? "Rolling back..." : "Rollback"}
                 </Button>
               </TableCell>
             </TableRow>

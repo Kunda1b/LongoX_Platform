@@ -96,7 +96,7 @@ router.post("/datasources", async (req, res): Promise<void> => {
       description: description ? String(description) : undefined,
       kind: String(kind) as any,
       config: (config ?? {}) as Record<string, unknown>,
-      createdBy: Number(createdBy),
+      createdBy: String(createdBy),
     });
     res.status(201).json(ds.toJSON());
   } catch (err) {

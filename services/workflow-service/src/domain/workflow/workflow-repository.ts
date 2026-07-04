@@ -12,9 +12,9 @@ export interface WorkflowFilters {
 export interface WorkflowRepository {
   findById(id: string): Promise<Workflow | null>;
   findAll(filters?: WorkflowFilters): Promise<Workflow[]>;
-  count(filters?: WorkflowFilters): Promise<string>;
+  count(filters?: WorkflowFilters): Promise<number>;
   save(workflow: Workflow): Promise<Workflow>;
   create(data: Partial<Workflow>): Promise<Workflow>;
   delete(id: string): Promise<boolean>;
-  getNextVersion(workflowId: string): Promise<string>;
+  getNextVersion(workflowId: string): Promise<number>;
 }

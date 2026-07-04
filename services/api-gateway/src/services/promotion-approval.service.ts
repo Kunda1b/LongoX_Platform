@@ -95,7 +95,7 @@ async function writeAuditLog(
   metadata: Record<string, unknown> = {},
 ): Promise<void> {
   await db.insert(auditLogTable).values({
-    tenantId: tenantId ?? 0,
+    tenantId: tenantId ?? "",
     actorType: "user",
     actorId,
     action,
@@ -258,7 +258,7 @@ export class PromotionApprovalService {
   }
 
   async approvePromotion(
-    promotionId: number,
+    promotionId: string,
     approvedBy: string,
     note?: string,
   ): Promise<{
@@ -361,7 +361,7 @@ export class PromotionApprovalService {
   }
 
   async rejectPromotion(
-    promotionId: number,
+    promotionId: string,
     reason: string,
     rejectedBy: string,
   ): Promise<{
@@ -441,7 +441,7 @@ export class PromotionApprovalService {
   }
 
   async rollbackPromotion(
-    promotionId: number,
+    promotionId: string,
     rolledBackBy: string,
   ): Promise<{
     promotion: typeof workflowPromotionsTable.$inferSelect;

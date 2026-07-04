@@ -91,7 +91,7 @@ export default function PromptsGovernancePage() {
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [testOpen, setTestOpen] = useState(false);
   const [testVars, setTestVars] = useState("");
-  const [rollbackVersion, setRollbackVersion] = useState<number | null>(null);
+  const [rollbackVersion, setRollbackVersion] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", description: "", content: "", tags: "" });
 
   const { data: prompts, isLoading } = useQuery<Prompt[]>({

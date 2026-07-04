@@ -424,7 +424,7 @@ export function ExecutionDetail() {
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedStepId, setSelectedStepId] = useState<number | null>(null);
+  const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   // Mobile: "timeline" | "detail"
   const [mobileView, setMobileView] = useState<"timeline" | "detail">(
     "timeline",
@@ -449,7 +449,7 @@ export function ExecutionDetail() {
   const retryMutation = useRetryExecution({
     mutation: {
       onSuccess: (newExec) => {
-        const e = newExec as { id: string };
+        const e = newExec as unknown as { id: string };
         queryClient.invalidateQueries({
           queryKey: getListExecutionsQueryKey(),
         });

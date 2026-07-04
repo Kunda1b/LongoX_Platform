@@ -223,7 +223,7 @@ export function useUpdateDataSource<TError = ErrorType<unknown>>(
 }
 
 export function useDeleteDataSource<TError = ErrorType<unknown>>(
-  options?: UseMutationOptions<void, TError, number>,
+  options?: UseMutationOptions<void, TError, string>,
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -237,7 +237,7 @@ export function useDeleteDataSource<TError = ErrorType<unknown>>(
 }
 
 export function useTestConnection<TError = ErrorType<unknown>>(
-  options?: UseMutationOptions<ConnectionTestResult, TError, number>,
+  options?: UseMutationOptions<ConnectionTestResult, TError, string>,
 ) {
   return useMutation({
     mutationFn: (id: string) => testConnection(id),

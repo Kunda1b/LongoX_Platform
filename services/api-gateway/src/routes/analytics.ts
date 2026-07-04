@@ -58,7 +58,7 @@ router.get("/analytics/workflows", authorize("analytics.read"), requireTenantCon
     .orderBy(desc(executionsTable.startedAt));
 
   const stats = new Map<
-    number,
+    string,
     {
       workflowId: string;
       workflowName: string;

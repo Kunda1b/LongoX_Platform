@@ -18,7 +18,7 @@ type SSEClient = {
   executionId: string;
 };
 
-const clients = new Map<number, Set<SSEClient>>();
+const clients = new Map<string, Set<SSEClient>>();
 
 function addClient(executionId: string, client: SSEClient): void {
   if (!clients.has(executionId)) clients.set(executionId, new Set());
@@ -77,12 +77,12 @@ router.get(
     const executionIds = req.query["executionIds"]
       ? String(req.query["executionIds"])
           .split(",")
-          .map(Number)
-          .filter((n) => !isNaN(n) && n > 0)
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0)
       : [];
 
-    const paramId = parseInt(String(req.params["id"] ?? "0"), 10);
-    if (!isNaN(paramId) && paramId > 0) executionIds.push(paramId);
+    const paramId = String(req.params["id"] ?? "");
+    if (paramId) executionIds.push(paramId);
 
     if (executionIds.length === 0) {
       res.status(400).json({ error: "At least one execution ID is required" });
@@ -284,9 +284,9 @@ router.post(
   ["/api/executions/:id/approve", "/api/v1/executions/:id/approve"],
   authorize("executions:run"),
   async (req: Request, res: Response): Promise<void> => {
-    const executionId = parseInt(String(req.params["id"] ?? "0"), 10);
+    const executionId = String(req.params["id"] ?? "");
     const { task_id, decision, note } = req.body as {
-      task_id?: number;
+      task_id?: string;
       decision?: "approved" | "rejected";
       note?: string;
     };

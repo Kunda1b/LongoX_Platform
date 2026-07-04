@@ -47,8 +47,8 @@ function getWorkerDeploymentName(tenantId: string): string {
 
 interface MigrationPlan {
   plan: {
-    fromTierId: number;
-    toTierId: number;
+    fromTierId: string;
+    toTierId: string;
     fromPlacement: string;
     toPlacement: string;
     fromCluster: string;
@@ -88,7 +88,7 @@ interface MigrationStatus {
 export class TenantMigrationService {
   async planMigration(
     tenantId: string,
-    targetTierId: number,
+    targetTierId: string,
   ): Promise<MigrationPlan> {
     const [targetTier] = await db
       .select()
@@ -190,7 +190,7 @@ export class TenantMigrationService {
 
     return {
       plan: {
-        fromTierId: assignment?.tierId ?? 0,
+        fromTierId: assignment?.tierId ?? "",
         toTierId: targetTierId,
         fromPlacement,
         toPlacement: targetPlacement,
@@ -205,7 +205,7 @@ export class TenantMigrationService {
 
   async executeMigration(
     tenantId: string,
-    planId: number,
+    planId: string,
   ): Promise<MigrationStatus> {
     const [migration] = await db
       .select()

@@ -41,7 +41,7 @@ router.get(
       return;
     }
     try {
-      const result = await backupRestore.listBackups(Number(tenantId), {
+      const result = await backupRestore.listBackups(String(tenantId), {
         dateFrom,
         dateTo,
         scope: scope as any,
@@ -110,7 +110,7 @@ router.post(
       return;
     }
     try {
-      const result = await backupRestore.restoreBackup(id, Number(tenantId), {
+      const result = await backupRestore.restoreBackup(id, String(tenantId), {
         restoreType: restoreType as any,
         targetEnvironment: targetEnvironment as string | undefined,
         tables: tables as string[] | undefined,

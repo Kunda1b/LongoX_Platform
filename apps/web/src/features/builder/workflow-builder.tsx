@@ -1573,7 +1573,7 @@ function WorkflowBuilderInner({
 
   const handleSave = useCallback(() => {
     const wfNodes = flowNodesToWorkflow(nodes);
-    updateMutation.mutate({ id: workflowId, data: { nodes: wfNodes } });
+    updateMutation.mutate({ id: workflowId as any, data: { nodes: wfNodes } });
   }, [nodes, workflowId, updateMutation]);
 
   // ── Shared ReactFlow canvas props ──────────────────────────────────────────

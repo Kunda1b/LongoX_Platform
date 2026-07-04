@@ -114,7 +114,7 @@ async function ensureRbacSeed() {
 
   // 1. Upsert permissions — get existing, insert only missing ones
   const existingPerms = await db.select().from(permissionsTable);
-  const permMap: Record<string, number> = Object.fromEntries(
+  const permMap: Record<string, string> = Object.fromEntries(
     existingPerms.map((p) => [`${p.resource}:${p.action}`, p.id]),
   );
   const missingPerms = SYSTEM_PERMISSIONS.filter(
@@ -133,7 +133,7 @@ async function ensureRbacSeed() {
     .select()
     .from(rolesTable)
     .where(isNull(rolesTable.tenantId));
-  const roleMap: Record<string, number> = Object.fromEntries(
+  const roleMap: Record<string, string> = Object.fromEntries(
     existingRoles.map((r) => [r.name, r.id]),
   );
   for (const roleDef of SYSTEM_ROLES) {
@@ -459,7 +459,7 @@ router.delete("/user-roles/:id", authorize({ resource: "users", action: "write" 
 
 router.get("/members", authorize({ resource: "users", action: "read" }), async (req, res): Promise<void> => {
   await ensureRbacSeed();
-  const tenantId = req.tenantId as number;
+  const tenantId = req.tenantId as string;
 
   const members = await db
     .select({
@@ -513,12 +513,12 @@ router.put("/members/:userId/role", authorize({ resource: "users", action: "writ
   await ensureRbacSeed();
   const { userId } = req.params;
   const { roleId } = req.body as { roleId: string };
-  const tenantId = req.tenantId as number;
+  const tenantId = req.tenantId as string;
 
   const [user] = await db
     .select({ id: usersTable.id })
     .from(usersTable)
-    .where(and(eq(usersTable.id, Number(userId)), eq(usersTable.tenantId, tenantId)));
+    .where(and(eq(usersTable.id, String(userId)), eq(usersTable.tenantId, tenantId)));
 
   if (!user) {
     res.status(404).json({ error: "User not found in this workspace" });

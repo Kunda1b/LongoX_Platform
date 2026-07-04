@@ -42,7 +42,7 @@ export function PromoteDialog() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          workflowId: Number(workflowId),
+          workflowId: String(workflowId),
           fromEnvironment: fromEnv,
           toEnvironment: toEnv,
           notes: notes || undefined,
