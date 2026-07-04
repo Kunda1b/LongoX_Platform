@@ -1,11 +1,11 @@
+/**
+ * Workflow REST routes.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ */
+
 import { Router, type IRouter } from "express";
-import { eq, like, and, desc } from "drizzle-orm";
-import {
-  db,
-  workflowsTable,
-  workflowVersionsTable,
-  workflowPromotionsTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import {
   ListWorkflowsQueryParams,
   CreateWorkflowBody,
@@ -25,15 +25,15 @@ import { publishWorkflow } from "../../application/commands/publish-workflow.com
 
 const router: IRouter = Router();
 
-function serializeWorkflow(w: typeof workflowsTable.$inferSelect) {
+function serializeWorkflow(w: any) {
   return {
     ...w,
     description: w.description ?? null,
-    lastRunAt: w.lastRunAt ? w.lastRunAt.toISOString() : null,
+    lastRunAt: w.lastRunAt ? new Date(w.lastRunAt).toISOString() : null,
     lastRunStatus: w.lastRunStatus ?? null,
     nodes: w.nodes ?? null,
-    createdAt: w.createdAt.toISOString(),
-    updatedAt: w.updatedAt.toISOString(),
+    createdAt: new Date(w.createdAt).toISOString(),
+    updatedAt: new Date(w.updatedAt).toISOString(),
   };
 }
 
@@ -44,17 +44,14 @@ router.get("/workflows", authorize({ resource: "workflows", action: "read" }), a
     return;
   }
 
-  const conditions = [];
-  if (params.data.status)
-    conditions.push(eq(workflowsTable.status, params.data.status));
-  if (params.data.search)
-    conditions.push(like(workflowsTable.name, `%${params.data.search}%`));
+  const where: Record<string, unknown> = {};
+  if (params.data.status) where.status = params.data.status;
+  if (params.data.search) where.name = { contains: params.data.search, mode: "insensitive" };
 
-  const workflows = await db
-    .select()
-    .from(workflowsTable)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(workflowsTable.updatedAt);
+  const workflows = await prisma.workflow.findMany({
+    where,
+    orderBy: { updatedAt: "asc" },
+  });
 
   res.json(workflows.map(serializeWorkflow));
 });
@@ -69,16 +66,15 @@ router.post("/workflows", authorize({ resource: "workflows", action: "write" }),
   const { nodes, ...rest } = parsed.data;
   const nodeCount = nodes ? nodes.length : 0;
 
-  const [workflow] = await db
-    .insert(workflowsTable)
-    .values({ ...rest, nodes: nodes ?? null, nodeCount } as any)
-    .returning();
+  const workflow = await prisma.workflow.create({
+    data: { ...rest, nodes: nodes ?? null, nodeCount } as any,
+  });
 
   await writeAudit(
     "workflow.created",
     "workflow",
     String(workflow.id),
-    { name: workflow.name, triggerType: workflow.triggerType },
+    { name: workflow.name, triggerType: (workflow as any).triggerType },
     "user",
   );
   res.status(201).json(serializeWorkflow(workflow));
@@ -91,10 +87,9 @@ router.get("/workflows/:id", authorize({ resource: "workflows", action: "read" }
     return;
   }
 
-  const [workflow] = await db
-    .select()
-    .from(workflowsTable)
-    .where(eq(workflowsTable.id, params.data.id));
+  const workflow = await prisma.workflow.findUnique({
+    where: { id: params.data.id },
+  });
   if (!workflow) {
     res.status(404).json({ error: "Workflow not found" });
     return;
@@ -122,11 +117,10 @@ router.patch("/workflows/:id", authorize({ resource: "workflows", action: "write
     updates.nodeCount = nodes.length;
   }
 
-  const [workflow] = await db
-    .update(workflowsTable)
-    .set(updates)
-    .where(eq(workflowsTable.id, params.data.id))
-    .returning();
+  const workflow = await prisma.workflow.update({
+    where: { id: params.data.id },
+    data: updates as any,
+  }).catch(() => null);
   if (!workflow) {
     res.status(404).json({ error: "Workflow not found" });
     return;
@@ -134,19 +128,20 @@ router.patch("/workflows/:id", authorize({ resource: "workflows", action: "write
 
   // Save a version snapshot when nodes are updated
   if (nodes !== undefined && nodes.length > 0) {
-    const existing = await db
-      .select({ version: workflowVersionsTable.version })
-      .from(workflowVersionsTable)
-      .where(eq(workflowVersionsTable.workflowId, params.data.id))
-      .orderBy(desc(workflowVersionsTable.version))
-      .limit(1);
-    const nextVersion = (existing[0]?.version ?? 0) + 1;
-    await db.insert(workflowVersionsTable).values({
-      workflowId: params.data.id,
-      version: nextVersion,
-      name: workflow.name,
-      nodes,
-      changeNote: "Manual save",
+    const existing = await prisma.workflowVersion.findFirst({
+      where: { workflowId: params.data.id },
+      orderBy: { versionNumber: "desc" },
+      select: { versionNumber: true },
+    });
+    const nextVersion = (existing?.versionNumber ?? 0) + 1;
+    await prisma.workflowVersion.create({
+      data: {
+        workflowId: params.data.id,
+        versionNumber: nextVersion,
+        graphJson: { nodes } as any,
+        checksum: "",
+        releaseNotes: "Manual save",
+      } as any,
     });
   }
 
@@ -167,10 +162,9 @@ router.delete("/workflows/:id", authorize({ resource: "workflows", action: "dele
     return;
   }
 
-  const [workflow] = await db
-    .delete(workflowsTable)
-    .where(eq(workflowsTable.id, params.data.id))
-    .returning();
+  const workflow = await prisma.workflow.delete({
+    where: { id: params.data.id },
+  }).catch(() => null);
   if (!workflow) {
     res.status(404).json({ error: "Workflow not found" });
     return;
@@ -193,21 +187,19 @@ router.post("/workflows/:id/toggle", authorize({ resource: "workflows", action: 
     return;
   }
 
-  const [existing] = await db
-    .select()
-    .from(workflowsTable)
-    .where(eq(workflowsTable.id, params.data.id));
+  const existing = await prisma.workflow.findUnique({
+    where: { id: params.data.id },
+  });
   if (!existing) {
     res.status(404).json({ error: "Workflow not found" });
     return;
   }
 
   const newStatus = existing.status === "active" ? "inactive" : "active";
-  const [workflow] = await db
-    .update(workflowsTable)
-    .set({ status: newStatus })
-    .where(eq(workflowsTable.id, params.data.id))
-    .returning();
+  const workflow = await prisma.workflow.update({
+    where: { id: params.data.id },
+    data: { status: newStatus },
+  });
 
   await writeAudit(
     `workflow.${newStatus}`,
@@ -226,17 +218,16 @@ router.post("/workflows/:id/run", authorize({ resource: "workflows", action: "ru
     return;
   }
 
-  const [workflow] = await db
-    .select()
-    .from(workflowsTable)
-    .where(eq(workflowsTable.id, params.data.id));
+  const workflow = await prisma.workflow.findUnique({
+    where: { id: params.data.id },
+  });
   if (!workflow) {
     res.status(404).json({ error: "Workflow not found" });
     return;
   }
 
-  const nodes: any[] = Array.isArray(workflow.nodes)
-    ? (workflow.nodes as any[])
+  const nodes: any[] = Array.isArray((workflow as any).nodes)
+    ? ((workflow as any).nodes as any[])
     : [];
 
   if (nodes.length === 0) {
@@ -257,10 +248,10 @@ router.post("/workflows/:id/run", authorize({ resource: "workflows", action: "ru
 
   res.status(202).json({
     id: execution.id,
-    workflowId: execution.workflowId,
-    workflowName: execution.workflowName,
-    status: execution.status,
-    startedAt: execution.startedAt.toISOString(),
+    workflowId: (execution as any).workflowId,
+    workflowName: (execution as any).workflowName,
+    status: (execution as any).status,
+    startedAt: (execution as any).startedAt.toISOString(),
     finishedAt: null,
     durationMs: null,
     errorMessage: null,
@@ -274,10 +265,9 @@ router.post("/workflows/:id/publish", authorize({ resource: "workflows", action:
     return;
   }
 
-  const [workflow] = await db
-    .select()
-    .from(workflowsTable)
-    .where(eq(workflowsTable.id, params.data.id));
+  const workflow = await prisma.workflow.findUnique({
+    where: { id: params.data.id },
+  });
   if (!workflow) {
     res.status(404).json({ error: "Workflow not found" });
     return;
@@ -286,7 +276,7 @@ router.post("/workflows/:id/publish", authorize({ resource: "workflows", action:
   const changeNote =
     (req.body as { changeNote?: string })?.changeNote ?? "Published";
 
-  const rawNodes = workflow.nodes as any;
+  const rawNodes = (workflow as any).nodes as any;
   const graph = {
     nodes: Array.isArray(rawNodes) ? rawNodes : Array.isArray(rawNodes?.nodes) ? rawNodes.nodes : [],
     edges: Array.isArray(rawNodes?.edges) ? rawNodes.edges : [],
@@ -331,27 +321,25 @@ router.post("/workflows/:id/duplicate", authorize({ resource: "workflows", actio
     return;
   }
 
-  const [existing] = await db
-    .select()
-    .from(workflowsTable)
-    .where(eq(workflowsTable.id, params.data.id));
+  const existing = await prisma.workflow.findUnique({
+    where: { id: params.data.id },
+  });
   if (!existing) {
     res.status(404).json({ error: "Workflow not found" });
     return;
   }
 
-  const [workflow] = await db
-    .insert(workflowsTable)
-    .values({
+  const workflow = await prisma.workflow.create({
+    data: {
       name: `${existing.name} (copy)`,
       description: existing.description,
       status: "draft",
-      triggerType: existing.triggerType,
-      nodeCount: existing.nodeCount,
+      triggerType: (existing as any).triggerType,
+      nodeCount: (existing as any).nodeCount ?? 0,
       executionCount: 0,
-      nodes: existing.nodes,
-    } as any)
-    .returning();
+      nodes: (existing as any).nodes,
+    } as any,
+  });
 
   await writeAudit(
     "workflow.duplicated",
@@ -374,22 +362,21 @@ router.get("/workflows/:id/versions", authorize({ resource: "workflows", action:
     return;
   }
 
-  const versions = await db
-    .select()
-    .from(workflowVersionsTable)
-    .where(eq(workflowVersionsTable.workflowId, params.data.id))
-    .orderBy(desc(workflowVersionsTable.version))
-    .limit(20);
+  const versions = await prisma.workflowVersion.findMany({
+    where: { workflowId: params.data.id },
+    orderBy: { versionNumber: "desc" },
+    take: 20,
+  });
 
   res.json(
-    versions.map((v) => ({
+    versions.map((v: any) => ({
       id: v.id,
       workflowId: v.workflowId,
-      version: v.version,
+      version: v.versionNumber,
       name: v.name,
       nodes: v.nodes,
       changeNote: v.changeNote ?? null,
-      createdAt: v.createdAt.toISOString(),
+      createdAt: new Date(v.createdAt).toISOString(),
     })),
   );
 });
@@ -403,24 +390,22 @@ router.get("/workflows/:id/promotions", authorize({ resource: "workflows", actio
     return;
   }
 
-  const [workflow] = await db
-    .select()
-    .from(workflowsTable)
-    .where(eq(workflowsTable.id, params.data.id));
+  const workflow = await prisma.workflow.findUnique({
+    where: { id: params.data.id },
+  });
   if (!workflow) {
     res.status(404).json({ error: "Workflow not found" });
     return;
   }
 
-  const promotions = await db
-    .select()
-    .from(workflowPromotionsTable)
-    .where(eq(workflowPromotionsTable.workflowId, params.data.id))
-    .orderBy(desc(workflowPromotionsTable.createdAt))
-    .limit(20);
+  const promotions = await prisma.workflowPromotion.findMany({
+    where: { workflowId: params.data.id },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  });
 
   res.json(
-    promotions.map((p) => ({
+    promotions.map((p: any) => ({
       id: p.id,
       workflowId: p.workflowId,
       workflowName: p.workflowName,
@@ -430,7 +415,7 @@ router.get("/workflows/:id/promotions", authorize({ resource: "workflows", actio
       promotedBy: p.promotedBy,
       approvedBy: p.approvedBy ?? null,
       notes: p.notes ?? null,
-      createdAt: p.createdAt.toISOString(),
+      createdAt: new Date(p.createdAt).toISOString(),
     })),
   );
 });
@@ -442,10 +427,9 @@ router.post("/workflows/:id/promotions", authorize({ resource: "workflows", acti
     return;
   }
 
-  const [workflow] = await db
-    .select()
-    .from(workflowsTable)
-    .where(eq(workflowsTable.id, params.data.id));
+  const workflow = await prisma.workflow.findUnique({
+    where: { id: params.data.id },
+  });
   if (!workflow) {
     res.status(404).json({ error: "Workflow not found" });
     return;
@@ -464,9 +448,8 @@ router.post("/workflows/:id/promotions", authorize({ resource: "workflows", acti
     return;
   }
 
-  const [promotion] = await db
-    .insert(workflowPromotionsTable)
-    .values({
+  const promotion = await prisma.workflowPromotion.create({
+    data: {
       workflowId: workflow.id,
       workflowName: workflow.name,
       fromEnvironment,
@@ -474,8 +457,8 @@ router.post("/workflows/:id/promotions", authorize({ resource: "workflows", acti
       status: "promoted",
       promotedBy: "user",
       notes: notes ?? null,
-    })
-    .returning();
+    } as any,
+  });
 
   await writeAudit(
     "workflow.promoted",
@@ -487,15 +470,15 @@ router.post("/workflows/:id/promotions", authorize({ resource: "workflows", acti
 
   res.status(201).json({
     id: promotion.id,
-    workflowId: promotion.workflowId,
-    workflowName: promotion.workflowName,
-    fromEnvironment: promotion.fromEnvironment,
-    toEnvironment: promotion.toEnvironment,
-    status: promotion.status,
-    promotedBy: promotion.promotedBy,
-    approvedBy: promotion.approvedBy ?? null,
-    notes: promotion.notes ?? null,
-    createdAt: promotion.createdAt.toISOString(),
+    workflowId: (promotion as any).workflowId,
+    workflowName: (promotion as any).workflowName,
+    fromEnvironment: (promotion as any).fromEnvironment,
+    toEnvironment: (promotion as any).toEnvironment,
+    status: (promotion as any).status,
+    promotedBy: (promotion as any).promotedBy,
+    approvedBy: (promotion as any).approvedBy ?? null,
+    notes: (promotion as any).notes ?? null,
+    createdAt: new Date((promotion as any).createdAt).toISOString(),
   });
 });
 
