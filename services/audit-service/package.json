@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@longox/db": "workspace:*",
+    "@longox/shared-queue": "workspace:*",
     "@longox/shared-rbac": "workspace:*",
     "express": "^5.2.1"
   },

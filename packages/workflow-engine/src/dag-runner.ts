@@ -31,6 +31,7 @@ import {
   DEFAULT_RETRY_POLICY,
   TRIGGER_RETRY_POLICY,
   computeBackoffDelay,
+  MAX_LOOP_ITERATIONS_DEFAULT,
   type LeaseStore,
 } from "./types";
 import { NoOpLeaseStore } from "./node-lease";
@@ -162,15 +163,28 @@ export class DAGRunner {
           return;
         }
 
-        // ── Idempotency check ───────────────────────────────────────────────
+        // ── Idempotency check (architecture §9.1) ─────────────────────────
+        // The idempotency key is `${workflowId}|${executionId}|${nodeId}|${attempt}`.
+        // For the resume-skip path we probe attempt=1 — the underlying store
+        // is free to interpret the attempt component per its dedup strategy
+        // (DbIdempotencyStore treats any completed checkpoint for the
+        // (workflow, run, node) tuple as a hit so resume works regardless
+        // of which attempt originally succeeded).
         if (idempotencyStore) {
-          const alreadyDone = await idempotencyStore.isComplete(
-            context.executionId,
-            node.id,
-          );
+          const alreadyDone = await idempotencyStore.isComplete({
+            workflowId: context.workflowId,
+            executionId: context.executionId,
+            nodeId: node.id,
+            attempt: 1,
+          });
           if (alreadyDone) {
             const savedOutput =
-              (await idempotencyStore.getOutput(context.executionId, node.id)) ??
+              (await idempotencyStore.getOutput({
+                workflowId: context.workflowId,
+                executionId: context.executionId,
+                nodeId: node.id,
+                attempt: 1,
+              })) ??
               {};
             context.sharedState!.set(node.id, savedOutput);
             results.push({
@@ -227,8 +241,12 @@ export class DAGRunner {
 
         if (idempotencyStore) {
           await idempotencyStore.markComplete(
-            context.executionId,
-            node.id,
+            {
+              workflowId: context.workflowId,
+              executionId: context.executionId,
+              nodeId: node.id,
+              attempt: result.attemptNumber,
+            },
             result.output,
           );
         }
@@ -360,6 +378,43 @@ export class DAGRunner {
     // ── Child workflow spawn ────────────────────────────────────────────────
     if (node.childWorkflow && options.spawnChildWorkflow) {
       const input = gatherInputs(node, context);
+
+      // ── P1-11: enforce child-workflow nesting depth (architecture §9.1) ──
+      // Top-level executions start at depth 0. Each spawn increments the
+      // depth by 1; a spawn that would push the depth past
+      // `maxChildWorkflowDepth` (default 5) is rejected at the node level
+      // so we never enqueue an over-nested child.
+      const currentDepth = context.childWorkflowDepth ?? 0;
+      const maxDepth = options.maxChildWorkflowDepth ?? 5;
+      const childDepth = currentDepth + 1;
+      if (childDepth > maxDepth) {
+        const depthError =
+          `Max child workflow nesting depth (${maxDepth}) exceeded ` +
+          `(attempted depth ${childDepth})`;
+        emit({
+          type: "node.failed",
+          executionId: context.executionId,
+          nodeId: node.id,
+          error: depthError,
+          attempt: 1,
+        });
+        return {
+          nodeId: node.id,
+          nodeName: node.name,
+          nodeType: nodeTypeId,
+          status: "failed",
+          output: {},
+          error: depthError,
+          durationMs: 0,
+          attemptNumber: 1,
+        };
+      }
+
+      // Mark the depth on the context so the spawner can propagate it to
+      // the child execution (the child's own DAG run will start at
+      // `childDepth` and reject any further spawn past `maxDepth`).
+      context.childWorkflowDepth = childDepth;
+
       const childExecutionId = await options.spawnChildWorkflow(
         node.childWorkflow,
         input,
@@ -371,6 +426,67 @@ export class DAGRunner {
         nodeId: node.id,
         childExecutionId,
       });
+
+      // ── P1-12: child workflow `await: true` ────────────────────────────
+      // When the child is awaited, poll its execution status until it
+      // reaches a terminal state (success/failed/cancelled/timeout). The
+      // node's result mirrors the child's terminal status. The actual
+      // polling is delegated to `awaitChildWorkflowCompletion` (provided
+      // by the runner host — typically a `workflow_executions` table
+      // poller). If no awaiter is wired we fall back to fire-and-forget
+      // and surface a warning so operators notice the misconfiguration.
+      if (node.childWorkflow.await === true) {
+        if (options.awaitChildWorkflowCompletion) {
+          const startedWait = Date.now();
+          const childResult = await options.awaitChildWorkflowCompletion(
+            childExecutionId,
+            {
+              timeoutMs: node.childWorkflow.awaitTimeoutMs,
+            },
+          );
+          const waitDurationMs = Date.now() - startedWait;
+          if (childResult.status !== "success") {
+            const childError =
+              childResult.error ??
+              `Child workflow ${childExecutionId} ended in status "${childResult.status}"`;
+            emit({
+              type: "node.failed",
+              executionId: context.executionId,
+              nodeId: node.id,
+              error: childError,
+              attempt: 1,
+            });
+            return {
+              nodeId: node.id,
+              nodeName: node.name,
+              nodeType: nodeTypeId,
+              status: "failed",
+              output: { childExecutionId },
+              error: childError,
+              durationMs: waitDurationMs,
+              attemptNumber: 1,
+              childExecutionId,
+            };
+          }
+          return {
+            nodeId: node.id,
+            nodeName: node.name,
+            nodeType: nodeTypeId,
+            status: "success",
+            output: { childExecutionId },
+            error: null,
+            durationMs: waitDurationMs,
+            attemptNumber: 1,
+            childExecutionId,
+          };
+        }
+        // No awaiter wired — surface as a warning in logs but still
+        // succeed (the child was spawned; we just couldn't wait for it).
+        console.warn(
+          `[DAGRunner] childWorkflow.await=true for node ${node.id} but no awaitChildWorkflowCompletion callback was provided; falling back to fire-and-forget`,
+        );
+      }
+
       return {
         nodeId: node.id,
         nodeName: node.name,
@@ -525,6 +641,59 @@ export class DAGRunner {
     const loopConfig = node.loop!;
     const { maxIterations, continueCondition, breakOnKey, iterationDelayMs = 0 } = loopConfig;
     const startedAt = Date.now();
+
+    // ── P1-13: enforce loop-iteration caps (architecture §9.1) ──────────────
+    // Default tenants are capped at MAX_LOOP_ITERATIONS_DEFAULT (100); Pro
+    // tenants at MAX_LOOP_ITERATIONS_PRO (10,000). Unbounded loops are
+    // forbidden. The cap is resolved by the runner host (dag-worker.ts)
+    // based on tenant tier and passed via `options.maxLoopIterations`.
+    const loopCap = options.maxLoopIterations ?? MAX_LOOP_ITERATIONS_DEFAULT;
+    if (!Number.isFinite(maxIterations) || maxIterations <= 0) {
+      const loopError =
+        `Bounded loop on node "${node.id}" has invalid maxIterations ` +
+        `(${maxIterations}); must be a positive finite integer`;
+      emit({
+        type: "node.failed",
+        executionId: context.executionId,
+        nodeId: node.id,
+        error: loopError,
+        attempt: 1,
+      });
+      return {
+        nodeId: node.id,
+        nodeName: node.name,
+        nodeType: node.nodeTypeId ?? node.type ?? "unknown",
+        status: "failed",
+        output: {},
+        error: loopError,
+        durationMs: Date.now() - startedAt,
+        attemptNumber: 1,
+      };
+    }
+    if (maxIterations > loopCap) {
+      const loopError =
+        `Bounded loop on node "${node.id}" exceeds the iteration cap ` +
+        `(${maxIterations} > ${loopCap}). Unbounded loops are forbidden; ` +
+        `the tenant tier cap is ${loopCap}.`;
+      emit({
+        type: "node.failed",
+        executionId: context.executionId,
+        nodeId: node.id,
+        error: loopError,
+        attempt: 1,
+      });
+      return {
+        nodeId: node.id,
+        nodeName: node.name,
+        nodeType: node.nodeTypeId ?? node.type ?? "unknown",
+        status: "failed",
+        output: {},
+        error: loopError,
+        durationMs: Date.now() - startedAt,
+        attemptNumber: 1,
+      };
+    }
+
     let lastOutput: Record<string, unknown> = {};
     let iterations = 0;
 

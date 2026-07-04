@@ -2005,6 +2005,12 @@ model SearchIndex {
   content      String?
   metadata     Json                         @default("{}")
   vector       Unsupported("vector(1536)")?
+  // ─── ADR-010: Pre-computed tsvector columns for FTS ──────────────────────
+  // Generated columns so GIN indexes can be used without runtime tsvector
+  // computation. Prisma doesn't support generated columns natively, so we
+  // use Unsupported("tsvector") and create them via raw SQL migration.
+  titleTsv     Unsupported("tsvector")?     @map("title_tsv")
+  contentTsv   Unsupported("tsvector")?     @map("content_tsv")
   updatedAt    DateTime                     @updatedAt @map("updated_at")
   createdAt    DateTime                     @default(now()) @map("created_at")
 

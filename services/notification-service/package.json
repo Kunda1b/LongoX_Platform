@@ -3,12 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "dev": "tsx watch src/api/rest/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@longox/db": "workspace:*",
+    "@longox/shared-queue": "workspace:*",
     "@longox/shared-rbac": "workspace:*",
     "express": "^5.2.1",
     "nodemailer": "^6.9.16"

@@ -1,0 +1,311 @@
+# ─── PodDisruptionBudgets for every service Deployment ──────────────────────
+#
+# Architecture §11.x — every long-running Deployment must have a PDB so that
+# voluntary disruptions (node drain, cluster autoscaler, rolling updates) can't
+# take all replicas offline at once. minAvailable: 1 ensures at least one pod
+# stays serving traffic during the disruption.
+#
+# This manifest covers the deployments that live under
+# `infrastructure/kubernetes/base/`. Services deployed via the umbrella Helm
+# chart (`infrastructure/helm/longox/templates/pdb.yaml`) have their own PDBs
+# generated from values.yaml; the manifest below is the canonical plain-YAML
+# fallback for environments that deploy via kustomize (overlays/dev,
+# overlays/staging, overlays/prod) instead of Helm.
+#
+# Per-deployment PDBs are listed with `---` document separators so they can
+# be split/filtered by kustomize if a particular overlay wants to override
+# just one.
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb
+  namespace: platform-control
+  labels:
+    app: api-gateway
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: execution-service-pdb
+  namespace: platform-execution
+  labels:
+    app: execution-service
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: execution-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: execution-worker-pdb
+  namespace: platform-execution
+  labels:
+    app: execution-worker
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: execution-worker
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ai-service-pdb
+  namespace: platform-services
+  labels:
+    app: ai-service
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: ai-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: billing-service-pdb
+  namespace: platform-services
+  labels:
+    app: billing-service
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: billing-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: search-service-pdb
+  namespace: platform-services
+  labels:
+    app: search-service
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: search-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: auth-service-pdb
+  namespace: platform-control
+  labels:
+    app: auth-service
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: auth-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: workflow-service-pdb
+  namespace: platform-services
+  labels:
+    app: workflow-service
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: workflow-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: connector-service-pdb
+  namespace: platform-services
+  labels:
+    app: connector-service
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: connector-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: notification-service-pdb
+  namespace: platform-services
+  labels:
+    app: notification-service
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: notification-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: audit-service-pdb
+  namespace: platform-services
+  labels:
+    app: audit-service
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: audit-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: scheduler-service-pdb
+  namespace: platform-control
+  labels:
+    app: scheduler-service
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: scheduler-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: dashboard-service-pdb
+  namespace: platform-services
+  labels:
+    app: dashboard-service
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: dashboard-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: datasource-service-pdb
+  namespace: platform-services
+  labels:
+    app: datasource-service
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: datasource-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: template-service-pdb
+  namespace: platform-services
+  labels:
+    app: template-service
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: template-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: metering-service-pdb
+  namespace: platform-services
+  labels:
+    app: metering-service
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: metering-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: marketplace-service-pdb
+  namespace: platform-services
+  labels:
+    app: marketplace-service
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: marketplace-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: compliance-service-pdb
+  namespace: platform-services
+  labels:
+    app: compliance-service
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: compliance-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: replication-service-pdb
+  namespace: platform-control
+  labels:
+    app: replication-service
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: replication-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: admin-frontend-pdb
+  namespace: platform-control
+  labels:
+    app: admin-frontend
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: admin-frontend
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: web-app-pdb
+  namespace: platform-control
+  labels:
+    app: web-app
+    app.kubernetes.io/part-of: longox
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: web-app

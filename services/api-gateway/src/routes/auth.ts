@@ -13,6 +13,14 @@ import { seedRoles, getSystemRoleId } from "@longox/shared-rbac";
 import { RegisterUserBody, LoginUserBody } from "@longox/lib-api-zod";
 import { validateRequest } from "../middleware/zod-validation";
 import { buildVersionedPaths } from "../lib/api-versioning";
+import {
+  sendApiError,
+  sendConflict,
+  sendInternalError,
+  sendNotFound,
+  sendUnauthorized,
+  sendValidationError,
+} from "../middleware/error-handler";
 
 const router: IRouter = Router();
 
@@ -63,7 +71,7 @@ router.post(
   })) as any;
 
   if (existingUser) {
-    res.status(409).json({ error: "An account with this email already exists" });
+    sendConflict(res, "An account with this email already exists", req.correlationId ?? null);
     return;
   }
 
@@ -167,10 +175,10 @@ router.post(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (message.includes("unique") || message.includes("duplicate")) {
-      res.status(409).json({ error: "An account with this email already exists" });
+      sendConflict(res, "An account with this email already exists", req.correlationId ?? null);
       return;
     }
-    res.status(500).json({ error: "Registration failed" });
+    sendInternalError(res, "Registration failed", req.correlationId ?? null);
   }
 });
 
@@ -184,18 +192,18 @@ router.post(
     where: { email: email.trim().toLowerCase() },
   })) as any;
   if (!user) {
-    res.status(401).json({ error: "Invalid email or password" });
+    sendUnauthorized(res, "Invalid email or password", req.correlationId ?? null);
     return;
   }
 
   if (user.status !== "active") {
-    res.status(401).json({ error: "Account is disabled" });
+    sendUnauthorized(res, "Account is disabled", req.correlationId ?? null);
     return;
   }
 
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
-    res.status(401).json({ error: "Invalid email or password" });
+    sendUnauthorized(res, "Invalid email or password", req.correlationId ?? null);
     return;
   }
 
@@ -281,7 +289,7 @@ router.get(["/auth/me", "/api/auth/me", "/api/v1/auth/me"], authMiddleware, asyn
   })) as any;
 
   if (!user) {
-    res.status(404).json({ error: "User not found" });
+    sendNotFound(res, "User not found", req.correlationId ?? null);
     return;
   }
 
@@ -298,7 +306,7 @@ router.get(
   async (req, res): Promise<void> => {
     const token = req.query.token as string | undefined;
     if (!token) {
-      res.status(400).json({ error: "Verification token is required" });
+      sendValidationError(res, "Verification token is required", [], req.correlationId ?? null);
       return;
     }
 
@@ -308,7 +316,7 @@ router.get(
     })) as any;
 
     if (!user) {
-      res.status(400).json({ error: "Invalid or expired verification link" });
+      sendValidationError(res, "Invalid or expired verification link", [], req.correlationId ?? null);
       return;
     }
 
@@ -342,12 +350,12 @@ router.post(
     })) as any;
 
     if (!user) {
-      res.status(404).json({ error: "User not found" });
+      sendNotFound(res, "User not found", req.correlationId ?? null);
       return;
     }
 
     if (user.emailVerifiedAt) {
-      res.status(400).json({ error: "Email is already verified" });
+      sendValidationError(res, "Email is already verified", [], req.correlationId ?? null);
       return;
     }
 
@@ -371,7 +379,7 @@ router.post(
   async (req, res): Promise<void> => {
     const { email } = req.body as { email?: string };
     if (!email?.trim()) {
-      res.status(400).json({ error: "Email is required" });
+      sendValidationError(res, "Email is required", [{ field: "email", rule: "required" }], req.correlationId ?? null);
       return;
     }
 
@@ -412,12 +420,22 @@ router.post(
     const { token, password } = req.body as { token?: string; password?: string };
 
     if (!token || !password?.trim()) {
-      res.status(400).json({ error: "Token and new password are required" });
+      sendValidationError(
+        res,
+        "Token and new password are required",
+        [],
+        req.correlationId ?? null,
+      );
       return;
     }
 
     if (password.trim().length < 8) {
-      res.status(400).json({ error: "Password must be at least 8 characters" });
+      sendValidationError(
+        res,
+        "Password must be at least 8 characters",
+        [{ field: "password", rule: "min_length", value: password.trim().length }],
+        req.correlationId ?? null,
+      );
       return;
     }
 
@@ -431,7 +449,7 @@ router.post(
     })) as any;
 
     if (!user) {
-      res.status(400).json({ error: "Invalid or expired reset link" });
+      sendValidationError(res, "Invalid or expired reset link", [], req.correlationId ?? null);
       return;
     }
 
@@ -459,12 +477,17 @@ router.patch(
     const trimmedName = name?.trim();
 
     if (!trimmedName) {
-      res.status(400).json({ error: "Name is required" });
+      sendValidationError(res, "Name is required", [{ field: "name", rule: "required" }], req.correlationId ?? null);
       return;
     }
 
     if (trimmedName.length < 2) {
-      res.status(400).json({ error: "Name must be at least 2 characters" });
+      sendValidationError(
+        res,
+        "Name must be at least 2 characters",
+        [{ field: "name", rule: "min_length", value: trimmedName.length }],
+        req.correlationId ?? null,
+      );
       return;
     }
 
@@ -481,7 +504,7 @@ router.patch(
     })) as any;
 
     if (!updated) {
-      res.status(404).json({ error: "User not found" });
+      sendNotFound(res, "User not found", req.correlationId ?? null);
       return;
     }
 
@@ -497,18 +520,28 @@ router.post(
     const { avatar } = req.body as { avatar?: string };
 
     if (!avatar) {
-      res.status(400).json({ error: "avatar field is required" });
+      sendValidationError(res, "avatar field is required", [{ field: "avatar", rule: "required" }], req.correlationId ?? null);
       return;
     }
 
     if (!avatar.startsWith("data:image/")) {
-      res.status(400).json({ error: "avatar must be a base64 image data URL" });
+      sendValidationError(
+        res,
+        "avatar must be a base64 image data URL",
+        [{ field: "avatar", rule: "format" }],
+        req.correlationId ?? null,
+      );
       return;
     }
 
     // Limit to ~2 MB of base64 (≈ 1.5 MB image)
     if (avatar.length > 2_800_000) {
-      res.status(413).json({ error: "Image too large — please use an image under 1.5 MB" });
+      sendApiError(res, 413, {
+        code: "PAYLOAD_TOO_LARGE",
+        message: "Image too large — please use an image under 1.5 MB",
+        details: [{ field: "avatar", rule: "max_size", value: avatar.length }],
+        correlationId: req.correlationId ?? null,
+      });
       return;
     }
 
@@ -519,7 +552,7 @@ router.post(
     })) as any;
 
     if (!updated) {
-      res.status(404).json({ error: "User not found" });
+      sendNotFound(res, "User not found", req.correlationId ?? null);
       return;
     }
 
@@ -552,12 +585,25 @@ router.patch(
     };
 
     if (!currentPassword?.trim() || !newPassword?.trim()) {
-      res.status(400).json({ error: "Current password and new password are required" });
+      sendValidationError(
+        res,
+        "Current password and new password are required",
+        [
+          { field: "currentPassword", rule: "required" },
+          { field: "newPassword", rule: "required" },
+        ],
+        req.correlationId ?? null,
+      );
       return;
     }
 
     if (newPassword.trim().length < 8) {
-      res.status(400).json({ error: "New password must be at least 8 characters" });
+      sendValidationError(
+        res,
+        "New password must be at least 8 characters",
+        [{ field: "newPassword", rule: "min_length", value: newPassword.trim().length }],
+        req.correlationId ?? null,
+      );
       return;
     }
 
@@ -567,13 +613,18 @@ router.patch(
     })) as any;
 
     if (!user) {
-      res.status(404).json({ error: "User not found" });
+      sendNotFound(res, "User not found", req.correlationId ?? null);
       return;
     }
 
     const valid = await bcrypt.compare(currentPassword.trim(), user.passwordHash);
     if (!valid) {
-      res.status(400).json({ error: "Current password is incorrect" });
+      sendValidationError(
+        res,
+        "Current password is incorrect",
+        [{ field: "currentPassword", rule: "invalid" }],
+        req.correlationId ?? null,
+      );
       return;
     }
 
@@ -598,7 +649,7 @@ router.get(
     })) as any;
 
     if (!user) {
-      res.status(404).json({ error: "User not found" });
+      sendNotFound(res, "User not found", req.correlationId ?? null);
       return;
     }
 
@@ -643,7 +694,7 @@ router.patch(
     })) as any;
 
     if (!user) {
-      res.status(404).json({ error: "User not found" });
+      sendNotFound(res, "User not found", req.correlationId ?? null);
       return;
     }
 

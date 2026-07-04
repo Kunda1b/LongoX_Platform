@@ -1,0 +1,76 @@
+# ─── ADR §21.2: Queue-depth HPA via BullMQ metrics adapter ──────────────────
+# This HPA template scales services based on BullMQ queue depth.
+# Requires the BullMQ Prometheus metrics adapter to be installed:
+#   https://github.com/Zooz/prometheus-adapter
+#
+# The adapter exposes metrics like:
+#   bullmq_queue_waiting{queue="workflow-execution"} 42
+#   bullmq_queue_active{queue="ai-run"} 7
+#
+# Apply per-service by setting the queue name and target value.
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: execution-service-queue-hpa
+  namespace: platform-execution
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: execution-service
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+    - type: External
+      external:
+        metric:
+          name: bullmq_queue_waiting
+          selector:
+            matchLabels:
+              queue: workflow-execution
+        target:
+          type: AverageValue
+          averageValue: "10"
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ai-service-queue-hpa
+  namespace: platform-execution
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ai-service
+  minReplicas: 2
+  maxReplicas: 15
+  metrics:
+    - type: External
+      external:
+        metric:
+          name: bullmq_queue_waiting
+          selector:
+            matchLabels:
+              queue: ai-run
+        target:
+          type: AverageValue
+          averageValue: "5"
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

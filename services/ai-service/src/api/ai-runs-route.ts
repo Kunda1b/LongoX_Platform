@@ -99,6 +99,75 @@ router.post(
       .includes("text/event-stream");
 
     if (wantsStream) {
+      // ─── ADR-008 / §8.5 — input guardrails MUST run before streaming ───────
+      // Per architecture §8.5, input guardrails check the rendered prompt for
+      // PII, prompt injection, and policy compliance BEFORE the provider call.
+      // We run them synchronously BEFORE `res.writeHead(200, ...)` so a blocked
+      // request returns a proper HTTP error status (403) with the standard
+      // §13.3 error envelope — NOT a 200 with an SSE error event (which the
+      // client would have to demux and treat as a soft failure).
+      //
+      // If guardrails block, we short-circuit here without ever opening the
+      // SSE stream. If guardrails pass, we proceed to the streaming path
+      // below (true streaming when the provider supports it, simulated
+      // streaming otherwise). Output guardrails still need to buffer the
+      // final response — they run on the `done` event in the non-streaming
+      // fallback path; for true streaming, partial tokens are emitted
+      // unfiltered (architecture trade-off documented in ADR-008).
+      if (guardrailIds && guardrailIds.length > 0) {
+        const inputText = messages.map((m) => m.content).join("\n");
+        let inputModeration;
+        try {
+          inputModeration = await moderationService.moderateInput(inputText, guardrailIds);
+        } catch (err) {
+          // Guardrail execution itself failed — fail closed (block the run)
+          // so a broken guardrail never lets a request through silently.
+          const message = err instanceof Error ? err.message : String(err);
+          res.status(500).json({
+            error: {
+              code: "GUARDRAIL_EXECUTION_FAILED",
+              message: `Input guardrail execution failed: ${message}`,
+              details: [],
+              correlation_id: req.correlationId ?? null,
+              retry_after_seconds: null,
+              documentation_url: null,
+            },
+          });
+          return;
+        }
+
+        if (inputModeration.blocked) {
+          // Block the request — return a 403 with the §13.3 error envelope.
+          // We do NOT open the SSE stream; the client gets a normal HTTP
+          // error response it can handle with standard error middleware.
+          const violations = inputModeration.violations.map((v) => ({
+            field: "messages",
+            rule: v.type,
+            message: v.detail,
+          }));
+          res.status(403).json({
+            error: {
+              code: "GUARDRAIL_BLOCKED",
+              message: "Request blocked by input guardrails",
+              details: violations,
+              correlation_id: req.correlationId ?? null,
+              retry_after_seconds: null,
+              documentation_url: null,
+            },
+          });
+          return;
+        }
+
+        // If the guardrail scrubbed the input (e.g., PII redaction), use the
+        // scrubbed text for the provider call. We replace the first message
+        // content with the scrubbed text — this is the same behavior as the
+        // non-streaming path in aiRunLifecycleService.executeRun().
+        if (inputModeration.scrubbedText && inputModeration.scrubbedText !== inputText) {
+          const scrubbed = inputModeration.scrubbedText;
+          messages[0] = { ...messages[0], content: scrubbed };
+        }
+      }
+
       // SSE response headers. Disable compression and Nagle's algorithm so
       // tokens flush immediately. Set keep-alive so the connection persists.
       res.writeHead(200, {
@@ -139,7 +208,7 @@ router.post(
       req.on("close", cleanup);
 
       try {
-        // ─── True streaming path (OpenAI provider, no guardrails) ────────────
+        // ─── True streaming path (OpenAI provider) ──────────────────────────
         // Per ADR-008, when the client requests `text/event-stream` and the
         // selected provider supports true token streaming (OpenAI does), we
         // stream tokens directly from the provider to the SSE client. This
@@ -149,19 +218,23 @@ router.post(
         // We bypass the aiRunLifecycleService for the streaming path because
         // the lifecycle service is non-streaming (it returns a single resolved
         // result). To preserve guardrails + budget enforcement, we:
-        //   1. Check the budget up front (via costBudgetService).
-        //   2. Skip guardrails for streaming (input guardrails would block
-        //      before streaming starts; output guardrails would need to
-        //      buffer, defeating the purpose). Guardrailed runs fall back
-        //      to the non-streaming path.
+        //   1. Run input guardrails BEFORE opening the SSE stream (see the
+        //      block above the `res.writeHead(200, ...)` call). A blocked
+        //      request returns 403 with the §13.3 error envelope and never
+        //      opens the stream.
+        //   2. Check the budget up front (via costBudgetService).
         //   3. Persist partial output every AI_PARTIAL_PERSIST_INTERVAL_MS.
         //
-        // The non-streaming path (guardrails, budget errors, non-OpenAI
-        // providers) is preserved below as the fallback.
+        // Output guardrails are NOT applied to true-streaming responses —
+        // they would require buffering the full output, defeating the
+        // streaming semantics. Output guardrails run only on the
+        // non-streaming fallback path (which buffers via
+        // aiRunLifecycleService.executeRun). This trade-off is documented in
+        // ADR-008 and is acceptable because input guardrails catch the most
+        // dangerous attacks (prompt injection, PII exfiltration).
         const useTrueStreaming =
           (provider === "openai" ||
             (!provider && process.env.OPENAI_API_KEY)) &&
-          (!guardrailIds || guardrailIds.length === 0) &&
           budgetCheckEnabled !== false;
 
         if (useTrueStreaming) {

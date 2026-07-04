@@ -13,7 +13,9 @@
   "dependencies": {
     "@longox/db": "workspace:*",
     "@longox/shared-auth": "workspace:*",
+    "@longox/shared-logger": "workspace:*",
     "@longox/shared-observability": "workspace:*",
+    "@longox/shared-queue": "workspace:*",
     "@longox/shared-rbac": "workspace:*",
     "express": "^5.2.1",
     "stripe": "^17.7.0"

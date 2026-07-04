@@ -6,3 +6,4 @@ export * from "./commands/create-notification-template.command";
 export * from "./commands/send-email.command";
 export * from "./commands/send-webhook.command";
 export * from "./events/event-handler";
+export * from "./jobs";

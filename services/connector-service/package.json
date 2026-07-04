@@ -15,6 +15,7 @@
     "@longox/connector-runtime": "workspace:*",
     "@longox/connector-sandbox": "workspace:*",
     "@longox/db": "workspace:*",
+    "@longox/shared-queue": "workspace:*",
     "@longox/shared-rbac": "workspace:*",
     "express": "^5.2.1"
   },

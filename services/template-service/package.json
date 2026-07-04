@@ -15,6 +15,7 @@
     "@longox/shared-types": "workspace:*",
     "@longox/shared-events": "workspace:*",
     "@longox/shared-logger": "workspace:*",
+    "@longox/shared-queue": "workspace:*",
     "@longox/shared-auth": "workspace:*",
     "@longox/shared-rbac": "workspace:*",
     "express": "^5.2.1",

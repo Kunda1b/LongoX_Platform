@@ -2,19 +2,15 @@ import { Router, type IRouter } from "express";
 import { authorize, requireTenantContext } from "@longox/shared-rbac";
 import { SearchQuery } from "../../application/queries/search.query";
 import { PostgresSearchRepository } from "../../infrastructure/postgres/search-repository";
-import { TypesenseSearchRepository } from "../../infrastructure/typesense/search-repository";
+// Typesense removed per ADR-010 — PostgreSQL FTS is the sole backend
 import type { SearchableType } from "../../domain/search/search-result.entity";
 import type { Request } from "express";
 
 const router: IRouter = Router();
 
-const useTypesense =
-  process.env.SEARCH_BACKEND === "typesense" &&
-  process.env.TYPESENSE_API_KEY &&
-  process.env.TYPESENSE_HOST;
-const repository = useTypesense
-  ? new TypesenseSearchRepository()
-  : new PostgresSearchRepository();
+// ADR-010: PostgreSQL FTS is the sole search backend.
+// Typesense was removed; OpenSearch is the documented escape path.
+const repository = new PostgresSearchRepository();
 const searchQuery = new SearchQuery(repository);
 
 const ALL_TYPES: SearchableType[] = [

@@ -94,16 +94,19 @@ export class FtsSearchService {
     resourceId: string,
     data: IndexData,
   ): Promise<void> {
-    // Use raw SQL for tsvector column support.
+    // ─── ADR-010: Use pre-computed tsvector generated columns ──────────────
+    // title_tsv and content_tsv are GENERATED ALWAYS columns in the DB
+    // (migration 007). We don't need to compute to_tsvector at INSERT time —
+    // the DB does it automatically. We also don't need a separate `tsv`
+    // column — the GIN indexes on title_tsv and content_tsv handle search.
     await prisma.$executeRaw`
-      INSERT INTO search_index (id, resource_type, resource_id, title, content, tsv, tenant_id, permission_resource, permission_action, metadata, created_at, updated_at)
+      INSERT INTO search_index (id, resource_type, resource_id, title, content, tenant_id, permission_resource, permission_action, metadata, created_at, updated_at)
       VALUES (
         encode(gen_random_bytes(12), 'hex'),
         ${resourceType},
         ${resourceId},
         ${data.title},
         ${data.content},
-        to_tsvector('english', ${data.title} || ' ' || ${data.content}),
         ${data.tenantId ?? null},
         ${data.permissionResource ?? null},
         ${data.permissionAction ?? null},
@@ -115,7 +118,6 @@ export class FtsSearchService {
       DO UPDATE SET
         title = EXCLUDED.title,
         content = EXCLUDED.content,
-        tsv = EXCLUDED.tsv,
         tenant_id = EXCLUDED.tenant_id,
         permission_resource = EXCLUDED.permission_resource,
         permission_action = EXCLUDED.permission_action,
@@ -138,7 +140,11 @@ export class FtsSearchService {
     const permFilter = options.permissionFilter ?? null;
 
     const params: unknown[] = [query];
-    let whereSql = `tsv @@ websearch_to_tsquery('english', $1)`;
+    // ─── ADR-010: Use pre-computed tsvector columns with GIN indexes ────────
+    // Query uses title_tsv || content_tsv (both are GENERATED ALWAYS columns
+    // with GIN indexes from migration 007). This avoids runtime tsvector
+    // computation on every search.
+    let whereSql = `(title_tsv @@ websearch_to_tsquery('english', $1) OR content_tsv @@ websearch_to_tsquery('english', $1))`;
     let paramIdx = 2;
 
     if (tenantId !== null && tenantId !== undefined) {
@@ -181,7 +187,7 @@ export class FtsSearchService {
         resource_id,
         title,
         content,
-        ts_rank(tsv, websearch_to_tsquery('english', $1)) AS rank,
+        ts_rank(title_tsv || content_tsv, websearch_to_tsquery('english', $1)) AS rank,
         metadata
       FROM search_index
       WHERE ${whereSql}

@@ -328,4 +328,322 @@ router.post(
 );
 
 export { clients as sseClients };
+
+// ─── P1-19: Unified multiplexed realtime endpoint ───────────────────────────
+//
+// `GET /api/v1/realtime` accepts multiple event-type subscriptions on a
+// single SSE connection. The client passes `event_types=execution,dashboard,
+// notification` (comma-separated, default: `execution`) plus the per-type
+// subscription IDs:
+//
+//   - `executionIds`  : comma-separated execution ids (for execution events)
+//   - `dashboardIds`  : comma-separated dashboard ids (for dashboard events)
+//   - `recipientId`   : user id (for notification events)
+//
+// Each event pushed on this stream carries an `event_type` field so the
+// client can demultiplex by type:
+//
+//   event: execution
+//   data: {"event_type":"execution","executionId":"...","eventType":"node","data":{...}}
+//
+//   event: dashboard
+//   data: {"event_type":"dashboard","dashboardId":"...","snapshot":{...}}
+//
+//   event: notification
+//   data: {"event_type":"notification","recipientId":"...","notification":{...}}
+//
+// All execution events flow through `sseExecutionBus` (Redis-backed, so
+// events fan out to clients connected to any gateway instance). Dashboard
+// and notification events are polled at a configurable interval
+// (`REALTIME_DASHBOARD_POLL_MS` / `REALTIME_NOTIFICATION_POLL_MS`, default
+// 30s each) — a future refactor will switch them to Redis pub/sub once
+// the owning services publish to a shared channel.
+
+const REALTIME_DASHBOARD_POLL_MS = Number(
+  process.env.REALTIME_DASHBOARD_POLL_MS ?? 30_000,
+);
+const REALTIME_NOTIFICATION_POLL_MS = Number(
+  process.env.REALTIME_NOTIFICATION_POLL_MS ?? 30_000,
+);
+
+type EventType = "execution" | "dashboard" | "notification";
+
+function parseEventTypes(raw: unknown): EventType[] {
+  const all: EventType[] = ["execution", "dashboard", "notification"];
+  if (!raw) return ["execution"];
+  const parts = String(raw)
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter((s): s is EventType => (all as string[]).includes(s));
+  return parts.length > 0 ? parts : ["execution"];
+}
+
+function parseIds(raw: unknown): string[] {
+  if (!raw) return [];
+  return String(raw)
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+function sendMultiplexedSSE(
+  res: Response,
+  opts: {
+    id: string;
+    event: EventType;
+    data: Record<string, unknown>;
+  },
+): void {
+  try {
+    res.write(`id: ${opts.id}\n`);
+    res.write(`event: ${opts.event}\n`);
+    // Always include `event_type` in the payload so the client can
+    // demultiplex even if it parses only the `data:` line.
+    res.write(
+      `data: ${JSON.stringify({ event_type: opts.event, ...opts.data })}\n`,
+    );
+    res.write(`retry: 3000\n`);
+    res.write(`\n`);
+    if (typeof (res as any).flush === "function") (res as any).flush();
+  } catch {
+    // socket closed — ignore
+  }
+}
+
+router.get(
+  ["/api/v1/realtime", "/api/realtime"],
+  authorize("executions:read"),
+  async (req: Request, res: Response): Promise<void> => {
+    const eventTypes = parseEventTypes(req.query["event_types"]);
+    const executionIds = parseIds(req.query["executionIds"]);
+    const dashboardIds = parseIds(req.query["dashboardIds"]);
+    const recipientId = String(req.query["recipientId"] ?? "");
+    const paramId = String(req.params["id"] ?? "");
+
+    // Backwards-compat: if the caller passed a single `:id` path param
+    // (from the legacy `/api/v1/realtime/:id` shim) treat it as an
+    // execution id.
+    if (paramId) executionIds.push(paramId);
+
+    if (
+      executionIds.length === 0 &&
+      dashboardIds.length === 0 &&
+      !recipientId
+    ) {
+      res
+        .status(400)
+        .json({
+          error:
+            "At least one subscription is required (executionIds, dashboardIds, or recipientId)",
+        });
+      return;
+    }
+
+    // Validate execution ids exist + tenant access (same check as the
+    // legacy /stream endpoint). Dashboard/notification subscriptions are
+    // best-effort — the polling loop will just emit empty snapshots if
+    // the row doesn't exist.
+    if (eventTypes.includes("execution")) {
+      for (const executionId of executionIds) {
+        const execution = (await prisma.workflowExecution.findUnique({
+          where: { id: executionId },
+        })) as any;
+        if (!execution) {
+          res.status(404).json({ error: `Execution ${executionId} not found` });
+          return;
+        }
+        const tenantId = req.user?.tenantId;
+        if (tenantId && execution.tenantId && execution.tenantId !== tenantId) {
+          res
+            .status(403)
+            .json({ error: `Forbidden for execution ${executionId}` });
+          return;
+        }
+      }
+    }
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.flushHeaders();
+
+    const clientId = `rt_sse_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    let seq = 0;
+
+    // `connected` event — emitted once on connection open.
+    seq++;
+    sendMultiplexedSSE(res, {
+      id: `rt/${seq}`,
+      event: "execution", // reuse `execution` channel for connection metadata
+      data: {
+        clientId,
+        subscriptions: { eventTypes, executionIds, dashboardIds, recipientId },
+      },
+    });
+
+    const subscriptions: Array<() => void> = [];
+    const timers: Array<NodeJS.Timeout> = [];
+
+    // ── Execution events ──────────────────────────────────────────────────
+    if (eventTypes.includes("execution")) {
+      for (const executionId of executionIds) {
+        const unsub = sseExecutionBus.onExecutionEvent(
+          executionId,
+          (payload) => {
+            if (res.writableEnded) return;
+            seq++;
+            sendMultiplexedSSE(res, {
+              id: `rt/${seq}`,
+              event: "execution",
+              data: {
+                executionId,
+                eventType: payload.eventType,
+                data: payload.data,
+              },
+            });
+          },
+        );
+        subscriptions.push(unsub);
+      }
+    }
+
+    // ── Dashboard refresh events (polled) ─────────────────────────────────
+    if (eventTypes.includes("dashboard") && dashboardIds.length > 0) {
+      const dashboardSigs = new Map<string, string>();
+      const pollDashboards = async () => {
+        if (res.writableEnded) return;
+        for (const dashboardId of dashboardIds) {
+          try {
+            const dash = (await prisma.dashboard.findUnique({
+              where: { id: dashboardId },
+            })) as any;
+            const snap = {
+              dashboardId,
+              exists: !!dash,
+              name: dash?.name ?? null,
+              updatedAt:
+                dash?.updatedAt instanceof Date
+                  ? dash.updatedAt.toISOString()
+                  : dash?.updatedAt
+                    ? new Date(dash.updatedAt).toISOString()
+                    : null,
+            };
+            const sig = JSON.stringify(snap);
+            if (dashboardSigs.get(dashboardId) === sig) continue;
+            dashboardSigs.set(dashboardId, sig);
+            seq++;
+            sendMultiplexedSSE(res, {
+              id: `rt/${seq}`,
+              event: "dashboard",
+              data: { snapshot: snap },
+            });
+          } catch {
+            // best-effort — skip on error
+          }
+        }
+      };
+      // Initial snapshot
+      void pollDashboards();
+      const t = setInterval(pollDashboards, REALTIME_DASHBOARD_POLL_MS);
+      timers.push(t);
+    }
+
+    // ── Notification events (polled) ──────────────────────────────────────
+    if (eventTypes.includes("notification") && recipientId) {
+      let lastSeenId: string | null = null;
+      const pollNotifications = async () => {
+        if (res.writableEnded) return;
+        try {
+          const rows = (await prisma.notification.findMany({
+            where: { recipientId } as any,
+            orderBy: { createdAt: "desc" } as any,
+            take: 20,
+          })) as any[];
+          if (rows.length === 0) return;
+          // If we haven't seen anything yet, push the latest unread count.
+          if (lastSeenId === null) {
+            const unreadCount = (await prisma.notification.count({
+              where: { recipientId, status: "unread" } as any,
+            })) as number;
+            seq++;
+            sendMultiplexedSSE(res, {
+              id: `rt/${seq}`,
+              event: "notification",
+              data: {
+                recipientId,
+                unreadCount,
+                recent: rows.map((r: any) => ({
+                  id: r.id,
+                  type: r.type,
+                  title: r.title,
+                  status: r.status,
+                  createdAt:
+                    r.createdAt instanceof Date
+                      ? r.createdAt.toISOString()
+                      : new Date(r.createdAt).toISOString(),
+                })),
+              },
+            });
+            lastSeenId = rows[0]!.id;
+            return;
+          }
+          // Push any new notifications since last poll.
+          for (const r of rows) {
+            if (r.id === lastSeenId) break;
+            seq++;
+            sendMultiplexedSSE(res, {
+              id: `rt/${seq}`,
+              event: "notification",
+              data: {
+                recipientId,
+                notification: {
+                  id: r.id,
+                  type: r.type,
+                  title: r.title,
+                  body: r.body ?? null,
+                  channel: r.channel,
+                  status: r.status,
+                  createdAt:
+                    r.createdAt instanceof Date
+                      ? r.createdAt.toISOString()
+                      : new Date(r.createdAt).toISOString(),
+                },
+              },
+            });
+          }
+          lastSeenId = rows[0]!.id;
+        } catch {
+          // best-effort
+        }
+      };
+      void pollNotifications();
+      const t = setInterval(pollNotifications, REALTIME_NOTIFICATION_POLL_MS);
+      timers.push(t);
+    }
+
+    // Heartbeat every 15s keeps the connection alive through proxies.
+    const heartbeat = setInterval(() => {
+      if (res.writableEnded) {
+        clearInterval(heartbeat);
+        return;
+      }
+      try {
+        res.write(`: heartbeat\n\n`);
+        if (typeof (res as any).flush === "function") (res as any).flush();
+      } catch {}
+    }, 15_000);
+    timers.push(heartbeat);
+
+    const cleanup = () => {
+      timers.forEach((t) => clearInterval(t));
+      subscriptions.forEach((u) => u());
+      if (!res.writableEnded) res.end();
+    };
+    req.on("close", cleanup);
+    req.on("error", cleanup);
+  },
+);
+
 export default router;

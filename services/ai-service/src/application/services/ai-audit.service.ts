@@ -8,6 +8,7 @@
 import { prisma } from "@longox/db/prisma";
 
 export type AiAuditEventType =
+  | "ai.run.guardrail.violation"
   | "ai.run.started"
   | "ai.run.completed"
   | "ai.run.blocked"
@@ -30,6 +31,9 @@ export interface AiAuditDetail {
   guardrailId?: string;
   guardrailName?: string;
   violationType?: string;
+  stage?: string;
+  severity?: string;
+  detail?: string;
   budgetId?: string;
   budgetName?: string;
   evaluationScore?: number;
