@@ -46,7 +46,7 @@ export interface ReconciliationReport {
   rerollups_queued: number;
   alert_triggered: boolean;
   details: Array<{
-    tenant_id: number;
+    tenant_id: string;
     metric_name: string;
     rollup_quantity: number;
     raw_quantity: number;
