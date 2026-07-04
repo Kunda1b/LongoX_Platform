@@ -139,20 +139,120 @@ export class InMemoryApprovalStore implements ApprovalStore {
  * Periodically scans pending approval tasks and marks overdue ones as timed_out.
  * In production, integrate with the scheduler service.
  */
+/**
+ * Approval timeout sweeper with escalation chain and reminders.
+ *
+ * Per architecture.md §9.5:
+ *   - Approval timeout defaults to 7 days
+ *   - Escalation chain: if approver doesn't respond, escalate to next approver
+ *   - Reminders sent 24h and 1h before timeout
+ *   - On timeout: auto-approve / auto-reject / extend (configurable)
+ *
+ * The sweeper runs on a configurable interval (default 60s) and:
+ *   1. Checks all pending approval tasks
+ *   2. Sends reminders at 24h and 1h before timeout
+ *   3. Escalates to the next approver in the chain if configured
+ *   4. Times out the task if the deadline has passed
+ */
 export function startApprovalTimeoutSweeper(
   store: ApprovalStore,
   onTimeout: (task: ApprovalTask) => Promise<void>,
+  onReminder?: (task: ApprovalTask, hoursBeforeTimeout: number) => Promise<void>,
+  onEscalation?: (task: ApprovalTask, escalatedTo: string) => Promise<void>,
   intervalMs = 60_000,
 ): () => void {
+  // Track which tasks have already received reminders to avoid duplicates
+  const reminderSent24h = new Set<string>();
+  const reminderSent1h = new Set<string>();
+  const escalationApplied = new Set<string>();
+
   const timer = setInterval(async () => {
-    // This is a simplified sweep — production should query the DB directly.
     const now = Date.now();
     if (store instanceof InMemoryApprovalStore) {
-      const allTasks = await store.getPendingTasksForExecution('');
+      const allTasks = await store.getPendingTasksForExecution("");
       for (const task of allTasks) {
         const timeoutMs =
-          (task.config["timeoutMs"] as number | undefined) ?? 7 * 24 * 60 * 60 * 1000;
-        if (now - task.createdAt.getTime() > timeoutMs) {
+          (task.config["timeoutMs"] as number | undefined) ??
+          7 * 24 * 60 * 60 * 1000; // 7 days default
+        const createdAt = task.createdAt.getTime();
+        const deadline = createdAt + timeoutMs;
+        const timeRemaining = deadline - now;
+
+        // ── 1. Reminders (24h and 1h before timeout) ───────────────────────
+        if (timeRemaining <= 24 * 60 * 60 * 1000 && timeRemaining > 0) {
+          // 24h reminder
+          if (!reminderSent24h.has(task.id)) {
+            reminderSent24h.add(task.id);
+            if (onReminder) {
+              try {
+                await onReminder(task, 24);
+              } catch {
+                // Reminder failure is non-fatal
+              }
+            }
+          }
+        }
+
+        if (timeRemaining <= 60 * 60 * 1000 && timeRemaining > 0) {
+          // 1h reminder
+          if (!reminderSent1h.has(task.id)) {
+            reminderSent1h.add(task.id);
+            if (onReminder) {
+              try {
+                await onReminder(task, 1);
+              } catch {
+                // Reminder failure is non-fatal
+              }
+            }
+          }
+        }
+
+        // ── 2. Escalation chain ─────────────────────────────────────────────
+        // If the task has an escalation chain and the escalation threshold
+        // (e.g., 50% of timeout) has passed, escalate to the next approver
+        const escalationChain = task.config["escalationChain"] as
+          | string[]
+          | undefined;
+        const escalationThresholdMs =
+          (task.config["escalationThresholdMs"] as number | undefined) ??
+          timeoutMs * 0.5; // Default: escalate at 50% of timeout
+
+        if (
+          escalationChain &&
+          escalationChain.length > 0 &&
+          !escalationApplied.has(task.id) &&
+          timeRemaining < timeoutMs - escalationThresholdMs
+        ) {
+          escalationApplied.add(task.id);
+          const escalatedTo = escalationChain[0];
+          // Update the task's approver to the escalated approver
+          task.approverId = Number(escalatedTo);
+          if (onEscalation) {
+            try {
+              await onEscalation(task, escalatedTo);
+            } catch {
+              // Escalation notification failure is non-fatal
+            }
+          }
+        }
+
+        // ── 3. Timeout ──────────────────────────────────────────────────────
+        if (timeRemaining <= 0) {
+          // Clean up reminder/escalation tracking
+          reminderSent24h.delete(task.id);
+          reminderSent1h.delete(task.id);
+          escalationApplied.delete(task.id);
+
+          // Apply timeout action (auto-approve / auto-reject / extend)
+          const timeoutAction =
+            (task.config["timeoutAction"] as string | undefined) ?? "auto_reject";
+
+          if (timeoutAction === "extend") {
+            // Extend the deadline by the original timeout duration
+            task.createdAt = new Date();
+            continue;
+          }
+
           await store.decide({
             taskId: task.id,
             decision: "timed_out",

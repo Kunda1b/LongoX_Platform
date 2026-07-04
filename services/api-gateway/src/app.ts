@@ -36,6 +36,7 @@ import { apiRateLimiter } from "./lib/rate-limiter";
 import { apiVersioningMiddleware } from "./lib/api-versioning";
 import { tierEnforcementMiddleware } from "./middleware/tier-enforcement.middleware";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
+import { idempotencyMiddleware } from "./middleware/idempotency";
 import { auditLogRouter } from "@longox/audit-service";
 import { yoga } from "./graphql/index";
 import {
@@ -148,6 +149,11 @@ app.use(apiVersioningMiddleware);
 
 // Tier enforcement: set x-tenant-tier header and tier routing context
 app.use(tierEnforcementMiddleware);
+
+// ─── ADR §12: Gateway-level idempotency ──────────────────────────────────────
+// All mutating requests (POST/PUT/PATCH/DELETE) get x-idempotency-key validation.
+// Critical endpoints additionally use `requireIdempotencyKey` for mandatory enforcement.
+app.use(idempotencyMiddleware);
 
 // ─── Public routes ────────────────────────────────────────────────────────────
 
