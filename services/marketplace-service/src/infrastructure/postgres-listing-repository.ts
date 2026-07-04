@@ -1,5 +1,11 @@
-import { eq, like, and as andOp, or, desc, sql } from "drizzle-orm";
-import { db, marketplaceListingsTable, marketplaceInstallsTable } from "@longox/db";
+/**
+ * Prisma-based marketplace listing repository.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.marketplaceListing` delegate with `as any` casts for legacy columns.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import { Listing } from "../domain/listing.entity";
 import type { ListingRepository } from "../domain/listing-repository";
 import type {
@@ -9,7 +15,7 @@ import type {
 } from "../domain/listing.entity";
 
 export class PostgresListingRepository implements ListingRepository {
-  private toDomain(row: typeof marketplaceListingsTable.$inferSelect): Listing {
+  private toDomain(row: any): Listing {
     return new Listing({
       id: row.id,
       title: row.title,
@@ -34,11 +40,7 @@ export class PostgresListingRepository implements ListingRepository {
   }
 
   async findById(id: string): Promise<Listing | null> {
-    const [row] = await db
-      .select()
-      .from(marketplaceListingsTable)
-      .where(eq(marketplaceListingsTable.id, id))
-      .limit(1);
+    const row = await prisma.marketplaceListing.findUnique({ where: { id } });
     return row ? this.toDomain(row) : null;
   }
 
@@ -49,61 +51,47 @@ export class PostgresListingRepository implements ListingRepository {
     status?: ListingStatus;
     featured?: boolean;
   }): Promise<Listing[]> {
-    const conditions = [];
-    if (filters?.type)
-      conditions.push(eq(marketplaceListingsTable.listingType, filters.type));
-    if (filters?.category)
-      conditions.push(eq(marketplaceListingsTable.category, filters.category));
-    if (filters?.search)
-      conditions.push(
-        or(
-          like(marketplaceListingsTable.title, `%${filters.search}%`),
-          like(marketplaceListingsTable.description, `%${filters.search}%`),
-        ),
-      );
-    if (filters?.status)
-      conditions.push(eq(marketplaceListingsTable.status, filters.status));
-    if (filters?.featured !== undefined)
-      conditions.push(eq(marketplaceListingsTable.featured, filters.featured));
+    const where: Record<string, unknown> = {};
+    if (filters?.type) where.listingType = filters.type;
+    if (filters?.category) where.category = filters.category;
+    if (filters?.search) {
+      where.OR = [
+        { title: { contains: filters.search, mode: "insensitive" } },
+        { description: { contains: filters.search, mode: "insensitive" } },
+      ];
+    }
+    if (filters?.status) where.status = filters.status;
+    if (filters?.featured !== undefined) where.featured = filters.featured;
 
-    const rows = await db
-      .select()
-      .from(marketplaceListingsTable)
-      .where(conditions.length ? andOp(...conditions) : undefined)
-      .orderBy(desc(marketplaceListingsTable.installCount));
-    return rows.map(this.toDomain);
+    const rows = await prisma.marketplaceListing.findMany({
+      where: where as any,
+      orderBy: { installCount: "desc" },
+    });
+    return rows.map((r: any) => this.toDomain(r));
   }
 
   async findFeatured(): Promise<Listing[]> {
-    const rows = await db
-      .select()
-      .from(marketplaceListingsTable)
-      .where(
-        andOp(
-          eq(marketplaceListingsTable.featured, true),
-          eq(marketplaceListingsTable.status, "published"),
-        ),
-      )
-      .orderBy(desc(marketplaceListingsTable.installCount))
-      .limit(20);
-    return rows.map(this.toDomain);
+    const rows = await prisma.marketplaceListing.findMany({
+      where: { featured: true, status: "published" } as any,
+      orderBy: { installCount: "desc" },
+      take: 20,
+    });
+    return rows.map((r: any) => this.toDomain(r));
   }
 
   async findByAuthor(authorId: string): Promise<Listing[]> {
-    const rows = await db
-      .select()
-      .from(marketplaceListingsTable)
-      .where(eq(marketplaceListingsTable.authorId, authorId))
-      .orderBy(desc(marketplaceListingsTable.createdAt));
-    return rows.map(this.toDomain);
+    const rows = await prisma.marketplaceListing.findMany({
+      where: { authorId } as any,
+      orderBy: { createdAt: "desc" },
+    });
+    return rows.map((r: any) => this.toDomain(r));
   }
 
   async create(
     props: Omit<ListingProps, "id" | "createdAt" | "updatedAt">,
   ): Promise<Listing> {
-    const [row] = await db
-      .insert(marketplaceListingsTable)
-      .values({
+    const row = await prisma.marketplaceListing.create({
+      data: {
         title: props.title,
         description: props.description,
         listingType: props.listingType,
@@ -121,15 +109,15 @@ export class PostgresListingRepository implements ListingRepository {
         pricing: props.pricing ?? { free: true },
         metadata: props.metadata,
         nodes: [],
-      } as any)
-      .returning();
+      } as any,
+    });
     return this.toDomain(row);
   }
 
   async update(id: string, data: Partial<ListingProps>): Promise<Listing> {
-    const [row] = await db
-      .update(marketplaceListingsTable)
-      .set({
+    const row = await prisma.marketplaceListing.update({
+      where: { id },
+      data: {
         title: data.title,
         description: data.description,
         category: data.category,
@@ -137,13 +125,13 @@ export class PostgresListingRepository implements ListingRepository {
         status: data.status,
         pricing: data.pricing,
         metadata: data.metadata,
-      })
-      .where(eq(marketplaceListingsTable.id, id))
-      .returning();
+        installCount: data.installCount,
+      } as any,
+    });
     return this.toDomain(row);
   }
 
   async delete(id: string): Promise<void> {
-    await db.delete(marketplaceListingsTable).where(eq(marketplaceListingsTable.id, id));
+    await prisma.marketplaceListing.delete({ where: { id } });
   }
 }

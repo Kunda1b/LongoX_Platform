@@ -1,5 +1,4 @@
-import { db, workflowsTable } from "@longox/db";
-import { eq } from "drizzle-orm";
+import { prisma } from "@longox/db/prisma";
 import { PostgresScheduleRepository } from "./infrastructure";
 import { CronParser } from "./infrastructure/cron-parser";
 import { logger } from "@longox/shared-logger";
@@ -76,11 +75,9 @@ export class ScheduleWorker {
       "[ScheduleWorker] Executing scheduled workflow",
     );
 
-    const [workflow] = await db
-      .select()
-      .from(workflowsTable)
-      .where(eq(workflowsTable.id, workflowId))
-      .limit(1);
+    const workflow = await prisma.workflow.findUnique({
+      where: { id: workflowId },
+    });
     if (!workflow) {
       logger.warn(
         { scheduleId, workflowId },
@@ -91,8 +88,8 @@ export class ScheduleWorker {
       return;
     }
 
-    const nodes = Array.isArray(workflow.nodes)
-      ? (workflow.nodes as any[])
+    const nodes = Array.isArray((workflow as any).nodes)
+      ? ((workflow as any).nodes as any[])
       : [];
 
     // Enqueue the workflow execution via the shared job queue.

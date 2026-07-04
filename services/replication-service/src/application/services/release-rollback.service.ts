@@ -1,5 +1,12 @@
-import { eq, and, desc, sql } from "drizzle-orm";
-import { db, releaseSnapshotsTable } from "@longox/db";
+/**
+ * Release rollback service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.releaseSnapshot` delegate with `as any` casts for legacy
+ * columns. Raw SQL on `_migrations` uses `prisma.$queryRawUnsafe()`.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import * as crypto from "node:crypto";
 import { execSync } from "node:child_process";
 
@@ -30,14 +37,13 @@ export class ReleaseRollbackService {
   async createReleaseSnapshot(
     service: string,
     version: string,
-  ): Promise<typeof releaseSnapshotsTable.$inferSelect> {
+  ): Promise<any> {
     const helmRevision = await this.getCurrentHelmRevision(service);
     const configChecksum = await this.computeConfigChecksum(service);
     const migrationVersion = await this.getCurrentMigrationVersion(service);
 
-    const [snapshot] = await db
-      .insert(releaseSnapshotsTable)
-      .values({
+    const snapshot = await prisma.releaseSnapshot.create({
+      data: {
         serviceName: service,
         version,
         chartVersion: process.env.HELM_CHART_VERSION ?? "unknown",
@@ -50,8 +56,8 @@ export class ReleaseRollbackService {
           helmReleaseStatus: await this.getHelmReleaseStatus(service),
           currentReplicaCount: await this.getCurrentReplicaCount(service),
         },
-      })
-      .returning();
+      } as any,
+    });
 
     return snapshot;
   }
@@ -158,7 +164,7 @@ export class ReleaseRollbackService {
   async executeRollback(
     service: string,
     targetVersion: string,
-  ): Promise<typeof releaseSnapshotsTable.$inferSelect> {
+  ): Promise<any> {
     const plan = await this.planRollback(service, targetVersion);
     const currentSnapshot = await this.getLatestSnapshot(service);
     if (!currentSnapshot) {
@@ -175,17 +181,16 @@ export class ReleaseRollbackService {
       }
     }
 
-    await db
-      .update(releaseSnapshotsTable)
-      .set({
+    await prisma.releaseSnapshot.update({
+      where: { id: currentSnapshot.id },
+      data: {
         rolledBackAt: new Date(),
         rolledBackToVersion: targetVersion,
-      })
-      .where(eq(releaseSnapshotsTable.id, currentSnapshot.id));
+      } as any,
+    });
 
-    const [record] = await db
-      .insert(releaseSnapshotsTable)
-      .values({
+    const record = await prisma.releaseSnapshot.create({
+      data: {
         serviceName: service,
         version: targetVersion,
         chartVersion: currentSnapshot.chartVersion,
@@ -199,42 +204,35 @@ export class ReleaseRollbackService {
           rolledBackAt: new Date().toISOString(),
           planSummary: plan,
         },
-      })
-      .returning();
+      } as any,
+    });
 
     await this.runPostRollbackIntegrityChecks(service);
 
     return record;
   }
 
-  async getRollbackHistory(service: string): Promise<(typeof releaseSnapshotsTable.$inferSelect)[]> {
-    return db
-      .select()
-      .from(releaseSnapshotsTable)
-      .where(
-        and(
-          eq(releaseSnapshotsTable.serviceName, service),
-          eq(releaseSnapshotsTable.rolledBackAt, null as any),
-        ),
-      )
-      .orderBy(desc(releaseSnapshotsTable.createdAt));
+  async getRollbackHistory(service: string): Promise<any[]> {
+    return prisma.releaseSnapshot.findMany({
+      where: {
+        serviceName: service,
+        rolledBackAt: null,
+      } as any,
+      orderBy: { createdAt: "desc" },
+    });
   }
 
-  async getRollbackStatus(rollbackId: string): Promise<typeof releaseSnapshotsTable.$inferSelect | null> {
-    const [record] = await db
-      .select()
-      .from(releaseSnapshotsTable)
-      .where(eq(releaseSnapshotsTable.id, String(rollbackId)))
-      .limit(1);
+  async getRollbackStatus(rollbackId: string): Promise<any | null> {
+    const record = await prisma.releaseSnapshot.findUnique({
+      where: { id: String(rollbackId) },
+    });
     return record ?? null;
   }
 
   async cancelRollback(rollbackId: string): Promise<{ cancelled: boolean }> {
-    const [record] = await db
-      .select()
-      .from(releaseSnapshotsTable)
-      .where(eq(releaseSnapshotsTable.id, String(rollbackId)))
-      .limit(1);
+    const record = await prisma.releaseSnapshot.findUnique({
+      where: { id: String(rollbackId) },
+    });
 
     if (!record) {
       throw new Error(`Rollback ${rollbackId} not found`);
@@ -247,28 +245,24 @@ export class ReleaseRollbackService {
     return { cancelled: true };
   }
 
-  private async getLatestSnapshot(service: string): Promise<typeof releaseSnapshotsTable.$inferSelect | null> {
-    const [snapshot] = await db
-      .select()
-      .from(releaseSnapshotsTable)
-      .where(eq(releaseSnapshotsTable.serviceName, service))
-      .orderBy(desc(releaseSnapshotsTable.createdAt))
-      .limit(1);
-    return snapshot ?? null;
+  private async getLatestSnapshot(service: string): Promise<any | null> {
+    const snapshots = await prisma.releaseSnapshot.findMany({
+      where: { serviceName: service } as any,
+      orderBy: { createdAt: "desc" },
+      take: 1,
+    });
+    return snapshots[0] ?? null;
   }
 
-  private async getSnapshotByVersion(service: string, version: string): Promise<typeof releaseSnapshotsTable.$inferSelect | null> {
-    const [snapshot] = await db
-      .select()
-      .from(releaseSnapshotsTable)
-      .where(
-        and(
-          eq(releaseSnapshotsTable.serviceName, service),
-          eq(releaseSnapshotsTable.version, version),
-        ),
-      )
-      .limit(1);
-    return snapshot ?? null;
+  private async getSnapshotByVersion(service: string, version: string): Promise<any | null> {
+    const snapshots = await prisma.releaseSnapshot.findMany({
+      where: {
+        serviceName: service,
+        version,
+      } as any,
+      take: 1,
+    });
+    return snapshots[0] ?? null;
   }
 
   private getCurrentHelmRevision(service: string): number {
@@ -303,13 +297,12 @@ export class ReleaseRollbackService {
 
   private async getCurrentMigrationVersion(service: string): Promise<number> {
     try {
-      // Drizzle's `db.execute` takes a single sql template — parameters are
-      // interpolated via `sql.param()` or `${...}` placeholders. We use a
-      // parameterized query to avoid SQL injection from the `service` argument.
-      const result = await db.execute(
-        sql`SELECT MAX(version) as version FROM _migrations WHERE service = ${service}`,
+      // Use a parameterized query to avoid SQL injection from the `service` argument.
+      const result: any[] = await prisma.$queryRawUnsafe(
+        `SELECT MAX(version) as version FROM _migrations WHERE service = $1`,
+        service,
       );
-      return Number((result.rows ?? result)[0]?.version ?? 0);
+      return Number(result[0]?.version ?? 0);
     } catch {
       return 0;
     }

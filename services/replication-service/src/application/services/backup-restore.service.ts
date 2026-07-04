@@ -1,5 +1,16 @@
-import { eq, and, desc, gte, lte, or, sql } from "drizzle-orm";
-import { db, backupRecordsTable, restoreRecordsTable } from "@longox/db";
+/**
+ * Backup & restore service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.backupRecord` and `prisma.restoreRecord` delegates with `as any`
+ * casts for legacy columns. Raw table scans (`workflows`, `executions`,
+ * `audit_log`, `billing`) use `prisma.$queryRawUnsafe()` /
+ * `prisma.$executeRawUnsafe()` because the target tables are not all modelled
+ * in the Prisma schema and we must mirror the original `db.execute(sql\`...\`)`
+ * semantics.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -29,7 +40,7 @@ export class BackupRestoreService {
   async createBackup(
     tenantId: string,
     scope: BackupScope = "full",
-  ): Promise<typeof backupRecordsTable.$inferSelect> {
+  ): Promise<any> {
     const backupDir = path.join(BACKUP_DIR, String(tenantId));
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
@@ -38,87 +49,91 @@ export class BackupRestoreService {
     const timestamp = Date.now();
     const storagePath = path.join(backupDir, `backup_${scope}_${timestamp}`);
 
-    const [record] = await db
-      .insert(backupRecordsTable)
-      .values({
+    const record = await prisma.backupRecord.create({
+      data: {
         tenantId,
         backupType: "manual",
         scope,
         status: "running",
         storagePath,
         startedAt: new Date(),
-      })
-      .returning();
+      } as any,
+    });
 
     try {
       const rowCounts: Record<string, number> = {};
 
       if (scope === "full" || scope === "workflows") {
-        const workflows = await db.execute(sql`
-          SELECT COUNT(*) as count FROM workflows WHERE tenant_id = ${tenantId}
-        `);
-        rowCounts.workflows = Number((workflows.rows ?? workflows)[0]?.count ?? 0);
+        const workflows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT COUNT(*) as count FROM workflows WHERE tenant_id = $1`,
+          tenantId,
+        );
+        rowCounts.workflows = Number((workflows[0] as any)?.count ?? 0);
 
-        const workflowVersions = await db.execute(sql`
-          SELECT COUNT(*) as count FROM workflow_versions WHERE tenant_id = ${tenantId}
-        `);
-        rowCounts.workflow_versions = Number((workflowVersions.rows ?? workflowVersions)[0]?.count ?? 0);
+        const workflowVersions: any[] = await prisma.$queryRawUnsafe(
+          `SELECT COUNT(*) as count FROM workflow_versions WHERE tenant_id = $1`,
+          tenantId,
+        );
+        rowCounts.workflow_versions = Number((workflowVersions[0] as any)?.count ?? 0);
 
-        const workflowData = await db.execute(sql`
-          SELECT * FROM workflows WHERE tenant_id = ${tenantId}
-        `);
-        const workflowRows = workflowData.rows ?? workflowData;
+        const workflowData: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM workflows WHERE tenant_id = $1`,
+          tenantId,
+        );
         fs.writeFileSync(
           `${storagePath}_workflows.json`,
-          JSON.stringify(workflowRows, null, 2),
+          JSON.stringify(workflowData, null, 2),
         );
       }
 
       if (scope === "full" || scope === "executions") {
-        const executions = await db.execute(sql`
-          SELECT COUNT(*) as count FROM executions WHERE tenant_id = ${tenantId}
-        `);
-        rowCounts.executions = Number((executions.rows ?? executions)[0]?.count ?? 0);
+        const executions: any[] = await prisma.$queryRawUnsafe(
+          `SELECT COUNT(*) as count FROM executions WHERE tenant_id = $1`,
+          tenantId,
+        );
+        rowCounts.executions = Number((executions[0] as any)?.count ?? 0);
 
-        const executionData = await db.execute(sql`
-          SELECT * FROM executions WHERE tenant_id = ${tenantId}
-        `);
-        const executionRows = executionData.rows ?? executionData;
+        const executionData: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM executions WHERE tenant_id = $1`,
+          tenantId,
+        );
         fs.writeFileSync(
           `${storagePath}_executions.json`,
-          JSON.stringify(executionRows, null, 2),
+          JSON.stringify(executionData, null, 2),
         );
       }
 
       if (scope === "full" || scope === "audit") {
-        const audit = await db.execute(sql`
-          SELECT COUNT(*) as count FROM audit_log WHERE tenant_id = ${tenantId}
-        `);
-        rowCounts.audit_log = Number((audit.rows ?? audit)[0]?.count ?? 0);
+        const audit: any[] = await prisma.$queryRawUnsafe(
+          `SELECT COUNT(*) as count FROM audit_log WHERE tenant_id = $1`,
+          tenantId,
+        );
+        rowCounts.audit_log = Number((audit[0] as any)?.count ?? 0);
 
-        const auditData = await db.execute(sql`
-          SELECT * FROM audit_log WHERE tenant_id = ${tenantId}
-        `);
-        const auditRows = auditData.rows ?? auditData;
+        const auditData: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM audit_log WHERE tenant_id = $1`,
+          tenantId,
+        );
         fs.writeFileSync(
           `${storagePath}_audit.json`,
-          JSON.stringify(auditRows, null, 2),
+          JSON.stringify(auditData, null, 2),
         );
       }
 
       if (scope === "full" || scope === "billing") {
-        const billing = await db.execute(sql`
-          SELECT COUNT(*) as count FROM billing WHERE tenant_id = ${tenantId}
-        `);
-        rowCounts.billing = Number((billing.rows ?? billing)[0]?.count ?? 0);
+        const billing: any[] = await prisma.$queryRawUnsafe(
+          `SELECT COUNT(*) as count FROM billing WHERE tenant_id = $1`,
+          tenantId,
+        );
+        rowCounts.billing = Number((billing[0] as any)?.count ?? 0);
 
-        const billingData = await db.execute(sql`
-          SELECT * FROM billing WHERE tenant_id = ${tenantId}
-        `);
-        const billingRows = billingData.rows ?? billingData;
+        const billingData: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM billing WHERE tenant_id = $1`,
+          tenantId,
+        );
         fs.writeFileSync(
           `${storagePath}_billing.json`,
-          JSON.stringify(billingRows, null, 2),
+          JSON.stringify(billingData, null, 2),
         );
       }
 
@@ -126,12 +141,12 @@ export class BackupRestoreService {
 
       const totalSize = this.calculateBackupSize(storagePath, scope);
 
-      const [updated] = await db
-        .update(backupRecordsTable)
-        .set({
+      const updated = await prisma.backupRecord.update({
+        where: { id: record.id },
+        data: {
           status: "completed",
           completedAt: new Date(),
-          fileSizeBytes: totalSize,
+          fileSizeBytes: totalSize as any,
           checksum,
           rowCounts,
           metadata: {
@@ -140,23 +155,21 @@ export class BackupRestoreService {
             scope,
           },
           expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        })
-        .where(eq(backupRecordsTable.id, record.id))
-        .returning();
+        } as any,
+      });
 
-      return updated!;
+      return updated;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      const [failed] = await db
-        .update(backupRecordsTable)
-        .set({
+      const failed = await prisma.backupRecord.update({
+        where: { id: record.id },
+        data: {
           status: "failed",
           errorMessage: message,
           completedAt: new Date(),
-        })
-        .where(eq(backupRecordsTable.id, record.id))
-        .returning();
-      return failed!;
+        } as any,
+      });
+      return failed;
     }
   }
 
@@ -164,15 +177,13 @@ export class BackupRestoreService {
     backupId: string,
     tenantId: string,
     options: { restoreType?: RestoreType; targetEnvironment?: string; tables?: string[]; restoredBy?: string; notes?: string } = {},
-  ): Promise<typeof restoreRecordsTable.$inferSelect> {
+  ): Promise<any> {
     const restoreType = options.restoreType ?? "full";
     const targetEnvironment = options.targetEnvironment ?? process.env.NODE_ENV ?? "development";
 
-    const [backup] = await db
-      .select()
-      .from(backupRecordsTable)
-      .where(and(eq(backupRecordsTable.id, backupId), eq(backupRecordsTable.tenantId, tenantId)))
-      .limit(1);
+    const backup = await prisma.backupRecord.findFirst({
+      where: { id: backupId, tenantId } as any,
+    });
 
     if (!backup) {
       throw new Error(`Backup ${backupId} not found for tenant ${tenantId}`);
@@ -184,9 +195,8 @@ export class BackupRestoreService {
 
     await this.validateBackup(backupId);
 
-    const [record] = await db
-      .insert(restoreRecordsTable)
-      .values({
+    const record = await prisma.restoreRecord.create({
+      data: {
         backupId,
         tenantId,
         restoreType,
@@ -195,8 +205,8 @@ export class BackupRestoreService {
         startedAt: new Date(),
         restoredBy: options.restoredBy ?? "system",
         notes: options.notes ?? "",
-      })
-      .returning();
+      } as any,
+    });
 
     try {
       const tablesRestored: string[] = [];
@@ -217,9 +227,9 @@ export class BackupRestoreService {
           }
         }
 
-        const [updated] = await db
-          .update(restoreRecordsTable)
-          .set({
+        const updated = await prisma.restoreRecord.update({
+          where: { id: record.id },
+          data: {
             status: "completed",
             tablesRestored,
             rowCountRestored,
@@ -227,11 +237,10 @@ export class BackupRestoreService {
             integrityPassed: 1,
             warnings,
             completedAt: new Date(),
-          })
-          .where(eq(restoreRecordsTable.id, record.id))
-          .returning();
+          } as any,
+        });
 
-        return updated!;
+        return updated;
       }
 
       if (restoreType === "full" || restoreType === "partial") {
@@ -252,26 +261,28 @@ export class BackupRestoreService {
 
           const tableName = this.scopeToTableName(s);
           if (tableName) {
-            await db.execute(sql`
-              DELETE FROM ${sql.identifier(tableName as any)} WHERE tenant_id = ${tenantId}
-            `);
+            await prisma.$executeRawUnsafe(
+              `DELETE FROM "${tableName}" WHERE tenant_id = $1`,
+              tenantId,
+            );
           }
 
           for (const row of rows) {
             try {
               if (tableName) {
                 const keys = Object.keys(row).filter((k) => k !== "id");
+                const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
+                const quotedKeys = keys.map((k) => `"${k}"`).join(", ");
                 const values = keys.map((k) => {
                   const v = row[k];
                   if (v instanceof Date) return v;
                   if (typeof v === "object" && v !== null) return JSON.stringify(v);
                   return v;
                 });
-                const placeholders = keys.map((_, i) => `$${i + 1}`);
-                await db.execute(sql`
-                  INSERT INTO ${sql.identifier(tableName as any)} (${sql.raw(keys.join(", "))})
-                  VALUES (${sql.raw(placeholders.join(", "))})
-                `);
+                await prisma.$executeRawUnsafe(
+                  `INSERT INTO "${tableName}" (${quotedKeys}) VALUES (${placeholders})`,
+                  ...values,
+                );
               }
             } catch (err: unknown) {
               warnings.push(`Failed to restore row in "${s}": ${(err as Error)?.message ?? "unknown error"}`);
@@ -287,9 +298,9 @@ export class BackupRestoreService {
 
       const integrityPassed = warnings.length === 0;
 
-      const [updated] = await db
-        .update(restoreRecordsTable)
-        .set({
+      const updated = await prisma.restoreRecord.update({
+        where: { id: record.id },
+        data: {
           status: "completed",
           tablesRestored,
           rowCountRestored,
@@ -297,66 +308,53 @@ export class BackupRestoreService {
           integrityPassed: integrityPassed ? 1 : 0,
           warnings,
           completedAt: new Date(),
-        })
-        .where(eq(restoreRecordsTable.id, record.id))
-        .returning();
+        } as any,
+      });
 
-      return updated!;
+      return updated;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      const [failed] = await db
-        .update(restoreRecordsTable)
-        .set({
+      const failed = await prisma.restoreRecord.update({
+        where: { id: record.id },
+        data: {
           status: "failed",
           errorMessage: message,
           completedAt: new Date(),
-        })
-        .where(eq(restoreRecordsTable.id, record.id))
-        .returning();
-      return failed!;
+        } as any,
+      });
+      return failed;
     }
   }
 
   async listBackups(
     tenantId: string,
     filters: BackupFilters = {},
-  ): Promise<(typeof backupRecordsTable.$inferSelect)[]> {
-    let query: any = db
-      .select()
-      .from(backupRecordsTable)
-      .where(eq(backupRecordsTable.tenantId, tenantId));
-
-    if (filters.scope) {
-      query = query.where(eq(backupRecordsTable.scope, filters.scope));
-    }
-    if (filters.status) {
-      query = query.where(eq(backupRecordsTable.status, filters.status));
-    }
-    if (filters.dateFrom) {
-      query = query.where(gte(backupRecordsTable.startedAt, new Date(filters.dateFrom)));
-    }
+  ): Promise<any[]> {
+    const where: Record<string, unknown> = { tenantId };
+    if (filters.scope) where.scope = filters.scope;
+    if (filters.status) where.status = filters.status;
+    if (filters.dateFrom) where.startedAt = { gte: new Date(filters.dateFrom) };
     if (filters.dateTo) {
-      query = query.where(lte(backupRecordsTable.startedAt, new Date(filters.dateTo)));
+      if (where.startedAt && typeof where.startedAt === "object") {
+        (where.startedAt as Record<string, unknown>).lte = new Date(filters.dateTo);
+      } else {
+        where.startedAt = { lte: new Date(filters.dateTo) };
+      }
     }
 
-    return query.orderBy(desc(backupRecordsTable.createdAt));
+    return prisma.backupRecord.findMany({
+      where: where as any,
+      orderBy: { createdAt: "desc" },
+    });
   }
 
-  async getBackup(id: string): Promise<typeof backupRecordsTable.$inferSelect | null> {
-    const [record] = await db
-      .select()
-      .from(backupRecordsTable)
-      .where(eq(backupRecordsTable.id, id))
-      .limit(1);
+  async getBackup(id: string): Promise<any | null> {
+    const record = await prisma.backupRecord.findUnique({ where: { id } });
     return record ?? null;
   }
 
   async deleteBackup(id: string): Promise<void> {
-    const [record] = await db
-      .select()
-      .from(backupRecordsTable)
-      .where(eq(backupRecordsTable.id, id))
-      .limit(1);
+    const record = await prisma.backupRecord.findUnique({ where: { id } });
 
     if (!record) {
       throw new Error(`Backup ${id} not found`);
@@ -372,7 +370,7 @@ export class BackupRestoreService {
       }
     }
 
-    await db.delete(backupRecordsTable).where(eq(backupRecordsTable.id, id));
+    await prisma.backupRecord.delete({ where: { id } });
   }
 
   async scheduleBackup(tenantId: string, config: ScheduleConfig): Promise<{ scheduled: true; config: ScheduleConfig }> {
@@ -398,11 +396,7 @@ export class BackupRestoreService {
   }
 
   async validateBackup(id: string): Promise<{ valid: boolean; checksumMatch: boolean; fileCount: number; errors: string[] }> {
-    const [record] = await db
-      .select()
-      .from(backupRecordsTable)
-      .where(eq(backupRecordsTable.id, id))
-      .limit(1);
+    const record = await prisma.backupRecord.findUnique({ where: { id } });
 
     if (!record) {
       throw new Error(`Backup ${id} not found`);
@@ -412,9 +406,6 @@ export class BackupRestoreService {
     let fileCount = 0;
 
     if (!record.storagePath || !fs.existsSync(record.storagePath.replace(/_workflows\.json$/, "").replace(/_executions\.json$/, "").replace(/_audit\.json$/, "").replace(/_billing\.json$/, ""))) {
-      const dir = record.storagePath ? path.dirname(record.storagePath) : "";
-      const baseName = record.storagePath ? path.basename(record.storagePath) : "";
-
       const scope = record.scope as BackupScope;
       const scopes = this.getScopesForRestore(scope);
 
@@ -445,11 +436,11 @@ export class BackupRestoreService {
 
     const tables = ["workflows", "workflow_versions", "executions", "audit_log", "billing"] as const;
     for (const table of tables) {
-      const result = await db.execute(sql`
-        SELECT COUNT(*) as count, SUM(pg_column_size(${sql.identifier(table as any)})) as size
-        FROM ${sql.identifier(table as any)} WHERE tenant_id = ${tenantId}
-      `);
-      const row = (result.rows ?? result)[0];
+      const result: any[] = await prisma.$queryRawUnsafe(
+        `SELECT COUNT(*) as count FROM "${table}" WHERE tenant_id = $1`,
+        tenantId,
+      );
+      const row = result[0];
       estimatedRows[table] = Number(row?.count ?? 0);
     }
 
@@ -506,9 +497,10 @@ export class BackupRestoreService {
     const tables = ["workflows", "executions", "audit_log", "billing"];
     for (const table of tables) {
       try {
-        await db.execute(sql`
-          SELECT COUNT(*) FROM ${sql.identifier(table as any)} WHERE tenant_id = ${tenantId}
-        `);
+        await prisma.$queryRawUnsafe(
+          `SELECT COUNT(*) FROM "${table}" WHERE tenant_id = $1`,
+          tenantId,
+        );
       } catch {
         console.warn(`Integrity check skipped for table ${table} — may not exist`);
       }

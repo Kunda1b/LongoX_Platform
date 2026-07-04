@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc } from "drizzle-orm";
-import { db, dataSourcesTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { PostgresDataSourceRepository } from "../infrastructure";
 import { AdapterRegistry } from "../infrastructure";
 import {
@@ -21,20 +20,20 @@ const testDs = new TestDataSourceConnectionCommand(
   adapterRegistry as any,
 );
 
-function serializeDs(row: typeof dataSourcesTable.$inferSelect) {
+function serializeDs(row: any) {
   return {
     id: row.id,
     tenantId: row.tenantId,
     name: row.name,
     description: row.description ?? null,
     kind: row.kind,
-    config: row.config ?? {},
-    status: row.status,
-    lastTestedAt: row.lastTestedAt?.toISOString() ?? null,
+    config: (row.configJson ?? row.config) ?? {},
+    status: row.status ?? (row.isActive ? "active" : "inactive"),
+    lastTestedAt: row.lastTestedAt instanceof Date ? row.lastTestedAt.toISOString() : (row.lastTestedAt ?? null),
     lastTestError: row.lastTestError ?? null,
-    createdBy: row.createdBy,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
+    createdBy: row.createdBy ?? null,
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -43,13 +42,15 @@ router.get("/datasources", async (req, res): Promise<void> => {
   const kind = req.query.kind as string | undefined;
   const limit = Math.min(Number(req.query.limit) || 50, 200);
 
-  let query = db.select().from(dataSourcesTable).$dynamic();
-  if (tenantId) query = query.where(eq(dataSourcesTable.tenantId, tenantId));
-  if (kind) query = query.where(eq(dataSourcesTable.kind, kind));
+  const where: Record<string, unknown> = {};
+  if (tenantId) where.tenantId = tenantId;
+  if (kind) where.kind = kind;
 
-  const rows = await query
-    .orderBy(desc(dataSourcesTable.createdAt))
-    .limit(limit);
+  const rows = await prisma.dataSource.findMany({
+    where: where as any,
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
   res.json(rows.map(serializeDs));
 });
 
@@ -65,11 +66,7 @@ router.get("/datasources/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [row] = await db
-    .select()
-    .from(dataSourcesTable)
-    .where(eq(dataSourcesTable.id, id))
-    .limit(1);
+  const row = await prisma.dataSource.findUnique({ where: { id } });
   if (!row) {
     res.status(404).json({ error: "Data source not found" });
     return;

@@ -1,15 +1,21 @@
-import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
-import { db, schedulesTable } from "@longox/db";
+/**
+ * Prisma-based schedule repository.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.schedule` delegate with `as any` casts for legacy columns.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import { Schedule } from "../domain/schedule.entity";
 import type { ScheduleRepository } from "../domain/schedule-repository";
 import type { ScheduleProps, ScheduleStatus } from "../domain/schedule.entity";
 
 export class PostgresScheduleRepository implements ScheduleRepository {
-  private toDomain(row: typeof schedulesTable.$inferSelect): Schedule {
+  private toDomain(row: any): Schedule {
     return new Schedule({
       id: row.id,
-      tenantId: row.tenantId ?? 0,
-      workflowId: row.workflowId ?? 0,
+      tenantId: row.tenantId ?? "",
+      workflowId: row.workflowId ?? "",
       name: row.name,
       description: row.description ?? undefined,
       interval: row.interval as ScheduleProps["interval"],
@@ -31,62 +37,51 @@ export class PostgresScheduleRepository implements ScheduleRepository {
   }
 
   async findById(id: string): Promise<Schedule | null> {
-    const [row] = await db
-      .select()
-      .from(schedulesTable)
-      .where(eq(schedulesTable.id, id))
-      .limit(1);
+    const row = await prisma.schedule.findUnique({ where: { id } });
     return row ? this.toDomain(row) : null;
   }
 
   async findByTenantId(tenantId: string): Promise<Schedule[]> {
-    const rows = await db
-      .select()
-      .from(schedulesTable)
-      .where(eq(schedulesTable.tenantId, tenantId))
-      .orderBy(desc(schedulesTable.createdAt));
-    return rows.map(this.toDomain);
+    const rows = await prisma.schedule.findMany({
+      where: { tenantId } as any,
+      orderBy: { createdAt: "desc" },
+    });
+    return rows.map((r: any) => this.toDomain(r));
   }
 
   async findByWorkflowId(workflowId: string): Promise<Schedule[]> {
-    const rows = await db
-      .select()
-      .from(schedulesTable)
-      .where(eq(schedulesTable.workflowId, workflowId))
-      .orderBy(desc(schedulesTable.createdAt));
-    return rows.map(this.toDomain);
+    const rows = await prisma.schedule.findMany({
+      where: { workflowId } as any,
+      orderBy: { createdAt: "desc" },
+    });
+    return rows.map((r: any) => this.toDomain(r));
   }
 
   async findDueSchedules(now: Date): Promise<Schedule[]> {
-    const rows = await db
-      .select()
-      .from(schedulesTable)
-      .where(
-        and(
-          eq(schedulesTable.status, "active"),
-          lte(schedulesTable.nextRunAt, now),
-          sql`(${schedulesTable.endAt} IS NULL OR ${schedulesTable.endAt} >= ${now})`,
-        ),
-      )
-      .orderBy(schedulesTable.nextRunAt);
-    return rows.map(this.toDomain);
+    const rows = await prisma.schedule.findMany({
+      where: {
+        status: "active",
+        nextRunAt: { lte: now },
+        OR: [{ endAt: null }, { endAt: { gte: now } }],
+      } as any,
+      orderBy: { nextRunAt: "asc" } as any,
+    });
+    return rows.map((r: any) => this.toDomain(r));
   }
 
   async findActive(): Promise<Schedule[]> {
-    const rows = await db
-      .select()
-      .from(schedulesTable)
-      .where(eq(schedulesTable.status, "active"))
-      .orderBy(schedulesTable.nextRunAt);
-    return rows.map(this.toDomain);
+    const rows = await prisma.schedule.findMany({
+      where: { status: "active" } as any,
+      orderBy: { nextRunAt: "asc" } as any,
+    });
+    return rows.map((r: any) => this.toDomain(r));
   }
 
   async create(
     props: Omit<ScheduleProps, "id" | "createdAt" | "updatedAt">,
   ): Promise<Schedule> {
-    const [row] = await db
-      .insert(schedulesTable)
-      .values({
+    const row = await prisma.schedule.create({
+      data: {
         tenantId: props.tenantId,
         workflowId: props.workflowId,
         name: props.name,
@@ -104,37 +99,28 @@ export class PostgresScheduleRepository implements ScheduleRepository {
         retryOnFailure: props.retryOnFailure,
         maxRetries: props.maxRetries,
         metadata: props.metadata,
-      })
-      .returning();
+      } as any,
+    });
     return this.toDomain(row);
   }
 
   async update(id: string, data: Partial<ScheduleProps>): Promise<Schedule> {
-    const [row] = await db
-      .update(schedulesTable)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(schedulesTable.id, id))
-      .returning();
+    const row = await prisma.schedule.update({
+      where: { id },
+      data: { ...data, updatedAt: new Date() } as any,
+    });
     return this.toDomain(row);
   }
 
   async delete(id: string): Promise<void> {
-    await db.delete(schedulesTable).where(eq(schedulesTable.id, id));
+    await prisma.schedule.delete({ where: { id } });
   }
 
   async countByTenantId(tenantId: string): Promise<number> {
-    const [result] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(schedulesTable)
-      .where(eq(schedulesTable.tenantId, tenantId));
-    return result.count;
+    return prisma.schedule.count({ where: { tenantId } });
   }
 
   async countByStatus(status: ScheduleStatus): Promise<number> {
-    const [result] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(schedulesTable)
-      .where(eq(schedulesTable.status, status));
-    return result.count;
+    return prisma.schedule.count({ where: { status } as any });
   }
 }

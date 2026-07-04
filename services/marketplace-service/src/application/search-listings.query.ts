@@ -1,7 +1,6 @@
 import type { ListingRepository } from "../domain/listing-repository";
 import type { Listing, ListingType } from "../domain/listing.entity";
-import { db, marketplaceListingsTable, marketplaceInstallsTable } from "@longox/db";
-import { eq } from "drizzle-orm";
+import { prisma } from "@longox/db/prisma";
 
 export interface SearchListingsInput {
   type?: ListingType;
@@ -59,10 +58,12 @@ export class InstallListingCommand {
       installCount: listing.installCount,
     } as any);
 
-    await db.insert(marketplaceInstallsTable).values({
-      listingId: input.listingId,
-      tenantId: input.tenantId,
-      installedBy: input.installedBy,
+    await prisma.marketplaceInstall.create({
+      data: {
+        listingId: input.listingId,
+        tenantId: input.tenantId,
+        installedBy: input.installedBy,
+      } as any,
     });
   }
 }

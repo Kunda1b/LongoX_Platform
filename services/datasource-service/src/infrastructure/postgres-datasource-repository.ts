@@ -1,5 +1,11 @@
-import { eq, desc, sql } from "drizzle-orm";
-import { db, dataSourcesTable } from "@longox/db";
+/**
+ * Prisma-based data source repository.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.dataSource` delegate with `as any` casts for legacy columns.
+ */
+
+import { prisma } from "@longox/db/prisma";
 import { DataSource } from "../domain/datasource.entity";
 import type { DataSourceRepository } from "../domain/datasource-repository";
 import type {
@@ -8,15 +14,15 @@ import type {
 } from "../domain/datasource.entity";
 
 export class PostgresDataSourceRepository implements DataSourceRepository {
-  private toDomain(row: typeof dataSourcesTable.$inferSelect): DataSource {
+  private toDomain(row: any): DataSource {
     return new DataSource({
       id: row.id,
       tenantId: row.tenantId ?? "",
       name: row.name,
       description: row.description ?? undefined,
       kind: row.kind as DataSourceKind,
-      config: (row.config ?? {}) as Record<string, unknown>,
-      status: row.status as DataSourceProps["status"],
+      config: ((row.configJson ?? row.config) ?? {}) as Record<string, unknown>,
+      status: (row.status ?? (row.isActive ? "active" : "inactive")) as DataSourceProps["status"],
       lastTestedAt: row.lastTestedAt ?? undefined,
       lastTestError: row.lastTestError ?? undefined,
       createdBy: row.createdBy ?? "",
@@ -26,11 +32,7 @@ export class PostgresDataSourceRepository implements DataSourceRepository {
   }
 
   async findById(id: string): Promise<DataSource | null> {
-    const [row] = await db
-      .select()
-      .from(dataSourcesTable)
-      .where(eq(dataSourcesTable.id, id))
-      .limit(1);
+    const row = await prisma.dataSource.findUnique({ where: { id } });
     return row ? this.toDomain(row) : null;
   }
 
@@ -38,31 +40,33 @@ export class PostgresDataSourceRepository implements DataSourceRepository {
     tenantId: string,
     kind?: DataSourceKind,
   ): Promise<DataSource[]> {
-    let query = db
-      .select()
-      .from(dataSourcesTable)
-      .where(eq(dataSourcesTable.tenantId, tenantId))
-      .$dynamic();
-    if (kind) query = query.where(eq(dataSourcesTable.kind, kind));
-    const rows = await query.orderBy(desc(dataSourcesTable.createdAt));
-    return rows.map(this.toDomain);
+    const where: Record<string, unknown> = { tenantId };
+    if (kind) where.kind = kind;
+    const rows = await prisma.dataSource.findMany({
+      where: where as any,
+      orderBy: { createdAt: "desc" },
+    });
+    return rows.map((r: any) => this.toDomain(r));
   }
 
   async create(
     props: Omit<DataSourceProps, "id" | "createdAt" | "updatedAt">,
   ): Promise<DataSource> {
-    const [row] = await db
-      .insert(dataSourcesTable)
-      .values({
+    const row = await prisma.dataSource.create({
+      data: {
         tenantId: props.tenantId,
         name: props.name,
         description: props.description,
         kind: props.kind,
+        configJson: props.config,
         config: props.config,
+        isActive: props.status === "active",
         status: props.status,
+        lastTestedAt: props.lastTestedAt,
+        lastTestError: props.lastTestError,
         createdBy: props.createdBy,
-      })
-      .returning();
+      } as any,
+    });
     return this.toDomain(row);
   }
 
@@ -70,23 +74,25 @@ export class PostgresDataSourceRepository implements DataSourceRepository {
     id: string,
     data: Partial<DataSourceProps>,
   ): Promise<DataSource> {
-    const [row] = await db
-      .update(dataSourcesTable)
-      .set({ ...data, updatedAt: new Date() } as any)
-      .where(eq(dataSourcesTable.id, id))
-      .returning();
+    const payload: Record<string, unknown> = { ...data, updatedAt: new Date() };
+    if (data.config) {
+      payload.configJson = data.config;
+    }
+    if (data.status) {
+      payload.isActive = data.status === "active";
+    }
+    const row = await prisma.dataSource.update({
+      where: { id },
+      data: payload as any,
+    });
     return this.toDomain(row);
   }
 
   async delete(id: string): Promise<void> {
-    await db.delete(dataSourcesTable).where(eq(dataSourcesTable.id, id));
+    await prisma.dataSource.delete({ where: { id } });
   }
 
   async countByTenantId(tenantId: string): Promise<number> {
-    const [result] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(dataSourcesTable)
-      .where(eq(dataSourcesTable.tenantId, tenantId));
-    return result.count;
+    return prisma.dataSource.count({ where: { tenantId } });
   }
 }
