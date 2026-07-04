@@ -12,7 +12,7 @@ import { authorize, requireTenantContext } from "@longox/shared-rbac";
 const router: IRouter = Router();
 
 function actorFromRequest(req: {
-  user?: { id: number; role?: string };
+  user?: { id: string; role?: string };
 }): { actorType: string; actorId?: string } {
   return req.user
     ? { actorType: "user", actorId: String(req.user.id) }
@@ -70,7 +70,7 @@ router.get("/dlq", authorize("executions.read"), requireTenantContext, async (re
 });
 
 router.post("/dlq/:id/retry", authorize("executions.run"), requireTenantContext, async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   if (!Number.isInteger(id)) {
     res.status(400).json({ error: "Invalid DLQ id" });
     return;
@@ -124,7 +124,7 @@ router.post("/dlq/:id/retry", authorize("executions.run"), requireTenantContext,
 });
 
 router.post("/dlq/:id/dismiss", authorize("executions.run"), requireTenantContext, async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   if (!Number.isInteger(id)) {
     res.status(400).json({ error: "Invalid DLQ id" });
     return;

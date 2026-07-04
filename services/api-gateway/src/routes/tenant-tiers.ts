@@ -55,7 +55,7 @@ router.get(
   "/tenants/tiers/:id",
   authorize({ resource: "tenants", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const id = Number(req.params.id);
+    const id = String(req.params.id);
     const [tier] = await db
       .select()
       .from(tenantTiersTable)
@@ -131,7 +131,7 @@ router.put(
   "/tenants/tiers/:id",
   authorize({ resource: "tenants", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const id = Number(req.params.id);
+    const id = String(req.params.id);
     const body = req.body as Record<string, unknown>;
     const [tier] = await db
       .update(tenantTiersTable)
@@ -419,7 +419,7 @@ router.post(
       return;
     }
 
-    const planId = Number(req.params.id);
+    const planId = String(req.params.id);
 
     try {
       const result = await tenantMigrationService.executeMigration(
@@ -445,7 +445,7 @@ router.post(
       return;
     }
 
-    const migrationId = Number(req.params.id);
+    const migrationId = String(req.params.id);
 
     try {
       const result = await tenantMigrationService.rollbackMigration(

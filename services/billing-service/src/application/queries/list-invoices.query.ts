@@ -5,7 +5,7 @@ import { buildUsageBreakdown, round2 } from "../../domain/billing/pricing";
 export class ListInvoicesQuery {
   constructor(private readonly repository: UsageRepository) {}
 
-  async execute(tenantId: number): Promise<Invoice[]> {
+  async execute(tenantId: string): Promise<Invoice[]> {
     const now = new Date();
     const invoices: Invoice[] = [];
 

@@ -11,16 +11,16 @@ export type EventType =
   | "user.seat";
 
 export interface MeteringEventProps {
-  id: number;
-  tenantId: number;
+  id: string;
+  tenantId: string;
   eventType: EventType;
   quantity: number;
   unit: string;
   metadata: Record<string, unknown>;
   source: string;
   sourceId?: string;
-  workflowId?: number;
-  executionId?: number;
+  workflowId?: string;
+  executionId?: string;
   timestamp: Date;
   createdAt: Date;
 }

@@ -221,10 +221,10 @@ export class PostgresSearchRepository implements SearchRepository {
 
   async searchExecutions(
     query: string,
-    tenantId: number,
+    tenantId: string,
     filters?: {
       status?: string;
-      workflowId?: number;
+      workflowId?: string;
       startDate?: Date;
       endDate?: Date;
     },
@@ -317,11 +317,11 @@ export class PostgresSearchRepository implements SearchRepository {
 
   async searchAuditLogs(
     query: string,
-    tenantId: number,
+    tenantId: string,
     filters?: {
       action?: string;
       resource?: string;
-      userId?: number;
+      userId?: string;
       startDate?: Date;
       endDate?: Date;
     },
@@ -391,7 +391,7 @@ export class PostgresSearchRepository implements SearchRepository {
 
   async searchAiPrompts(
     query: string,
-    tenantId: number,
+    tenantId: string,
     filters?: { model?: string },
     limit: number = 20,
   ): Promise<SearchResult[]> {

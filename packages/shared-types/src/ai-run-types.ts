@@ -1,14 +1,14 @@
 export interface AiRunRequest {
   provider?: string;
   model: string;
-  promptId?: number;
+  promptId?: string;
   promptVersion?: number;
   messages: AiMessage[];
   temperature?: number;
   maxTokens?: number;
   topP?: number;
   stop?: string[];
-  knowledgeBaseId?: number;
+  knowledgeBaseId?: string;
   ragOptions?: {
     topK: number;
     minScore: number;
@@ -41,7 +41,7 @@ export interface AiRunResponse {
   runId: string;
   provider: string;
   model: string;
-  promptId?: number;
+  promptId?: string;
   promptVersion?: number;
   messages: AiMessage[];
   content: string;
@@ -89,7 +89,7 @@ export interface AiGuardrailViolation {
 }
 
 export interface AiRagCitation {
-  documentId: number;
+  documentId: string;
   documentName: string;
   chunkId: number;
   chunkContent: string;
@@ -116,10 +116,10 @@ export interface AiRunFilters {
   status?: string;
   provider?: string;
   model?: string;
-  promptId?: number;
+  promptId?: string;
   fromDate?: string;
   toDate?: string;
-  tenantId?: number;
+  tenantId?: string;
   limit?: number;
   offset?: number;
 }

@@ -112,7 +112,7 @@ router.get("/connectors", authorize({ resource: "connectors", action: "read" }),
 });
 
 router.get("/connectors/:id", authorize({ resource: "connectors", action: "read" }), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   if (!Number.isInteger(id)) {
     res.status(400).json({ error: "Invalid connector id" });
     return;
@@ -130,7 +130,7 @@ router.get("/connectors/:id", authorize({ resource: "connectors", action: "read"
 });
 
 router.post("/connectors/:id/install", authorize({ resource: "connectors", action: "install" }), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   if (!Number.isInteger(id)) {
     res.status(400).json({ error: "Invalid connector id" });
     return;
@@ -151,7 +151,7 @@ router.post("/connectors/:id/install", authorize({ resource: "connectors", actio
 });
 
 router.post("/connectors/:id/configure", authorize({ resource: "connectors", action: "write" }), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   if (!Number.isInteger(id)) {
     res.status(400).json({ error: "Invalid connector id" });
     return;
@@ -172,7 +172,7 @@ router.post("/connectors/:id/configure", authorize({ resource: "connectors", act
 });
 
 router.post("/connectors/:id/upgrade", authorize({ resource: "connectors", action: "install" }), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   if (!Number.isInteger(id)) {
     res.status(400).json({ error: "Invalid connector id" });
     return;
@@ -193,7 +193,7 @@ router.post("/connectors/:id/upgrade", authorize({ resource: "connectors", actio
 });
 
 router.post("/connectors/:id/remove", authorize({ resource: "connectors", action: "install" }), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   if (!Number.isInteger(id)) {
     res.status(400).json({ error: "Invalid connector id" });
     return;
@@ -283,7 +283,7 @@ router.post("/apps", authorize({ resource: "apps", action: "write" }), async (re
 });
 
 router.get("/apps/:id", authorize({ resource: "apps", action: "read" }), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   if (!Number.isInteger(id)) {
     res.status(400).json({ error: "Invalid app id" });
     return;
@@ -297,7 +297,7 @@ router.get("/apps/:id", authorize({ resource: "apps", action: "read" }), async (
 });
 
 router.patch("/apps/:id", authorize({ resource: "apps", action: "write" }), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   if (!Number.isInteger(id)) {
     res.status(400).json({ error: "Invalid app id" });
     return;
@@ -327,7 +327,7 @@ router.patch("/apps/:id", authorize({ resource: "apps", action: "write" }), asyn
 });
 
 router.delete("/apps/:id", authorize({ resource: "apps", action: "delete" }), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   if (!Number.isInteger(id)) {
     res.status(400).json({ error: "Invalid app id" });
     return;
@@ -347,7 +347,7 @@ router.get("/credentials", authorize({ resource: "credentials", action: "read" }
 router.post("/credentials", authorize({ resource: "credentials", action: "write" }), async (req, res): Promise<void> => {
   const body = req.body as {
     name?: string;
-    connectorId?: number;
+    connectorId?: string;
     connectorName?: string;
     fields?: string[];
   };
@@ -371,7 +371,7 @@ router.post("/credentials", authorize({ resource: "credentials", action: "write"
 });
 
 router.delete("/credentials/:id", authorize({ resource: "credentials", action: "write" }), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   if (!Number.isInteger(id)) {
     res.status(400).json({ error: "Invalid credential id" });
     return;

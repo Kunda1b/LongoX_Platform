@@ -14,15 +14,15 @@ import type {
 
 export const getListSchedulesUrl = () => `/api/schedules`;
 
-export const getScheduleUrl = (id: number) => `/api/schedules/${id}`;
+export const getScheduleUrl = (id: string) => `/api/schedules/${id}`;
 
 export const getDueSchedulesUrl = () => `/api/schedules/due`;
 
 export const getScheduleStatsUrl = () => `/api/schedules/stats`;
 
-export const getPauseScheduleUrl = (id: number) => `/api/schedules/${id}/pause`;
+export const getPauseScheduleUrl = (id: string) => `/api/schedules/${id}/pause`;
 
-export const getActivateScheduleUrl = (id: number) =>
+export const getActivateScheduleUrl = (id: string) =>
   `/api/schedules/${id}/activate`;
 
 export const listSchedules = async (
@@ -43,7 +43,7 @@ export const listSchedules = async (
 };
 
 export const getSchedule = async (
-  id: number,
+  id: string,
   options?: RequestInit,
 ): Promise<Schedule> => {
   return customFetch<Schedule>(getScheduleUrl(id), {
@@ -65,7 +65,7 @@ export const createSchedule = async (
 };
 
 export const updateSchedule = async (
-  id: number,
+  id: string,
   input: Partial<ScheduleInput>,
   options?: RequestInit,
 ): Promise<Schedule> => {
@@ -78,7 +78,7 @@ export const updateSchedule = async (
 };
 
 export const deleteSchedule = async (
-  id: number,
+  id: string,
   options?: RequestInit,
 ): Promise<void> => {
   await customFetch<void>(getScheduleUrl(id), { ...options, method: "DELETE" });
@@ -103,7 +103,7 @@ export const getScheduleStats = async (
 };
 
 export const pauseSchedule = async (
-  id: number,
+  id: string,
   options?: RequestInit,
 ): Promise<Schedule> => {
   return customFetch<Schedule>(getPauseScheduleUrl(id), {
@@ -113,7 +113,7 @@ export const pauseSchedule = async (
 };
 
 export const activateSchedule = async (
-  id: number,
+  id: string,
   options?: RequestInit,
 ): Promise<Schedule> => {
   return customFetch<Schedule>(getActivateScheduleUrl(id), {
@@ -125,7 +125,7 @@ export const activateSchedule = async (
 export const getListSchedulesQueryKey = (params?: ListSchedulesParams) =>
   [`/api/schedules`, ...(params ? [params] : [])] as const;
 
-export const getScheduleQueryKey = (id: number) =>
+export const getScheduleQueryKey = (id: string) =>
   [`/api/schedules/${id}`] as const;
 
 export const getDueSchedulesQueryKey = () => [`/api/schedules/due`] as const;
@@ -151,7 +151,7 @@ export function useListSchedules<
 }
 
 export function useGetSchedule<TData = Schedule, TError = ErrorType<void>>(
-  id: number,
+  id: string,
   options?: {
     query?: UseQueryOptions<Schedule, TError, TData>;
     request?: RequestInit;
@@ -218,7 +218,7 @@ export function useUpdateSchedule<TError = ErrorType<unknown>>(
   options?: UseMutationOptions<
     Schedule,
     TError,
-    { id: number; data: Partial<ScheduleInput> }
+    { id: string; data: Partial<ScheduleInput> }
   >,
 ) {
   const queryClient = useQueryClient();
@@ -237,7 +237,7 @@ export function useDeleteSchedule<TError = ErrorType<unknown>>(
 ) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => deleteSchedule(id),
+    mutationFn: (id: string) => deleteSchedule(id),
     onSuccess: (...args) => {
       queryClient.invalidateQueries({ queryKey: [`/api/schedules`] });
       options?.onSuccess?.(...args);
@@ -251,7 +251,7 @@ export function usePauseSchedule<TError = ErrorType<unknown>>(
 ) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => pauseSchedule(id),
+    mutationFn: (id: string) => pauseSchedule(id),
     onSuccess: (...args) => {
       queryClient.invalidateQueries({ queryKey: [`/api/schedules`] });
       options?.onSuccess?.(...args);
@@ -265,7 +265,7 @@ export function useActivateSchedule<TError = ErrorType<unknown>>(
 ) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => activateSchedule(id),
+    mutationFn: (id: string) => activateSchedule(id),
     onSuccess: (...args) => {
       queryClient.invalidateQueries({ queryKey: [`/api/schedules`] });
       options?.onSuccess?.(...args);

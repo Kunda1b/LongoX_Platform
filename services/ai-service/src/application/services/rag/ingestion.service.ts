@@ -11,7 +11,7 @@ export interface DocumentInput {
 }
 
 export interface DocumentResult {
-  documentId: number;
+  documentId: string;
   chunkCount: number;
   status: string;
 }

@@ -45,7 +45,7 @@ router.get("/tenants", authorize({ resource: "tenants", action: "admin" }), asyn
 // ─── Get tenant ───────────────────────────────────────────────────────────────
 
 router.get("/tenants/:id", authorize({ resource: "tenants", action: "admin" }), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const [t] = await db
     .select()
     .from(tenantsTable)
@@ -105,7 +105,7 @@ router.post("/tenants", authorize({ resource: "tenants", action: "admin" }), asy
 // ─── Update tenant ────────────────────────────────────────────────────────────
 
 router.patch("/tenants/:id", authorize({ resource: "tenants", action: "admin" }), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const { name, slug, plan, isActive, settings } = req.body as Partial<{
     name: string;
     slug: string;
@@ -143,7 +143,7 @@ router.patch("/tenants/:id", authorize({ resource: "tenants", action: "admin" })
 // ─── Delete tenant ────────────────────────────────────────────────────────────
 
 router.delete("/tenants/:id", authorize({ resource: "tenants", action: "admin" }), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   await db.delete(tenantsTable).where(eq(tenantsTable.id, id));
   res.status(204).end();
 });

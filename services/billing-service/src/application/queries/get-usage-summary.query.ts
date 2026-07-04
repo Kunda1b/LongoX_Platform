@@ -5,7 +5,7 @@ import { priceFor, round2 } from "../../domain/billing/pricing";
 export class GetUsageSummaryQuery {
   constructor(private readonly repository: UsageRepository) {}
 
-  async execute(tenantId: number): Promise<UsageSummary> {
+  async execute(tenantId: string): Promise<UsageSummary> {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 

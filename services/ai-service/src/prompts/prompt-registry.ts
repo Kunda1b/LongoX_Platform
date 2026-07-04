@@ -2,7 +2,7 @@ import { db, promptsTable, templateVersionsTable } from "@longox/db";
 import { eq, and, desc } from "drizzle-orm";
 
 export interface PromptDefinition {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   systemPrompt: string;
@@ -16,7 +16,7 @@ export interface PromptDefinition {
 }
 
 export class PromptRegistry {
-  async getPrompt(id: number): Promise<PromptDefinition | null> {
+  async getPrompt(id: string): Promise<PromptDefinition | null> {
     const [prompt] = await db
       .select()
       .from(promptsTable)
@@ -85,7 +85,7 @@ export class PromptRegistry {
   }
 
   async updatePrompt(
-    id: number,
+    id: string,
     data: Partial<Omit<PromptDefinition, "id" | "version">>,
   ): Promise<PromptDefinition | null> {
     const updates: Record<string, unknown> = {};
@@ -113,7 +113,7 @@ export class PromptRegistry {
   }
 
   async renderPrompt(
-    promptId: number,
+    promptId: string,
     variables: Record<string, string>,
   ): Promise<{ systemPrompt: string; userPrompt: string }> {
     const prompt = await this.getPrompt(promptId);

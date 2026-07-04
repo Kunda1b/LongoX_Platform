@@ -7,10 +7,10 @@ import {
 } from "../../infrastructure/auth/jwt";
 
 export interface LoginUser {
-  id: number;
+  id: string;
   email: string;
   name: string;
-  tenantId: number | null;
+  tenantId: string | null;
   role: string;
 }
 

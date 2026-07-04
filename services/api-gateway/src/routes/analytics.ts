@@ -60,7 +60,7 @@ router.get("/analytics/workflows", authorize("analytics.read"), requireTenantCon
   const stats = new Map<
     number,
     {
-      workflowId: number;
+      workflowId: string;
       workflowName: string;
       total: number;
       success: number;

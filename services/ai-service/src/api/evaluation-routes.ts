@@ -13,7 +13,7 @@ router.post("/datasets", authorize("ai:write"), async (req, res): Promise<void> 
     const { name, description, promptId, metadata } = req.body as {
       name: string;
       description?: string;
-      promptId?: number;
+      promptId?: string;
       metadata?: Record<string, unknown>;
     };
 
@@ -47,7 +47,7 @@ router.get("/datasets", authorize("ai:read"), async (req, res): Promise<void> =>
 
 router.get("/datasets/:id", authorize("ai:read"), async (req, res): Promise<void> => {
   try {
-    const dataset = await evaluationDatasetService.getDataset(Number(req.params.id));
+    const dataset = await evaluationDatasetService.getDataset(String(req.params.id));
     if (!dataset) {
       res.status(404).json({ error: "Dataset not found" });
       return;
@@ -74,7 +74,7 @@ router.post("/datasets/:id/entries", authorize("ai:write"), async (req, res): Pr
       return;
     }
 
-    const inserted = await evaluationDatasetService.addEntries(Number(req.params.id), entries);
+    const inserted = await evaluationDatasetService.addEntries(String(req.params.id), entries);
     res.status(201).json(inserted);
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : "Internal error" });
@@ -84,8 +84,8 @@ router.post("/datasets/:id/entries", authorize("ai:write"), async (req, res): Pr
 router.delete("/datasets/:id/entries/:entryId", authorize("ai:write"), async (req, res): Promise<void> => {
   try {
     const deleted = await evaluationDatasetService.removeEntry(
-      Number(req.params.id),
-      Number(req.params.entryId),
+      String(req.params.id),
+      String(req.params.entryId),
     );
     if (!deleted) {
       res.status(404).json({ error: "Entry not found" });
@@ -99,7 +99,7 @@ router.delete("/datasets/:id/entries/:entryId", authorize("ai:write"), async (re
 
 router.delete("/datasets/:id", authorize("ai:delete"), async (req, res): Promise<void> => {
   try {
-    const dataset = await evaluationDatasetService.deleteDataset(Number(req.params.id));
+    const dataset = await evaluationDatasetService.deleteDataset(String(req.params.id));
     if (!dataset) {
       res.status(404).json({ error: "Dataset not found" });
       return;
@@ -113,8 +113,8 @@ router.delete("/datasets/:id", authorize("ai:delete"), async (req, res): Promise
 router.post("/runs", authorize("ai:write"), async (req, res): Promise<void> => {
   try {
     const { datasetId, promptId, promptVersion, threshold } = req.body as {
-      datasetId: number;
-      promptId: number;
+      datasetId: string;
+      promptId: string;
       promptVersion?: number;
       threshold?: number;
     };
@@ -152,7 +152,7 @@ router.get("/runs", authorize("ai:read"), async (req, res): Promise<void> => {
 
 router.get("/runs/:id", authorize("ai:read"), async (req, res): Promise<void> => {
   try {
-    const run = await evaluationRunService.getRun(Number(req.params.id));
+    const run = await evaluationRunService.getRun(String(req.params.id));
     if (!run) {
       res.status(404).json({ error: "Run not found" });
       return;
@@ -165,7 +165,7 @@ router.get("/runs/:id", authorize("ai:read"), async (req, res): Promise<void> =>
 
 router.get("/runs/:id/results", authorize("ai:read"), async (req, res): Promise<void> => {
   try {
-    const results = await evaluationRunService.getRunResults(Number(req.params.id));
+    const results = await evaluationRunService.getRunResults(String(req.params.id));
     res.json(results);
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : "Internal error" });
@@ -175,9 +175,9 @@ router.get("/runs/:id/results", authorize("ai:read"), async (req, res): Promise<
 router.post("/regression-check", authorize("ai:write"), async (req, res): Promise<void> => {
   try {
     const { promptId, promptVersion, datasetId, threshold, targetEnvironment } = req.body as {
-      promptId: number;
+      promptId: string;
       promptVersion: number;
-      datasetId?: number;
+      datasetId?: string;
       threshold?: number;
       targetEnvironment?: string;
     };

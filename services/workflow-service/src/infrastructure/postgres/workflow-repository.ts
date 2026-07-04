@@ -24,7 +24,7 @@ function mapRowToWorkflow(row: typeof workflowsTable.$inferSelect): Workflow {
 }
 
 export class PostgresWorkflowRepository implements WorkflowRepository {
-  async findById(id: number): Promise<Workflow | null> {
+  async findById(id: string): Promise<Workflow | null> {
     const [row] = await db
       .select()
       .from(workflowsTable)
@@ -115,7 +115,7 @@ export class PostgresWorkflowRepository implements WorkflowRepository {
     return mapRowToWorkflow(row);
   }
 
-  async delete(id: number): Promise<boolean> {
+  async delete(id: string): Promise<boolean> {
     const [row] = await db
       .delete(workflowsTable)
       .where(eq(workflowsTable.id, id))
@@ -123,7 +123,7 @@ export class PostgresWorkflowRepository implements WorkflowRepository {
     return !!row;
   }
 
-  async getNextVersion(workflowId: number): Promise<number> {
+  async getNextVersion(workflowId: string): Promise<number> {
     const [existing] = await db
       .select({ version: workflowVersionsTable.version })
       .from(workflowVersionsTable)

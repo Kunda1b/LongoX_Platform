@@ -1,8 +1,8 @@
 export type AggregatePeriod = "hour" | "day" | "month";
 
 export interface UsageAggregateProps {
-  id: number;
-  tenantId: number;
+  id: string;
+  tenantId: string;
   eventType: string;
   period: AggregatePeriod;
   periodStart: Date;

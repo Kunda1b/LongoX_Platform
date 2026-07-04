@@ -13,7 +13,7 @@ router.post(
   "/dr/backup",
   authorize({ resource: "tenants", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const { tenantId, scope } = req.body as { tenantId?: number; scope?: string };
+    const { tenantId, scope } = req.body as { tenantId?: string; scope?: string };
     if (!tenantId) {
       res.status(400).json({ error: "tenantId is required" });
       return;
@@ -58,8 +58,8 @@ router.get(
   "/dr/backups/:id",
   authorize({ resource: "tenants", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const id = Number(req.params.id);
-    if (isNaN(id)) {
+    const id = String(req.params.id);
+    if (!id) {
       res.status(400).json({ error: "Invalid backup id" });
       return;
     }
@@ -80,8 +80,8 @@ router.post(
   "/dr/backups/:id/validate",
   authorize({ resource: "tenants", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const id = Number(req.params.id);
-    if (isNaN(id)) {
+    const id = String(req.params.id);
+    if (!id) {
       res.status(400).json({ error: "Invalid backup id" });
       return;
     }
@@ -98,8 +98,8 @@ router.post(
   "/dr/backups/:id/restore",
   authorize({ resource: "tenants", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const id = Number(req.params.id);
-    if (isNaN(id)) {
+    const id = String(req.params.id);
+    if (!id) {
       res.status(400).json({ error: "Invalid backup id" });
       return;
     }
@@ -128,8 +128,8 @@ router.get(
   "/dr/restores/:id",
   authorize({ resource: "tenants", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const id = Number(req.params.id);
-    if (isNaN(id)) {
+    const id = String(req.params.id);
+    if (!id) {
       res.status(400).json({ error: "Invalid restore id" });
       return;
     }
@@ -272,7 +272,7 @@ router.post(
   "/dr/drills/backup",
   authorize({ resource: "tenants", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const { tenantId } = req.body as { tenantId?: number };
+    const { tenantId } = req.body as { tenantId?: string };
     if (!tenantId) {
       res.status(400).json({ error: "tenantId is required" });
       return;

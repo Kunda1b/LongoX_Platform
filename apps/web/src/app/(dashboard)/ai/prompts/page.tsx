@@ -38,7 +38,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 
 type Prompt = {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   content: string;
@@ -49,8 +49,8 @@ type Prompt = {
 };
 
 type PromptVersion = {
-  id: number;
-  promptId: number;
+  id: string;
+  promptId: string;
   content: string;
   version: number;
   status: string;
@@ -59,8 +59,8 @@ type PromptVersion = {
 };
 
 type ApprovalRecord = {
-  id: number;
-  promptId: number;
+  id: string;
+  promptId: string;
   version: number;
   requesterId: number | null;
   approverId: number | null;
@@ -71,7 +71,7 @@ type ApprovalRecord = {
 };
 
 type TestResult = {
-  promptId: number;
+  promptId: string;
   version: number;
   provider: string;
   model: string;
@@ -157,7 +157,7 @@ export default function PromptsGovernancePage() {
   });
 
   const submitForReviewMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       const res = await fetch(`/api/prompts/${id}/submit-for-review`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -172,7 +172,7 @@ export default function PromptsGovernancePage() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       const res = await fetch(`/api/prompts/${id}/publish`, {
         method: "POST",
         headers: {
@@ -193,7 +193,7 @@ export default function PromptsGovernancePage() {
   });
 
   const rejectMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       const res = await fetch(`/api/prompts/${id}/reject`, {
         method: "POST",
         headers: {
@@ -212,7 +212,7 @@ export default function PromptsGovernancePage() {
   });
 
   const rollbackMutation = useMutation({
-    mutationFn: async ({ id, targetVersion }: { id: number; targetVersion: number }) => {
+    mutationFn: async ({ id, targetVersion }: { id: string; targetVersion: number }) => {
       const res = await fetch(`/api/prompts/${id}/rollback`, {
         method: "POST",
         headers: {
@@ -233,7 +233,7 @@ export default function PromptsGovernancePage() {
   });
 
   const testMutation = useMutation({
-    mutationFn: async ({ id, variables }: { id: number; variables?: Record<string, string> }) => {
+    mutationFn: async ({ id, variables }: { id: string; variables?: Record<string, string> }) => {
       const res = await fetch(`/api/prompts/${id}/test`, {
         method: "POST",
         headers: {
@@ -253,7 +253,7 @@ export default function PromptsGovernancePage() {
     },
   });
 
-  const handleTest = (id: number) => {
+  const handleTest = (id: string) => {
     let variables: Record<string, string> = {};
     if (testVars.trim()) {
       try {

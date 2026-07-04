@@ -6,8 +6,8 @@ import type {
 } from "../../domain/schedule.entity";
 
 export interface CreateScheduleInput {
-  tenantId: number;
-  workflowId: number;
+  tenantId: string;
+  workflowId: string;
   name: string;
   description?: string;
   interval: ScheduleInterval;
@@ -92,7 +92,7 @@ export interface UpdateScheduleInput {
 export class UpdateScheduleCommand {
   constructor(private repository: ScheduleRepository) {}
 
-  async execute(id: number, input: UpdateScheduleInput): Promise<Schedule> {
+  async execute(id: string, input: UpdateScheduleInput): Promise<Schedule> {
     const existing = await this.repository.findById(id);
     if (!existing) {
       throw new Error(`Schedule with id ${id} not found`);
@@ -106,7 +106,7 @@ export class UpdateScheduleCommand {
 export class DeleteScheduleCommand {
   constructor(private repository: ScheduleRepository) {}
 
-  async execute(id: number): Promise<void> {
+  async execute(id: string): Promise<void> {
     const existing = await this.repository.findById(id);
     if (!existing) {
       throw new Error(`Schedule with id ${id} not found`);

@@ -41,9 +41,9 @@ router.post("/datasources", authorize("dashboards:write"), async (req, res): Pro
 });
 
 router.delete("/datasources/:id", authorize("dashboards:delete"), async (req, res): Promise<void> => {
-  const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
 
@@ -60,9 +60,9 @@ router.delete("/datasources/:id", authorize("dashboards:delete"), async (req, re
 });
 
 router.post("/datasources/:id/test", authorize("dashboards:write"), async (req, res): Promise<void> => {
-  const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
 

@@ -16,7 +16,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 
 type AIModel = {
-  id: number;
+  id: string;
   provider: string;
   name: string;
   modelId: string;
@@ -44,7 +44,7 @@ export function AIModelsList() {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: async ({ id, isEnabled }: { id: number; isEnabled: boolean }) => {
+    mutationFn: async ({ id, isEnabled }: { id: string; isEnabled: boolean }) => {
       const res = await fetch(`/api/ai-models/${id}`, {
         method: "PATCH",
         headers: {

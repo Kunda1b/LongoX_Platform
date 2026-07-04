@@ -17,10 +17,10 @@ import {
 } from "@longox/db";
 
 interface AppUser {
-  id: number;
+  id: string;
   email: string;
   name: string;
-  tenantId: number;
+  tenantId: string;
   role: string;
 }
 
@@ -28,10 +28,10 @@ function clamp(n: number | null | undefined): number {
   return Math.min(Math.max(n ?? 20, 1), 100);
 }
 
-const enc = (id: number) => Buffer.from(String(id)).toString("base64");
+const enc = (id: string) => Buffer.from(String(id)).toString("base64");
 const dec = (c: string) => Number(Buffer.from(c, "base64").toString());
 
-function pageInfo(hasNext: boolean, offset: number, items: { id: number }[]) {
+function pageInfo(hasNext: boolean, offset: number, items: { id: string }[]) {
   return {
     hasNextPage: hasNext,
     hasPreviousPage: offset > 0,

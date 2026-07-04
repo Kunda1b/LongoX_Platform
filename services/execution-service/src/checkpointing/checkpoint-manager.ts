@@ -2,7 +2,7 @@ import { db, executionCheckpointsTable } from "@longox/db";
 import { eq, and } from "drizzle-orm";
 
 export interface CheckpointData {
-  executionId: number;
+  executionId: string;
   nodeId: string;
   nodeName: string;
   nodeType: string;
@@ -36,7 +36,7 @@ export class CheckpointManager {
   }
 
   async updateCheckpoint(
-    id: number,
+    id: string,
     updates: Partial<{
       status: "running" | "success" | "failed";
       outputData: Record<string, unknown> | null;
@@ -52,7 +52,7 @@ export class CheckpointManager {
   }
 
   async getCheckpoints(
-    executionId: number,
+    executionId: string,
   ): Promise<(typeof executionCheckpointsTable.$inferSelect)[]> {
     return db
       .select()
@@ -62,7 +62,7 @@ export class CheckpointManager {
   }
 
   async getLatestCheckpoint(
-    executionId: number,
+    executionId: string,
   ): Promise<typeof executionCheckpointsTable.$inferSelect | null> {
     const [checkpoint] = await db
       .select()
@@ -74,7 +74,7 @@ export class CheckpointManager {
     return checkpoint ?? null;
   }
 
-  async getCompletedNodeIds(executionId: number): Promise<Set<string>> {
+  async getCompletedNodeIds(executionId: string): Promise<Set<string>> {
     const checkpoints = await db
       .select({ nodeId: executionCheckpointsTable.nodeId })
       .from(executionCheckpointsTable)
@@ -89,7 +89,7 @@ export class CheckpointManager {
   }
 
   async getLastOutput(
-    executionId: number,
+    executionId: string,
   ): Promise<Record<string, unknown> | null> {
     const [checkpoint] = await db
       .select()

@@ -25,9 +25,9 @@ export type ConnectorLifecycleEvent =
 
 export interface LifecycleState {
   installationId: number;
-  connectorId: number;
+  connectorId: string;
   connectorName: string;
-  tenantId: number;
+  tenantId: string;
   currentEvent: ConnectorLifecycleEvent;
   previousEvent: ConnectorLifecycleEvent | null;
   status: "installing" | "active" | "error" | "retired";
@@ -119,10 +119,10 @@ class LifecycleEngine {
     return this.states.get(installationId);
   }
 
-  createInitialState(manifest: ConnectorManifest, tenantId: number): LifecycleState {
+  createInitialState(manifest: ConnectorManifest, tenantId: string): LifecycleState {
     return {
-      installationId: 0,
-      connectorId: 0,
+      installationId: "",
+      connectorId: "",
       connectorName: manifest.name,
       tenantId,
       currentEvent: "installing",

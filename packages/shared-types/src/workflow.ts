@@ -2,7 +2,7 @@ export type WorkflowStatus = "draft" | "active" | "inactive" | "archived";
 export type TriggerType = "manual" | "webhook" | "schedule" | "event" | "api";
 
 export interface WorkflowDefinition {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   status: WorkflowStatus;
@@ -45,8 +45,8 @@ export interface WorkflowEdge {
 }
 
 export interface WorkflowVersion {
-  id: number;
-  workflowId: number;
+  id: string;
+  workflowId: string;
   version: number;
   name: string;
   nodes: WorkflowNode[];
@@ -57,8 +57,8 @@ export interface WorkflowVersion {
 }
 
 export interface WorkflowPromotion {
-  id: number;
-  workflowId: number;
+  id: string;
+  workflowId: string;
   workflowName: string;
   fromEnvironment: string;
   toEnvironment: string;

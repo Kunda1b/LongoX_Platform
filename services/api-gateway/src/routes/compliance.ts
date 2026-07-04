@@ -221,7 +221,7 @@ router.post(
   "/compliance/gdpr/delete-account",
   authorize({ resource: "compliance", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const { userId, confirm } = req.body as { userId?: number; confirm?: boolean };
+    const { userId, confirm } = req.body as { userId?: string; confirm?: boolean };
 
     if (!userId || !confirm) {
       res.status(400).json({ error: "userId and confirm=true are required" });
@@ -332,7 +332,7 @@ router.post(
   "/api/v1/compliance/gdpr/delete",
   authorize({ resource: "compliance", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const { userId, reason } = req.body as { userId?: number; reason?: string };
+    const { userId, reason } = req.body as { userId?: string; reason?: string };
 
     if (!userId) {
       res.status(400).json({ error: "userId is required" });

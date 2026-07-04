@@ -24,13 +24,13 @@ import type { WorkflowGraph } from "@longox/workflow-canvas";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface PublishWorkflowCommand {
-  workflowId: number;
+  workflowId: string;
   changeNote?: string;
 }
 
 export interface PublishWorkflowInput {
-  workflowId: number;
-  tenantId: number;
+  workflowId: string;
+  tenantId: string;
   graph: WorkflowGraph;
   changeNote?: string;
   publishedBy?: string;
@@ -39,7 +39,7 @@ export interface PublishWorkflowInput {
 }
 
 export interface PublishWorkflowResult {
-  versionId: number;
+  versionId: string;
   versionNumber: number;
   checksum: string;
   diffId: number | null;

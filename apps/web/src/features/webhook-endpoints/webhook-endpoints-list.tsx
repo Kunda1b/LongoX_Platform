@@ -9,8 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth";
 
 type WebhookEndpoint = {
-  id: number;
-  workflowId: number;
+  id: string;
+  workflowId: string;
   name: string;
   description: string | null;
   isActive: boolean;

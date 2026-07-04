@@ -70,7 +70,7 @@ export class PostgresWebhookEndpointRepository implements WebhookEndpointReposit
     return endpointToDomain(row);
   }
 
-  async delete(id: number): Promise<boolean> {
+  async delete(id: string): Promise<boolean> {
     const result = await db
       .delete(webhookEndpointsTable)
       .where(eq(webhookEndpointsTable.id, id));
@@ -112,7 +112,7 @@ export class PostgresWebhookDeliveryRepository implements WebhookDeliveryReposit
   }
 
   async create(
-    endpointId: number,
+    endpointId: string,
     eventType: string,
     payload: Record<string, unknown>,
   ): Promise<WebhookDelivery> {
@@ -130,7 +130,7 @@ export class PostgresWebhookDeliveryRepository implements WebhookDeliveryReposit
   }
 
   async markDelivered(
-    id: number,
+    id: string,
     statusCode: number,
     response: string,
   ): Promise<WebhookDelivery | null> {
@@ -143,7 +143,7 @@ export class PostgresWebhookDeliveryRepository implements WebhookDeliveryReposit
   }
 
   async markFailed(
-    id: number,
+    id: string,
     statusCode: number | null,
     errorMessage: string,
   ): Promise<WebhookDelivery | null> {
@@ -155,7 +155,7 @@ export class PostgresWebhookDeliveryRepository implements WebhookDeliveryReposit
     return row ? deliveryToDomain(row) : null;
   }
 
-  async incrementRetryCount(id: number): Promise<void> {
+  async incrementRetryCount(id: string): Promise<void> {
     await db
       .update(webhookDeliveriesTable)
       .set({ retryCount: sql`${webhookDeliveriesTable.retryCount} + 1` })

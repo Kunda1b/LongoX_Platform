@@ -14,13 +14,13 @@ export class BudgetExceededError extends Error {
 }
 
 export interface UsageRecord {
-  runId?: number;
-  tenantId?: number;
-  modelId?: number;
+  runId?: string;
+  tenantId?: string;
+  modelId?: string;
   modelName: string;
   provider: string;
-  promptId?: number;
-  workflowId?: number;
+  promptId?: string;
+  workflowId?: string;
   inputTokens: number;
   outputTokens: number;
   cost: number;
@@ -49,7 +49,7 @@ export class TokenAccountingService {
     } as any);
   }
 
-  async getUsageSummary(runId: number): Promise<UsageSummary> {
+  async getUsageSummary(runId: string): Promise<UsageSummary> {
     const rows = await db
       .select()
       .from(tokenUsageTable)
@@ -84,7 +84,7 @@ export class TokenAccountingService {
   }
 
   async getTenantUsage(
-    tenantId: number,
+    tenantId: string,
     period?: { start: Date; end: Date },
   ): Promise<UsageSummary> {
     const conditions = [eq(tokenUsageTable.tenantId, tenantId)];
@@ -127,7 +127,7 @@ export class TokenAccountingService {
   }
 
   async updateRollups(
-    tenantId: number,
+    tenantId: string,
     period: string,
     metricName: string,
     quantity: number,

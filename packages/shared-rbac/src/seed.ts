@@ -184,7 +184,7 @@ export async function seedRoles(): Promise<void> {
     .values(allRoles.map((r) => ({ name: r.name, description: r.description })))
     .returning({ id: rolesTable.id, name: rolesTable.name });
 
-  const roleIdByName: Record<string, number> = {};
+  const roleIdByName: Record<string, string> = {};
   for (const r of insertedRoles) roleIdByName[r.name] = r.id;
 
   const insertedPerms = await db
@@ -192,10 +192,10 @@ export async function seedRoles(): Promise<void> {
     .values(ALL_PERMISSIONS)
     .returning({ id: permissionsTable.id, resource: permissionsTable.resource, action: permissionsTable.action });
 
-  const permIdByKey: Record<string, number> = {};
+  const permIdByKey: Record<string, string> = {};
   for (const p of insertedPerms) permIdByKey[`${p.resource}:${p.action}`] = p.id;
 
-  const rolePermValues: Array<{ roleId: number; permissionId: number }> = [];
+  const rolePermValues: Array<{ roleId: string; permissionId: string }> = [];
   for (const [roleName, pairs] of Object.entries(ROLE_PERMISSIONS)) {
     const roleId = roleIdByName[roleName];
     if (!roleId) continue;
@@ -213,7 +213,7 @@ export async function seedRoles(): Promise<void> {
   console.log(`[RBAC] Seeded ${insertedRoles.length} roles and ${insertedPerms.length} permissions.`);
 }
 
-export async function getSystemRoleId(name: string): Promise<number | null> {
+export async function getSystemRoleId(name: string): Promise<string | null> {
   const [row] = await db
     .select({ id: rolesTable.id })
     .from(rolesTable)

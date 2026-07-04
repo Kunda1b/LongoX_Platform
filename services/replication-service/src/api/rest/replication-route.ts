@@ -139,9 +139,9 @@ router.put(
   "/replication/configs/:id",
   authorize({ resource: "admin", action: "write" }),
   async (req, res): Promise<void> => {
-    const id = parseInt(String(req.params.id), 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: "Invalid id" });
+    const id = req.params.id;
+    if (!id) {
+      res.status(400).json({ error: "id is required" });
       return;
     }
 

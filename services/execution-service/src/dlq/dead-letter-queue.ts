@@ -2,8 +2,8 @@ import { db, dlqEntriesTable } from "@longox/db";
 import { eq, and, desc } from "drizzle-orm";
 
 export interface DLQEntry {
-  executionId: number;
-  workflowId: number;
+  executionId: string;
+  workflowId: string;
   workflowName: string;
   nodeId: string;
   nodeName: string;
@@ -34,7 +34,7 @@ export class DeadLetterQueue {
   }
 
   async listEntries(
-    workflowId?: number,
+    workflowId?: string,
     status?: string,
     limit: number = 50,
   ): Promise<(typeof dlqEntriesTable.$inferSelect)[]> {
@@ -51,7 +51,7 @@ export class DeadLetterQueue {
   }
 
   async getEntry(
-    id: number,
+    id: string,
   ): Promise<typeof dlqEntriesTable.$inferSelect | null> {
     const [entry] = await db
       .select()
@@ -61,28 +61,28 @@ export class DeadLetterQueue {
     return entry ?? null;
   }
 
-  async markRetrying(id: number): Promise<void> {
+  async markRetrying(id: string): Promise<void> {
     await db
       .update(dlqEntriesTable)
       .set({ status: "retrying" })
       .where(eq(dlqEntriesTable.id, id));
   }
 
-  async markResolved(id: number): Promise<void> {
+  async markResolved(id: string): Promise<void> {
     await db
       .update(dlqEntriesTable)
       .set({ status: "resolved" })
       .where(eq(dlqEntriesTable.id, id));
   }
 
-  async markArchived(id: number): Promise<void> {
+  async markArchived(id: string): Promise<void> {
     await db
       .update(dlqEntriesTable)
       .set({ status: "archived" })
       .where(eq(dlqEntriesTable.id, id));
   }
 
-  async getStats(workflowId?: number): Promise<{
+  async getStats(workflowId?: string): Promise<{
     total: number;
     pending: number;
     retrying: number;

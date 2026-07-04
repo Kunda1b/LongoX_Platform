@@ -1,8 +1,8 @@
 export interface ReviewProps {
-  id: number;
-  listingId: number;
-  tenantId: number;
-  userId: number;
+  id: string;
+  listingId: string;
+  tenantId: string;
+  userId: string;
   rating: number;
   title?: string;
   body?: string;

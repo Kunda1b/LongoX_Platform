@@ -5,7 +5,7 @@ import {
 
 export interface RagNodeInput {
   query: string;
-  knowledgeBaseId: number;
+  knowledgeBaseId: string;
   topK?: number;
   minScore?: number;
   filter?: Record<string, unknown>;
@@ -15,7 +15,7 @@ export interface RagNodeResult {
   query: string;
   results: Array<{
     chunkId: number;
-    documentId: number;
+    documentId: string;
     content: string;
     score: number;
     documentFilename: string;

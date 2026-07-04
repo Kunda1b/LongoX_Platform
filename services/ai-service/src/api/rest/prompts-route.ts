@@ -77,7 +77,7 @@ router.get("/prompts/:id", authorize("ai:read"), async (req, res): Promise<void>
   const [row] = await db
     .select()
     .from(promptsTable)
-    .where(eq(promptsTable.id, Number(req.params.id)));
+    .where(eq(promptsTable.id, String(req.params.id)));
   if (!row) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -117,7 +117,7 @@ router.post("/prompts", authorize("ai:write"), async (req, res): Promise<void> =
 });
 
 router.patch("/prompts/:id", authorize("ai:write"), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const updates: Record<string, unknown> = {};
   const b = req.body as Partial<{
     name: string;
@@ -160,7 +160,7 @@ router.patch("/prompts/:id", authorize("ai:write"), async (req, res): Promise<vo
 });
 
 router.delete("/prompts/:id", authorize("ai:delete"), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   await db
     .delete(promptVersionsTable)
     .where(eq(promptVersionsTable.promptId, id));
@@ -169,7 +169,7 @@ router.delete("/prompts/:id", authorize("ai:delete"), async (req, res): Promise<
 });
 
 router.get("/prompts/:id/versions", authorize("ai:read"), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const rows = await db
     .select()
     .from(promptVersionsTable)
@@ -189,7 +189,7 @@ router.get("/prompts/:id/versions", authorize("ai:read"), async (req, res): Prom
 });
 
 router.post("/prompts/:id/publish", authorize("ai:write"), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   await db
     .update(promptVersionsTable)
     .set({ status: "approved" })

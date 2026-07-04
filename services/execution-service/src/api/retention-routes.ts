@@ -17,7 +17,7 @@ router.get(
   "/api/retention/policy",
   authorize({ resource: "executions", action: "read" }),
   async (req, res): Promise<void> => {
-    const tenantId = parseInt(req.headers["x-tenant-id"] as string, 10);
+    const tenantId = req.headers["x-tenant-id"] as string;
     if (!tenantId) {
       res.status(400).json({ error: "x-tenant-id header required" });
       return;
@@ -32,7 +32,7 @@ router.put(
   "/api/retention/policy",
   authorize({ resource: "executions", action: "write" }),
   async (req, res): Promise<void> => {
-    const tenantId = parseInt(req.headers["x-tenant-id"] as string, 10);
+    const tenantId = req.headers["x-tenant-id"] as string;
     if (!tenantId) {
       res.status(400).json({ error: "x-tenant-id header required" });
       return;
@@ -47,7 +47,7 @@ router.post(
   "/api/retention/partitions/create",
   authorize({ resource: "executions", action: "write" }),
   async (req, res): Promise<void> => {
-    const tenantId = parseInt(req.headers["x-tenant-id"] as string, 10);
+    const tenantId = req.headers["x-tenant-id"] as string;
     if (!tenantId) {
       res.status(400).json({ error: "x-tenant-id header required" });
       return;
@@ -74,7 +74,7 @@ router.get(
   "/api/retention/partitions",
   authorize({ resource: "executions", action: "read" }),
   async (req, res): Promise<void> => {
-    const tenantId = parseInt(req.headers["x-tenant-id"] as string, 10);
+    const tenantId = req.headers["x-tenant-id"] as string;
     if (!tenantId) {
       res.status(400).json({ error: "x-tenant-id header required" });
       return;
@@ -99,7 +99,7 @@ router.post(
   "/api/retention/archive",
   authorize({ resource: "executions", action: "write" }),
   async (req, res): Promise<void> => {
-    const tenantId = parseInt(req.headers["x-tenant-id"] as string, 10);
+    const tenantId = req.headers["x-tenant-id"] as string;
     if (!tenantId) {
       res.status(400).json({ error: "x-tenant-id header required" });
       return;
@@ -126,7 +126,7 @@ router.get(
   "/api/retention/archives",
   authorize({ resource: "executions", action: "read" }),
   async (req, res): Promise<void> => {
-    const tenantId = parseInt(req.headers["x-tenant-id"] as string, 10);
+    const tenantId = req.headers["x-tenant-id"] as string;
     if (!tenantId) {
       res.status(400).json({ error: "x-tenant-id header required" });
       return;
@@ -141,9 +141,9 @@ router.get(
   "/api/retention/archives/:id",
   authorize({ resource: "executions", action: "read" }),
   async (req, res): Promise<void> => {
-    const exportId = parseInt(String(req.params.id), 10);
+    const exportId = req.params.id;
     if (!exportId) {
-      res.status(400).json({ error: "Invalid export id" });
+      res.status(400).json({ error: "id is required" });
       return;
     }
 

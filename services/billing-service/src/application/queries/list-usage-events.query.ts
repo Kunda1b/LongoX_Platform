@@ -8,7 +8,7 @@ export class ListUsageEventsQuery {
   constructor(private readonly repository: UsageRepository) {}
 
   async execute(
-    tenantId: number,
+    tenantId: string,
     filter: ListUsageEventsFilter,
   ): Promise<UsageEvent[]> {
     return this.repository.listEvents(tenantId, filter);

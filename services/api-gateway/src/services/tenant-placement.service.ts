@@ -4,7 +4,7 @@ import { db, tenantTiersTable, tenantPlacementTable, tenantTierAssignmentsTable,
 interface PlacementResult {
   clusterId: string;
   namespace: string | null;
-  regionId: number;
+  regionId: string;
   regionName: string;
   placementType: string;
   isolationGroup: string | null;
@@ -12,13 +12,13 @@ interface PlacementResult {
 }
 
 interface AvailableRegion {
-  id: number;
+  id: string;
   regionId: string;
   name: string;
 }
 
 export class TenantPlacementService {
-  async determinePlacement(tenantId: number, tierId: number): Promise<PlacementResult> {
+  async determinePlacement(tenantId: string, tierId: number): Promise<PlacementResult> {
     const [tier] = await db
       .select()
       .from(tenantTiersTable)
@@ -50,7 +50,7 @@ export class TenantPlacementService {
     }
   }
 
-  async getPlacement(tenantId: number): Promise<PlacementResult | null> {
+  async getPlacement(tenantId: string): Promise<PlacementResult | null> {
     const [placement] = await db
       .select()
       .from(tenantPlacementTable)
@@ -106,8 +106,8 @@ export class TenantPlacementService {
   }
 
   async getClusterForTenant(
-    tenantId: number,
-    regionId: number,
+    tenantId: string,
+    regionId: string,
     tierId: number,
   ): Promise<{ clusterId: string; region: typeof regionsTable.$inferSelect }> {
     const [region] = await db
@@ -136,7 +136,7 @@ export class TenantPlacementService {
   }
 
   async assignDedicatedNamespace(
-    tenantId: number,
+    tenantId: string,
     clusterId: string,
     region: typeof regionsTable.$inferSelect,
   ): Promise<PlacementResult> {
@@ -187,7 +187,7 @@ export class TenantPlacementService {
   }
 
   async assignDedicatedCluster(
-    tenantId: number,
+    tenantId: string,
     region: typeof regionsTable.$inferSelect,
   ): Promise<PlacementResult> {
     const clusterId = `eks-${region.regionId}-dedicated-${tenantId}`;
@@ -238,7 +238,7 @@ export class TenantPlacementService {
   }
 
   private async placeInShared(
-    tenantId: number,
+    tenantId: string,
     region: typeof regionsTable.$inferSelect,
     placement: { clusterId: string },
   ): Promise<PlacementResult> {
@@ -285,7 +285,7 @@ export class TenantPlacementService {
   }
 
   private async getRegionForTenant(
-    tenantId: number,
+    tenantId: string,
     tier: typeof tenantTiersTable.$inferSelect,
   ): Promise<typeof regionsTable.$inferSelect> {
     const [assignment] = await db

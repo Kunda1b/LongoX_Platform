@@ -79,7 +79,7 @@ router.post(
       return;
     }
 
-    const { email, roleId } = req.body as { email?: string; roleId?: number };
+    const { email, roleId } = req.body as { email?: string; roleId?: string };
     const trimmedEmail = email?.trim().toLowerCase();
 
     if (!trimmedEmail || !roleId) {
@@ -203,7 +203,7 @@ router.delete(
   authorize({ resource: "users", action: "write" }),
   async (req, res): Promise<void> => {
     const tenantId = req.user!.tenantId;
-    const id = Number(req.params.id);
+    const id = String(req.params.id);
 
     const [inv] = await db
       .select({ id: workspaceInvitationsTable.id })

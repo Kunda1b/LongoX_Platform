@@ -39,7 +39,7 @@ export class PostgresConnectorRepository implements ConnectorRepository {
     });
   }
 
-  async findById(id: number): Promise<Connector | null> {
+  async findById(id: string): Promise<Connector | null> {
     const [row] = await db
       .select()
       .from(connectorsTable)
@@ -119,7 +119,7 @@ export class PostgresConnectorRepository implements ConnectorRepository {
     return this.toDomain(row);
   }
 
-  async update(id: number, data: Partial<ConnectorProps>): Promise<Connector> {
+  async update(id: string, data: Partial<ConnectorProps>): Promise<Connector> {
     const [row] = await db
       .update(connectorsTable)
       .set({ ...data, updatedAt: new Date() })
@@ -128,7 +128,7 @@ export class PostgresConnectorRepository implements ConnectorRepository {
     return this.toDomain(row);
   }
 
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await db.delete(connectorsTable).where(eq(connectorsTable.id, id));
   }
 }

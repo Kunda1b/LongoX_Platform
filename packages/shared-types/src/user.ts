@@ -1,8 +1,8 @@
 export interface User {
-  id: number;
+  id: string;
   email: string;
   name: string;
-  tenantId: number | null;
+  tenantId: string | null;
   role: string;
   isActive: boolean;
   lastLoginAt: string | null;
@@ -12,18 +12,18 @@ export interface User {
 }
 
 export interface AuthUser {
-  id: number;
+  id: string;
   email: string;
   name: string;
-  tenantId: number | null;
+  tenantId: string | null;
   role: string;
 }
 
 export interface Membership {
-  id: number;
-  userId: number;
-  tenantId: number;
-  roleId: number;
+  id: string;
+  userId: string;
+  tenantId: string;
+  roleId: string;
   invitedBy: string | null;
   createdAt: string;
 }

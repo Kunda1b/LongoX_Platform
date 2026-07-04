@@ -2,8 +2,8 @@ import type { WorkflowNode, WorkflowEdge } from "../workflow/workflow.entity";
 
 export class WorkflowVersion {
   constructor(
-    public readonly id: number,
-    public readonly workflowId: number,
+    public readonly id: string,
+    public readonly workflowId: string,
     public readonly version: number,
     public readonly name: string,
     public readonly nodes: WorkflowNode[],
@@ -15,7 +15,7 @@ export class WorkflowVersion {
   ) {}
 
   static create(
-    workflowId: number,
+    workflowId: string,
     version: number,
     name: string,
     nodes: WorkflowNode[],

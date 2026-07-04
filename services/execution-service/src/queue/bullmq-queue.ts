@@ -167,7 +167,7 @@ async function processAiRun(data: AiRunJobData): Promise<void> {
       position: { x: 0, y: 0 },
     },
     {
-      executionId: 0,
+      executionId: "",
       workflowId,
       workflowName: "",
       triggerType: "api",
@@ -401,7 +401,7 @@ export const jobQueue: JobQueue = new BullMQJobQueue();
 // ─── startWorkflowExecution ───────────────────────────────────────────────────
 
 export async function startWorkflowExecution(
-  workflowId: number,
+  workflowId: string,
   workflowName: string,
   nodes: WorkflowNode[],
   triggerType: "manual" | "webhook" | "schedule" | "api" | "recovery",
@@ -483,7 +483,7 @@ export async function startWorkflowExecution(
 }
 
 async function addWorkflowJob(
-  workflowId: number,
+  workflowId: string,
   workflowName: string,
   nodes: any[],
   triggerType: string,
@@ -503,10 +503,10 @@ async function addWorkflowJob(
 // new execution job, tagging it with parentExecutionId so the runner can link
 // child -> parent executions (used by dag-worker.ts's spawnChildWorkflow).
 export async function enqueueWorkflow(opts: {
-  workflowId: number;
+  workflowId: string;
   triggerPayload?: Record<string, unknown>;
   triggerType?: "manual" | "webhook" | "schedule" | "api" | "recovery" | "child_workflow";
-  parentExecutionId?: number;
+  parentExecutionId?: string;
 }): Promise<number> {
   const { workflowId, triggerPayload = {}, parentExecutionId } = opts;
 

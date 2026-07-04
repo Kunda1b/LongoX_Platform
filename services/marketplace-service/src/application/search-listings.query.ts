@@ -42,8 +42,8 @@ export class SearchListingsQuery {
 }
 
 export interface InstallListingInput {
-  listingId: number;
-  tenantId: number;
+  listingId: string;
+  tenantId: string;
   installedBy: number;
 }
 

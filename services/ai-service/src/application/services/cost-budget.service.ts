@@ -24,7 +24,7 @@ export interface BudgetUsage {
 }
 
 export class CostBudgetService {
-  async checkBudget(tenantId: number, estimatedCost: number): Promise<void> {
+  async checkBudget(tenantId: string, estimatedCost: number): Promise<void> {
     const budgets = await db
       .select()
       .from(tokenBudgetsTable)
@@ -69,7 +69,7 @@ export class CostBudgetService {
   }
 
   private async getCurrentPeriodCost(
-    tenantId: number,
+    tenantId: string,
     periodStart: Date,
     periodEnd: Date,
   ): Promise<number> {
@@ -89,7 +89,7 @@ export class CostBudgetService {
     return result[0]?.totalCost ?? 0;
   }
 
-  async getBudgetUsage(tenantId: number): Promise<BudgetUsage[]> {
+  async getBudgetUsage(tenantId: string): Promise<BudgetUsage[]> {
     const budgets = await db
       .select()
       .from(tokenBudgetsTable)
@@ -127,7 +127,7 @@ export class CostBudgetService {
     return results;
   }
 
-  async setAlertThreshold(tenantId: number, threshold: number): Promise<void> {
+  async setAlertThreshold(tenantId: string, threshold: number): Promise<void> {
     await db
       .update(tokenBudgetsTable)
       .set({ notifyAtPercent: threshold })

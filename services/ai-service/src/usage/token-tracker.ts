@@ -4,7 +4,7 @@ import { eq, sql, and, gte } from "drizzle-orm";
 export interface TokenUsageRecord {
   modelName: string;
   provider: string;
-  workflowId: number;
+  workflowId: string;
   inputTokens: number;
   outputTokens: number;
   cost: number;
@@ -41,7 +41,7 @@ export class TokenTracker {
   }
 
   async getUsage(
-    workflowId?: number,
+    workflowId?: string,
     startDate?: Date,
     endDate?: Date,
   ): Promise<{

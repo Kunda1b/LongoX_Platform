@@ -27,13 +27,13 @@ router.post("/api/metering/events", async (req, res): Promise<void> => {
   const { events } = req.body as { events?: Array<{
     eventId: string;
     eventType: string;
-    tenantId: number;
+    tenantId: string;
     quantity: string | number;
     unit: string;
-    workflowId?: number | null;
-    executionId?: number | null;
-    connectorId?: number | null;
-    dashboardId?: number | null;
+    workflowId?: string | null;
+    executionId?: string | null;
+    connectorId?: string | null;
+    dashboardId?: string | null;
     metadata?: Record<string, unknown>;
     timestamp?: string;
   }> };
@@ -67,7 +67,7 @@ router.post("/api/metering/events", async (req, res): Promise<void> => {
 });
 
 router.post("/api/metering/events/rollup", async (req, res): Promise<void> => {
-  const { tenantId } = req.body as { tenantId?: number };
+  const { tenantId } = req.body as { tenantId?: string };
 
   if (!tenantId) {
     res.status(400).json({ error: "tenantId is required" });

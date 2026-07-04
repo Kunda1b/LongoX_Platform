@@ -1,5 +1,5 @@
 export interface NotificationTemplate {
-  id: number;
+  id: string;
   name: string;
   channel: string;
   subject: string | null;

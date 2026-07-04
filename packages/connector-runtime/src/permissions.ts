@@ -19,8 +19,8 @@ export type PermissionScope =
 
 export interface PermissionSet {
   scopes: PermissionScope[];
-  tenantId: number;
-  userId: number;
+  tenantId: string;
+  userId: string;
 }
 
 export function canAccess(permissions: PermissionSet, requiredScope: PermissionScope): boolean {

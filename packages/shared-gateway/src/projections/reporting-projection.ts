@@ -67,7 +67,7 @@ export class ReportingProjection {
   private async upsertKPI(
     name: string,
     value: number,
-    tenantId: number,
+    tenantId: string,
     period: string,
   ): Promise<void> {
     try {

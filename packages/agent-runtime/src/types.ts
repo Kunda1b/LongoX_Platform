@@ -85,7 +85,7 @@ export interface AgentPlan {
 }
 
 export interface AgentPlanStep {
-  id: number;
+  id: string;
   description: string;
   status: "pending" | "in_progress" | "completed" | "failed";
   toolCall?: AgentToolCall;

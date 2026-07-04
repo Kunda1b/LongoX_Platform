@@ -16,7 +16,7 @@ async function seedConnectors(): Promise<void> {
       .where(eq(connectorsTable.name, manifest.name))
       .limit(1);
 
-    let connectorId: number;
+    let connectorId: string;
 
     const connectorData = {
       name: manifest.name,

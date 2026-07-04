@@ -14,8 +14,8 @@ export interface InvoiceLineItem {
 }
 
 export interface InvoiceProps {
-  id: number;
-  tenantId: number;
+  id: string;
+  tenantId: string;
   periodStart: Date;
   periodEnd: Date;
   lineItems: InvoiceLineItem[];

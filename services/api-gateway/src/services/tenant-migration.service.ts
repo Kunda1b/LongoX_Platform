@@ -37,11 +37,11 @@ async function getK8sClient(): Promise<any> {
   }
 }
 
-function getNamespaceName(tenantId: number): string {
+function getNamespaceName(tenantId: string): string {
   return `platform-enterprise-${tenantId}`;
 }
 
-function getWorkerDeploymentName(tenantId: number): string {
+function getWorkerDeploymentName(tenantId: string): string {
   return `execution-worker-${tenantId}`;
 }
 
@@ -67,8 +67,8 @@ interface MigrationStep {
 }
 
 interface MigrationStatus {
-  id: number;
-  tenantId: number;
+  id: string;
+  tenantId: string;
   status: string;
   fromPlacement: string;
   toPlacement: string;
@@ -87,7 +87,7 @@ interface MigrationStatus {
 
 export class TenantMigrationService {
   async planMigration(
-    tenantId: number,
+    tenantId: string,
     targetTierId: number,
   ): Promise<MigrationPlan> {
     const [targetTier] = await db
@@ -204,7 +204,7 @@ export class TenantMigrationService {
   }
 
   async executeMigration(
-    tenantId: number,
+    tenantId: string,
     planId: number,
   ): Promise<MigrationStatus> {
     const [migration] = await db
@@ -390,8 +390,8 @@ export class TenantMigrationService {
   }
 
   async rollbackMigration(
-    tenantId: number,
-    migrationId: number,
+    tenantId: string,
+    migrationId: string,
   ): Promise<MigrationStatus> {
     const [migration] = await db
       .select()
@@ -447,7 +447,7 @@ export class TenantMigrationService {
     return this.getMigrationStatus(tenantId) as Promise<MigrationStatus>;
   }
 
-  async getMigrationStatus(tenantId: number): Promise<MigrationStatus | null> {
+  async getMigrationStatus(tenantId: string): Promise<MigrationStatus | null> {
     const [migration] = await db
       .select()
       .from(tenantMigrationsTable)
@@ -477,7 +477,7 @@ export class TenantMigrationService {
     };
   }
 
-  async getMigrationHistory(tenantId: number): Promise<MigrationStatus[]> {
+  async getMigrationHistory(tenantId: string): Promise<MigrationStatus[]> {
     const migrations = await db
       .select()
       .from(tenantMigrationsTable)
@@ -505,7 +505,7 @@ export class TenantMigrationService {
   }
 
   private async provisionTargetResources(
-    tenantId: number,
+    tenantId: string,
     clusterId: string,
     placementType: string,
   ): Promise<void> {
@@ -610,7 +610,7 @@ export class TenantMigrationService {
   }
 
   private async replicateData(
-    tenantId: number,
+    tenantId: string,
     fromCluster: string,
     toCluster: string,
   ): Promise<void> {
@@ -645,7 +645,7 @@ export class TenantMigrationService {
   }
 
   private async syncDataWithCutover(
-    tenantId: number,
+    tenantId: string,
     fromCluster: string,
     toCluster: string,
   ): Promise<void> {
@@ -653,7 +653,7 @@ export class TenantMigrationService {
   }
 
   private async verifyDataIntegrity(
-    tenantId: number,
+    tenantId: string,
     fromCluster: string,
     toCluster: string,
   ): Promise<boolean> {
@@ -671,7 +671,7 @@ export class TenantMigrationService {
   }
 
   private async switchTraffic(
-    tenantId: number,
+    tenantId: string,
     toCluster: string,
     placementType: string,
   ): Promise<void> {

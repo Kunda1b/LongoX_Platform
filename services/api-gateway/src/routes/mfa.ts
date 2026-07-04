@@ -139,7 +139,7 @@ router.post(
   "/auth/mfa/challenge",
   authMiddleware,
   async (req: Request, res: Response): Promise<void> => {
-    const { userId, code } = req.body as { userId?: number; code?: string };
+    const { userId, code } = req.body as { userId?: string; code?: string };
 
     if (!userId || !code) {
       res.status(400).json({ error: "userId and code are required" });

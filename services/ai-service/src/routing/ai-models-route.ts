@@ -100,7 +100,7 @@ router.get("/ai-models/:id", authorize("ai:read"), async (req, res): Promise<voi
   const [row] = await db
     .select()
     .from(aiModelsTable)
-    .where(eq(aiModelsTable.id, Number(req.params.id)));
+    .where(eq(aiModelsTable.id, String(req.params.id)));
   if (!row) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -149,7 +149,7 @@ router.post("/ai-models", authorize("ai:write"), async (req, res): Promise<void>
 });
 
 router.patch("/ai-models/:id", authorize("ai:write"), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const updates: Record<string, unknown> = {};
   const b = req.body as Partial<{
     provider: string;
@@ -186,7 +186,7 @@ router.patch("/ai-models/:id", authorize("ai:write"), async (req, res): Promise<
 router.delete("/ai-models/:id", authorize("ai:delete"), async (req, res): Promise<void> => {
   await db
     .delete(aiModelsTable)
-    .where(eq(aiModelsTable.id, Number(req.params.id)));
+    .where(eq(aiModelsTable.id, String(req.params.id)));
   res.status(204).end();
 });
 

@@ -27,7 +27,7 @@ interface ScheduleConfig {
 
 export class BackupRestoreService {
   async createBackup(
-    tenantId: number,
+    tenantId: string,
     scope: BackupScope = "full",
   ): Promise<typeof backupRecordsTable.$inferSelect> {
     const backupDir = path.join(BACKUP_DIR, String(tenantId));
@@ -161,8 +161,8 @@ export class BackupRestoreService {
   }
 
   async restoreBackup(
-    backupId: number,
-    tenantId: number,
+    backupId: string,
+    tenantId: string,
     options: { restoreType?: RestoreType; targetEnvironment?: string; tables?: string[]; restoredBy?: string; notes?: string } = {},
   ): Promise<typeof restoreRecordsTable.$inferSelect> {
     const restoreType = options.restoreType ?? "full";
@@ -318,7 +318,7 @@ export class BackupRestoreService {
   }
 
   async listBackups(
-    tenantId: number,
+    tenantId: string,
     filters: BackupFilters = {},
   ): Promise<(typeof backupRecordsTable.$inferSelect)[]> {
     let query: any = db
@@ -342,7 +342,7 @@ export class BackupRestoreService {
     return query.orderBy(desc(backupRecordsTable.createdAt));
   }
 
-  async getBackup(id: number): Promise<typeof backupRecordsTable.$inferSelect | null> {
+  async getBackup(id: string): Promise<typeof backupRecordsTable.$inferSelect | null> {
     const [record] = await db
       .select()
       .from(backupRecordsTable)
@@ -351,7 +351,7 @@ export class BackupRestoreService {
     return record ?? null;
   }
 
-  async deleteBackup(id: number): Promise<void> {
+  async deleteBackup(id: string): Promise<void> {
     const [record] = await db
       .select()
       .from(backupRecordsTable)
@@ -375,7 +375,7 @@ export class BackupRestoreService {
     await db.delete(backupRecordsTable).where(eq(backupRecordsTable.id, id));
   }
 
-  async scheduleBackup(tenantId: number, config: ScheduleConfig): Promise<{ scheduled: true; config: ScheduleConfig }> {
+  async scheduleBackup(tenantId: string, config: ScheduleConfig): Promise<{ scheduled: true; config: ScheduleConfig }> {
     const scheduleRecord = {
       tenantId,
       cronExpression: config.cronExpression,
@@ -397,7 +397,7 @@ export class BackupRestoreService {
     return { scheduled: true, config };
   }
 
-  async validateBackup(id: number): Promise<{ valid: boolean; checksumMatch: boolean; fileCount: number; errors: string[] }> {
+  async validateBackup(id: string): Promise<{ valid: boolean; checksumMatch: boolean; fileCount: number; errors: string[] }> {
     const [record] = await db
       .select()
       .from(backupRecordsTable)
@@ -440,7 +440,7 @@ export class BackupRestoreService {
     return { valid: errors.length === 0, checksumMatch: true, fileCount, errors };
   }
 
-  async estimateBackupSize(tenantId: number): Promise<{ estimatedBytes: number; estimatedRows: Record<string, number> }> {
+  async estimateBackupSize(tenantId: string): Promise<{ estimatedBytes: number; estimatedRows: Record<string, number> }> {
     const estimatedRows: Record<string, number> = {};
 
     const tables = ["workflows", "workflow_versions", "executions", "audit_log", "billing"] as const;
@@ -502,7 +502,7 @@ export class BackupRestoreService {
     return map[scope] ?? null;
   }
 
-  private async runIntegrityChecks(tenantId: number): Promise<void> {
+  private async runIntegrityChecks(tenantId: string): Promise<void> {
     const tables = ["workflows", "executions", "audit_log", "billing"];
     for (const table of tables) {
       try {

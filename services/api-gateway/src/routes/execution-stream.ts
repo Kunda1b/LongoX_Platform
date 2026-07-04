@@ -15,17 +15,17 @@ const router = Router();
 type SSEClient = {
   res: Response;
   seq: number;
-  executionId: number;
+  executionId: string;
 };
 
 const clients = new Map<number, Set<SSEClient>>();
 
-function addClient(executionId: number, client: SSEClient): void {
+function addClient(executionId: string, client: SSEClient): void {
   if (!clients.has(executionId)) clients.set(executionId, new Set());
   clients.get(executionId)!.add(client);
 }
 
-function removeClient(executionId: number, client: SSEClient): void {
+function removeClient(executionId: string, client: SSEClient): void {
   clients.get(executionId)?.delete(client);
   if (clients.get(executionId)?.size === 0) clients.delete(executionId);
 }
@@ -37,7 +37,7 @@ function removeClient(executionId: number, client: SSEClient): void {
  * clients on this instance via sseExecutionBus.onExecutionEvent.
  */
 export function broadcastExecutionEvent(
-  executionId: number,
+  executionId: string,
   eventType: string,
   payload: Record<string, unknown>,
 ): void {
@@ -180,7 +180,7 @@ router.get(
 );
 
 async function sendInitialState(
-  executionId: number,
+  executionId: string,
   res: Response,
   client: SSEClient,
 ): Promise<void> {

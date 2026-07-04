@@ -7,5 +7,5 @@ import type {
 export interface NotificationRepository {
   list(filter: ListNotificationsFilter): Promise<Notification[]>;
   create(input: CreateNotificationInput): Promise<Notification>;
-  markRead(id: number): Promise<Notification | null>;
+  markRead(id: string): Promise<Notification | null>;
 }

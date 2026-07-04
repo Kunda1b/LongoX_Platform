@@ -14,15 +14,15 @@ import { TokenAccountingService } from "./token-accounting.service";
 import { AiAuditService } from "./ai-audit.service";
 
 export interface AiRunInput {
-  tenantId: number;
+  tenantId: string;
   messages: ChatMessage[];
   model?: string;
   provider?: string;
   temperature?: number;
   maxTokens?: number;
   responseFormat?: "text" | "json";
-  promptId?: number;
-  workflowId?: number;
+  promptId?: string;
+  workflowId?: string;
   guardrailIds?: number[];
   routingPolicyId?: number;
   scrubPii?: boolean;

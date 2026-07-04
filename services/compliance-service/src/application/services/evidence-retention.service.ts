@@ -29,7 +29,7 @@ export class EvidenceRetentionService {
   async retainEvidence(
     eventType: string,
     data: { title: string; description?: string; payload: unknown; source: string; severity?: string },
-    metadata?: { tenantId: number },
+    metadata?: { tenantId: string },
   ) {
     const payload = data.payload;
     const hash = this.computeHash(payload);
@@ -55,7 +55,7 @@ export class EvidenceRetentionService {
     return evidence;
   }
 
-  async verifyEvidence(id: number) {
+  async verifyEvidence(id: string) {
     const [evidence] = await db
       .select()
       .from(complianceEvidenceTable)
@@ -73,7 +73,7 @@ export class EvidenceRetentionService {
     };
   }
 
-  async getEvidence(id: number) {
+  async getEvidence(id: string) {
     const [evidence] = await db
       .select()
       .from(complianceEvidenceTable)

@@ -9,15 +9,15 @@ import {
 import { EvaluationService } from "../../../evaluation/evaluation-service";
 
 export interface CreateRunInput {
-  datasetId: number;
-  promptId: number;
+  datasetId: string;
+  promptId: string;
   promptVersion?: number;
   threshold?: number;
-  tenantId: number;
+  tenantId: string;
 }
 
 export interface RecordResultInput {
-  entryId: number;
+  entryId: string;
   input: string;
   expectedOutput?: string;
   actualOutput: string;
@@ -50,7 +50,7 @@ export class EvaluationRunService {
     return run;
   }
 
-  async startRun(runId: number) {
+  async startRun(runId: string) {
     const [run] = await db
       .update(aiEvaluationRunsTable)
       .set({
@@ -62,7 +62,7 @@ export class EvaluationRunService {
     return run;
   }
 
-  async executeRun(runId: number) {
+  async executeRun(runId: string) {
     const [run] = await db
       .select()
       .from(aiEvaluationRunsTable)
@@ -102,7 +102,7 @@ export class EvaluationRunService {
     return this.completeRun(runId);
   }
 
-  async recordResult(runId: number, result: RecordResultInput) {
+  async recordResult(runId: string, result: RecordResultInput) {
     const evalResult = evaluationService.evaluate(
       result.actualOutput,
       result.expectedOutput,
@@ -128,7 +128,7 @@ export class EvaluationRunService {
     return row;
   }
 
-  async completeRun(runId: number) {
+  async completeRun(runId: string) {
     const results = await db
       .select()
       .from(aiEvaluationRunResultsTable)
@@ -169,7 +169,7 @@ export class EvaluationRunService {
     return updated;
   }
 
-  async getRun(runId: number) {
+  async getRun(runId: string) {
     const [run] = await db
       .select()
       .from(aiEvaluationRunsTable)
@@ -177,7 +177,7 @@ export class EvaluationRunService {
     return run ?? null;
   }
 
-  async getRunResults(runId: number) {
+  async getRunResults(runId: string) {
     return db
       .select()
       .from(aiEvaluationRunResultsTable)
@@ -185,7 +185,7 @@ export class EvaluationRunService {
       .orderBy(aiEvaluationRunResultsTable.id);
   }
 
-  async listRuns(datasetId?: number) {
+  async listRuns(datasetId?: string) {
     const conditions = [];
     if (datasetId) {
       conditions.push(eq(aiEvaluationRunsTable.datasetId, datasetId));

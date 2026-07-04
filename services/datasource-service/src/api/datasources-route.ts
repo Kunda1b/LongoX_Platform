@@ -59,9 +59,9 @@ router.get("/datasources/adapters", async (_req, res): Promise<void> => {
 });
 
 router.get("/datasources/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
 
@@ -105,9 +105,9 @@ router.post("/datasources", async (req, res): Promise<void> => {
 });
 
 router.patch("/datasources/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
 
@@ -120,9 +120,9 @@ router.patch("/datasources/:id", async (req, res): Promise<void> => {
 });
 
 router.delete("/datasources/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
 
@@ -135,9 +135,9 @@ router.delete("/datasources/:id", async (req, res): Promise<void> => {
 });
 
 router.post("/datasources/:id/test", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
 
@@ -150,9 +150,9 @@ router.post("/datasources/:id/test", async (req, res): Promise<void> => {
 });
 
 router.post("/datasources/:id/query", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
 
@@ -183,9 +183,9 @@ router.post("/datasources/:id/query", async (req, res): Promise<void> => {
 });
 
 router.get("/datasources/:id/tables", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
 

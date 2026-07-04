@@ -73,9 +73,9 @@ router.post("/dashboards", authorize("dashboards:write"), async (req, res): Prom
 });
 
 router.get("/dashboards/:id", authorize("dashboards:read"), async (req, res): Promise<void> => {
-  const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
 
@@ -92,9 +92,9 @@ router.get("/dashboards/:id", authorize("dashboards:read"), async (req, res): Pr
 });
 
 router.patch("/dashboards/:id", authorize("dashboards:write"), async (req, res): Promise<void> => {
-  const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
 
@@ -126,9 +126,9 @@ router.patch("/dashboards/:id", authorize("dashboards:write"), async (req, res):
 });
 
 router.delete("/dashboards/:id", authorize("dashboards:delete"), async (req, res): Promise<void> => {
-  const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
 
@@ -145,9 +145,9 @@ router.delete("/dashboards/:id", authorize("dashboards:delete"), async (req, res
 });
 
 router.post("/dashboards/:id/publish", authorize("dashboards:write"), async (req, res): Promise<void> => {
-  const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
 

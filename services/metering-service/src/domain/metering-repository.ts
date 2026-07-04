@@ -14,17 +14,17 @@ export interface MeteringRepository {
     props: Omit<MeteringEventProps, "id" | "createdAt">,
   ): Promise<MeteringEvent>;
   findEvents(
-    tenantId: number,
+    tenantId: string,
     filters?: {
       eventType?: EventType;
       from?: Date;
       to?: Date;
-      workflowId?: number;
+      workflowId?: string;
       limit?: number;
     },
   ): Promise<MeteringEvent[]>;
   getAggregate(
-    tenantId: number,
+    tenantId: string,
     eventType: string,
     period: AggregatePeriod,
     periodStart: Date,
@@ -33,7 +33,7 @@ export interface MeteringRepository {
     props: Omit<UsageAggregateProps, "id" | "createdAt" | "updatedAt">,
   ): Promise<UsageAggregate>;
   getUsageSummary(
-    tenantId: number,
+    tenantId: string,
     from: Date,
     to: Date,
   ): Promise<

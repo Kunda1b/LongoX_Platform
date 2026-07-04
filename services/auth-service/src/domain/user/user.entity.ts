@@ -1,8 +1,8 @@
 export interface AuthUser {
-  id: number;
+  id: string;
   email: string;
   name: string;
-  tenantId: number | null;
+  tenantId: string | null;
   role: string;
 }
 
@@ -12,11 +12,11 @@ export interface UserRecord extends AuthUser {
 }
 
 export interface UserProfile {
-  id: number;
+  id: string;
   email: string;
   name: string;
   role: string;
-  tenantId: number | null;
+  tenantId: string | null;
   isActive: boolean;
   lastLoginAt: Date | null;
   createdAt: Date;

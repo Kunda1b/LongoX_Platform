@@ -37,8 +37,8 @@ export const typeDefs = readFileSync(
  * GraphQL context — populated by the gateway from the authenticated request.
  */
 export interface GraphQlContext {
-  tenantId: number;
-  userId: number;
+  tenantId: string;
+  userId: string;
   role: string;
   correlationId?: string;
   idempotencyKey?: string;

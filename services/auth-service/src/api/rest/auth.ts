@@ -128,7 +128,7 @@ router.post(
       });
       return;
     }
-    const user = await repository.findById(Number(payload.sub));
+    const user = await repository.findById(String(payload.sub));
     if (!user || !user.isActive) {
       res.status(401).json({
         error: {

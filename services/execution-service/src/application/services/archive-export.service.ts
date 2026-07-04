@@ -45,7 +45,7 @@ export class ArchiveExportService {
     tableName: string,
     startDate: Date,
     endDate: Date,
-    tenantId: number,
+    tenantId: string,
   ): Promise<typeof archiveExportsTable.$inferSelect> {
     const partitionName = `${tableName}_${startDate.getFullYear()}${String(startDate.getMonth() + 1).padStart(2, "0")}`;
 
@@ -159,7 +159,7 @@ export class ArchiveExportService {
     }
   }
 
-  async uploadExport(exportId: number): Promise<void> {
+  async uploadExport(exportId: string): Promise<void> {
     const [record] = await db
       .select()
       .from(archiveExportsTable)
@@ -188,7 +188,7 @@ export class ArchiveExportService {
   }
 
   async getExportStatus(
-    exportId: number,
+    exportId: string,
   ): Promise<typeof archiveExportsTable.$inferSelect | null> {
     const [record] = await db
       .select()
@@ -199,7 +199,7 @@ export class ArchiveExportService {
     return record ?? null;
   }
 
-  async listExports(tenantId: number): Promise<(typeof archiveExportsTable.$inferSelect)[]> {
+  async listExports(tenantId: string): Promise<(typeof archiveExportsTable.$inferSelect)[]> {
     return db
       .select()
       .from(archiveExportsTable)

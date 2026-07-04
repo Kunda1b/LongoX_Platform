@@ -107,7 +107,7 @@ router.get("/auth/workos/callback", async (req, res): Promise<void> => {
     // platform session (platform is the session authority per ADR-007).
     const wosUser = session.workosUser;
     const authUser: AuthUser = {
-      id: 0, // resolved by downstream middleware from the WorkOS user id
+      id: "", // resolved by downstream middleware from the WorkOS user id
       email: wosUser.email,
       name: wosUser.firstName
         ? `${wosUser.firstName} ${wosUser.lastName ?? ""}`.trim()

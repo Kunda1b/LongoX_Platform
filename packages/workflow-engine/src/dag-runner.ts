@@ -421,7 +421,7 @@ export class DAGRunner {
     }
 
     let lastError: string | null = null;
-    let checkpointId: number | undefined;
+    let checkpointId: string | undefined;
 
     for (let attempt = 1; attempt <= policy.maxAttempts; attempt++) {
       emit({

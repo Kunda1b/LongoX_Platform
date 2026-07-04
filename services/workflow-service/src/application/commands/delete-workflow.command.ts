@@ -1,3 +1,3 @@
 export interface DeleteWorkflowCommand {
-  id: number;
+  id: string;
 }

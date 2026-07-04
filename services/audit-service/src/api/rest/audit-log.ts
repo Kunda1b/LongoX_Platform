@@ -46,7 +46,7 @@ const listAuditEntries = new ListAuditEntriesQuery(
  */
 async function searchAuditEntries(params: {
   query?: string;
-  tenantId?: number;
+  tenantId?: string;
   resourceType?: string;
   resourceId?: string;
   action?: string;
@@ -184,12 +184,12 @@ router.get("/audit-log", async (req: Request, res: Response): Promise<void> => {
  * GET /audit/:id — fetch a single audit entry by id.
  */
 router.get("/audit/:id", async (req: Request, res: Response): Promise<void> => {
-  const id = parseInt(String(req.params.id), 10);
-  if (!id || isNaN(id)) {
+  const id = req.params.id;
+  if (!id) {
     res.status(400).json({
       error: {
         code: "VALIDATION_ERROR",
-        message: "id must be a positive integer",
+        message: "id is required",
         correlation_id: req.correlationId ?? null,
       },
     });

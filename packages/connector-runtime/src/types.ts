@@ -37,7 +37,7 @@ export interface ActionContext {
   config: Record<string, unknown>;
   auth: AuthConfig;
   input: Record<string, unknown>;
-  tenantId: number;
+  tenantId: string;
 }
 
 export interface ActionResult {
@@ -52,7 +52,7 @@ export interface TriggerContext {
   triggerId: string;
   config: Record<string, unknown>;
   auth: AuthConfig;
-  tenantId: number;
+  tenantId: string;
 }
 
 export interface TriggerEvent {

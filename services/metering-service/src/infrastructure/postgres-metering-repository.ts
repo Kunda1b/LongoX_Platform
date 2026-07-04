@@ -50,12 +50,12 @@ export class PostgresMeteringRepository implements MeteringRepository {
   }
 
   async findEvents(
-    tenantId: number,
+    tenantId: string,
     filters?: {
       eventType?: EventType;
       from?: Date;
       to?: Date;
-      workflowId?: number;
+      workflowId?: string;
       limit?: number;
     },
   ): Promise<MeteringEvent[]> {
@@ -80,7 +80,7 @@ export class PostgresMeteringRepository implements MeteringRepository {
   }
 
   async getAggregate(
-    tenantId: number,
+    tenantId: string,
     eventType: string,
     _period: AggregatePeriod,
     _periodStart: Date,
@@ -127,7 +127,7 @@ export class PostgresMeteringRepository implements MeteringRepository {
   }
 
   async getUsageSummary(
-    tenantId: number,
+    tenantId: string,
     from: Date,
     to: Date,
   ): Promise<

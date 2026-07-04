@@ -1,3 +1,3 @@
 export interface ToggleWorkflowCommand {
-  id: number;
+  id: string;
 }

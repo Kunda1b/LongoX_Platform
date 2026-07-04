@@ -17,7 +17,7 @@ export interface IncidentFilters {
 
 export class SecurityIncidentService {
   async createIncident(
-    tenantId: number,
+    tenantId: string,
     type: string,
     severity: string,
     description: string,
@@ -40,7 +40,7 @@ export class SecurityIncidentService {
     return incident;
   }
 
-  async updateIncident(id: number, updates: { status?: string; title?: string; description?: string; metadata?: Record<string, unknown> }) {
+  async updateIncident(id: string, updates: { status?: string; title?: string; description?: string; metadata?: Record<string, unknown> }) {
     const [incident] = await db
       .update(securityIncidentsTable)
       .set({
@@ -56,7 +56,7 @@ export class SecurityIncidentService {
     return incident;
   }
 
-  async resolveIncident(id: number, resolution: string, resolvedBy: number) {
+  async resolveIncident(id: string, resolution: string, resolvedBy: number) {
     const [incident] = await db
       .update(securityIncidentsTable)
       .set({
@@ -72,7 +72,7 @@ export class SecurityIncidentService {
     return incident;
   }
 
-  async addEvidence(incidentId: number, evidenceData: { evidenceType: string; data: unknown }) {
+  async addEvidence(incidentId: string, evidenceData: { evidenceType: string; data: unknown }) {
     const hash = createHash("sha256")
       .update(JSON.stringify(evidenceData.data))
       .digest("hex");
@@ -89,7 +89,7 @@ export class SecurityIncidentService {
     return evidence;
   }
 
-  async getIncident(id: number) {
+  async getIncident(id: string) {
     const [incident] = await db
       .select()
       .from(securityIncidentsTable)
@@ -106,7 +106,7 @@ export class SecurityIncidentService {
     return { incident, evidence };
   }
 
-  async queryIncidents(tenantId: number, filters: IncidentFilters) {
+  async queryIncidents(tenantId: string, filters: IncidentFilters) {
     const conditions = [eq(securityIncidentsTable.tenantId, tenantId)];
 
     if (filters.status) {
@@ -137,7 +137,7 @@ export class SecurityIncidentService {
     return incidents;
   }
 
-  async getOpenIncidents(tenantId: number) {
+  async getOpenIncidents(tenantId: string) {
     const incidents = await db
       .select()
       .from(securityIncidentsTable)
@@ -154,7 +154,7 @@ export class SecurityIncidentService {
 
   async createFromDetection(
     detectionRule: { name: string; type: string; severity: string },
-    matchData: { tenantId: number; description: string; affectedResources?: string[]; metadata?: Record<string, unknown> },
+    matchData: { tenantId: string; description: string; affectedResources?: string[]; metadata?: Record<string, unknown> },
   ) {
     const incident = await this.createIncident(
       matchData.tenantId,

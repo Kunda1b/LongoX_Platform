@@ -24,8 +24,8 @@ export interface DataSourceConfig {
 }
 
 export interface DataSourceProps {
-  id: number;
-  tenantId: number;
+  id: string;
+  tenantId: string;
   name: string;
   description?: string;
   kind: DataSourceKind;

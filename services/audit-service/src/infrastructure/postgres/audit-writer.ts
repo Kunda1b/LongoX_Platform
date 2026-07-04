@@ -1,7 +1,7 @@
 import { db, auditLogTable } from "@longox/db";
 
 export interface AuditContext {
-  tenantId: number;
+  tenantId: string;
   actorType: string;
   actorId?: string | null;
   correlationId?: string | null;
@@ -16,7 +16,7 @@ export interface WriteAuditParams {
 }
 
 export function actorFromUser(user?: {
-  id: number;
+  id: string;
   role?: string;
 }): { actorType: string; actorId: string | null } {
   if (!user) {
@@ -48,7 +48,7 @@ export async function writeAudit(
   metadata?: Record<string, unknown>,
   actorType = "system",
   actorId?: string,
-  tenantId?: number,
+  tenantId?: string,
   correlationId?: string,
 ): Promise<void> {
   if (tenantId == null) {

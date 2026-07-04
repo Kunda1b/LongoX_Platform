@@ -19,10 +19,10 @@ type AcceptedInfo = {
   message: string;
   token: string;
   user: {
-    id: number;
+    id: string;
     email: string;
     name: string;
-    tenantId: number;
+    tenantId: string;
     role: string;
     emailVerifiedAt: string | null;
     avatarUrl: string | null;

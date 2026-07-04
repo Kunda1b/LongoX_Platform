@@ -2,15 +2,15 @@ import type { MeteringRepository } from "../domain";
 import type { MeteringEvent, EventType } from "../domain";
 
 export interface RecordEventInput {
-  tenantId: number;
+  tenantId: string;
   eventType: EventType;
   quantity: number;
   unit?: string;
   metadata?: Record<string, unknown>;
   source: string;
   sourceId?: string;
-  workflowId?: number;
-  executionId?: number;
+  workflowId?: string;
+  executionId?: string;
   timestamp?: Date;
 }
 
@@ -34,7 +34,7 @@ export class RecordEventCommand {
 }
 
 export interface GetUsageSummaryInput {
-  tenantId: number;
+  tenantId: string;
   from?: Date;
   to?: Date;
 }

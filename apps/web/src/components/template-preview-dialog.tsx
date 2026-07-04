@@ -436,7 +436,7 @@ interface TemplatePreviewDialogProps {
   template: Template | null;
   open: boolean;
   onClose: () => void;
-  onUse: (id: number) => void;
+  onUse: (id: string) => void;
   isUsing: boolean;
 }
 

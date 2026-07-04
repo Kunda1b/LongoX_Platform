@@ -15,7 +15,7 @@ import type { Request, Response, NextFunction } from "express";
 // `Express.Request` declarations across packages, and TS2717 fires if the
 // `user` property has different shapes in different files.
 //
-// The canonical `AuthUser` type is `{ id, email, name, tenantId: number | null,
+// The canonical `AuthUser` type is `{ id, email, name, tenantId: string | null,
 // role }`. Both shared-rbac and shared-auth declare it identically so that
 // services depending on either package see the same `req.user` shape.
 // Downstream services that import BOTH packages still typecheck cleanly.
@@ -23,40 +23,40 @@ declare global {
   namespace Express {
     interface Request {
       user?: {
-        id: number;
+        id: string;
         email: string;
         name: string;
-        tenantId: number | null;
+        tenantId: string | null;
         role: string;
       };
-      tenantId?: number;
+      tenantId?: string;
       correlationId?: string;
     }
   }
 }
 
 export interface Permission {
-  id: number;
+  id: string;
   resource: string;
   action: string;
   description: string | null;
 }
 
 export interface Role {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
-  tenantId: number | null;
+  tenantId: string | null;
   permissions: Permission[];
   createdAt: string;
 }
 
 export interface UserRole {
-  id: number;
+  id: string;
   userId: string;
-  roleId: number;
+  roleId: string;
   roleName: string;
-  tenantId: number | null;
+  tenantId: string | null;
   createdAt: string;
 }
 
@@ -505,8 +505,8 @@ export function clearPermissionCache(userId?: string): void {
 // ─── Fetch User Permissions ────────────────────────────────────────────────────
 
 async function getUserPermissions(
-  userId: number,
-  tenantId: number | null,
+  userId: string,
+  tenantId: string | null,
 ): Promise<Set<string>> {
   const cacheKey = `perm:${userId}:tenant:${tenantId ?? "global"}`;
   const cached = getCachedPermissions(cacheKey);
@@ -562,8 +562,8 @@ const ROLE_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
  * in workspace A from bypassing permission checks in workspace B.
  */
 async function getUserRoleName(
-  userId: number,
-  tenantId: number | null,
+  userId: string,
+  tenantId: string | null,
 ): Promise<string | null> {
   const cacheKey = `${userId}:${tenantId ?? "null"}`;
   const cached = roleCache.get(cacheKey);

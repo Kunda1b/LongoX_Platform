@@ -59,7 +59,7 @@ export class PostgresEmailRepository implements EmailRepository {
     return toDomain(row);
   }
 
-  async markSent(id: number): Promise<EmailMessage | null> {
+  async markSent(id: string): Promise<EmailMessage | null> {
     const [row] = await db
       .update(emailMessagesTable)
       .set({ status: "sent", sentAt: new Date() })
@@ -68,7 +68,7 @@ export class PostgresEmailRepository implements EmailRepository {
     return row ? toDomain(row) : null;
   }
 
-  async markFailed(id: number, errorMessage: string): Promise<EmailMessage | null> {
+  async markFailed(id: string, errorMessage: string): Promise<EmailMessage | null> {
     const [row] = await db
       .update(emailMessagesTable)
       .set({ status: "failed", errorMessage })

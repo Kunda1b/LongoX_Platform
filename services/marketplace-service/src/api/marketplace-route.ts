@@ -55,9 +55,9 @@ router.get(
   "/marketplace/listings/:id",
   authorize({ resource: "templates", action: "read" }),
   async (req, res): Promise<void> => {
-    const id = parseInt(String(req.params.id), 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: "Invalid id" });
+    const id = req.params.id;
+    if (!id) {
+      res.status(400).json({ error: "id is required" });
       return;
     }
 
@@ -142,9 +142,9 @@ router.post(
   authorize({ resource: "templates", action: "write" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = parseInt(String(req.params.id), 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: "Invalid id" });
+    const id = req.params.id;
+    if (!id) {
+      res.status(400).json({ error: "id is required" });
       return;
     }
 
@@ -166,9 +166,9 @@ router.post(
   authorize({ resource: "templates", action: "write" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = parseInt(String(req.params.id), 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: "Invalid id" });
+    const id = req.params.id;
+    if (!id) {
+      res.status(400).json({ error: "id is required" });
       return;
     }
 
@@ -189,9 +189,9 @@ router.post(
   authorize({ resource: "templates", action: "write" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = parseInt(String(req.params.id), 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: "Invalid id" });
+    const id = req.params.id;
+    if (!id) {
+      res.status(400).json({ error: "id is required" });
       return;
     }
 
@@ -212,9 +212,9 @@ router.put(
   authorize({ resource: "templates", action: "write" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = parseInt(String(req.params.id), 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: "Invalid id" });
+    const id = req.params.id;
+    if (!id) {
+      res.status(400).json({ error: "id is required" });
       return;
     }
 
@@ -240,9 +240,9 @@ router.delete(
   authorize({ resource: "templates", action: "write" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = parseInt(String(req.params.id), 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: "Invalid id" });
+    const id = req.params.id;
+    if (!id) {
+      res.status(400).json({ error: "id is required" });
       return;
     }
 
@@ -256,9 +256,9 @@ router.post(
   authorize({ resource: "templates", action: "write" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = parseInt(String(req.params.id), 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: "Invalid id" });
+    const id = req.params.id;
+    if (!id) {
+      res.status(400).json({ error: "id is required" });
       return;
     }
 
@@ -312,9 +312,9 @@ router.get(
   authorize({ resource: "templates", action: "read" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = parseInt(String(req.params.id), 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: "Invalid id" });
+    const id = req.params.id;
+    if (!id) {
+      res.status(400).json({ error: "id is required" });
       return;
     }
 
@@ -340,9 +340,9 @@ router.put(
   "/marketplace/revenue/:id/payout",
   authorize({ resource: "templates", action: "write" }),
   async (req, res): Promise<void> => {
-    const id = parseInt(String(req.params.id), 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: "Invalid id" });
+    const id = req.params.id;
+    if (!id) {
+      res.status(400).json({ error: "id is required" });
       return;
     }
 
@@ -397,9 +397,9 @@ router.get(
   "/marketplace/listings/:id/reviews",
   authorize({ resource: "templates", action: "read" }),
   async (req, res): Promise<void> => {
-    const listingId = parseInt(String(req.params.id), 10);
+    const listingId = req.params.id;
     if (isNaN(listingId)) {
-      res.status(400).json({ error: "Invalid id" });
+      res.status(400).json({ error: "id is required" });
       return;
     }
 
@@ -423,9 +423,9 @@ router.post(
   authorize({ resource: "templates", action: "write" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const listingId = parseInt(String(req.params.id), 10);
+    const listingId = req.params.id;
     if (isNaN(listingId)) {
-      res.status(400).json({ error: "Invalid id" });
+      res.status(400).json({ error: "id is required" });
       return;
     }
 
@@ -477,9 +477,9 @@ router.put(
   authorize({ resource: "templates", action: "write" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const reviewId = parseInt(String(req.params.id), 10);
+    const reviewId = req.params.id;
     if (isNaN(reviewId)) {
-      res.status(400).json({ error: "Invalid id" });
+      res.status(400).json({ error: "id is required" });
       return;
     }
 
@@ -531,9 +531,9 @@ router.delete(
   authorize({ resource: "templates", action: "write" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const reviewId = parseInt(String(req.params.id), 10);
+    const reviewId = req.params.id;
     if (isNaN(reviewId)) {
-      res.status(400).json({ error: "Invalid id" });
+      res.status(400).json({ error: "id is required" });
       return;
     }
 
@@ -582,9 +582,9 @@ router.post(
   authorize({ resource: "templates", action: "write" }),
   requireTenantContext,
   async (req, res): Promise<void> => {
-    const id = parseInt(String(req.params.id), 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: "Invalid id" });
+    const id = req.params.id;
+    if (!id) {
+      res.status(400).json({ error: "id is required" });
       return;
     }
 
@@ -617,9 +617,9 @@ router.post(
   "/marketplace/listings/:id/approve",
   authorize({ resource: "templates", action: "write" }),
   async (req, res): Promise<void> => {
-    const id = parseInt(String(req.params.id), 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: "Invalid id" });
+    const id = req.params.id;
+    if (!id) {
+      res.status(400).json({ error: "id is required" });
       return;
     }
 
@@ -652,9 +652,9 @@ router.post(
   "/marketplace/listings/:id/reject",
   authorize({ resource: "templates", action: "write" }),
   async (req, res): Promise<void> => {
-    const id = parseInt(String(req.params.id), 10);
-    if (isNaN(id)) {
-      res.status(400).json({ error: "Invalid id" });
+    const id = req.params.id;
+    if (!id) {
+      res.status(400).json({ error: "id is required" });
       return;
     }
 
@@ -703,9 +703,9 @@ router.post(
   "/marketplace/reviews/:id/moderate",
   authorize({ resource: "templates", action: "write" }),
   async (req, res): Promise<void> => {
-    const reviewId = parseInt(String(req.params.id), 10);
+    const reviewId = req.params.id;
     if (isNaN(reviewId)) {
-      res.status(400).json({ error: "Invalid id" });
+      res.status(400).json({ error: "id is required" });
       return;
     }
 

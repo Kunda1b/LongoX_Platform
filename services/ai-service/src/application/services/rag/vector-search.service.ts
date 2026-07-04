@@ -4,7 +4,7 @@ import { EmbeddingService, embeddingService } from "./embedding.service";
 
 export interface SearchResult {
   chunkId: number;
-  documentId: number;
+  documentId: string;
   chunkIndex: number;
   content: string;
   score: number;

@@ -33,7 +33,7 @@ export class PostgresListingRepository implements ListingRepository {
     });
   }
 
-  async findById(id: number): Promise<Listing | null> {
+  async findById(id: string): Promise<Listing | null> {
     const [row] = await db
       .select()
       .from(marketplaceListingsTable)
@@ -126,7 +126,7 @@ export class PostgresListingRepository implements ListingRepository {
     return this.toDomain(row);
   }
 
-  async update(id: number, data: Partial<ListingProps>): Promise<Listing> {
+  async update(id: string, data: Partial<ListingProps>): Promise<Listing> {
     const [row] = await db
       .update(marketplaceListingsTable)
       .set({
@@ -143,7 +143,7 @@ export class PostgresListingRepository implements ListingRepository {
     return this.toDomain(row);
   }
 
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await db.delete(marketplaceListingsTable).where(eq(marketplaceListingsTable.id, id));
   }
 }

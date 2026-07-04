@@ -16,7 +16,7 @@ import type {
 
 export class PostgresUsageRepository implements UsageRepository {
   async listEvents(
-    tenantId: number,
+    tenantId: string,
     filter: ListUsageEventsFilter,
   ): Promise<UsageEvent[]> {
     const limit = Math.min(filter.limit ?? 50, 200);
@@ -45,7 +45,7 @@ export class PostgresUsageRepository implements UsageRepository {
     }));
   }
 
-  async getMetrics(tenantId: number, monthStart: Date): Promise<UsageMetrics> {
+  async getMetrics(tenantId: string, monthStart: Date): Promise<UsageMetrics> {
     const [allExecs] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(executionsTable)
@@ -91,7 +91,7 @@ export class PostgresUsageRepository implements UsageRepository {
   }
 
   async getEventQuantities(
-    tenantId: number,
+    tenantId: string,
     periodStart: Date,
     periodEnd?: Date,
   ): Promise<UsageEventQuantity[]> {

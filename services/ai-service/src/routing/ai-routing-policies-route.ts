@@ -45,7 +45,7 @@ router.get("/ai-routing-policies/:id", authorize("ai:read"), async (req, res): P
     .from(aiRoutingPoliciesTable)
     .where(
       and(
-        eq(aiRoutingPoliciesTable.id, Number(req.params.id)),
+        eq(aiRoutingPoliciesTable.id, String(req.params.id)),
         eq(aiRoutingPoliciesTable.tenantId, tenantId),
       ),
     );
@@ -107,7 +107,7 @@ router.post("/ai-routing-policies", authorize("ai:write"), async (req, res): Pro
 
 router.patch("/ai-routing-policies/:id", authorize("ai:write"), async (req, res): Promise<void> => {
   const tenantId = req.tenantId ?? 0;
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const updates: Record<string, unknown> = {};
   const b = req.body as Partial<{
     name: string;
@@ -155,7 +155,7 @@ router.delete("/ai-routing-policies/:id", authorize("ai:delete"), async (req, re
     .delete(aiRoutingPoliciesTable)
     .where(
       and(
-        eq(aiRoutingPoliciesTable.id, Number(req.params.id)),
+        eq(aiRoutingPoliciesTable.id, String(req.params.id)),
         eq(aiRoutingPoliciesTable.tenantId, tenantId),
       ),
     );

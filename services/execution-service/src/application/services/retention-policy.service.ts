@@ -50,7 +50,7 @@ function normalizeColdYears(years: number): number {
 }
 
 export class RetentionPolicyService {
-  async getPolicy(tenantId: number): Promise<RetentionPolicyConfig> {
+  async getPolicy(tenantId: string): Promise<RetentionPolicyConfig> {
     const [settings] = await db
       .select()
       .from(tenantSettingsTable)
@@ -86,7 +86,7 @@ export class RetentionPolicyService {
   }
 
   async setPolicy(
-    tenantId: number,
+    tenantId: string,
     config: Partial<RetentionPolicyConfig>,
   ): Promise<RetentionPolicyConfig> {
     const current = await this.getPolicy(tenantId);
@@ -162,7 +162,7 @@ export class RetentionPolicyService {
     return this.getPolicy(tenantId);
   }
 
-  async getExpirationDates(tenantId: number): Promise<{
+  async getExpirationDates(tenantId: string): Promise<{
     hotExpiresAt: Date;
     coldExpiresAt: Date;
   }> {
@@ -178,7 +178,7 @@ export class RetentionPolicyService {
     return { hotExpiresAt, coldExpiresAt };
   }
 
-  async isHotData(tenantId: number, timestamp: Date): Promise<boolean> {
+  async isHotData(tenantId: string, timestamp: Date): Promise<boolean> {
     const policy = await this.getPolicy(tenantId);
     const now = new Date();
     const ageDays =
@@ -186,7 +186,7 @@ export class RetentionPolicyService {
     return ageDays <= policy.hotRetentionDays;
   }
 
-  async isColdData(tenantId: number, timestamp: Date): Promise<boolean> {
+  async isColdData(tenantId: string, timestamp: Date): Promise<boolean> {
     const policy = await this.getPolicy(tenantId);
     const now = new Date();
     const ageDays =

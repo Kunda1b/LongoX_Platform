@@ -9,7 +9,7 @@ export interface IsolateContext {
   connectorName: string;
   actionId: string;
   executionId: string;
-  tenantId: number;
+  tenantId: string;
   auth: Record<string, unknown>;
   input: Record<string, unknown>;
   config: Record<string, unknown>;

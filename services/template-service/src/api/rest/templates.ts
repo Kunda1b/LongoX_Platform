@@ -51,9 +51,9 @@ router.get("/templates", async (req, res): Promise<void> => {
 });
 
 router.get("/templates/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
 
@@ -109,9 +109,9 @@ router.post("/templates", async (req, res): Promise<void> => {
 });
 
 router.post("/templates/:id/use", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
 
@@ -129,9 +129,9 @@ router.post("/templates/:id/use", async (req, res): Promise<void> => {
 });
 
 router.get("/templates/:id/versions", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
 
@@ -145,9 +145,9 @@ router.get("/templates/:id/versions", async (req, res): Promise<void> => {
 });
 
 router.post("/templates/:id/fork", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
+  const id = req.params.id;
+  if (!id) {
+    res.status(400).json({ error: "id is required" });
     return;
   }
 

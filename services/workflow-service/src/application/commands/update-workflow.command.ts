@@ -1,7 +1,7 @@
 import type { WorkflowNode, WorkflowEdge } from "../../domain";
 
 export interface UpdateWorkflowCommand {
-  id: number;
+  id: string;
   name?: string;
   description?: string | null;
   nodes?: WorkflowNode[];

@@ -36,7 +36,7 @@ export class RetentionSchedulerService {
   }
 
   async runManual(
-    tenantId: number,
+    tenantId: string,
     action: "archive" | "purge" | "export",
   ): Promise<void> {
     switch (action) {
@@ -52,7 +52,7 @@ export class RetentionSchedulerService {
     }
   }
 
-  private async processTenant(tenantId: number): Promise<void> {
+  private async processTenant(tenantId: string): Promise<void> {
     const expiredPartitions =
       await this.partitionManager.getExpiredPartitions(tenantId);
 
@@ -94,7 +94,7 @@ export class RetentionSchedulerService {
     }
   }
 
-  private async archiveTenantData(tenantId: number): Promise<void> {
+  private async archiveTenantData(tenantId: string): Promise<void> {
     const expiredPartitions =
       await this.partitionManager.getExpiredPartitions(tenantId);
 
@@ -118,7 +118,7 @@ export class RetentionSchedulerService {
     }
   }
 
-  private async purgeTenantData(tenantId: number): Promise<void> {
+  private async purgeTenantData(tenantId: string): Promise<void> {
     const expiredPartitions =
       await this.partitionManager.getExpiredPartitions(tenantId);
 

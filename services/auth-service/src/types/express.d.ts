@@ -16,6 +16,6 @@ declare namespace Express {
   interface Request {
     correlationId?: string;
     idempotencyKey?: string;
-    tenantId?: number;
+    tenantId?: string;
   }
 }

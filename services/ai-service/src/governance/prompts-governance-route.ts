@@ -8,7 +8,7 @@ import { authorize } from "@longox/shared-rbac";
 const router: IRouter = Router();
 
 router.get("/prompts/:id/versions", authorize("ai:read"), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const rows = await db
     .select()
     .from(promptVersionsTable)
@@ -28,7 +28,7 @@ router.get("/prompts/:id/versions", authorize("ai:read"), async (req, res): Prom
 });
 
 router.post("/prompts/:id/publish", authorize("ai:write"), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const { approverId, comment } = req.body as {
     approverId?: number;
     comment?: string;
@@ -79,7 +79,7 @@ router.post("/prompts/:id/publish", authorize("ai:write"), async (req, res): Pro
 });
 
 router.post("/prompts/:id/rollback", authorize("ai:write"), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const { targetVersion } = req.body as { targetVersion: number };
 
   if (!targetVersion || targetVersion < 1) {
@@ -144,7 +144,7 @@ router.post("/prompts/:id/rollback", authorize("ai:write"), async (req, res): Pr
 });
 
 router.post("/prompts/:id/submit-for-review", authorize("ai:write"), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const [row] = await db
     .update(promptsTable)
     .set({ status: "review" })
@@ -166,7 +166,7 @@ router.post("/prompts/:id/submit-for-review", authorize("ai:write"), async (req,
 });
 
 router.post("/prompts/:id/reject", authorize("ai:write"), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const { comment } = req.body as { comment?: string };
 
   const [row] = await db
@@ -192,7 +192,7 @@ router.post("/prompts/:id/reject", authorize("ai:write"), async (req, res): Prom
 });
 
 router.get("/prompts/:id/approval-history", authorize("ai:read"), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const rows = await db
     .select()
     .from(promptApprovalsTable)
@@ -214,7 +214,7 @@ router.get("/prompts/:id/approval-history", authorize("ai:read"), async (req, re
 });
 
 router.post("/prompts/:id/test", authorize("ai:run"), async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const { variables, modelId, provider } = req.body as {
     variables?: Record<string, string>;
     modelId?: string;
