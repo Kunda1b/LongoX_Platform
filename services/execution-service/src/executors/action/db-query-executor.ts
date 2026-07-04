@@ -4,8 +4,7 @@ import type {
   ExecutionContext,
   NodeExecutionResult,
 } from "@longox/workflow-engine";
-import { db } from "@longox/db";
-import { sql } from "drizzle-orm";
+import { prisma } from "@longox/db/prisma";
 
 export class DbQueryExecutor implements NodeExecutor {
   canHandle(nodeTypeId: string): boolean {
@@ -35,15 +34,15 @@ export class DbQueryExecutor implements NodeExecutor {
     }
 
     try {
-      const result = await db.execute(sql.raw(query));
-      const rows = Array.isArray(result) ? result : [];
+      const rows = await prisma.$queryRawUnsafe(query);
+      const rowArray = Array.isArray(rows) ? rows : [];
 
       return {
         nodeId: node.id,
         nodeName: node.name,
         nodeType: "action.db_query",
         status: "success",
-        output: { rows, rowCount: rows.length },
+        output: { rows: rowArray, rowCount: rowArray.length },
         error: null,
         durationMs: Date.now() - startTime,
         attemptNumber: 1,

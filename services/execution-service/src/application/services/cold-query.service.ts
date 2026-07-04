@@ -1,5 +1,4 @@
-import { eq, and, gte, lte, desc } from "drizzle-orm";
-import { db, executionsTable, archiveExportsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { RetentionPolicyService } from "./retention-policy.service";
 import * as parquet from "parquetjs-lite";
 
@@ -91,17 +90,13 @@ export class ColdQueryService {
   async queryExecution(
     id: string,
     tenantId: string,
-  ): Promise<typeof executionsTable.$inferSelect | null> {
-    const [execution] = await db
-      .select()
-      .from(executionsTable)
-      .where(
-        and(
-          eq(executionsTable.id, id),
-          eq(executionsTable.tenantId, tenantId),
-        ),
-      )
-      .limit(1);
+  ): Promise<any | null> {
+    const execution = await prisma.workflowExecution.findFirst({
+      where: {
+        id,
+        tenantId,
+      } as any,
+    });
 
     if (execution) {
       return execution;
@@ -119,18 +114,14 @@ export class ColdQueryService {
     tenantId: string,
     from: Date,
     to: Date,
-  ): Promise<(typeof executionsTable.$inferSelect)[]> {
-    const hotResults = await db
-      .select()
-      .from(executionsTable)
-      .where(
-        and(
-          eq(executionsTable.tenantId, tenantId),
-          gte(executionsTable.startedAt, from),
-          lte(executionsTable.startedAt, to),
-        ),
-      )
-      .orderBy(desc(executionsTable.startedAt));
+  ): Promise<any[]> {
+    const hotResults = await prisma.workflowExecution.findMany({
+      where: {
+        tenantId,
+        startedAt: { gte: from, lte: to },
+      } as any,
+      orderBy: { startedAt: "desc" },
+    });
 
     const policy = await this.policyService.getPolicy(tenantId);
     if (!policy.coldQueryEnabled) {
@@ -144,7 +135,7 @@ export class ColdQueryService {
   async restoreFromCold(
     executionId: string,
     tenantId: string,
-  ): Promise<typeof executionsTable.$inferSelect | null> {
+  ): Promise<any | null> {
     const policy = await this.policyService.getPolicy(tenantId);
     if (!policy.coldQueryEnabled) {
       return null;
@@ -155,10 +146,9 @@ export class ColdQueryService {
       return null;
     }
 
-    const [restored] = await db
-      .insert(executionsTable)
-      .values(coldData as any)
-      .returning();
+    const restored = await prisma.workflowExecution.create({
+      data: coldData as any,
+    });
 
     return restored;
   }
@@ -166,11 +156,9 @@ export class ColdQueryService {
   async getColdQueryPresignedUrl(
     exportId: string,
   ): Promise<string | null> {
-    const [record] = await db
-      .select()
-      .from(archiveExportsTable)
-      .where(eq(archiveExportsTable.id, exportId))
-      .limit(1);
+    const record = await prisma.archiveExport.findUnique({
+      where: { id: exportId },
+    });
 
     if (!record || !record.storageUrl) {
       return null;
@@ -183,19 +171,16 @@ export class ColdQueryService {
   private async queryColdStorage(
     id: string,
     tenantId: string,
-  ): Promise<typeof executionsTable.$inferSelect | null> {
-    const exports = await db
-      .select()
-      .from(archiveExportsTable)
-      .where(
-        and(
-          eq(archiveExportsTable.tenantId, tenantId),
-          eq(archiveExportsTable.tableName, "executions"),
-          eq(archiveExportsTable.status, "completed"),
-        ),
-      )
-      .orderBy(desc(archiveExportsTable.createdAt))
-      .limit(5);
+  ): Promise<any | null> {
+    const exports = await prisma.archiveExport.findMany({
+      where: {
+        tenantId,
+        tableName: "executions",
+        status: "completed",
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    });
 
     for (const exp of exports) {
       const key = exp.storageUrl?.replace(/^https?:\/\/[^\/]+\//, "");
@@ -203,7 +188,7 @@ export class ColdQueryService {
 
       const records = await queryParquetFromS3(key, { id, tenantId });
       if (records.length > 0) {
-        return records[0] as typeof executionsTable.$inferSelect;
+        return records[0];
       }
     }
 
@@ -214,19 +199,16 @@ export class ColdQueryService {
     tenantId: string,
     from: Date,
     to: Date,
-  ): Promise<(typeof executionsTable.$inferSelect)[]> {
-    const exports = await db
-      .select()
-      .from(archiveExportsTable)
-      .where(
-        and(
-          eq(archiveExportsTable.tenantId, tenantId),
-          eq(archiveExportsTable.tableName, "executions"),
-          eq(archiveExportsTable.status, "completed"),
-        ),
-      )
-      .orderBy(desc(archiveExportsTable.createdAt))
-      .limit(20);
+  ): Promise<any[]> {
+    const exports = await prisma.archiveExport.findMany({
+      where: {
+        tenantId,
+        tableName: "executions",
+        status: "completed",
+      },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
 
     const results: any[] = [];
 
@@ -238,7 +220,7 @@ export class ColdQueryService {
       for (const r of records) {
         const startedAt = new Date(r.started_at ?? r.startedAt);
         if (startedAt >= from && startedAt <= to) {
-          results.push(r as typeof executionsTable.$inferSelect);
+          results.push(r);
         }
       }
     }

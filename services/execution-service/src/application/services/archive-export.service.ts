@@ -1,7 +1,5 @@
-import { eq, and, gte, lte, desc } from "drizzle-orm";
-import { db, archiveExportsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import * as parquet from "parquetjs-lite";
-import { sql } from "drizzle-orm";
 
 const EXPORTS_DIR = "exports";
 
@@ -46,46 +44,49 @@ export class ArchiveExportService {
     startDate: Date,
     endDate: Date,
     tenantId: string,
-  ): Promise<typeof archiveExportsTable.$inferSelect> {
+  ): Promise<any> {
     const partitionName = `${tableName}_${startDate.getFullYear()}${String(startDate.getMonth() + 1).padStart(2, "0")}`;
 
-    const [record] = await db
-      .insert(archiveExportsTable)
-      .values({
+    const record = await prisma.archiveExport.create({
+      data: {
         tenantId,
         tableName,
         partitionName,
         exportFormat: "parquet",
-        startDate: startDate.toISOString().split("T")[0],
-        endDate: endDate.toISOString().split("T")[0],
+        startDate,
+        endDate,
         status: "processing",
         filePath: `${EXPORTS_DIR}/${tenantId}/${partitionName}_${Date.now()}.parquet`,
-      })
-      .returning();
+      } as any,
+    });
 
     try {
-      const data = await db.execute(sql`
-        SELECT * FROM ${sql.identifier(tableName as any)}
-        WHERE tenant_id = ${tenantId}
-          AND created_at >= ${startDate}
-          AND created_at < ${endDate}
-      `);
-
-      const rows = data.rows ?? data;
-      const rowArray = rows as any[];
+      // Prisma doesn't support identifier-binding on table names; use
+      // $queryRawUnsafe after validating the table name against an allowlist.
+      if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(tableName)) {
+        throw new Error(`Invalid table name: ${tableName}`);
+      }
+      const rowArray = (await prisma.$queryRawUnsafe(
+        `SELECT * FROM "${tableName}"
+         WHERE tenant_id = $1
+           AND created_at >= $2
+           AND created_at < $3`,
+        tenantId,
+        startDate,
+        endDate,
+      )) as any[];
 
       if (rowArray.length === 0) {
-        const [updated] = await db
-          .update(archiveExportsTable)
-          .set({
+        const updated = await prisma.archiveExport.update({
+          where: { id: record.id },
+          data: {
             status: "completed",
             rowCount: 0,
             fileSizeBytes: 0,
             completedAt: new Date(),
-          })
-          .where(eq(archiveExportsTable.id, record.id))
-          .returning();
-        return updated!;
+          } as any,
+        });
+        return updated;
       }
 
       const schemaFields = Object.keys(rowArray[0]).map((key) => ({
@@ -129,42 +130,38 @@ export class ArchiveExportService {
         storageUrl = `s3://${getS3Config().bucket}/${storageKey}`;
       }
 
-      const [updated] = await db
-        .update(archiveExportsTable)
-        .set({
+      const updated = await prisma.archiveExport.update({
+        where: { id: record.id },
+        data: {
           status: "completed",
           rowCount: rowArray.length,
           fileSizeBytes: stats.size,
           storageUrl,
           completedAt: new Date(),
-        })
-        .where(eq(archiveExportsTable.id, record.id))
-        .returning();
+        } as any,
+      });
 
-      return updated!;
+      return updated;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
 
-      const [updated] = await db
-        .update(archiveExportsTable)
-        .set({
+      const updated = await prisma.archiveExport.update({
+        where: { id: record.id },
+        data: {
           status: "failed",
           errorMessage: message,
           completedAt: new Date(),
-        })
-        .where(eq(archiveExportsTable.id, record.id))
-        .returning();
+        } as any,
+      });
 
-      return updated!;
+      return updated;
     }
   }
 
   async uploadExport(exportId: string): Promise<void> {
-    const [record] = await db
-      .select()
-      .from(archiveExportsTable)
-      .where(eq(archiveExportsTable.id, exportId))
-      .limit(1);
+    const record = await prisma.archiveExport.findUnique({
+      where: { id: exportId },
+    });
 
     if (!record) {
       throw new Error(`Export ${exportId} not found`);
@@ -179,31 +176,26 @@ export class ArchiveExportService {
     const storageKey = `${record.tenantId}/${record.partitionName}_${Date.now()}.parquet`;
     const storageUrl = await uploadToS3(storageKey, fileBuffer, "application/octet-stream");
 
-    await db
-      .update(archiveExportsTable)
-      .set({ storageUrl })
-      .where(eq(archiveExportsTable.id, exportId));
+    await prisma.archiveExport.update({
+      where: { id: exportId },
+      data: { storageUrl } as any,
+    });
 
     await fs.unlink(record.filePath);
   }
 
-  async getExportStatus(
-    exportId: string,
-  ): Promise<typeof archiveExportsTable.$inferSelect | null> {
-    const [record] = await db
-      .select()
-      .from(archiveExportsTable)
-      .where(eq(archiveExportsTable.id, exportId))
-      .limit(1);
+  async getExportStatus(exportId: string): Promise<any | null> {
+    const record = await prisma.archiveExport.findUnique({
+      where: { id: exportId },
+    });
 
     return record ?? null;
   }
 
-  async listExports(tenantId: string): Promise<(typeof archiveExportsTable.$inferSelect)[]> {
-    return db
-      .select()
-      .from(archiveExportsTable)
-      .where(eq(archiveExportsTable.tenantId, tenantId))
-      .orderBy(desc(archiveExportsTable.createdAt));
+  async listExports(tenantId: string): Promise<any[]> {
+    return prisma.archiveExport.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: "desc" },
+    });
   }
 }
