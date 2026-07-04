@@ -267,7 +267,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint, typecheck, eval-gate, dependency-audit, schema-lint, api-contract, graphql-check, test, security-test, integration-test, architecture-verification, operational-rehearsal]
+    needs: [lint, typecheck, eval-gate, dependency-audit, circular-dependency-check, schema-lint, api-contract, graphql-check, test, security-test, integration-test, architecture-verification, operational-rehearsal]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -287,6 +287,8 @@ jobs:
             apps/*/dist/
             services/*/dist/
             packages/*/dist/
+          # ADR §21.3: Versioned artifacts retained 6 months (180 days)
+          retention-days: 180
 
   security-scan:
     name: Security Scan
