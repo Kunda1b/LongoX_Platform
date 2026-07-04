@@ -1,18 +1,10 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  jsonb,
-  real,
-  boolean,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, jsonb, real, boolean } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const templatesTable = pgTable("templates", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   name: text("name").notNull(),
   description: text("description").notNull(),
   category: text("category").notNull(),

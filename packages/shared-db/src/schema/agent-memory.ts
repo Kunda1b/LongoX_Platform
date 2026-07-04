@@ -1,21 +1,15 @@
-import {
-  pgTable,
-  text,
-  serial,
-  integer,
-  jsonb,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { tenantsTable } from "./tenants";
 
 export const agentMemoryTable = pgTable("agent_memory", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id")
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
   agentId: text("agent_id").notNull(),
-  workflowId: integer("workflow_id"),
-  executionId: integer("execution_id"),
+  workflowId: text("workflow_id"),
+  executionId: text("execution_id"),
   memoryType: text("memory_type").notNull().default("short_term"),
   key: text("key").notNull(),
   content: text("content").notNull(),

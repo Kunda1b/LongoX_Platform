@@ -1,9 +1,10 @@
-import { pgTable, text, serial, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { tenantsTable } from "./tenants";
 
 export const auditLogTable = pgTable("audit_log", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id")
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
   actorType: text("actor_type").notNull().default("system"),

@@ -1,15 +1,9 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 
 export const templateVersionsTable = pgTable("template_versions", {
-  id: serial("id").primaryKey(),
-  templateId: integer("template_id").notNull(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  templateId: text("template_id").notNull(),
   version: integer("version").notNull(),
   name: text("name").notNull(),
   nodes: jsonb("nodes").notNull().default([]),

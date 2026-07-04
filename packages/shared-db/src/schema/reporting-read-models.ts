@@ -1,17 +1,10 @@
-import {
-  pgTable,
-  text,
-  serial,
-  integer,
-  numeric,
-  jsonb,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, integer, numeric, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 
 export const reportingSnapshotsTable = pgTable("reporting_snapshots", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   reportType: text("report_type").notNull(),
-  tenantId: integer("tenant_id"),
+  tenantId: text("tenant_id"),
   period: text("period").notNull(),
   periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
   periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
@@ -23,9 +16,9 @@ export const reportingSnapshotsTable = pgTable("reporting_snapshots", {
 });
 
 export const reportingExportsTable = pgTable("reporting_exports", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   reportType: text("report_type").notNull(),
-  tenantId: integer("tenant_id"),
+  tenantId: text("tenant_id"),
   format: text("format").notNull().default("json"),
   fileUrl: text("file_url"),
   status: text("status").notNull().default("pending"),
@@ -37,12 +30,12 @@ export const reportingExportsTable = pgTable("reporting_exports", {
 });
 
 export const reportingKPIsTable = pgTable("reporting_kpis", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   kpiName: text("kpi_name").notNull(),
   kpiValue: numeric("kpi_value", { precision: 16, scale: 6 }).notNull(),
   targetValue: numeric("target_value", { precision: 16, scale: 6 }),
   unit: text("unit").default("count"),
-  tenantId: integer("tenant_id"),
+  tenantId: text("tenant_id"),
   period: text("period").notNull().default("day"),
   recordedAt: timestamp("recorded_at", { withTimezone: true })
     .notNull()

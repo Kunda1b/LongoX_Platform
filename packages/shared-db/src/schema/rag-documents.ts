@@ -1,16 +1,10 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { ragKnowledgeBasesTable } from "./rag-knowledge-bases";
 
 export const ragDocumentsTable = pgTable("rag_documents", {
-  id: serial("id").primaryKey(),
-  knowledgeBaseId: integer("knowledge_base_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  knowledgeBaseId: text("knowledge_base_id")
     .notNull()
     .references(() => ragKnowledgeBasesTable.id, { onDelete: "cascade" }),
   filename: text("filename").notNull(),

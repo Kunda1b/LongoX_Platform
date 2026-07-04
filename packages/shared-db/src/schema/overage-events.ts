@@ -1,17 +1,10 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  numeric,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, numeric, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { tenantsTable } from "./tenants";
 
 export const overageEventsTable = pgTable("overage_events", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id")
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
   resource: text("resource").notNull(),

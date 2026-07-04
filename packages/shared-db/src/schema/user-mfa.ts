@@ -1,16 +1,10 @@
-import {
-  pgTable,
-  serial,
-  text,
-  timestamp,
-  boolean,
-  integer,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { usersTable } from "./users";
 
 export const userMfaTable = pgTable("user_mfa", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  userId: text("user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
   method: text("method").notNull().default("totp"),
@@ -26,8 +20,8 @@ export const userMfaTable = pgTable("user_mfa", {
 });
 
 export const ssoConnectionsTable = pgTable("sso_connections", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id"),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id"),
   provider: text("provider").notNull(),
   providerClientId: text("provider_client_id").notNull(),
   providerClientSecret: text("provider_client_secret").notNull(),
@@ -44,8 +38,8 @@ export const ssoConnectionsTable = pgTable("sso_connections", {
 });
 
 export const userSsoIdentitiesTable = pgTable("user_sso_identities", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  userId: text("user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
   provider: text("provider").notNull(),

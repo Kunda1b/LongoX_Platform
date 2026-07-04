@@ -1,26 +1,18 @@
-import {
-  pgTable,
-  text,
-  serial,
-  integer,
-  real,
-  boolean,
-  jsonb,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, integer, real, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const marketplaceListingsTable = pgTable("marketplace_listings", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
   listingType: text("listing_type").notNull(),
   category: text("category").notNull().default("general"),
   tags: text("tags").array().notNull().default([]),
   author: text("author").notNull().default("LongoX"),
-  authorId: integer("author_id").notNull().default(0),
-  tenantId: integer("tenant_id"),
+  authorId: text("author_id"),
+  tenantId: text("tenant_id"),
   version: text("version").notNull().default("1.0.0"),
   status: text("status").notNull().default("draft"),
   visibility: text("visibility").notNull().default("private"),
@@ -33,7 +25,7 @@ export const marketplaceListingsTable = pgTable("marketplace_listings", {
     .$type<{ free: boolean; price?: number; currency?: string; subscription?: boolean }>()
     .notNull()
     .default({ free: true }),
-  resourceId: integer("resource_id"),
+  resourceId: text("resource_id"),
   nodes: jsonb("nodes").notNull().default([]),
   metadata: jsonb("metadata").notNull().default({}),
   platformSharePercent: integer("platform_share_percent").notNull().default(20),
@@ -50,12 +42,12 @@ export const marketplaceListingsTable = pgTable("marketplace_listings", {
 });
 
 export const marketplaceInstallsTable = pgTable("marketplace_installs", {
-  id: serial("id").primaryKey(),
-  listingId: integer("listing_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  listingId: text("listing_id")
     .notNull()
     .references(() => marketplaceListingsTable.id, { onDelete: "cascade" }),
-  tenantId: integer("tenant_id").notNull(),
-  installedBy: integer("installed_by").notNull().default(0),
+  tenantId: text("tenant_id").notNull(),
+  installedBy: text("installed_by"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

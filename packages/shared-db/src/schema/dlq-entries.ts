@@ -1,16 +1,10 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 
 export const dlqEntriesTable = pgTable("dlq_entries", {
-  id: serial("id").primaryKey(),
-  executionId: integer("execution_id").notNull(),
-  workflowId: integer("workflow_id").notNull(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  executionId: text("execution_id").notNull(),
+  workflowId: text("workflow_id").notNull(),
   workflowName: text("workflow_name").notNull(),
   nodeId: text("node_id").notNull(),
   nodeName: text("node_name").notNull(),

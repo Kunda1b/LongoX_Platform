@@ -1,16 +1,9 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  jsonb,
-  boolean,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { connectorsTable } from "./connectors";
 export const connectorVersionsTable = pgTable("connector_versions", {
-  id: serial("id").primaryKey(),
-  connectorId: integer("connector_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  connectorId: text("connector_id")
     .notNull()
     .references(() => connectorsTable.id, { onDelete: "cascade" }),
   semver: text("semver").notNull(),

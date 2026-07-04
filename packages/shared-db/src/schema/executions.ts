@@ -1,21 +1,15 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { tenantsTable } from "./tenants";
 
 export const executionsTable = pgTable("executions", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id")
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
-  workflowId: integer("workflow_id").notNull(),
+  workflowId: text("workflow_id").notNull(),
   workflowName: text("workflow_name").notNull(),
   status: text("status").notNull().default("running"),
   startedAt: timestamp("started_at", { withTimezone: true })
@@ -28,7 +22,7 @@ export const executionsTable = pgTable("executions", {
   region: text("region"),
   executedInRegion: text("executed_in_region"),
   isReplicated: integer("is_replicated").notNull().default(0),
-  parentExecutionId: integer("parent_execution_id"),
+  parentExecutionId: text("parent_execution_id"),
 });
 
 export const insertExecutionSchema = createInsertSchema(executionsTable).omit({

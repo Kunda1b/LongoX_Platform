@@ -1,22 +1,16 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { tenantsTable } from "./tenants";
 import { regionsTable } from "./regions";
 
 export const tenantPlacementTable = pgTable("tenant_placement", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id")
     .notNull()
     .unique()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
   placementType: text("placement_type").notNull(),
-  regionId: integer("region_id")
+  regionId: text("region_id")
     .notNull()
     .references(() => regionsTable.id),
   clusterId: text("cluster_id").notNull(),

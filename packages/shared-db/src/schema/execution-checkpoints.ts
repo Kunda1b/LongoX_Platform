@@ -1,18 +1,11 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  jsonb,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 
 export const executionCheckpointsTable = pgTable(
   "execution_checkpoints",
   {
-    id: serial("id").primaryKey(),
-    executionId: integer("execution_id").notNull(),
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    executionId: text("execution_id").notNull(),
     nodeId: text("node_id").notNull(),
     nodeName: text("node_name"),
     nodeType: text("node_type"),

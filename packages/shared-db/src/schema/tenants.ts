@@ -1,15 +1,8 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  boolean,
-  integer,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 
 export const tenantsTable = pgTable("tenants", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   plan: text("plan").notNull().default("free"),

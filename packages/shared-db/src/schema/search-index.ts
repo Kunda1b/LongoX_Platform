@@ -1,14 +1,5 @@
-import {
-  pgTable,
-  text,
-  serial,
-  integer,
-  jsonb,
-  timestamp,
-  uniqueIndex,
-  index,
-  customType,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, integer, jsonb, timestamp, uniqueIndex, index, customType } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { sql } from "drizzle-orm";
 
 const tsvectorType = customType<{ data: string }>({
@@ -20,13 +11,13 @@ const tsvectorType = customType<{ data: string }>({
 export const searchIndexTable = pgTable(
   "search_index",
   {
-    id: serial("id").primaryKey(),
+    id: text("id").primaryKey().$defaultFn(() => createId()),
     resourceType: text("resource_type").notNull(),
     resourceId: text("resource_id").notNull(),
     title: text("title").notNull(),
     content: text("content").notNull().default(""),
     tsv: tsvectorType("tsv"),
-    tenantId: integer("tenant_id"),
+    tenantId: text("tenant_id"),
     permissionResource: text("permission_resource"),
     permissionAction: text("permission_action"),
     metadata: jsonb("metadata").default({}),
@@ -48,9 +39,9 @@ export const searchIndexTable = pgTable(
 );
 
 export const searchSuggestionsTable = pgTable("search_suggestions", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   query: text("query").notNull(),
-  tenantId: integer("tenant_id"),
+  tenantId: text("tenant_id"),
   resultCount: integer("result_count").notNull().default(0),
   clickedDocumentId: text("clicked_document_id"),
   createdAt: timestamp("created_at", { withTimezone: true })

@@ -1,9 +1,10 @@
-import { pgTable, text, serial, integer, timestamp, jsonb, date, bigint } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, jsonb, date, bigint } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { tenantsTable } from "./tenants";
 
 export const auditExportsTable = pgTable("audit_exports", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id")
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
   format: text("format").notNull(),
@@ -14,7 +15,7 @@ export const auditExportsTable = pgTable("audit_exports", {
   rowCount: integer("row_count"),
   fileSizeBytes: bigint("file_size_bytes", { mode: "number" }),
   storagePath: text("storage_path"),
-  createdBy: integer("created_by"),
+  createdBy: text("created_by"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -1,9 +1,10 @@
-import { pgTable, text, serial, jsonb, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { tenantsTable } from "./tenants";
 
 export const emailMessagesTable = pgTable("email_messages", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id")
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
   to: text("to").notNull(),
   from: text("from").notNull().default("noreply@longox.com"),

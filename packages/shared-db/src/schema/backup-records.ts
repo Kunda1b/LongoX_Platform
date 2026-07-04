@@ -1,17 +1,10 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  bigint,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, bigint, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { tenantsTable } from "./tenants";
 
 export const backupRecordsTable = pgTable("backup_records", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id")
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
   backupType: text("backup_type").notNull().default("manual"),
@@ -36,11 +29,11 @@ export const backupRecordsTable = pgTable("backup_records", {
 });
 
 export const restoreRecordsTable = pgTable("restore_records", {
-  id: serial("id").primaryKey(),
-  backupId: integer("backup_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  backupId: text("backup_id")
     .notNull()
     .references(() => backupRecordsTable.id, { onDelete: "cascade" }),
-  tenantId: integer("tenant_id")
+  tenantId: text("tenant_id")
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
   restoreType: text("restore_type").notNull().default("full"),

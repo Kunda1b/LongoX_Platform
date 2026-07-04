@@ -1,21 +1,14 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  boolean,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { tenantsTable } from "./tenants";
 
 export const tenantMigrationsTable = pgTable("tenant_migrations", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id")
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
-  fromTierId: integer("from_tier_id").notNull(),
-  toTierId: integer("to_tier_id").notNull(),
+  fromTierId: text("from_tier_id").notNull(),
+  toTierId: text("to_tier_id").notNull(),
   fromPlacement: text("from_placement").notNull(),
   toPlacement: text("to_placement").notNull(),
   fromCluster: text("from_cluster").notNull(),

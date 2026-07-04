@@ -1,15 +1,8 @@
-import {
-  pgTable,
-  text,
-  serial,
-  boolean,
-  integer,
-  jsonb,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, boolean, integer, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 
 export const featureFlagsTable = pgTable("feature_flags", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   key: text("key").notNull().unique(),
   name: text("name").notNull(),
   description: text("description"),

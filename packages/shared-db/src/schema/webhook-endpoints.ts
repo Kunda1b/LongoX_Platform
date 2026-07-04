@@ -1,16 +1,9 @@
-import {
-  pgTable,
-  serial,
-  text,
-  integer,
-  timestamp,
-  boolean,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 
 export const webhookEndpointsTable = pgTable("webhook_endpoints", {
-  id: serial("id").primaryKey(),
-  workflowId: integer("workflow_id").notNull(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  workflowId: text("workflow_id").notNull(),
   name: text("name").notNull(),
   description: text("description"),
   secret: text("secret"),

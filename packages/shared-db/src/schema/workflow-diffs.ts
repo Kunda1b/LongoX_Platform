@@ -1,23 +1,17 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { workflowsTable } from "./workflows";
 import { workflowVersionsTable } from "./workflow-versions";
 
 export const workflowDiffsTable = pgTable("workflow_diffs", {
-  id: serial("id").primaryKey(),
-  workflowId: integer("workflow_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  workflowId: text("workflow_id")
     .notNull()
     .references(() => workflowsTable.id, { onDelete: "cascade" }),
-  fromVersionId: integer("from_version_id")
+  fromVersionId: text("from_version_id")
     .notNull()
     .references(() => workflowVersionsTable.id, { onDelete: "cascade" }),
-  toVersionId: integer("to_version_id")
+  toVersionId: text("to_version_id")
     .notNull()
     .references(() => workflowVersionsTable.id, { onDelete: "cascade" }),
   patch: jsonb("patch").notNull(),

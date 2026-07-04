@@ -1,17 +1,9 @@
-import {
-  pgTable,
-  text,
-  serial,
-  integer,
-  boolean,
-  numeric,
-  jsonb,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, numeric, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { tenantsTable } from "./tenants";
 
 export const aiProviderRoutesTable = pgTable("ai_provider_routes", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   name: text("name").notNull(),
   provider: text("provider").notNull(),
   model: text("model").notNull(),
@@ -32,7 +24,7 @@ export const aiProviderRoutesTable = pgTable("ai_provider_routes", {
     .default("0"),
   rateLimitRpm: integer("rate_limit_rpm"),
   rateLimitTpm: integer("rate_limit_tpm"),
-  tenantId: integer("tenant_id")
+  tenantId: text("tenant_id")
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
   enabled: boolean("enabled").notNull().default(true),

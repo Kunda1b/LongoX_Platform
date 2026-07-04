@@ -1,18 +1,11 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  numeric,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, numeric, uuid } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { tenantsTable } from "./tenants";
 
 export const invoiceLinesTable = pgTable("invoice_lines", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   invoiceId: text("invoice_id").notNull(),
-  tenantId: integer("tenant_id")
+  tenantId: text("tenant_id")
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
   lineType: text("line_type").notNull(),

@@ -1,12 +1,5 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  jsonb,
-  customType,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, jsonb, customType } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { ragDocumentsTable } from "./rag-documents";
 import { ragKnowledgeBasesTable } from "./rag-knowledge-bases";
 
@@ -21,11 +14,11 @@ const vector1536 = customType<{ data: number[]; driverData: string }>({
 });
 
 export const ragChunksTable = pgTable("rag_chunks", {
-  id: serial("id").primaryKey(),
-  documentId: integer("document_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  documentId: text("document_id")
     .notNull()
     .references(() => ragDocumentsTable.id, { onDelete: "cascade" }),
-  knowledgeBaseId: integer("knowledge_base_id")
+  knowledgeBaseId: text("knowledge_base_id")
     .notNull()
     .references(() => ragKnowledgeBasesTable.id, { onDelete: "cascade" }),
   chunkIndex: integer("chunk_index").notNull(),

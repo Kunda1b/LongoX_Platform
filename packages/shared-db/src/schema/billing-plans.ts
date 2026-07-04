@@ -1,16 +1,8 @@
-import {
-  pgTable,
-  text,
-  serial,
-  integer,
-  real,
-  boolean,
-  jsonb,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, integer, real, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 
 export const billingPlansTable = pgTable("billing_plans", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   name: text("name").notNull().unique(),
   displayName: text("display_name").notNull(),
   description: text("description"),

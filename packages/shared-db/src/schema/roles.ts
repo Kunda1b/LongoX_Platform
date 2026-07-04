@@ -1,24 +1,18 @@
-import {
-  pgTable,
-  text,
-  serial,
-  integer,
-  timestamp,
-  unique,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, unique } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 
 export const rolesTable = pgTable("roles", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   name: text("name").notNull(),
   description: text("description"),
-  tenantId: integer("tenant_id"),
+  tenantId: text("tenant_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
 });
 
 export const permissionsTable = pgTable("permissions", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   resource: text("resource").notNull(),
   action: text("action").notNull(),
   description: text("description"),
@@ -30,17 +24,17 @@ export const permissionsTable = pgTable("permissions", {
 export const rolePermissionsTable = pgTable(
   "role_permissions",
   {
-    roleId: integer("role_id").notNull(),
-    permissionId: integer("permission_id").notNull(),
+    roleId: text("role_id").notNull(),
+    permissionId: text("permission_id").notNull(),
   },
   (t) => [unique().on(t.roleId, t.permissionId)],
 );
 
 export const userRolesTable = pgTable("user_roles", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   userId: text("user_id").notNull(),
-  roleId: integer("role_id").notNull(),
-  tenantId: integer("tenant_id"),
+  roleId: text("role_id").notNull(),
+  tenantId: text("tenant_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

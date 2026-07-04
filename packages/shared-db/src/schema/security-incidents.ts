@@ -1,10 +1,11 @@
-import { pgTable, text, serial, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { tenantsTable } from "./tenants";
 import { usersTable } from "./users";
 
 export const securityIncidentsTable = pgTable("security_incidents", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id")
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
   incidentType: text("incident_type").notNull(),
@@ -13,7 +14,7 @@ export const securityIncidentsTable = pgTable("security_incidents", {
   title: text("title").notNull(),
   description: text("description"),
   detectedBy: text("detected_by").notNull().default("system"),
-  resolvedBy: integer("resolved_by").references(() => usersTable.id, {
+  resolvedBy: text("resolved_by").references(() => usersTable.id, {
     onDelete: "set null",
   }),
   resolution: text("resolution"),
@@ -33,8 +34,8 @@ export const securityIncidentsTable = pgTable("security_incidents", {
 });
 
 export const securityIncidentEvidenceTable = pgTable("security_incident_evidence", {
-  id: serial("id").primaryKey(),
-  incidentId: integer("incident_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  incidentId: text("incident_id")
     .notNull()
     .references(() => securityIncidentsTable.id, { onDelete: "cascade" }),
   evidenceType: text("evidence_type").notNull(),

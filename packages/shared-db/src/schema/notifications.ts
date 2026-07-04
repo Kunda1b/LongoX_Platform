@@ -1,9 +1,10 @@
-import { pgTable, text, serial, jsonb, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { tenantsTable } from "./tenants";
 
 export const notificationsTable = pgTable("notifications", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id")
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
   type: text("type").notNull().default("info"),
@@ -19,7 +20,7 @@ export const notificationsTable = pgTable("notifications", {
 });
 
 export const notificationTemplatesTable = pgTable("notification_templates", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   name: text("name").notNull(),
   channel: text("channel").notNull().default("in_app"),
   subject: text("subject"),

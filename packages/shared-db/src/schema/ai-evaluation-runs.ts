@@ -1,26 +1,18 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  real,
-  boolean,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, real, boolean, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { tenantsTable } from "./tenants";
 import { aiEvaluationDatasetsTable } from "./ai-evaluation-datasets";
 import { promptsTable } from "./prompts";
 
 export const aiEvaluationRunsTable = pgTable("ai_evaluation_runs", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id")
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
-  datasetId: integer("dataset_id")
+  datasetId: text("dataset_id")
     .notNull()
     .references(() => aiEvaluationDatasetsTable.id, { onDelete: "cascade" }),
-  promptId: integer("prompt_id")
+  promptId: text("prompt_id")
     .notNull()
     .references(() => promptsTable.id, { onDelete: "cascade" }),
   promptVersion: integer("prompt_version"),

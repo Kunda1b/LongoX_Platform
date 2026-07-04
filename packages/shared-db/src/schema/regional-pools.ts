@@ -1,16 +1,8 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  real,
-  boolean,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, real, boolean, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 
 export const regionalPoolsTable = pgTable("regional_pools", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   regionId: text("region_id").notNull().unique(),
   status: text("status").notNull().default("active"),
   workerCount: integer("worker_count").notNull().default(0),

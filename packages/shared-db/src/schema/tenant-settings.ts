@@ -1,21 +1,14 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  boolean,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, boolean, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { tenantsTable } from "./tenants";
 
 export const tenantSettingsTable = pgTable("tenant_settings", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id")
     .notNull()
     .unique()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
-  tierId: integer("tier_id"),
+  tierId: text("tier_id"),
   infrastructureLevel: text("infrastructure_level"),
   placementRegion: text("placement_region"),
   retentionHotMonths: integer("retention_hot_months").notNull().default(13),

@@ -1,23 +1,17 @@
-import {
-  pgTable,
-  text,
-  serial,
-  integer,
-  numeric,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, integer, numeric, timestamp } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { tenantsTable } from "./tenants";
 
 export const tokenUsageTable = pgTable("token_usage", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id")
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
-  modelId: integer("model_id"),
+  modelId: text("model_id"),
   modelName: text("model_name"),
   provider: text("provider"),
-  promptId: integer("prompt_id"),
-  workflowId: integer("workflow_id"),
+  promptId: text("prompt_id"),
+  workflowId: text("workflow_id"),
   inputTokens: integer("input_tokens").notNull().default(0),
   outputTokens: integer("output_tokens").notNull().default(0),
   cost: numeric("cost", { precision: 12, scale: 6 }).notNull().default("0"),

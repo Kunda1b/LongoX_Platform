@@ -1,29 +1,20 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  numeric,
-  jsonb,
-  uniqueIndex,
-  index,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, numeric, jsonb, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { tenantsTable } from "./tenants";
 
 export const meteringEventsTable = pgTable(
   "metering_events",
   {
-    id: serial("id").primaryKey(),
+    id: text("id").primaryKey().$defaultFn(() => createId()),
     eventId: text("event_id").notNull(),
     eventType: text("event_type").notNull(),
-    tenantId: integer("tenant_id")
+    tenantId: text("tenant_id")
       .notNull()
       .references(() => tenantsTable.id, { onDelete: "cascade" }),
-    workflowId: integer("workflow_id"),
-    executionId: integer("execution_id"),
-    connectorId: integer("connector_id"),
-    dashboardId: integer("dashboard_id"),
+    workflowId: text("workflow_id"),
+    executionId: text("execution_id"),
+    connectorId: text("connector_id"),
+    dashboardId: text("dashboard_id"),
     quantity: numeric("quantity", { precision: 20, scale: 4 }).notNull().default("0"),
     unit: text("unit").notNull(),
     metadata: jsonb("metadata").default({}),

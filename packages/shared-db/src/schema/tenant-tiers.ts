@@ -1,15 +1,8 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  boolean,
-  bigint,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, boolean, bigint } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 
 export const tenantTiersTable = pgTable("tenant_tiers", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   name: text("name").notNull(),
   infrastructureLevel: text("infrastructure_level").notNull(),
   maxWorkflows: integer("max_workflows").notNull(),
@@ -39,11 +32,11 @@ export const tenantTiersTable = pgTable("tenant_tiers", {
 });
 
 export const tenantTierAssignmentsTable = pgTable("tenant_tier_assignments", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id")
     .notNull()
     .unique(),
-  tierId: integer("tier_id")
+  tierId: text("tier_id")
     .notNull(),
   assignedAt: timestamp("assigned_at", { withTimezone: true })
     .notNull()

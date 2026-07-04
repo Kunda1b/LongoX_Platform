@@ -1,18 +1,10 @@
-import {
-  pgTable,
-  serial,
-  integer,
-  varchar,
-  text,
-  timestamp,
-  boolean,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, integer, varchar, text, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 
 export const schedulesTable = pgTable("schedules", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id").notNull(),
-  workflowId: integer("workflow_id").notNull(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id").notNull(),
+  workflowId: text("workflow_id").notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   interval: varchar("interval", { length: 20 }).notNull().default("once"),

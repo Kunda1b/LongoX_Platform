@@ -1,16 +1,8 @@
-import {
-  pgTable,
-  text,
-  serial,
-  integer,
-  real,
-  boolean,
-  jsonb,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, integer, real, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 
 export const regionsTable = pgTable("regions", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   regionId: text("region_id").notNull().unique(),
   name: text("name").notNull(),
   endpoint: text("endpoint").notNull(),
@@ -26,7 +18,7 @@ export const regionsTable = pgTable("regions", {
 });
 
 export const replicationConfigsTable = pgTable("replication_configs", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   sourceRegionId: text("source_region_id").notNull(),
   targetRegionId: text("target_region_id").notNull(),
   entityType: text("entity_type").notNull(),
@@ -39,8 +31,8 @@ export const replicationConfigsTable = pgTable("replication_configs", {
 });
 
 export const replicationLogTable = pgTable("replication_log", {
-  id: serial("id").primaryKey(),
-  configId: integer("config_id").notNull(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  configId: text("config_id").notNull(),
   entityId: text("entity_id").notNull(),
   entityType: text("entity_type").notNull(),
   sourceRegion: text("source_region").notNull(),
@@ -53,7 +45,7 @@ export const replicationLogTable = pgTable("replication_log", {
 });
 
 export const drPoliciesTable = pgTable("dr_policies", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   name: text("name").notNull(),
   description: text("description"),
   primaryRegionId: text("primary_region_id").notNull(),
@@ -70,9 +62,9 @@ export const drPoliciesTable = pgTable("dr_policies", {
 });
 
 export const revenueSharesTable = pgTable("revenue_shares", {
-  id: serial("id").primaryKey(),
-  listingId: integer("listing_id").notNull(),
-  sellerTenantId: integer("seller_tenant_id").notNull(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  listingId: text("listing_id").notNull(),
+  sellerTenantId: text("seller_tenant_id").notNull(),
   platformPercentage: real("platform_percentage").notNull().default(20),
   sellerPercentage: real("seller_percentage").notNull().default(80),
   totalEarned: real("total_earned").notNull().default(0),
@@ -85,10 +77,10 @@ export const revenueSharesTable = pgTable("revenue_shares", {
 });
 
 export const agentDeploymentsTable = pgTable("agent_deployments", {
-  id: serial("id").primaryKey(),
-  listingId: integer("listing_id").notNull(),
-  tenantId: integer("tenant_id").notNull(),
-  deployedBy: integer("deployed_by").notNull(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  listingId: text("listing_id").notNull(),
+  tenantId: text("tenant_id").notNull(),
+  deployedBy: text("deployed_by").notNull(),
   targetEnvironment: text("target_environment").notNull().default("sandbox"),
   status: text("status").notNull().default("deploying"),
   config: jsonb("config").default({}),

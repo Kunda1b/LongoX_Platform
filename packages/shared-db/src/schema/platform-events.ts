@@ -1,13 +1,7 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 export const platformEventsTable = pgTable("platform_events", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   eventType: text("event_type").notNull(),
   eventVersion: integer("event_version").notNull().default(1),
   aggregateId: text("aggregate_id").notNull(),
@@ -21,8 +15,8 @@ export const platformEventsTable = pgTable("platform_events", {
     .defaultNow(),
 });
 export const webhookDeliveriesTable = pgTable("webhook_deliveries", {
-  id: serial("id").primaryKey(),
-  endpointId: integer("endpoint_id").notNull(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  endpointId: text("endpoint_id").notNull(),
   status: text("status").notNull().default("pending"),
   requestHeaders: jsonb("request_headers").default({}),
   requestBody: text("request_body"),

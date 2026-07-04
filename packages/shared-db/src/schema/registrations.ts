@@ -1,19 +1,14 @@
-import {
-  pgTable,
-  text,
-  serial,
-  integer,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { usersTable } from "./users";
 import { tenantsTable } from "./tenants";
 
 export const userRegistrationsTable = pgTable("user_registrations", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  userId: text("user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
-  tenantId: integer("tenant_id")
+  tenantId: text("tenant_id")
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
   email: text("email").notNull(),

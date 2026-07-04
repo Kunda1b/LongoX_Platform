@@ -1,7 +1,8 @@
-import { pgTable, text, serial, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 
 export const environmentsTable = pgTable("environments", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   name: text("name").notNull(),
   type: text("type").notNull().default("dev"),
   description: text("description"),

@@ -1,17 +1,9 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  real,
-  jsonb,
-  boolean,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, real, jsonb, boolean } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { tenantsTable } from "./tenants";
 export const billingAccountsTable = pgTable("billing_accounts", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id")
     .notNull()
     .references(() => tenantsTable.id, { onDelete: "cascade" }),
   providerRef: text("provider_ref"),
@@ -19,7 +11,7 @@ export const billingAccountsTable = pgTable("billing_accounts", {
   stripeSubscriptionId: text("stripe_subscription_id"),
   stripeSubscriptionStatus: text("stripe_subscription_status"),
   stripePriceId: text("stripe_price_id"),
-  planId: integer("plan_id"),
+  planId: text("plan_id"),
   billingCycle: text("billing_cycle").notNull().default("monthly"),
   currentPeriodStart: timestamp("current_period_start", { withTimezone: true }),
   currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
@@ -36,8 +28,8 @@ export const billingAccountsTable = pgTable("billing_accounts", {
     .defaultNow(),
 });
 export const invoicesTable = pgTable("invoices", {
-  id: serial("id").primaryKey(),
-  billingAccountId: integer("billing_account_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  billingAccountId: text("billing_account_id")
     .notNull()
     .references(() => billingAccountsTable.id, { onDelete: "cascade" }),
   invoiceNumber: text("invoice_number").notNull().unique(),

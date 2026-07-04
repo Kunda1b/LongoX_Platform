@@ -1,16 +1,9 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  bigint,
-  date,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, bigint, date } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 
 export const archiveExportsTable = pgTable("archive_exports", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id").notNull(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  tenantId: text("tenant_id").notNull(),
   tableName: text("table_name").notNull(),
   partitionName: text("partition_name").notNull(),
   exportFormat: text("export_format").notNull().default("parquet"),

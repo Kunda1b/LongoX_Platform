@@ -1,18 +1,10 @@
-import {
-  pgTable,
-  text,
-  serial,
-  integer,
-  boolean,
-  real,
-  jsonb,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, real, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const connectorsTable = pgTable("connectors", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
   name: text("name").notNull(),
   displayName: text("display_name"),
   version: text("version").notNull().default("1.0.0"),
@@ -91,8 +83,8 @@ export const connectorsTable = pgTable("connectors", {
 });
 
 export const connectorActionsTable = pgTable("connector_actions", {
-  id: serial("id").primaryKey(),
-  connectorId: integer("connector_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  connectorId: text("connector_id")
     .notNull()
     .references(() => connectorsTable.id, { onDelete: "cascade" }),
   actionId: text("action_id").notNull(),
@@ -109,8 +101,8 @@ export const connectorActionsTable = pgTable("connector_actions", {
 });
 
 export const connectorTriggersTable = pgTable("connector_triggers", {
-  id: serial("id").primaryKey(),
-  connectorId: integer("connector_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  connectorId: text("connector_id")
     .notNull()
     .references(() => connectorsTable.id, { onDelete: "cascade" }),
   triggerId: text("trigger_id").notNull(),
@@ -122,8 +114,8 @@ export const connectorTriggersTable = pgTable("connector_triggers", {
 });
 
 export const connectorExecutionsTable = pgTable("connector_executions", {
-  id: serial("id").primaryKey(),
-  connectorId: integer("connector_id").notNull(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  connectorId: text("connector_id").notNull(),
   connectorVersion: text("connector_version").notNull(),
   executionId: text("execution_id").notNull(),
   actionId: text("action_id"),
@@ -138,8 +130,8 @@ export const connectorExecutionsTable = pgTable("connector_executions", {
 });
 
 export const connectorPollingStatesTable = pgTable("connector_polling_states", {
-  id: serial("id").primaryKey(),
-  connectorId: integer("connector_id").notNull(),
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  connectorId: text("connector_id").notNull(),
   triggerId: text("trigger_id").notNull(),
   tenantId: text("tenant_id").notNull().default("default"),
   lastCursor: text("last_cursor"),

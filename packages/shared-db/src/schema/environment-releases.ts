@@ -1,23 +1,16 @@
-import {
-  pgTable,
-  text,
-  serial,
-  timestamp,
-  integer,
-  boolean,
-  jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { createId } from "@paralleldrive/cuid2";
 import { environmentsTable } from "./environments";
 
 export const environmentReleasesTable = pgTable("environment_releases", {
-  id: serial("id").primaryKey(),
-  environmentId: integer("environment_id")
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  environmentId: text("environment_id")
     .notNull()
     .references(() => environmentsTable.id, { onDelete: "cascade" }),
   releaseType: text("release_type").notNull().default("workflow"),
   artifactType: text("artifact_type").notNull(),
-  artifactId: integer("artifact_id").notNull(),
-  artifactVersionId: integer("artifact_version_id"),
+  artifactId: text("artifact_id").notNull(),
+  artifactVersionId: text("artifact_version_id"),
   artifactChecksum: text("artifact_checksum"),
   fromEnvironment: text("from_environment"),
   toEnvironment: text("to_environment").notNull(),
@@ -26,7 +19,7 @@ export const environmentReleasesTable = pgTable("environment_releases", {
   approvedBy: text("approved_by"),
   approvedAt: timestamp("approved_at", { withTimezone: true }),
   diffReview: jsonb("diff_review"),
-  rollbackOf: integer("rollback_of"),
+  rollbackOf: text("rollback_of"),
   deployedBy: text("deployed_by").notNull(),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true })
