@@ -1,10 +1,13 @@
-import { and, eq, desc, gte, lte, inArray } from "drizzle-orm";
+/**
+ * Security incident service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3. Uses
+ * `prisma.securityIncident` and `prisma.securityIncidentEvidence` delegates.
+ * `as any` casts handle field-shape parity between Drizzle and Prisma.
+ */
+
 import { createHash } from "node:crypto";
-import {
-  db,
-  securityIncidentsTable,
-  securityIncidentEvidenceTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 
 export interface IncidentFilters {
   status?: string;
@@ -23,9 +26,8 @@ export class SecurityIncidentService {
     description: string,
     metadata?: { title?: string; affectedResources?: string[]; extra?: Record<string, unknown> },
   ) {
-    const [incident] = await db
-      .insert(securityIncidentsTable)
-      .values({
+    const incident = await prisma.securityIncident.create({
+      data: {
         tenantId,
         incidentType: type,
         severity,
@@ -35,38 +37,36 @@ export class SecurityIncidentService {
         detectedBy: "system",
         affectedResources: (metadata?.affectedResources ?? []) as unknown as Record<string, unknown>[],
         metadata: (metadata?.extra ?? {}) as Record<string, unknown>,
-      })
-      .returning();
+      } as any,
+    });
     return incident;
   }
 
   async updateIncident(id: string, updates: { status?: string; title?: string; description?: string; metadata?: Record<string, unknown> }) {
-    const [incident] = await db
-      .update(securityIncidentsTable)
-      .set({
-        ...(updates.status && { status: updates.status } as any),
+    const incident = await prisma.securityIncident.update({
+      where: { id },
+      data: {
+        ...(updates.status && { status: updates.status }),
         ...(updates.title && { title: updates.title }),
         ...(updates.description && { description: updates.description }),
         ...(updates.metadata && { metadata: updates.metadata }),
-      })
-      .where(eq(securityIncidentsTable.id, id))
-      .returning();
+      } as any,
+    }).catch(() => null);
 
     if (!incident) throw new Error("Incident not found");
     return incident;
   }
 
   async resolveIncident(id: string, resolution: string, resolvedBy: string) {
-    const [incident] = await db
-      .update(securityIncidentsTable)
-      .set({
+    const incident = await prisma.securityIncident.update({
+      where: { id },
+      data: {
         status: "resolved",
         resolution,
         resolvedBy,
         resolvedAt: new Date(),
-      } as any)
-      .where(eq(securityIncidentsTable.id, id))
-      .returning();
+      } as any,
+    }).catch(() => null);
 
     if (!incident) throw new Error("Incident not found");
     return incident;
@@ -77,77 +77,53 @@ export class SecurityIncidentService {
       .update(JSON.stringify(evidenceData.data))
       .digest("hex");
 
-    const [evidence] = await db
-      .insert(securityIncidentEvidenceTable)
-      .values({
+    const evidence = await prisma.securityIncidentEvidence.create({
+      data: {
         incidentId,
         evidenceType: evidenceData.evidenceType,
         data: evidenceData.data as Record<string, unknown>,
         hash,
-      })
-      .returning();
+      } as any,
+    });
     return evidence;
   }
 
   async getIncident(id: string) {
-    const [incident] = await db
-      .select()
-      .from(securityIncidentsTable)
-      .where(eq(securityIncidentsTable.id, id));
+    const incident = await prisma.securityIncident.findUnique({ where: { id } });
 
     if (!incident) throw new Error("Incident not found");
 
-    const evidence = await db
-      .select()
-      .from(securityIncidentEvidenceTable)
-      .where(eq(securityIncidentEvidenceTable.incidentId, id))
-      .orderBy(desc(securityIncidentEvidenceTable.createdAt));
+    const evidence = await prisma.securityIncidentEvidence.findMany({
+      where: { incidentId: id },
+      orderBy: { createdAt: "desc" },
+    });
 
     return { incident, evidence };
   }
 
   async queryIncidents(tenantId: string, filters: IncidentFilters) {
-    const conditions = [eq(securityIncidentsTable.tenantId, tenantId)];
+    const where: Record<string, unknown> = { tenantId };
 
-    if (filters.status) {
-      conditions.push(eq(securityIncidentsTable.status, filters.status));
-    }
-    if (filters.severity) {
-      conditions.push(eq(securityIncidentsTable.severity, filters.severity));
-    }
-    if (filters.incidentType) {
-      conditions.push(eq(securityIncidentsTable.incidentType, filters.incidentType));
-    }
-    if (filters.detectedBy) {
-      conditions.push(eq(securityIncidentsTable.detectedBy, filters.detectedBy));
-    }
-    if (filters.from) {
-      conditions.push(gte(securityIncidentsTable.detectedAt, filters.from));
-    }
-    if (filters.to) {
-      conditions.push(lte(securityIncidentsTable.detectedAt, filters.to));
-    }
+    if (filters.status) where.status = filters.status;
+    if (filters.severity) where.severity = filters.severity;
+    if (filters.incidentType) where.incidentType = filters.incidentType;
+    if (filters.detectedBy) where.detectedBy = filters.detectedBy;
+    if (filters.from) where.detectedAt = { gte: filters.from, ...(filters.to ? { lte: filters.to } : {}) };
+    else if (filters.to) where.detectedAt = { lte: filters.to };
 
-    const incidents = await db
-      .select()
-      .from(securityIncidentsTable)
-      .where(and(...conditions))
-      .orderBy(desc(securityIncidentsTable.detectedAt));
+    const incidents = await prisma.securityIncident.findMany({
+      where: where as any,
+      orderBy: { detectedAt: "desc" },
+    });
 
     return incidents;
   }
 
   async getOpenIncidents(tenantId: string) {
-    const incidents = await db
-      .select()
-      .from(securityIncidentsTable)
-      .where(
-        and(
-          eq(securityIncidentsTable.tenantId, tenantId),
-          inArray(securityIncidentsTable.status, ["open", "investigating"]),
-        ),
-      )
-      .orderBy(desc(securityIncidentsTable.detectedAt));
+    const incidents = await prisma.securityIncident.findMany({
+      where: { tenantId, status: { in: ["open", "investigating"] } } as any,
+      orderBy: { detectedAt: "desc" },
+    });
 
     return incidents;
   }
@@ -168,7 +144,7 @@ export class SecurityIncidentService {
       },
     );
 
-    await this.addEvidence(incident.id, {
+    await this.addEvidence((incident as any).id, {
       evidenceType: "detection_match",
       data: { rule: detectionRule, match: matchData },
     });

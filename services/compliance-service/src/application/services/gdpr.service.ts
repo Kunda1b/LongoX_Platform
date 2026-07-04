@@ -1,23 +1,17 @@
-import { eq, and, desc, sql } from "drizzle-orm";
+/**
+ * GDPR request service.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3. Uses the following
+ * Prisma delegates: `prisma.user`, `prisma.workflow`, `prisma.workflowExecution`,
+ * `prisma.credential`, `prisma.auditLog`, `prisma.invoice`, `prisma.billingAccount`,
+ * `prisma.membership`, `prisma.userMfa`, `prisma.notification`, `prisma.userRegistration`,
+ * `prisma.gdprRequest`, `prisma.meteringEvent`, `prisma.tenantConnectorInstall`,
+ * `prisma.invoiceLine`. `as any` casts handle legacy columns (e.g. `tenantId`,
+ * `actorType`, `resourceType`) that aren't part of the canonical Prisma schema.
+ */
+
 import { createHash } from "node:crypto";
-import {
-  db,
-  usersTable,
-  workflowsTable,
-  executionsTable,
-  credentialsTable,
-  auditLogTable,
-  invoicesTable,
-  billingAccountsTable,
-  membershipsTable,
-  userMfaTable,
-  notificationsTable,
-  userRegistrationsTable,
-  gdprRequestsTable,
-  meteringEventsTable,
-  tenantConnectorInstallsTable,
-  invoiceLinesTable,
-} from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 
 function getS3Config() {
   return {
@@ -35,9 +29,6 @@ async function uploadToS3(
   contentType: string,
 ): Promise<string> {
   const cfg = getS3Config();
-  const host = cfg.endpoint
-    ? new URL(cfg.endpoint).host
-    : `${cfg.bucket}.s3.${cfg.region}.amazonaws.com`;
   const endpoint = cfg.endpoint ?? `https://${cfg.bucket}.s3.${cfg.region}.amazonaws.com`;
 
   const url = `${endpoint}/${key}`;
@@ -60,96 +51,76 @@ async function uploadToS3(
 
 export class GdprService {
   async exportUserData(userId: string, tenantId: string) {
-    const [user] = await db
-      .select()
-      .from(usersTable)
-      .where(and(eq(usersTable.id, userId), eq(usersTable.tenantId, tenantId)));
+    const user = await prisma.user.findFirst({
+      where: { id: userId, tenantId } as any,
+    });
 
     if (!user) throw new Error("User not found");
 
-    const workflows = await db
-      .select()
-      .from(workflowsTable)
-      .where(eq(workflowsTable.tenantId, tenantId));
+    const workflows = await prisma.workflow.findMany({
+      where: { tenantId } as any,
+    });
 
-    const executions = await db
-      .select()
-      .from(executionsTable)
-      .where(eq(executionsTable.tenantId, tenantId));
+    const executions = await prisma.workflowExecution.findMany({
+      where: { tenantId } as any,
+    });
 
-    const credentials = await db.select().from(credentialsTable);
+    const credentials = await prisma.credential.findMany();
 
-    const auditEntries = await db
-      .select()
-      .from(auditLogTable)
-      .where(
-        and(
-          eq(auditLogTable.tenantId, tenantId),
-          eq(auditLogTable.actorId, String(userId)),
-        ),
-      )
-      .orderBy(desc(auditLogTable.createdAt));
+    const auditEntries = await prisma.auditLog.findMany({
+      where: { tenantId, actorId: String(userId) } as any,
+      orderBy: { createdAt: "desc" } as any,
+    });
 
-    const billingAccount = await db
-      .select()
-      .from(billingAccountsTable)
-      .where(eq(billingAccountsTable.tenantId, tenantId));
+    const billingAccount = await prisma.billingAccount.findMany({
+      where: { tenantId } as any,
+    });
 
     let invoices: any[] = [];
     if (billingAccount.length > 0) {
-      invoices = await db
-        .select()
-        .from(invoicesTable)
-        .where(eq(invoicesTable.billingAccountId, billingAccount[0].id))
-        .orderBy(desc(invoicesTable.createdAt));
+      invoices = await prisma.invoice.findMany({
+        where: { billingAccountId: billingAccount[0].id } as any,
+        orderBy: { createdAt: "desc" },
+      });
     }
 
-    const memberships = await db
-      .select()
-      .from(membershipsTable)
-      .where(eq(membershipsTable.userId, userId));
+    const memberships = await prisma.membership.findMany({
+      where: { userId } as any,
+    });
 
-    const mfaDevices = await db
-      .select()
-      .from(userMfaTable)
-      .where(eq(userMfaTable.userId, userId));
+    const mfaDevices = await prisma.userMfa.findMany({
+      where: { userId } as any,
+    });
 
-    const notifications = await db
-      .select()
-      .from(notificationsTable)
-      .where(
-        and(
-          eq(notificationsTable.tenantId, tenantId),
-          eq(notificationsTable.recipientId, String(userId)),
-        ),
-      )
-      .orderBy(desc(notificationsTable.createdAt));
+    const notifications = await prisma.notification.findMany({
+      where: { tenantId, recipientId: String(userId) } as any,
+      orderBy: { createdAt: "desc" },
+    });
 
-    const registrations = await db
-      .select()
-      .from(userRegistrationsTable)
-      .where(eq(userRegistrationsTable.userId, userId));
+    const registrations = await prisma.userRegistration.findMany({
+      where: { userId } as any,
+    });
 
     return {
       exportedAt: new Date().toISOString(),
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        isActive: user.isActive,
-        emailVerifiedAt: user.emailVerifiedAt,
-        lastLoginAt: user.lastLoginAt,
-        createdAt: user.createdAt,
+        id: (user as any).id,
+        email: (user as any).email,
+        name: (user as any).name,
+        role: (user as any).role,
+        isActive: (user as any).isActive,
+        emailVerifiedAt: (user as any).emailVerifiedAt,
+        lastLoginAt: (user as any).lastLoginAt,
+        createdAt: (user as any).createdAt,
       },
-      workflows: workflows.map((w) => ({
+      workflows: workflows.map((w: any) => ({
         id: w.id,
         name: w.name,
         status: w.status,
         triggerType: w.triggerType,
         createdAt: w.createdAt,
       })),
-      executions: executions.map((e) => ({
+      executions: executions.map((e: any) => ({
         id: e.id,
         workflowId: e.workflowId,
         workflowName: e.workflowName,
@@ -157,29 +128,29 @@ export class GdprService {
         startedAt: e.startedAt,
         finishedAt: e.finishedAt,
       })),
-      credentials: credentials.map((c) => ({
+      credentials: credentials.map((c: any) => ({
         id: c.id,
         name: c.name,
         connectorName: c.connectorName,
-        fields: c.fields.map(() => "***MASKED***"),
+        fields: (c.fields ?? []).map(() => "***MASKED***"),
       })),
-      auditLog: auditEntries.map((e) => ({
+      auditLog: auditEntries.map((e: any) => ({
         action: e.action,
-        resourceType: e.resourceType,
-        resourceId: e.resourceId,
-        createdAt: e.createdAt,
+        resourceType: e.resourceType ?? e.targetType,
+        resourceId: e.resourceId ?? e.targetId,
+        createdAt: e.createdAt ?? e.occurredAt,
       })),
       billing: {
         account: billingAccount.length > 0
           ? {
-              id: billingAccount[0].id,
-              planId: billingAccount[0].planId,
-              status: billingAccount[0].status,
-              currentPeriodStart: billingAccount[0].currentPeriodStart,
-              currentPeriodEnd: billingAccount[0].currentPeriodEnd,
+              id: (billingAccount[0] as any).id,
+              planId: (billingAccount[0] as any).planId,
+              status: (billingAccount[0] as any).status,
+              currentPeriodStart: (billingAccount[0] as any).currentPeriodStart,
+              currentPeriodEnd: (billingAccount[0] as any).currentPeriodEnd,
             }
           : null,
-        invoices: invoices.map((inv) => ({
+        invoices: invoices.map((inv: any) => ({
           invoiceNumber: inv.invoiceNumber,
           status: inv.status,
           totalAmount: inv.totalAmount,
@@ -190,26 +161,26 @@ export class GdprService {
           createdAt: inv.createdAt,
         })),
       },
-      memberships: memberships.map((m) => ({
+      memberships: memberships.map((m: any) => ({
         id: m.id,
         roleId: m.roleId,
         status: m.status,
         joinedAt: m.joinedAt,
       })),
-      mfaDevices: mfaDevices.map((m) => ({
+      mfaDevices: mfaDevices.map((m: any) => ({
         id: m.id,
         method: m.method,
         enabled: m.enabled,
         verifiedAt: m.verifiedAt,
       })),
-      notifications: notifications.map((n) => ({
+      notifications: notifications.map((n: any) => ({
         type: n.type,
         title: n.title,
         body: n.body,
         status: n.status,
         createdAt: n.createdAt,
       })),
-      registrations: registrations.map((r) => ({
+      registrations: registrations.map((r: any) => ({
         email: r.email,
         organizationName: r.organizationName,
         status: r.status,
@@ -220,34 +191,32 @@ export class GdprService {
   }
 
   async createExportRequest(userId: string, tenantId: string) {
-    const [request] = await db
-      .insert(gdprRequestsTable)
-      .values({
+    const request = await prisma.gdprRequest.create({
+      data: {
         tenantId,
         userId,
         requestType: "export",
         status: "pending",
         dataScope: { allUserData: true },
         exportFormat: "json",
-      })
-      .returning();
+      } as any,
+    });
     return request;
   }
 
   async fulfillExportRequest(requestId: string) {
-    const [request] = await db
-      .select()
-      .from(gdprRequestsTable)
-      .where(eq(gdprRequestsTable.id, requestId));
+    const request = await prisma.gdprRequest.findUnique({
+      where: { id: requestId },
+    });
 
     if (!request) throw new Error("Export request not found");
     if (request.status !== "pending")
       throw new Error("Request is not in pending status");
 
-    await db
-      .update(gdprRequestsTable)
-      .set({ status: "processing" })
-      .where(eq(gdprRequestsTable.id, requestId));
+    await prisma.gdprRequest.update({
+      where: { id: requestId },
+      data: { status: "processing" } as any,
+    });
 
     const data = await this.exportUserData(request.userId, request.tenantId);
     const jsonData = JSON.stringify(data, null, 2);
@@ -260,34 +229,33 @@ export class GdprService {
       storageUrl = key;
     }
 
-    await db
-      .update(gdprRequestsTable)
-      .set({
+    await prisma.gdprRequest.update({
+      where: { id: requestId },
+      data: {
         status: "completed",
         exportStoragePath: storageUrl,
         completedAt: new Date(),
-      })
-      .where(eq(gdprRequestsTable.id, requestId));
+      } as any,
+    });
 
     return { requestId, storagePath: storageUrl, dataSizeBytes: Buffer.byteLength(jsonData) };
   }
 
   async deleteUserData(userId: string, tenantId: string) {
-    const [user] = await db
-      .select()
-      .from(usersTable)
-      .where(and(eq(usersTable.id, userId), eq(usersTable.tenantId, tenantId)));
+    const user = await prisma.user.findFirst({
+      where: { id: userId, tenantId } as any,
+    });
 
     if (!user) throw new Error("User not found");
 
     const emailHash = createHash("sha256")
-      .update(user.email)
+      .update((user as any).email)
       .digest("hex")
       .substring(0, 16);
 
-    await db
-      .update(usersTable)
-      .set({
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
         name: "Deleted User",
         email: `deleted-${emailHash}@anonymized.longox.io`,
         passwordHash: "ANONYMIZED",
@@ -296,123 +264,109 @@ export class GdprService {
         emailVerificationToken: null,
         passwordResetToken: null,
         passwordResetTokenExpiresAt: null,
-      })
-      .where(eq(usersTable.id, userId));
+      } as any,
+    });
 
-    await db
-      .delete(membershipsTable)
-      .where(and(eq(membershipsTable.userId, userId), eq(membershipsTable.tenantId, tenantId)));
+    await prisma.membership.deleteMany({
+      where: { userId, tenantId } as any,
+    });
 
-    await db
-      .delete(userMfaTable)
-      .where(eq(userMfaTable.userId, userId));
+    await prisma.userMfa.deleteMany({
+      where: { userId } as any,
+    });
 
-    await db
-      .delete(notificationsTable)
-      .where(
-        and(
-          eq(notificationsTable.tenantId, tenantId),
-          eq(notificationsTable.recipientId, String(userId)),
-        ),
-      );
+    await prisma.notification.deleteMany({
+      where: { tenantId, recipientId: String(userId) } as any,
+    });
 
-    await db
-      .delete(executionsTable)
-      .where(eq(executionsTable.tenantId, tenantId));
+    await prisma.workflowExecution.deleteMany({
+      where: { tenantId } as any,
+    });
 
-    const billingAccounts = await db
-      .select()
-      .from(billingAccountsTable)
-      .where(eq(billingAccountsTable.tenantId, tenantId));
+    const billingAccounts = await prisma.billingAccount.findMany({
+      where: { tenantId } as any,
+    });
 
     for (const ba of billingAccounts) {
-      await db
-        .delete(invoicesTable)
-        .where(eq(invoicesTable.billingAccountId, ba.id));
+      await prisma.invoice.deleteMany({
+        where: { billingAccountId: ba.id } as any,
+      });
     }
 
-    await db
-      .delete(invoiceLinesTable)
-      .where(eq(invoiceLinesTable.tenantId, tenantId));
+    await prisma.invoiceLine.deleteMany({
+      where: { tenantId } as any,
+    });
 
-    await db
-      .delete(billingAccountsTable)
-      .where(eq(billingAccountsTable.tenantId, tenantId));
+    await prisma.billingAccount.deleteMany({
+      where: { tenantId } as any,
+    });
 
-    await db
-      .delete(meteringEventsTable)
-      .where(eq(meteringEventsTable.tenantId, tenantId));
+    await prisma.meteringEvent.deleteMany({
+      where: { tenantId } as any,
+    });
 
-    await db
-      .delete(auditLogTable)
-      .where(
-        and(
-          eq(auditLogTable.tenantId, tenantId),
-          eq(auditLogTable.actorId, String(userId)),
-        ),
-      );
+    await prisma.auditLog.deleteMany({
+      where: { tenantId, actorId: String(userId) } as any,
+    });
 
-    await db
-      .delete(tenantConnectorInstallsTable)
-      .where(eq(tenantConnectorInstallsTable.tenantId, tenantId));
+    await prisma.tenantConnectorInstall.deleteMany({
+      where: { tenantId } as any,
+    });
   }
 
   async createDeletionRequest(userId: string, tenantId: string, reason: string) {
-    const [request] = await db
-      .insert(gdprRequestsTable)
-      .values({
+    const request = await prisma.gdprRequest.create({
+      data: {
         tenantId,
         userId,
         requestType: "deletion",
         status: "pending",
         dataScope: { reason, allUserData: true },
-      })
-      .returning();
+      } as any,
+    });
     return request;
   }
 
   async fulfillDeletionRequest(requestId: string) {
-    const [request] = await db
-      .select()
-      .from(gdprRequestsTable)
-      .where(eq(gdprRequestsTable.id, requestId));
+    const request = await prisma.gdprRequest.findUnique({
+      where: { id: requestId },
+    });
 
     if (!request) throw new Error("Deletion request not found");
     if (request.status !== "pending")
       throw new Error("Request is not in pending status");
 
-    await db
-      .update(gdprRequestsTable)
-      .set({ status: "processing" })
-      .where(eq(gdprRequestsTable.id, requestId));
+    await prisma.gdprRequest.update({
+      where: { id: requestId },
+      data: { status: "processing" } as any,
+    });
 
     await this.deleteUserData(request.userId, request.tenantId);
 
-    await db
-      .update(gdprRequestsTable)
-      .set({
+    await prisma.gdprRequest.update({
+      where: { id: requestId },
+      data: {
         status: "completed",
         completedAt: new Date(),
-      })
-      .where(eq(gdprRequestsTable.id, requestId));
+      } as any,
+    });
 
     return { requestId, fulfilled: true };
   }
 
   async cancelDeletionRequest(requestId: string) {
-    const [request] = await db
-      .select()
-      .from(gdprRequestsTable)
-      .where(eq(gdprRequestsTable.id, requestId));
+    const request = await prisma.gdprRequest.findUnique({
+      where: { id: requestId },
+    });
 
     if (!request) throw new Error("Deletion request not found");
     if (request.status !== "pending")
       throw new Error("Can only cancel pending requests");
 
-    await db
-      .update(gdprRequestsTable)
-      .set({ status: "rejected", rejectionReason: "Cancelled by user" })
-      .where(eq(gdprRequestsTable.id, requestId));
+    await prisma.gdprRequest.update({
+      where: { id: requestId },
+      data: { status: "rejected", rejectionReason: "Cancelled by user" } as any,
+    });
 
     return { requestId, status: "cancelled" };
   }

@@ -1,29 +1,37 @@
+/**
+ * Dashboard publishing REST routes.
+ *
+ * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
+ * Uses `prisma.dashboard` delegate with `as any` casts for legacy columns
+ * (`name`, `widgets`, `publishedAt`) that don't exist in the canonical
+ * Prisma schema but are still present in the underlying `dashboards` table.
+ */
+
 import { Router, type IRouter } from "express";
-import { eq, like, and } from "drizzle-orm";
-import { db, dashboardsTable } from "@longox/db";
+import { prisma } from "@longox/db/prisma";
 import { authorize } from "@longox/shared-rbac";
 
 const router: IRouter = Router();
 
-function serializeDashboard(d: typeof dashboardsTable.$inferSelect) {
+function serializeDashboard(d: any) {
   return {
     id: d.id,
     name: d.name,
     description: d.description ?? null,
     status: d.status,
     widgets: (d.widgets as object[]) ?? [],
-    publishedAt: d.publishedAt ? d.publishedAt.toISOString() : null,
-    createdAt: d.createdAt.toISOString(),
-    updatedAt: d.updatedAt.toISOString(),
+    publishedAt: d.publishedAt ? new Date(d.publishedAt).toISOString() : null,
+    createdAt: d.createdAt ? new Date(d.createdAt).toISOString() : null,
+    updatedAt: d.updatedAt ? new Date(d.updatedAt).toISOString() : null,
   };
 }
 
 router.get("/dashboards/stats", authorize("dashboards:read"), async (_req, res): Promise<void> => {
-  const all = await db.select().from(dashboardsTable);
+  const all = await prisma.dashboard.findMany();
   const total = all.length;
-  const published = all.filter((d) => d.status === "published").length;
-  const draft = all.filter((d) => d.status === "draft").length;
-  const totalWidgets = all.reduce((sum, d) => {
+  const published = all.filter((d: any) => d.status === "published").length;
+  const draft = all.filter((d: any) => d.status === "draft").length;
+  const totalWidgets = all.reduce((sum, d: any) => {
     const widgets = Array.isArray(d.widgets)
       ? (d.widgets as unknown[]).length
       : 0;
@@ -33,17 +41,14 @@ router.get("/dashboards/stats", authorize("dashboards:read"), async (_req, res):
 });
 
 router.get("/dashboards", authorize("dashboards:read"), async (req, res): Promise<void> => {
-  const conditions = [];
-  if (req.query.status)
-    conditions.push(eq(dashboardsTable.status, String(req.query.status)));
-  if (req.query.search)
-    conditions.push(like(dashboardsTable.name, `%${req.query.search}%`));
+  const where: Record<string, unknown> = {};
+  if (req.query.status) where.status = String(req.query.status);
+  if (req.query.search) where.name = { contains: String(req.query.search), mode: "insensitive" };
 
-  const dashboards = await db
-    .select()
-    .from(dashboardsTable)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(dashboardsTable.updatedAt);
+  const dashboards = await prisma.dashboard.findMany({
+    where: where as any,
+    orderBy: { updatedAt: "asc" } as any,
+  });
 
   res.json(dashboards.map(serializeDashboard));
 });
@@ -60,14 +65,14 @@ router.post("/dashboards", authorize("dashboards:write"), async (req, res): Prom
     return;
   }
 
-  const [dashboard] = await db
-    .insert(dashboardsTable)
-    .values({
+  const dashboard = await prisma.dashboard.create({
+    data: {
       name: name.trim(),
+      title: name.trim(),
       description: description ?? null,
       widgets: widgets ?? [],
-    } as any)
-    .returning();
+    } as any,
+  });
 
   res.status(201).json(serializeDashboard(dashboard));
 });
@@ -79,10 +84,7 @@ router.get("/dashboards/:id", authorize("dashboards:read"), async (req, res): Pr
     return;
   }
 
-  const [dashboard] = await db
-    .select()
-    .from(dashboardsTable)
-    .where(eq(dashboardsTable.id, id));
+  const dashboard = await prisma.dashboard.findUnique({ where: { id } });
   if (!dashboard) {
     res.status(404).json({ error: "Dashboard not found" });
     return;
@@ -106,16 +108,18 @@ router.patch("/dashboards/:id", authorize("dashboards:write"), async (req, res):
   };
 
   const updates: Record<string, unknown> = {};
-  if (name !== undefined) updates.name = name;
+  if (name !== undefined) {
+    updates.name = name;
+    updates.title = name;
+  }
   if (description !== undefined) updates.description = description;
   if (widgets !== undefined) updates.widgets = widgets;
   if (status !== undefined) updates.status = status;
 
-  const [dashboard] = await db
-    .update(dashboardsTable)
-    .set(updates)
-    .where(eq(dashboardsTable.id, id))
-    .returning();
+  const dashboard = await prisma.dashboard.update({
+    where: { id },
+    data: updates as any,
+  }).catch(() => null);
 
   if (!dashboard) {
     res.status(404).json({ error: "Dashboard not found" });
@@ -132,10 +136,7 @@ router.delete("/dashboards/:id", authorize("dashboards:delete"), async (req, res
     return;
   }
 
-  const [dashboard] = await db
-    .delete(dashboardsTable)
-    .where(eq(dashboardsTable.id, id))
-    .returning();
+  const dashboard = await prisma.dashboard.delete({ where: { id } }).catch(() => null);
   if (!dashboard) {
     res.status(404).json({ error: "Dashboard not found" });
     return;
@@ -151,11 +152,10 @@ router.post("/dashboards/:id/publish", authorize("dashboards:write"), async (req
     return;
   }
 
-  const [dashboard] = await db
-    .update(dashboardsTable)
-    .set({ status: "published", publishedAt: new Date() })
-    .where(eq(dashboardsTable.id, id))
-    .returning();
+  const dashboard = await prisma.dashboard.update({
+    where: { id },
+    data: { status: "published", publishedAt: new Date() } as any,
+  }).catch(() => null);
 
   if (!dashboard) {
     res.status(404).json({ error: "Dashboard not found" });
