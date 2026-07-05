@@ -1,0 +1,145 @@
+openapi: 3.1.0
+info:
+  title: LongoX Auth Service
+  version: 0.1.0
+  description: |
+    Authentication, authorization, and WorkOS MFA surface for the LongoX
+    Platform. Exposes the §4.1 user/tenant/session endpoints plus a WorkOS
+    MFA route (matrix items 21, 24).
+
+    Status: minimal stub — additional endpoints (SSO, roles, invitations)
+    will be documented as they ship.
+  license:
+    name: Proprietary
+servers:
+  - url: https://auth.longox.dev
+    description: Production
+  - url: http://localhost:3001
+    description: Local development
+paths:
+  /health:
+    get:
+      summary: Service health probe
+      operationId: authHealth
+      tags: [health]
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+        "503":
+          description: Service is not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /auth/session:
+    get:
+      summary: Retrieve the current session
+      operationId: getSession
+      tags: [auth]
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Current session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /auth/mfa/challenge:
+    post:
+      summary: Issue an MFA challenge via WorkOS
+      operationId: mfaChallenge
+      tags: [mfa]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MfaChallengeRequest"
+      responses:
+        "200":
+          description: Challenge issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MfaChallengeResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: __session
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status, service, timestamp]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        service:
+          type: string
+          enum: [auth-service]
+        timestamp:
+          type: string
+          format: date-time
+    Session:
+      type: object
+      required: [userId, tenantId, role]
+      properties:
+        userId:
+          type: string
+        tenantId:
+          type: string
+        role:
+          type: string
+    MfaChallengeRequest:
+      type: object
+      required: [factorType]
+      properties:
+        factorType:
+          type: string
+          enum: [totp, sms, webauthn]
+          description: |
+            MFA factor type. `webauthn` (passkey) is supported via WorkOS
+            (matrix item 24). Passkey enrollment flows through WorkOS's
+            hosted UI; this endpoint issues the challenge token.
+    MfaChallengeResponse:
+      type: object
+      required: [challengeId]
+      properties:
+        challengeId:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            requestId:
+              type: string

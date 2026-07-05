@@ -1,5 +1,44 @@
 name: CD
 
+# ─── Planned CI/CD improvements (matrix items 34–38) ────────────────────────
+# The following enhancements are tracked as planned features. They are
+# documented here so the CD pipeline maintainer has a single place to look
+# when wiring them up.
+#
+#   matrix item 34 — Build provenance / SLSA Level 3
+#     Goal: every Docker image carries a SLSA L3 provenance attestation
+#     (in-toto + DSSE) so downstream consumers can verify the build
+#     process. Today the workflow only signs images with cosign; the
+#     provenance step (`cosign attest --predicate slsa-v1.0.json`) is
+#     planned for the next release.
+#
+#   matrix item 35 — SBOM generation
+#     Goal: each image build emits a CycloneDX SBOM and uploads it as an
+#     image attestation (`cosign attach sbom --sbom sbom.cdx.json`). The
+#     SBOM feeds the license-check (item 25) and the Trivy vulnerability
+#     scan (already wired).
+#
+#   matrix item 36 — Policy-gated promotion
+#     Goal: the `deploy-production` job requires a passing OPA/Conftest
+#     policy check on the rendered Helm values (no `latest` tag, resource
+#     limits set, PDB present, etc.) before promoting from staging to
+#     production.
+#
+#   matrix item 37 — Blue/green for the api-gateway
+#     Goal: the api-gateway (the single point of ingress) uses
+#     blue/green instead of canary so that a rollback is a single
+#     service-selector swap (instant) rather than a deployment rollout
+#     (minutes). Tracked for the api-gateway only; other services keep
+#     the canary model.
+#
+#   matrix item 38 — Pre-deploy migration gate
+#     Goal: before `deploy-production` runs, a separate
+#     `prisma-migrate-deploy` job applies pending migrations against
+#     the production shadow database and waits for the schema diff to
+#     converge. The migration gate prevents shipping a service whose
+#     Prisma schema is ahead of the deployed DB schema.
+# ────────────────────────────────────────────────────────────────────────────
+
 on:
   push:
     branches: [main]
@@ -221,11 +260,25 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            // ─── matrix item 29 — Canary analysis (planned) ───────────────────────
+            // The current canary analysis is a structural placeholder: it only
+            // checks that canary pods reach `readyReplicas >= 1` for 10
+            // minutes. Real canary analysis (per architecture §21.3) must
+            // compare error rate, p99 latency, and SLO error-budget burn
+            // between stable and canary deployments via Prometheus/Grafana
+            // queries, and auto-rollback if the canary breaches thresholds.
+            //
+            // TODO(matrix item 29): replace this placeholder with a real
+            // canary analyser (Argo Rollouts AnalysisTemplate or Flagger
+            // Canary metric provider) backed by Prometheus queries:
+            //   - rate(http_requests_total{status=~"5.."}[1m]) < 0.1%
+            //   - histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[1m]))
+            //   - SLO error-budget burn rate < 2x baseline
             const canarySummary = `## Canary Analysis Results
             - **Observation**: 10-minute observation window completed
             - **Health**: All canary pods passed health checks
             - **Decision**: Canary passed — proceeding to full rollout
-            - **Metrics**: Placeholder — integrate with Prometheus/Grafana for error budget & latency comparison
+            - **Metrics**: Placeholder — integrate with Prometheus/Grafana for error budget & latency comparison (matrix item 29)
             - **Rollback**: If error rate > 0.1% or p99 latency increase > 10%, automatic rollback triggered
             `;
             github.rest.issues.createComment({

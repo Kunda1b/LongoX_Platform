@@ -1,0 +1,21 @@
+# LongoX Auth Service — GraphQL SDL (matrix item 19)
+#
+# Minimal SDL stub. The Auth service is primarily REST + WorkOS today; this
+# schema exposes a GraphQL health probe so that federated gateways can verify
+# reachability without coupling to the REST surface.
+#
+# Status: stub — full user/tenant/session types will be added when the
+# GraphQL gateway is wired in (per architecture §15).
+
+type Query {
+  """
+  Auth-service health probe. Returns 'ok' when the service is ready.
+  """
+  authHealth: HealthStatus!
+}
+
+type HealthStatus {
+  status: String!
+  service: String!
+  timestamp: String!
+}

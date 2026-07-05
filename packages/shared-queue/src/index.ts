@@ -29,7 +29,10 @@ export type QueueName =
   | "notification-outbound"
   | "connector-install"
   | "template-publish"
-  | "audit-export";
+  | "audit-export"
+  // §11 additional operational queues (items 7, 8)
+  | "search-indexing"
+  | "maintenance";
 
 /** Redis AOF persistence mode for a queue (ADR-001 / §11). */
 export type AofMode = "every-write" | "every-second" | "rdb-only";
@@ -56,19 +59,21 @@ export interface QueueTopologyEntry {
 }
 
 /**
- * The full topology of all 10 named BullMQ queues (ADR-001 / §11).
+ * The full topology of all named BullMQ queues (ADR-001 / §11).
  *
  * DB index allocation (each queue gets its own Redis DB for isolation):
- *   0 — workflow-execution
- *   1 — workflow-execution-recovery
- *   2 — webhook-delivery
- *   3 — ai-run
- *   4 — billing-rollup
- *   5 — billing-reconciliation
- *   6 — notification-outbound
- *   7 — connector-install
- *   8 — template-publish
- *   9 — audit-export
+ *   0  — workflow-execution
+ *   1  — workflow-execution-recovery
+ *   2  — webhook-delivery
+ *   3  — ai-run
+ *   4  — billing-rollup
+ *   5  — billing-reconciliation
+ *   6  — notification-outbound
+ *   7  — connector-install
+ *   8  — template-publish
+ *   9  — audit-export
+ *   10 — search-indexing (§11 — projections into search_index)
+ *   11 — maintenance (§11 — vacuum, reindex, retention sweeps)
  */
 export const QUEUE_TOPOLOGY: Record<QueueName, QueueTopologyEntry> = {
   "workflow-execution": {
@@ -132,10 +137,25 @@ export const QUEUE_TOPOLOGY: Record<QueueName, QueueTopologyEntry> = {
     redisDb: 9,
     limiter: { max: 5, duration: 60_000 },
   },
+  // §11 — additional operational queues (matrix items 7, 8)
+  "search-indexing": {
+    name: "search-indexing",
+    aof: "every-second",
+    redisDb: 10,
+    limiter: { max: 50, duration: 60_000 },
+  },
+  maintenance: {
+    name: "maintenance",
+    aof: "rdb-only",
+    redisDb: 11,
+    limiter: { max: 5, duration: 60_000 },
+  },
 };
 
-/** Ordered list of all 10 queue names — useful for workers that drain all queues. */
-export const ALL_QUEUE_NAMES: QueueName[] = Object.keys(QUEUE_TOPOLOGY) as QueueName[];
+/** Ordered list of all queue names — useful for workers that drain all queues. */
+export const ALL_QUEUE_NAMES: QueueName[] = Object.keys(
+  QUEUE_TOPOLOGY,
+) as QueueName[];
 
 // ─── Job types & payloads ─────────────────────────────────────────────────────
 
@@ -219,6 +239,18 @@ export interface WorkflowRecoveryJobData extends GenericJobData {
  * Strongly-typed map of queue name → job payload. Queues without a
  * strongly-typed payload fall back to `GenericJobData`.
  */
+export interface SearchIndexingJobData extends GenericJobData {
+  entityType?: string;
+  entityId?: string;
+  tenantId?: string;
+  op?: "upsert" | "delete";
+}
+
+export interface MaintenanceJobData extends GenericJobData {
+  task?: string;
+  tenantId?: string;
+}
+
 export type JobDataMap = {
   "workflow-execution": WorkflowJobData;
   "workflow-execution-recovery": WorkflowRecoveryJobData;
@@ -230,6 +262,8 @@ export type JobDataMap = {
   "connector-install": ConnectorInstallJobData;
   "template-publish": TemplatePublishJobData;
   "audit-export": AuditExportJobData;
+  "search-indexing": SearchIndexingJobData;
+  maintenance: MaintenanceJobData;
 };
 
 export interface RetryPolicy {

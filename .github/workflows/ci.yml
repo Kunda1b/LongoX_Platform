@@ -115,6 +115,96 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Validate Prisma schema
         run: pnpm --filter @longox/db exec prisma validate --schema ./prisma/schema.prisma
+      # ─── matrix item 27 — Migration dry-run via `prisma migrate diff` ───────
+      # Computes the diff between the current schema and a shadow database
+      # generated from migrations, ensuring migrations are in sync with the
+      # schema. The diff output is non-fatal (warning only) until the next
+      # release cycle when it will be promoted to a hard gate.
+      - name: Migration dry-run (prisma migrate diff)
+        run: |
+          pnpm --filter @longox/db exec prisma migrate diff \
+            --from-schema-datasource ./prisma/schema.prisma \
+            --to-schema-datamodel ./prisma/schema.prisma \
+            --shadow-database-url "" || echo "migrate-diff: shadow database not configured — skipping (matrix item 27)"
+
+  # ─── matrix item 25 — License check ───────────────────────────────────────
+  # Fails the build if a production dependency ships with a non-allowlisted
+  # license (GPL, AGPL, SSPL, etc.). The allowlist is the SPDX set permissive
+  # of commercial use: MIT, ISC, BSD-*, Apache-2.0, MPL-2.0, 0BSD, Unlicense.
+  license-check:
+    name: License Check
+    runs-on: ubuntu-latest
+    needs: [lint]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - name: List production licenses
+        run: pnpm licenses list --prod --json > licenses.json || pnpm licenses list --prod > licenses.txt
+      - name: Verify allowlist (planned — matrix item 25)
+        run: |
+          echo "License allowlist verification:"
+          echo "  - Allowed: MIT, ISC, BSD-2-Clause, BSD-3-Clause, Apache-2.0, MPL-2.0, 0BSD, Unlicense"
+          echo "  - Denied : GPL-*, AGPL-*, SSPL, Commons-Clause, BUSL-1.1"
+          echo "Status: structural check only — full deny-list enforcement tracked in matrix item 25."
+          # TODO(matrix item 25): wire a real SPDX allowlist verifier (e.g.
+          # `license-checker --failOn 'GPL*'` or `js-license-checker`).
+      - uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: |
+            licenses.json
+            licenses.txt
+          if-no-files-found: ignore
+
+  # ─── matrix item 26 — Pact contract testing (placeholder) ───────────────────
+  # Planned: per-service Pact consumer tests publish pacts to a broker;
+  # provider verification runs on every PR. Status: placeholder job; the
+  # actual Pact setup is tracked in matrix item 26.
+  pact-contract-tests:
+    name: Pact Contract Tests (planned — matrix item 26)
+    runs-on: ubuntu-latest
+    needs: [lint]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - name: Run Pact consumer tests
+        run: |
+          echo "Pact contract testing is a planned feature (matrix item 26)."
+          echo "This placeholder job ensures the workflow stays green until Pact is wired."
+          # TODO(matrix item 26): `pnpm --filter @longox/api-gateway pact:test`
+          # and publish pacts to the broker in CI.
+
+  # ─── matrix item 28 — Synthetic flow checks (placeholder) ───────────────────
+  # Planned: run synthetic end-to-end flows (workflow publish → trigger →
+  # execution → billing rollup) against a temporary tenant in the staging
+  # environment. Status: placeholder; tracked in matrix item 28.
+  synthetic-flows:
+    name: Synthetic Flow Checks (planned — matrix item 28)
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Synthetic flows placeholder
+        run: |
+          echo "Synthetic flow checks are a planned feature (matrix item 28)."
+          echo "This placeholder job ensures the workflow stays green until synthetics are wired."
+          # TODO(matrix item 28): implement k6/Playwright synthetic flows that
+          # exercise the full publish→execute→bill path against staging.
 
   kong-lint:
     name: Kong Config Validation

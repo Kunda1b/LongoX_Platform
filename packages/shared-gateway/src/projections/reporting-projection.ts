@@ -15,50 +15,64 @@ export class ReportingProjection {
 
     switch (event.type) {
       case "execution.completed":
-        await this.upsertKPI("executions.total", 1, String(tenantId), period) as any;
-        await this.upsertKPI(
+        (await this.upsertKPI(
+          "executions.total",
+          1,
+          String(tenantId),
+          period,
+        )) as any;
+        (await this.upsertKPI(
           "executions.success_rate",
           1,
           tenantId,
           period,
-        ) as any;
+        )) as any;
         break;
       case "execution.failed":
-        await this.upsertKPI("executions.total", 1, String(tenantId), period) as any;
-        await this.upsertKPI(
+        (await this.upsertKPI(
+          "executions.total",
+          1,
+          String(tenantId),
+          period,
+        )) as any;
+        (await this.upsertKPI(
           "executions.failure_rate",
           1,
           tenantId,
           period,
-        ) as any;
+        )) as any;
         break;
       case "ai.run.completed":
         await this.upsertKPI(
           "ai.cost",
-          (event.payload.cost as string) as any ?? "",
+          (event.payload.cost as string as any) ?? "",
           tenantId,
           period,
         );
-        await this.upsertKPI(
-          "ai.requests",
-          1,
-          tenantId,
-          period,
-        ) as any;
+        (await this.upsertKPI("ai.requests", 1, tenantId, period)) as any;
         break;
-      case "billing.usage.recorded":
+      case "usage.recorded":
+        // §19.4 canonical name — was previously `billing.usage.recorded`
+        // (matrix item 15). The old name is still emitted by some legacy
+        // publishers; we accept both as a courtesy but only the §19.4
+        // form is documented.
         await this.upsertKPI(
           "billing.usage",
-          (event.payload.quantity as string) as any ?? "",
+          (event.payload.quantity as string as any) ?? "",
           tenantId,
           period,
         );
         break;
       case "tenant.created":
-        await this.upsertKPI("tenants.total", 1, "", period) as any;
+        (await this.upsertKPI("tenants.total", 1, "", period)) as any;
         break;
       case "user.created":
-        await this.upsertKPI("users.total", 1, String(tenantId), period) as any;
+        (await this.upsertKPI(
+          "users.total",
+          1,
+          String(tenantId),
+          period,
+        )) as any;
         break;
     }
   }

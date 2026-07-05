@@ -1,0 +1,22 @@
+# LongoX Execution Service — GraphQL SDL (matrix item 20)
+#
+# Minimal SDL stub. The Execution service exposes workflow + execution
+# lifecycle primarily over REST + Server-Sent Events (SSE) for live updates;
+# this schema exposes a GraphQL health probe so federated gateways can verify
+# reachability.
+#
+# Status: stub — full execution / node-result types will be added when the
+# GraphQL gateway is wired in (per architecture §15).
+
+type Query {
+  """
+  Execution-service health probe. Returns 'ok' when the service is ready.
+  """
+  executionHealth: HealthStatus!
+}
+
+type HealthStatus {
+  status: String!
+  service: String!
+  timestamp: String!
+}

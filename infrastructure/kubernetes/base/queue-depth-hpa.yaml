@@ -8,6 +8,16 @@
 #   bullmq_queue_active{queue="ai-run"} 7
 #
 # Apply per-service by setting the queue name and target value.
+#
+# ─── matrix item 32 — Memory-based scaling ─────────────────────────────────
+# Every HPA in this file includes a `memory` Resource metric in addition to
+# the queue-depth and CPU metrics. Memory pressure is the leading indicator
+# for OOMKill in long-running Node.js workers (V8 heap growth, retention of
+# large workflow payloads in memory); scaling on memory prevents the worker
+# from being killed by the kubelet before CPU/queue metrics catch up. The
+# memory threshold is intentionally lower than the CPU threshold (75% vs
+# 70%) because memory pressure is asymmetric — once a pod is OOMKilled, in-
+# flight work is lost, whereas brief CPU spikes just slow down throughput.
 
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -43,7 +53,7 @@ spec:
         name: memory
         target:
           type: Utilization
-          averageUtilization: 80
+          averageUtilization: 75  # matrix item 32 — memory-based scaling
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -74,3 +84,9 @@ spec:
         target:
           type: Utilization
           averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75  # matrix item 32 — memory-based scaling

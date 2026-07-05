@@ -132,8 +132,12 @@ export const TRIGGER_RETRY_POLICY: RetryPolicy = {
   jitter: 0,
 };
 
-export function computeBackoffDelay(policy: RetryPolicy, attempt: number): number {
-  const base = policy.initialDelayMs * Math.pow(policy.backoffFactor, attempt - 1);
+export function computeBackoffDelay(
+  policy: RetryPolicy,
+  attempt: number,
+): number {
+  const base =
+    policy.initialDelayMs * Math.pow(policy.backoffFactor, attempt - 1);
   const capped = Math.min(base, policy.maxDelayMs);
   const jitter = capped * policy.jitter * Math.random();
   return Math.round(capped + jitter);
@@ -369,17 +373,20 @@ export interface CheckpointStore {
     executionId: string,
   ): Promise<Array<{ nodeId: string; outputData: Record<string, unknown> }>>;
   /** Update an existing checkpoint by its DB id. */
-  update(checkpointId: string, updates: {
-    status: "success" | "failed" | "paused";
-    outputData?: Record<string, unknown>;
-    errorMessage?: string;
-    durationMs?: number;
-    metadata?: Record<string, unknown>;
-    /** Saga compensation status — set to "done" after a successful compensate. */
-    compensationStatus?: "pending" | "done" | "failed" | "skipped";
-    /** Optional explicit finish timestamp (defaults to now). */
-    finishedAt?: Date | null;
-  }): Promise<void>;
+  update(
+    checkpointId: string,
+    updates: {
+      status: "success" | "failed" | "paused";
+      outputData?: Record<string, unknown>;
+      errorMessage?: string;
+      durationMs?: number;
+      metadata?: Record<string, unknown>;
+      /** Saga compensation status — set to "done" after a successful compensate. */
+      compensationStatus?: "pending" | "done" | "failed" | "skipped";
+      /** Optional explicit finish timestamp (defaults to now). */
+      finishedAt?: Date | null;
+    },
+  ): Promise<void>;
 }
 
 /**
@@ -405,14 +412,47 @@ export function buildCheckpointIdempotencyKey(opts: {
 
 export type DAGEvent =
   | { type: "execution.started"; executionId: string; workflowId: string }
-  | { type: "node.started"; executionId: string; nodeId: string; nodeName: string; attempt: number }
-  | { type: "node.completed"; executionId: string; nodeId: string; durationMs: number }
-  | { type: "node.failed"; executionId: string; nodeId: string; error: string; attempt: number }
-  | { type: "node.retrying"; executionId: string; nodeId: string; attempt: number; delayMs: number }
-  | { type: "node.paused"; executionId: string; nodeId: string; approvalTaskId: string }
+  | {
+      type: "node.started";
+      executionId: string;
+      nodeId: string;
+      nodeName: string;
+      attempt: number;
+    }
+  | {
+      type: "node.completed";
+      executionId: string;
+      nodeId: string;
+      durationMs: number;
+    }
+  | {
+      type: "node.failed";
+      executionId: string;
+      nodeId: string;
+      error: string;
+      attempt: number;
+    }
+  | {
+      type: "node.retrying";
+      executionId: string;
+      nodeId: string;
+      attempt: number;
+      delayMs: number;
+    }
+  | {
+      type: "node.paused";
+      executionId: string;
+      nodeId: string;
+      approvalTaskId: string;
+    }
   | { type: "node.compensating"; executionId: string; nodeId: string }
   | { type: "node.compensated"; executionId: string; nodeId: string }
-  | { type: "node.child_spawned"; executionId: string; nodeId: string; childExecutionId: string }
+  | {
+      type: "node.child_spawned";
+      executionId: string;
+      nodeId: string;
+      childExecutionId: string;
+    }
   | { type: "execution.completed"; executionId: string; durationMs: number }
   | { type: "execution.failed"; executionId: string; error: string }
   | { type: "execution.saga_compensating"; executionId: string; steps: number }
@@ -438,9 +478,18 @@ export interface DAGRunnerOptions {
   /** Whether to run saga compensation on failure. Default: true */
   enableSaga?: boolean;
   /** Child workflow spawner */
-  spawnChildWorkflow?: (config: ChildWorkflowConfig, input: Record<string, unknown>, context: ExecutionContext) => Promise<string>;
+  spawnChildWorkflow?: (
+    config: ChildWorkflowConfig,
+    input: Record<string, unknown>,
+    context: ExecutionContext,
+  ) => Promise<string>;
   /** Approval gate writer */
-  writeApprovalGate?: (opts: { executionId: string; nodeId: string; config: ApprovalGateConfig; input: Record<string, unknown> }) => Promise<string>;
+  writeApprovalGate?: (opts: {
+    executionId: string;
+    nodeId: string;
+    config: ApprovalGateConfig;
+    input: Record<string, unknown>;
+  }) => Promise<string>;
   /** Node lease store for multi-worker safety */
   leaseStore?: LeaseStore;
   /**

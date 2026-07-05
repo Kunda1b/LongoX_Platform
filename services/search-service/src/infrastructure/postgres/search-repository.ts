@@ -3,6 +3,24 @@
  *
  * Migrated from Drizzle to Prisma per ADR-013 Phase 3.
  * Uses `prisma.$queryRawUnsafe()` for FTS queries and Prisma delegates for basic lookups.
+ *
+ * ──────────────────────────────────────────────────────────────────────────────
+ * ADR-010 / architecture §16.5 — Pre-computed tsvector columns.
+ *
+ * The canonical `search_index` table (managed by the SearchService projection)
+ * is the ONLY table that carries pre-computed `title_tsv` / `content_tsv`
+ * tsvector columns. All tenant-facing search SHOULD go through that projection
+ * so it benefits from indexed, pre-computed tsvector lookups.
+ *
+ * The runtime `to_tsvector()` calls below on the legacy `workflows`, `apps`,
+ * `templates`, `connectors`, `executions`, `audit_log`, and `prompts` tables
+ * are retained for backwards compatibility with code paths that bypass the
+ * SearchService projection. Per ADR-010 scope, pre-computed tsvector columns
+ * are NOT added to those core domain tables — they are an internal concern of
+ * the `search_index` projection. Migrate callers to the SearchService API to
+ * eliminate the runtime `to_tsvector()` cost on these legacy paths.
+ * (matrix item 12 / matrix item 43 — by-design scope.)
+ * ──────────────────────────────────────────────────────────────────────────────
  */
 
 import { prisma } from "@longox/db/prisma";

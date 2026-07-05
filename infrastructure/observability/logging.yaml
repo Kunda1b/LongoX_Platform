@@ -102,6 +102,18 @@ logging:
   # Fields matching these patterns are redacted or hashed before logging.
   # The raw values are still available in traces (with appropriate access
   # control) and in the database.
+  #
+  # ─── matrix item 30 — Shipper-level redaction ─────────────────────────────
+  # The redaction rules below are ALSO enforced at the shipper layer
+  # (Fluentd / Fluent Bit → Loki pipeline) so that even services that fail
+  # to apply the application-level rules above don't leak PII into the log
+  # store. The shipper config lives in:
+  #   - infrastructure/observability/fluentd/fluentd.conf (parser + redact filter)
+  #   - infrastructure/observability/loki/loki-rules.yaml (drop rules for known PII)
+  # The two layers are intentionally redundant: defense in depth for PII.
+  # Application-level redaction catches structured fields; shipper-level
+  # redaction catches free-form message bodies and stack traces that
+  # wouldn't otherwise match the structured-field rules.
   pii_redaction:
     enabled: true
     redaction_string: "[REDACTED]"
