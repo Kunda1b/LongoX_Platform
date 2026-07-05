@@ -382,7 +382,7 @@ export function createEventEnvelope(
   context?: Partial<EventEnvelope["context"]>,
   eventVersion?: number,
 ): EventEnvelope {
-  const id = crypto.randomUUID();
+  const id = `evt_${crypto.randomUUID()}`;
   const registryEntry = EVENT_REGISTRY[type];
   const resolvedVersion = eventVersion ?? registryEntry?.eventVersion ?? 1;
   const resolvedSchemaUrl = registryEntry?.schemaUrl
