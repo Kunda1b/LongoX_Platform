@@ -17,7 +17,10 @@ interface AvailableRegion {
 }
 
 export class TenantPlacementService {
-  async determinePlacement(tenantId: string, tierId: string): Promise<PlacementResult> {
+  async determinePlacement(
+    tenantId: string,
+    tierId: string,
+  ): Promise<PlacementResult> {
     const tier = (await prisma.tenantTier.findUnique({
       where: { id: tierId },
     })) as any;
@@ -27,17 +30,27 @@ export class TenantPlacementService {
     }
 
     const region = await this.getRegionForTenant(tenantId, tier);
-    const placement = await this.getClusterForTenant(tenantId, region.id, tierId);
+    const placement = await this.getClusterForTenant(
+      tenantId,
+      region.id,
+      tierId,
+    );
 
     switch (tier.infrastructureLevel) {
       case "shared":
         return this.placeInShared(tenantId, region, placement);
       case "dedicated-namespace":
-        return this.assignDedicatedNamespace(tenantId, placement.clusterId, region);
+        return this.assignDedicatedNamespace(
+          tenantId,
+          placement.clusterId,
+          region,
+        );
       case "dedicated-cluster":
         return this.assignDedicatedCluster(tenantId, region);
       default:
-        throw new Error(`Unknown infrastructure level: ${tier.infrastructureLevel}`);
+        throw new Error(
+          `Unknown infrastructure level: ${tier.infrastructureLevel}`,
+        );
     }
   }
 
@@ -77,7 +90,11 @@ export class TenantPlacementService {
     })) as any[];
 
     if (allowedRegionIds.length === 0) {
-      return allRegions.map((r) => ({ id: r.id, regionId: r.regionId, name: r.name }));
+      return allRegions.map((r) => ({
+        id: r.id,
+        regionId: r.regionId,
+        name: r.name,
+      }));
     }
 
     return allRegions
@@ -168,7 +185,10 @@ export class TenantPlacementService {
     region: any,
   ): Promise<PlacementResult> {
     const clusterId = `eks-${region.regionId}-dedicated-${tenantId}`;
-    const tenantHash = Array.from(tenantId).reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) | 0, 0);
+    const tenantHash = Array.from(tenantId).reduce(
+      (acc, c) => (acc * 31 + c.charCodeAt(0)) | 0,
+      0,
+    );
     const networkCidr = `10.${Math.abs(tenantHash) % 256}.0.0/16`;
 
     const existing = (await prisma.tenantPlacement.findUnique({
@@ -262,10 +282,7 @@ export class TenantPlacementService {
     };
   }
 
-  private async getRegionForTenant(
-    _tenantId: string,
-    tier: any,
-  ): Promise<any> {
+  private async getRegionForTenant(_tenantId: string, tier: any): Promise<any> {
     const allowedRegionIds: string[] = tier.regionsAllowed ?? [];
     const allRegions = (await prisma.region.findMany({
       where: { isActive: true } as any,
@@ -274,7 +291,9 @@ export class TenantPlacementService {
 
     let region = allRegions[0];
     if (allowedRegionIds.length > 0) {
-      const matched = allRegions.find((r) => allowedRegionIds.includes(r.regionId));
+      const matched = allRegions.find((r) =>
+        allowedRegionIds.includes(r.regionId),
+      );
       if (matched) region = matched;
     }
 

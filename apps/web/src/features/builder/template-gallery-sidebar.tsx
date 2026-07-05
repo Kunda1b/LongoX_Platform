@@ -66,9 +66,12 @@ export function TemplateGallerySidebar({
   const { data: templates = [], isLoading } = useListTemplates({ search });
 
   const { data: selectedTemplate, isFetching: templateLoading } =
-    useGetTemplate(confirmId as any, {
-      query: { enabled: confirmId !== null },
-    } as any);
+    useGetTemplate(
+      confirmId as any,
+      {
+        query: { enabled: confirmId !== null },
+      } as any,
+    );
 
   if (!open) return null;
 

@@ -110,33 +110,35 @@ export const getPortalSession = async (
 export function useListPlans<
   TData = BillingPlan[],
   TError = ErrorType<unknown>,
->(
-  options?: {
-    query?: UseQueryOptions<BillingPlan[], TError, TData>;
-    request?: RequestInit;
-  },
-) {
+>(options?: {
+  query?: UseQueryOptions<BillingPlan[], TError, TData>;
+  request?: RequestInit;
+}) {
   const { query: queryOptions, request: requestOptions } = options ?? {};
   const queryKey = queryOptions?.queryKey ?? getPlansQueryKey();
   const queryFn = ({ signal }: { signal?: AbortSignal }) =>
     listPlans({ signal, ...requestOptions });
-  return useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: QueryKey };
 }
 
 export function useGetSubscriptionStatus<
   TData = SubscriptionStatus | null,
   TError = ErrorType<unknown>,
->(
-  options?: {
-    query?: UseQueryOptions<SubscriptionStatus | null, TError, TData>;
-    request?: RequestInit;
-  },
-) {
+>(options?: {
+  query?: UseQueryOptions<SubscriptionStatus | null, TError, TData>;
+  request?: RequestInit;
+}) {
   const { query: queryOptions, request: requestOptions } = options ?? {};
   const queryKey = queryOptions?.queryKey ?? getSubscriptionQueryKey();
   const queryFn = ({ signal }: { signal?: AbortSignal }) =>
     getSubscriptionStatus({ signal, ...requestOptions });
-  return useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: QueryKey };
 }
 
 export function useCreateCheckoutSession<TError = ErrorType<unknown>>(

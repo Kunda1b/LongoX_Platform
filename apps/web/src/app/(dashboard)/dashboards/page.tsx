@@ -74,7 +74,9 @@ export default function DashboardsPage() {
                 <span className="text-xs text-muted-foreground">
                   Updated {new Date(d.updatedAt).toLocaleDateString()}
                 </span>
-                <Badge variant={d.status === "published" ? "info" : "secondary"}>
+                <Badge
+                  variant={d.status === "published" ? "info" : "secondary"}
+                >
                   {d.status}
                 </Badge>
               </CardContent>

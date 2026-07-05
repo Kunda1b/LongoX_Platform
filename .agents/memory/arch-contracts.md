@@ -5,22 +5,23 @@ description: File locations, codegen wiring, and Prisma decisions established wh
 
 ## Canonical file locations
 
-| Contract | File |
-|---|---|
-| Gateway REST API (OpenAPI 3.1) | `services/api-gateway/openapi/openapi.yaml` |
-| Gateway TypeScript types (hand-managed, replaced by codegen) | `packages/shared-types/src/generated/gateway-api.d.ts` |
-| Gateway TypeScript types (api-gateway-local) | `services/api-gateway/openapi/generated/gateway-api.d.ts` |
-| Prisma canonical schema | `packages/shared-db/prisma/schema.prisma` |
-| GraphQL SDL | `services/api-gateway/graphql/schema.graphql` |
-| GraphQL base types (generated) | `services/api-gateway/src/graphql/generated/types.ts` |
-| GraphQL resolver types (generated) | `services/api-gateway/src/graphql/generated/resolvers.ts` |
-| GraphQL operation types (generated) | `services/api-gateway/src/graphql/generated/operations.ts` |
-| GraphQL context interface | `services/api-gateway/src/lib/context.ts` |
-| GraphQL codegen config | `services/api-gateway/graphql/codegen.ts` |
+| Contract                                                     | File                                                       |
+| ------------------------------------------------------------ | ---------------------------------------------------------- |
+| Gateway REST API (OpenAPI 3.1)                               | `services/api-gateway/openapi/openapi.yaml`                |
+| Gateway TypeScript types (hand-managed, replaced by codegen) | `packages/shared-types/src/generated/gateway-api.d.ts`     |
+| Gateway TypeScript types (api-gateway-local)                 | `services/api-gateway/openapi/generated/gateway-api.d.ts`  |
+| Prisma canonical schema                                      | `packages/shared-db/prisma/schema.prisma`                  |
+| GraphQL SDL                                                  | `services/api-gateway/graphql/schema.graphql`              |
+| GraphQL base types (generated)                               | `services/api-gateway/src/graphql/generated/types.ts`      |
+| GraphQL resolver types (generated)                           | `services/api-gateway/src/graphql/generated/resolvers.ts`  |
+| GraphQL operation types (generated)                          | `services/api-gateway/src/graphql/generated/operations.ts` |
+| GraphQL context interface                                    | `services/api-gateway/src/lib/context.ts`                  |
+| GraphQL codegen config                                       | `services/api-gateway/graphql/codegen.ts`                  |
 
 ## Codegen pipelines
 
 Root `pnpm run codegen` now chains three pipelines in order:
+
 1. `pnpm --filter @longox/api-spec run codegen` — Orval hooks + Zod schemas (existing)
 2. `pnpm --filter @longox/api-gateway run codegen` — GraphQL resolver/operation types + openapi-typescript gateway types
 3. `pnpm --filter @longox/shared-types run codegen` — copies gateway-api.d.ts to shared-types for cross-package use

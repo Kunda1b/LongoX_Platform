@@ -14,7 +14,9 @@ import { MailCheck, RefreshCw } from "lucide-react";
 
 export default function VerifyEmailPage() {
   const { user, token } = useAuth();
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">(
+    "idle",
+  );
 
   const resend = async () => {
     setStatus("sending");
@@ -50,7 +52,9 @@ export default function VerifyEmailPage() {
             <p className="text-sm text-green-600">Verification email resent!</p>
           )}
           {status === "error" && (
-            <p className="text-sm text-destructive">Failed to resend. Try again shortly.</p>
+            <p className="text-sm text-destructive">
+              Failed to resend. Try again shortly.
+            </p>
           )}
           <Button
             variant="outline"
@@ -63,7 +67,10 @@ export default function VerifyEmailPage() {
           </Button>
           <p className="text-xs text-muted-foreground">
             Already verified?{" "}
-            <a href="/dashboard" className="font-medium text-primary hover:underline">
+            <a
+              href="/dashboard"
+              className="font-medium text-primary hover:underline"
+            >
               Go to dashboard
             </a>
           </p>

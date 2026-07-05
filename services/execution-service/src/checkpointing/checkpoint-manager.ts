@@ -57,8 +57,10 @@ export class CheckpointManager {
     const patch: Record<string, unknown> = {};
     if (updates.status !== undefined) patch.status = updates.status;
     if (updates.outputData !== undefined) patch.outputData = updates.outputData;
-    if (updates.errorMessage !== undefined) patch.errorMessage = updates.errorMessage;
-    if (updates.completedAt !== undefined) patch.completedAt = updates.completedAt;
+    if (updates.errorMessage !== undefined)
+      patch.errorMessage = updates.errorMessage;
+    if (updates.completedAt !== undefined)
+      patch.completedAt = updates.completedAt;
     if (updates.durationMs !== undefined) patch.durationMs = updates.durationMs;
 
     await prisma.nodeExecutionCheckpoint.update({
@@ -106,8 +108,9 @@ export class CheckpointManager {
       orderBy: { id: "asc" },
     });
 
-    return ((checkpoint?.stateJson as any)?.outputData ?? null) as
-      | Record<string, unknown>
-      | null;
+    return ((checkpoint?.stateJson as any)?.outputData ?? null) as Record<
+      string,
+      unknown
+    > | null;
   }
 }

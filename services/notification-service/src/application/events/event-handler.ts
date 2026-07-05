@@ -73,7 +73,9 @@ export class EventHandler {
     await this.sendWebhooks(event.tenantId, event.type, event.data);
   }
 
-  private async handleBillingPaymentFailed(event: PlatformEvent): Promise<void> {
+  private async handleBillingPaymentFailed(
+    event: PlatformEvent,
+  ): Promise<void> {
     const { invoiceId, amount, reason } = event.data;
 
     // Create in-app notification
@@ -97,7 +99,9 @@ export class EventHandler {
     await this.sendWebhooks(event.tenantId, event.type, event.data);
   }
 
-  private async handleBillingSubscriptionExpired(event: PlatformEvent): Promise<void> {
+  private async handleBillingSubscriptionExpired(
+    event: PlatformEvent,
+  ): Promise<void> {
     const { subscriptionId, planName } = event.data;
 
     // Create in-app notification

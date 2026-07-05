@@ -47,7 +47,10 @@ interface SSOConnection {
   createdAt: string;
 }
 
-const providerMeta: Record<string, { name: string; icon: typeof Key; color: string }> = {
+const providerMeta: Record<
+  string,
+  { name: string; icon: typeof Key; color: string }
+> = {
   google: { name: "Google", icon: Search, color: "text-blue-500" },
   github: { name: "GitHub", icon: GitBranch, color: "text-foreground" },
   microsoft: { name: "Microsoft", icon: Building2, color: "text-blue-600" },
@@ -87,7 +90,10 @@ export function SSOConfig() {
 
   const handleConfigure = async () => {
     if (!formClientId || !formClientSecret) {
-      toast({ title: "Client ID and Client Secret are required", variant: "destructive" });
+      toast({
+        title: "Client ID and Client Secret are required",
+        variant: "destructive",
+      });
       return;
     }
     setSaving(true);
@@ -142,7 +148,9 @@ export function SSOConfig() {
   const deleteProvider = async (provider: string) => {
     if (!confirm(`Delete ${provider} configuration?`)) return;
     try {
-      const res = await fetch(`/api/auth/sso/${provider}`, { method: "DELETE" });
+      const res = await fetch(`/api/auth/sso/${provider}`, {
+        method: "DELETE",
+      });
       if (res.ok) {
         setConnections((prev) => prev.filter((c) => c.provider !== provider));
         toast({ title: "SSO provider deleted" });
@@ -208,20 +216,29 @@ export function SSOConfig() {
               </div>
               {formProvider === "saml" && (
                 <div className="rounded-lg border bg-muted/50 p-3 text-xs text-muted-foreground">
-                  SAML 2.0 requires an IdP-initiated SSO URL. Provide your Identity Provider&apos;s SSO URL as the Issuer URL and the SP Entity ID as the Client ID.
+                  SAML 2.0 requires an IdP-initiated SSO URL. Provide your
+                  Identity Provider&apos;s SSO URL as the Issuer URL and the SP
+                  Entity ID as the Client ID.
                 </div>
               )}
               {formProvider === "oidc" && (
                 <div className="rounded-lg border bg-muted/50 p-3 text-xs text-muted-foreground">
-                  Generic OpenID Connect provider. Requires the OIDC discovery URL as the Issuer URL.
+                  Generic OpenID Connect provider. Requires the OIDC discovery
+                  URL as the Issuer URL.
                 </div>
               )}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Client ID / Entity ID</label>
+                <label className="text-sm font-medium">
+                  Client ID / Entity ID
+                </label>
                 <Input
                   value={formClientId}
                   onChange={(e) => setFormClientId(e.target.value)}
-                  placeholder={formProvider === "saml" ? "SP Entity ID (audience)" : "Client ID"}
+                  placeholder={
+                    formProvider === "saml"
+                      ? "SP Entity ID (audience)"
+                      : "Client ID"
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -238,12 +255,18 @@ export function SSOConfig() {
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     onClick={() => setShowSecret(!showSecret)}
                   >
-                    {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showSecret ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Issuer URL / Domain URL</label>
+                <label className="text-sm font-medium">
+                  Issuer URL / Domain URL
+                </label>
                 <Input
                   value={formIssuerUrl}
                   onChange={(e) => setFormIssuerUrl(e.target.value)}
@@ -266,7 +289,11 @@ export function SSOConfig() {
                   placeholder="example.com"
                 />
               </div>
-              <Button onClick={handleConfigure} disabled={saving} className="w-full">
+              <Button
+                onClick={handleConfigure}
+                disabled={saving}
+                className="w-full"
+              >
                 {saving ? "Saving..." : "Save Configuration"}
               </Button>
             </div>
@@ -295,14 +322,18 @@ export function SSOConfig() {
                     <div>
                       <CardTitle className="text-sm">{meta.name}</CardTitle>
                       {conn.domain && (
-                        <p className="text-xs text-muted-foreground">{conn.domain}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {conn.domain}
+                        </p>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
                       checked={conn.enabled}
-                      onCheckedChange={(checked) => toggleProvider(conn.provider, checked)}
+                      onCheckedChange={(checked) =>
+                        toggleProvider(conn.provider, checked)
+                      }
                     />
                   </div>
                 </CardHeader>
@@ -310,7 +341,9 @@ export function SSOConfig() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Badge variant={conn.enabled ? "success" : "secondary"}>
-                        <Power className={`h-3 w-3 mr-1 ${conn.enabled ? "text-green-500" : ""}`} />
+                        <Power
+                          className={`h-3 w-3 mr-1 ${conn.enabled ? "text-green-500" : ""}`}
+                        />
                         {conn.enabled ? "Active" : "Disabled"}
                       </Badge>
                       {conn.hasClientId && (
@@ -352,7 +385,8 @@ export function SSOConfig() {
                   No SSO providers configured
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Add SAML, OIDC, Azure AD, or Okta to enable single sign-on for your organization
+                  Add SAML, OIDC, Azure AD, or Okta to enable single sign-on for
+                  your organization
                 </p>
               </div>
               <Button className="mt-2" onClick={() => setDialogOpen(true)}>
@@ -372,12 +406,19 @@ export function SSOConfig() {
             const conn = connections.find((c) => c.provider === key);
             const Icon = meta.icon;
             return (
-              <div key={key} className="flex items-center gap-3 rounded-lg border p-3">
+              <div
+                key={key}
+                className="flex items-center gap-3 rounded-lg border p-3"
+              >
                 <Icon className={`h-5 w-5 ${meta.color}`} />
                 <div className="flex-1">
                   <p className="text-sm font-medium">{meta.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {conn ? (conn.enabled ? "Enabled" : "Disabled") : "Not configured"}
+                    {conn
+                      ? conn.enabled
+                        ? "Enabled"
+                        : "Disabled"
+                      : "Not configured"}
                   </p>
                 </div>
                 {!conn && (

@@ -32,7 +32,10 @@ export class UsageRollupService {
       dayEnd,
     );
 
-    const breakdown: Record<string, { total: string; unit: string; count: number }> = {};
+    const breakdown: Record<
+      string,
+      { total: string; unit: string; count: number }
+    > = {};
     let meteredTotal = 0;
     const billableTotal = 0;
 
@@ -97,7 +100,11 @@ export class UsageRollupService {
     }
   }
 
-  async rollupMonthly(tenantId: string, year: number, month: number): Promise<void> {
+  async rollupMonthly(
+    tenantId: string,
+    year: number,
+    month: number,
+  ): Promise<void> {
     const monthStart = new Date(year, month - 1, 1);
     const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
 
@@ -183,12 +190,22 @@ export class UsageRollupService {
     await this.rollupMonthly(tenantId, year, month);
   }
 
-  private getOverageRate(plan: { overageExecutionsPrice?: number | null; overageAiTokensPrice?: number | null }, eventType: string): string | null {
+  private getOverageRate(
+    plan: {
+      overageExecutionsPrice?: number | null;
+      overageAiTokensPrice?: number | null;
+    },
+    eventType: string,
+  ): string | null {
     if (eventType === "workflow.execution" || eventType === "execution") {
-      return plan.overageExecutionsPrice != null ? String(plan.overageExecutionsPrice) : null;
+      return plan.overageExecutionsPrice != null
+        ? String(plan.overageExecutionsPrice)
+        : null;
     }
     if (eventType === "ai.token" || eventType === "token") {
-      return plan.overageAiTokensPrice != null ? String(plan.overageAiTokensPrice) : null;
+      return plan.overageAiTokensPrice != null
+        ? String(plan.overageAiTokensPrice)
+        : null;
     }
     return null;
   }

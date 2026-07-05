@@ -190,8 +190,18 @@ async function sendInitialState(
       workflowId: execution.workflowId,
       status: execution.status,
       triggerType: (execution as any).triggerType,
-      startedAt: execution.startedAt instanceof Date ? execution.startedAt.toISOString() : (execution.startedAt ? new Date(execution.startedAt).toISOString() : undefined),
-      finishedAt: execution.finishedAt instanceof Date ? execution.finishedAt.toISOString() : (execution.finishedAt ? new Date(execution.finishedAt).toISOString() : undefined),
+      startedAt:
+        execution.startedAt instanceof Date
+          ? execution.startedAt.toISOString()
+          : execution.startedAt
+            ? new Date(execution.startedAt).toISOString()
+            : undefined,
+      finishedAt:
+        execution.finishedAt instanceof Date
+          ? execution.finishedAt.toISOString()
+          : execution.finishedAt
+            ? new Date(execution.finishedAt).toISOString()
+            : undefined,
       durationMs: execution.durationMs,
       errorMessage: execution.errorMessage,
     },
@@ -216,8 +226,18 @@ async function sendInitialState(
         attemptNumber: (cp as any).attemptNumber ?? cp.attempt,
         durationMs: (cp as any).durationMs,
         errorMessage: (cp as any).errorMessage,
-        startedAt: (cp as any).startedAt instanceof Date ? (cp as any).startedAt.toISOString() : ((cp as any).startedAt ? new Date((cp as any).startedAt).toISOString() : undefined),
-        completedAt: (cp as any).completedAt instanceof Date ? (cp as any).completedAt.toISOString() : ((cp as any).completedAt ? new Date((cp as any).completedAt).toISOString() : undefined),
+        startedAt:
+          (cp as any).startedAt instanceof Date
+            ? (cp as any).startedAt.toISOString()
+            : (cp as any).startedAt
+              ? new Date((cp as any).startedAt).toISOString()
+              : undefined,
+        completedAt:
+          (cp as any).completedAt instanceof Date
+            ? (cp as any).completedAt.toISOString()
+            : (cp as any).completedAt
+              ? new Date((cp as any).completedAt).toISOString()
+              : undefined,
       },
     });
   }
@@ -227,7 +247,10 @@ async function sendInitialState(
   })) as any[];
 
   for (const approval of approvals) {
-    if (approval.status === "pending" && (approval as any).executionId === executionId) {
+    if (
+      approval.status === "pending" &&
+      (approval as any).executionId === executionId
+    ) {
       client.seq++;
       sendSSEEvent(res, {
         id: `${executionId}/${client.seq}`,
@@ -238,8 +261,16 @@ async function sendInitialState(
           nodeId: (approval as any).executionId,
           status: approval.status,
           approverId: approval.approverId,
-          createdAt: approval.createdAt instanceof Date ? approval.createdAt.toISOString() : new Date(approval.createdAt).toISOString(),
-          decidedAt: (approval as any).decidedAt instanceof Date ? (approval as any).decidedAt.toISOString() : ((approval as any).decidedAt ? new Date((approval as any).decidedAt).toISOString() : undefined),
+          createdAt:
+            approval.createdAt instanceof Date
+              ? approval.createdAt.toISOString()
+              : new Date(approval.createdAt).toISOString(),
+          decidedAt:
+            (approval as any).decidedAt instanceof Date
+              ? (approval as any).decidedAt.toISOString()
+              : (approval as any).decidedAt
+                ? new Date((approval as any).decidedAt).toISOString()
+                : undefined,
         },
       });
     }
@@ -430,12 +461,10 @@ router.get(
       dashboardIds.length === 0 &&
       !recipientId
     ) {
-      res
-        .status(400)
-        .json({
-          error:
-            "At least one subscription is required (executionIds, dashboardIds, or recipientId)",
-        });
+      res.status(400).json({
+        error:
+          "At least one subscription is required (executionIds, dashboardIds, or recipientId)",
+      });
       return;
     }
 

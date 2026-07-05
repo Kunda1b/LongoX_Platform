@@ -1,5 +1,8 @@
 import type { EmailRepository } from "../../domain/email/email-repository";
-import type { EmailMessage, SendEmailInput } from "../../domain/email/email.entity";
+import type {
+  EmailMessage,
+  SendEmailInput,
+} from "../../domain/email/email.entity";
 import type { EmailSender } from "../../infrastructure/email/ses-sender";
 
 export class SendEmailCommand {

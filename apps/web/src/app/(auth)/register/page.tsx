@@ -20,7 +20,8 @@ export default function RegisterPage() {
           </div>
           <CardTitle>Create your workspace</CardTitle>
           <CardDescription>
-            You&apos;ll be the <strong>Owner</strong> &mdash; invite your team once you&apos;re in.
+            You&apos;ll be the <strong>Owner</strong> &mdash; invite your team
+            once you&apos;re in.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -28,7 +28,11 @@ describe("Standard error envelope contract", () => {
       message: "3 validation errors",
       details: [
         { field: "name", message: "Required", code: "required" },
-        { field: "email", message: "Invalid email format", code: "invalid_format" },
+        {
+          field: "email",
+          message: "Invalid email format",
+          code: "invalid_format",
+        },
         { field: "age", message: "Must be >= 18", code: "min_value" },
       ],
       requestId: "req_abc123",

@@ -16,7 +16,10 @@
 
 import { Router, type Request, type Response } from "express";
 import { prisma } from "@longox/db/prisma";
-import { verifyScimWebhook, type WorkOSDirectoryUser } from "../lib/workos-auth";
+import {
+  verifyScimWebhook,
+  type WorkOSDirectoryUser,
+} from "../lib/workos-auth";
 
 const router = Router();
 
@@ -27,8 +30,7 @@ router.post(
   // We use express.raw() here to capture the raw body for HMAC verification.
   // app.ts must mount scimRouter BEFORE express.json() middleware.
   async (req: Request, res: Response): Promise<void> => {
-    const sigHeader =
-      req.headers["workos-signature"] as string | undefined;
+    const sigHeader = req.headers["workos-signature"] as string | undefined;
 
     if (!sigHeader) {
       res.status(400).json({ error: "Missing workos-signature header" });
@@ -44,7 +46,8 @@ router.post(
     try {
       event = verifyScimWebhook(rawBody, sigHeader);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Webhook verification failed";
+      const msg =
+        err instanceof Error ? err.message : "Webhook verification failed";
       res.status(401).json({ error: msg });
       return;
     }
@@ -87,7 +90,9 @@ async function handleScimEvent(event: {
   }
 }
 
-async function getPrimaryEmail(user: WorkOSDirectoryUser): Promise<string | null> {
+async function getPrimaryEmail(
+  user: WorkOSDirectoryUser,
+): Promise<string | null> {
   const primary = user.emails.find((e) => e.primary);
   return primary?.value ?? user.emails[0]?.value ?? null;
 }
@@ -114,7 +119,8 @@ async function handleUserCreated(dirUser: WorkOSDirectoryUser): Promise<void> {
     return;
   }
 
-  const name = [dirUser.firstName, dirUser.lastName].filter(Boolean).join(" ") ||
+  const name =
+    [dirUser.firstName, dirUser.lastName].filter(Boolean).join(" ") ||
     email.split("@")[0];
 
   await prisma.user.create({
@@ -145,7 +151,8 @@ async function handleUserUpdated(dirUser: WorkOSDirectoryUser): Promise<void> {
     return;
   }
 
-  const name = [dirUser.firstName, dirUser.lastName].filter(Boolean).join(" ") ||
+  const name =
+    [dirUser.firstName, dirUser.lastName].filter(Boolean).join(" ") ||
     email.split("@")[0];
 
   await prisma.user.update({

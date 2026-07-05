@@ -2,16 +2,17 @@
 
 ## Incident Classification
 
-| Severity | Description | Response Time | Examples |
-|----------|-------------|--------------|----------|
-| P0-Critical | Active data breach or unauthorized access | Immediate (< 5 min) | Credential leak, data exfiltration |
-| P1-High | Confirmed vulnerability with active exploitation | < 15 min | RCE, privilege escalation |
-| P2-Medium | Potential vulnerability or suspicious activity | < 60 min | Unusual API patterns, policy violations |
-| P3-Low | Minor security findings | < 24 hours | Non-sensitive misconfiguration |
+| Severity    | Description                                      | Response Time       | Examples                                |
+| ----------- | ------------------------------------------------ | ------------------- | --------------------------------------- |
+| P0-Critical | Active data breach or unauthorized access        | Immediate (< 5 min) | Credential leak, data exfiltration      |
+| P1-High     | Confirmed vulnerability with active exploitation | < 15 min            | RCE, privilege escalation               |
+| P2-Medium   | Potential vulnerability or suspicious activity   | < 60 min            | Unusual API patterns, policy violations |
+| P3-Low      | Minor security findings                          | < 24 hours          | Non-sensitive misconfiguration          |
 
 ## Breach Containment Procedures
 
 ### Step 1: Immediate Isolation (P0/P1 only)
+
 ```bash
 # 1. Revoke potentially compromised credentials
 curl -X POST https://api.longox.ai/api/v1/credentials/revoke-all \
@@ -35,6 +36,7 @@ kubectl create secret generic longox-api-tokens \
 ```
 
 ### Step 2: Evidence Collection
+
 ```bash
 # 1. Capture current state
 kubectl get pods --all-namespaces -o yaml > evidence/pods-$(date +%s).yaml
@@ -54,6 +56,7 @@ kubectl logs -n longox -l app=api-gateway --tail=10000 > evidence/gateway-logs.t
 ```
 
 ### Step 3: Deploy Hotfix
+
 ```bash
 # 1. Apply emergency security patch
 kubectl apply -f infrastructure/kubernetes/emergency/blocklist.yaml
@@ -73,6 +76,7 @@ kubectl rollout status deployment/api-gateway -n longox --timeout=120s
 ## Forensic Analysis
 
 ### Audit Trail Review
+
 ```bash
 # Check for unauthorized access patterns
 curl -s "https://api.longox.ai/api/v1/audit?actions=user.login,failed_login,api.access" \
@@ -80,6 +84,7 @@ curl -s "https://api.longox.ai/api/v1/audit?actions=user.login,failed_login,api.
 ```
 
 ### Compliance Evidence Recording
+
 ```bash
 # Record evidence with compliance service
 curl -X POST https://api.longox.ai/api/v1/compliance/evidence \
@@ -97,6 +102,7 @@ curl -X POST https://api.longox.ai/api/v1/compliance/evidence \
 ```
 
 ### Log Analysis
+
 ```bash
 # Check for data exfiltration patterns
 cat evidence/gateway-logs.txt | \
@@ -113,6 +119,7 @@ cat evidence/audit-logs.json | jq -r \
 ## Communication Templates
 
 ### Initial Alert
+
 ```text
 SECURITY INCIDENT: P${SEVERITY} - ${TITLE}
 Time Detected: ${TIMESTAMP}
@@ -123,6 +130,7 @@ Next Update: ${NEXT_UPDATE}
 ```
 
 ### Status Update
+
 ```text
 SECURITY UPDATE: ${INCIDENT_ID}
 Status: ${CONTAINING | INVESTIGATING | RESOLVED}
@@ -133,6 +141,7 @@ Remaining Actions: ${REMAINING_ACTIONS}
 ```
 
 ### Resolution Notice
+
 ```text
 SECURITY RESOLUTION: ${INCIDENT_ID}
 Resolved At: ${TIMESTAMP}
@@ -145,6 +154,7 @@ Post-Mortem Scheduled: ${POST_MORTEM_DATE}
 ## Post-Incident Recovery
 
 ### Step 1: Restore Normal Operations
+
 ```bash
 # 1. Remove emergency blocks
 kubectl delete -f infrastructure/kubernetes/emergency/blocklist.yaml
@@ -159,6 +169,7 @@ curl -s https://api.longox.ai/healthz | jq .
 ```
 
 ### Step 2: Apply Permanent Fixes
+
 ```bash
 # 1. Deploy security improvements
 helm upgrade longox-platform infrastructure/helm/longox \
@@ -171,12 +182,14 @@ aws wafv2 update-web-acl --name longox-waf \
 ```
 
 ### Step 3: Update Security Posture
+
 - Rotate all service credentials
 - Update incident response plan with findings
 - Implement additional monitoring rules
 - Schedule security audit
 
 ## Post-Mortem Checklist
+
 - [ ] Root cause identified and documented
 - [ ] Timeline of events reconstructed
 - [ ] All evidence preserved with chain of custody
@@ -188,6 +201,7 @@ aws wafv2 update-web-acl --name longox-waf \
 - [ ] Team debrief conducted within 48 hours
 
 ## Related Resources
+
 - compliance-evidence.md — Evidence recording procedures
 - gdpr-requests.md — GDPR breach notification procedures
 - audit-exports.md — Audit log export procedures

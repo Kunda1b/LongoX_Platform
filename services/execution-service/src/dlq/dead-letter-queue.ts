@@ -49,9 +49,10 @@ export class DeadLetterQueue {
     });
 
     if (!workflowId) return rows;
-    return rows.filter((r: any) =>
-      r.payloadJson?.workflowId === workflowId ||
-      (r as any).workflowId === workflowId,
+    return rows.filter(
+      (r: any) =>
+        r.payloadJson?.workflowId === workflowId ||
+        (r as any).workflowId === workflowId,
     );
   }
 

@@ -117,7 +117,11 @@ export class InstallConnectorCommand {
       connectorId: (row as any).connectorId,
       connectorName: connector.displayName ?? connector.name,
       environmentId: undefined,
-      status: (row as any).status as "installing" | "active" | "error" | "removed",
+      status: (row as any).status as
+        | "installing"
+        | "active"
+        | "error"
+        | "removed",
       config: ((row as any).config ?? {}) as Record<string, unknown>,
       installedBy: String((row as any).installedBy ?? input.installedBy ?? ""),
       createdAt: (row as any).createdAt,

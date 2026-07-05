@@ -87,18 +87,29 @@ export function PromotionHistory() {
                 <span className="text-sm font-medium truncate">
                   {p.workflowName}
                 </span>
-                <Badge variant={getStatusColor(p.status)} className="text-xs capitalize">
+                <Badge
+                  variant={getStatusColor(p.status)}
+                  className="text-xs capitalize"
+                >
                   {p.status.replace("_", " ")}
                 </Badge>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                <Badge variant="outline" className="text-xs">{p.fromEnvironment}</Badge>
+                <Badge variant="outline" className="text-xs">
+                  {p.fromEnvironment}
+                </Badge>
                 <ArrowRight className="h-3 w-3" />
-                <Badge variant="outline" className="text-xs">{p.toEnvironment}</Badge>
+                <Badge variant="outline" className="text-xs">
+                  {p.toEnvironment}
+                </Badge>
                 <span className="mx-1">&middot;</span>
                 <span>by {p.promotedBy}</span>
                 <span className="mx-1">&middot;</span>
-                <span>{formatDistanceToNow(new Date(p.createdAt), { addSuffix: true })}</span>
+                <span>
+                  {formatDistanceToNow(new Date(p.createdAt), {
+                    addSuffix: true,
+                  })}
+                </span>
               </div>
               {p.notes && (
                 <p className="text-xs text-muted-foreground mt-1 italic">

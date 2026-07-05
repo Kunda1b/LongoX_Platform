@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useListConnectors, customFetch, getListCredentialsQueryKey } from "@longox/api-client-react";
+import {
+  useListConnectors,
+  customFetch,
+  getListCredentialsQueryKey,
+} from "@longox/api-client-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,7 +39,9 @@ export function AddCredentialDialog() {
   const { toast } = useToast();
   const { data: connectors } = useListConnectors();
 
-  const selectedConnector = connectors?.find(c => String(c.id) === connectorId);
+  const selectedConnector = connectors?.find(
+    (c) => String(c.id) === connectorId,
+  );
 
   const reset = () => {
     setName("");
@@ -45,7 +51,10 @@ export function AddCredentialDialog() {
 
   const handleSubmit = async () => {
     if (!name || !connectorId) {
-      toast({ title: "Name and connector are required", variant: "destructive" });
+      toast({
+        title: "Name and connector are required",
+        variant: "destructive",
+      });
       return;
     }
     setLoading(true);
@@ -87,7 +96,11 @@ export function AddCredentialDialog() {
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>Name</Label>
-            <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Production DB" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Production DB"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Connector Type</Label>
@@ -96,7 +109,7 @@ export function AddCredentialDialog() {
                 <SelectValue placeholder="Select connector" />
               </SelectTrigger>
               <SelectContent>
-                {connectors?.map(c => (
+                {connectors?.map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>
                     {c.displayName || c.name}
                   </SelectItem>
@@ -104,17 +117,20 @@ export function AddCredentialDialog() {
               </SelectContent>
             </Select>
           </div>
-          {selectedConnector && (selectedConnector as any).authFields?.map((field: string) => (
-            <div key={field} className="space-y-1.5">
-              <Label>{field}</Label>
-              <Input
-                type="password"
-                value={fields[field] ?? ""}
-                onChange={e => setFields(prev => ({ ...prev, [field]: e.target.value }))}
-                placeholder={`Enter ${field}`}
-              />
-            </div>
-          ))}
+          {selectedConnector &&
+            (selectedConnector as any).authFields?.map((field: string) => (
+              <div key={field} className="space-y-1.5">
+                <Label>{field}</Label>
+                <Input
+                  type="password"
+                  value={fields[field] ?? ""}
+                  onChange={(e) =>
+                    setFields((prev) => ({ ...prev, [field]: e.target.value }))
+                  }
+                  placeholder={`Enter ${field}`}
+                />
+              </div>
+            ))}
           {selectedConnector && !(selectedConnector as any).authFields && (
             <>
               <div className="space-y-1.5">
@@ -122,7 +138,9 @@ export function AddCredentialDialog() {
                 <Input
                   type="password"
                   value={fields.apiKey ?? ""}
-                  onChange={e => setFields(prev => ({ ...prev, apiKey: e.target.value }))}
+                  onChange={(e) =>
+                    setFields((prev) => ({ ...prev, apiKey: e.target.value }))
+                  }
                   placeholder="Enter API key"
                 />
               </div>
@@ -131,7 +149,9 @@ export function AddCredentialDialog() {
                 <Input
                   type="password"
                   value={fields.secret ?? ""}
-                  onChange={e => setFields(prev => ({ ...prev, secret: e.target.value }))}
+                  onChange={(e) =>
+                    setFields((prev) => ({ ...prev, secret: e.target.value }))
+                  }
                   placeholder="Enter secret"
                 />
               </div>
@@ -139,7 +159,15 @@ export function AddCredentialDialog() {
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => { setOpen(false); reset(); }}>Cancel</Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setOpen(false);
+              reset();
+            }}
+          >
+            Cancel
+          </Button>
           <Button onClick={handleSubmit} disabled={loading}>
             {loading ? "Saving..." : "Save Credential"}
           </Button>

@@ -50,12 +50,16 @@ export default function CompliancePage() {
                     <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
                       <Icon className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <Badge variant="secondary" className="text-xs">{item.status}</Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {item.status}
+                    </Badge>
                   </div>
                   <CardTitle className="text-sm mt-3">{item.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-xs text-muted-foreground">{item.description}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.description}
+                  </p>
                   <div className="flex items-center gap-1 mt-3 text-xs font-medium text-primary">
                     <span>Open</span>
                     <ChevronRight className="h-3 w-3" />

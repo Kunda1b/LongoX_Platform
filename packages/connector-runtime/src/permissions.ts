@@ -23,8 +23,14 @@ export interface PermissionSet {
   userId: string;
 }
 
-export function canAccess(permissions: PermissionSet, requiredScope: PermissionScope): boolean {
-  return permissions.scopes.includes(requiredScope) || permissions.scopes.includes("*" as any);
+export function canAccess(
+  permissions: PermissionSet,
+  requiredScope: PermissionScope,
+): boolean {
+  return (
+    permissions.scopes.includes(requiredScope) ||
+    permissions.scopes.includes("*" as any)
+  );
 }
 
 export function validatePermissionScopes(

@@ -10,8 +10,10 @@ description: Using an unverified sending domain in Resend returns 403. Default t
 **Why:** Resend validates the sending domain on every send. An unverified domain returns `403 validation_error` — the error is only logged server-side, so users never see it and emails silently vanish.
 
 **How to apply:**
+
 ```ts
 from: process.env.RESEND_FROM_EMAIL ?? "LongoX <onboarding@resend.dev>",
 ```
+
 - `RESEND_FROM_EMAIL` should be set to `"Brand <noreply@yourdomain.com>"` only after verifying the domain at https://resend.com/domains.
 - `onboarding@resend.dev` can only send to the Resend account owner's email in test mode; for production use a verified domain.

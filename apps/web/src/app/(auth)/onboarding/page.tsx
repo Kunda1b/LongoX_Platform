@@ -42,12 +42,18 @@ export default function OnboardingPage() {
 
   const canProceed = () => {
     switch (step) {
-      case 0: return orgName.trim().length > 0 && orgSlug.trim().length > 0;
-      case 1: return teamSize.length > 0;
-      case 2: return true;
-      case 3: return acceptRetention;
-      case 4: return true;
-      default: return true;
+      case 0:
+        return orgName.trim().length > 0 && orgSlug.trim().length > 0;
+      case 1:
+        return teamSize.length > 0;
+      case 2:
+        return true;
+      case 3:
+        return acceptRetention;
+      case 4:
+        return true;
+      default:
+        return true;
     }
   };
 
@@ -92,7 +98,9 @@ export default function OnboardingPage() {
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-xl font-bold text-primary-foreground">
             LX
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Welcome to LongoX</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Welcome to LongoX
+          </h1>
           <p className="text-sm text-muted-foreground">
             Set up your enterprise workspace in minutes
           </p>
@@ -105,7 +113,10 @@ export default function OnboardingPage() {
               const isActive = i === step;
               const isDone = i < step;
               return (
-                <div key={s.id} className="flex flex-col items-center px-0.5 sm:px-0">
+                <div
+                  key={s.id}
+                  className="flex flex-col items-center px-0.5 sm:px-0"
+                >
                   <div
                     className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors sm:h-10 sm:w-10 ${
                       isDone
@@ -159,7 +170,9 @@ export default function OnboardingPage() {
             {step === 0 && (
               <>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Organization Name</label>
+                  <label className="text-sm font-medium">
+                    Organization Name
+                  </label>
                   <Input
                     value={orgName}
                     onChange={(e) => setOrgName(e.target.value)}
@@ -170,11 +183,16 @@ export default function OnboardingPage() {
                   <label className="text-sm font-medium">Workspace Slug</label>
                   <Input
                     value={orgSlug}
-                    onChange={(e) => setOrgSlug(e.target.value.toLowerCase().replace(/\s+/g, "-"))}
+                    onChange={(e) =>
+                      setOrgSlug(
+                        e.target.value.toLowerCase().replace(/\s+/g, "-"),
+                      )
+                    }
                     placeholder="acme"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Your workspace URL: https://app.longox.io/{orgSlug || "workspace"}
+                    Your workspace URL: https://app.longox.io/
+                    {orgSlug || "workspace"}
                   </p>
                 </div>
               </>
@@ -182,34 +200,49 @@ export default function OnboardingPage() {
 
             {step === 1 && (
               <div className="grid grid-cols-3 gap-3">
-                {["1-10", "10-50", "50-200", "200-1000", "1000+"].map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    className={`rounded-lg border p-4 text-center transition-colors ${
-                      teamSize === size
-                        ? "border-primary bg-primary/5"
-                        : "hover:border-muted-foreground/30"
-                    }`}
-                    onClick={() => setTeamSize(size)}
-                  >
-                    <Users className="mx-auto mb-1 h-5 w-5 text-muted-foreground" />
-                    <span className="text-sm font-medium">{size}</span>
-                  </button>
-                ))}
+                {["1-10", "10-50", "50-200", "200-1000", "1000+"].map(
+                  (size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      className={`rounded-lg border p-4 text-center transition-colors ${
+                        teamSize === size
+                          ? "border-primary bg-primary/5"
+                          : "hover:border-muted-foreground/30"
+                      }`}
+                      onClick={() => setTeamSize(size)}
+                    >
+                      <Users className="mx-auto mb-1 h-5 w-5 text-muted-foreground" />
+                      <span className="text-sm font-medium">{size}</span>
+                    </button>
+                  ),
+                )}
               </div>
             )}
 
             {step === 2 && (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Choose an SSO provider for your organization. You can configure this later in Settings.
+                  Choose an SSO provider for your organization. You can
+                  configure this later in Settings.
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { id: "saml", label: "SAML 2.0", desc: "Any SAML-compliant IdP" },
-                    { id: "oidc", label: "OpenID Connect", desc: "Generic OIDC provider" },
-                    { id: "azure_ad", label: "Azure AD", desc: "Microsoft Entra ID" },
+                    {
+                      id: "saml",
+                      label: "SAML 2.0",
+                      desc: "Any SAML-compliant IdP",
+                    },
+                    {
+                      id: "oidc",
+                      label: "OpenID Connect",
+                      desc: "Generic OIDC provider",
+                    },
+                    {
+                      id: "azure_ad",
+                      label: "Azure AD",
+                      desc: "Microsoft Entra ID",
+                    },
                     { id: "okta", label: "Okta", desc: "Okta Identity Cloud" },
                   ].map((p) => (
                     <button
@@ -230,7 +263,8 @@ export default function OnboardingPage() {
                 <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3">
                   <Settings className="h-4 w-4 text-muted-foreground" />
                   <p className="text-xs text-muted-foreground">
-                    You can skip this and configure SSO later in Settings &rarr; SSO
+                    You can skip this and configure SSO later in Settings &rarr;
+                    SSO
                   </p>
                 </div>
               </div>
@@ -239,7 +273,9 @@ export default function OnboardingPage() {
             {step === 3 && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Data Residency Region</label>
+                  <label className="text-sm font-medium">
+                    Data Residency Region
+                  </label>
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       { id: "us", label: "United States" },
@@ -271,9 +307,13 @@ export default function OnboardingPage() {
                     onChange={(e) => setAcceptRetention(e.target.checked)}
                     className="mt-0.5 h-4 w-4 rounded border-gray-300"
                   />
-                  <label htmlFor="retention" className="text-sm text-muted-foreground">
-                    I agree to the data retention policy. Audit logs will be retained for 90 days,
-                    and user data will be handled in accordance with GDPR and applicable regulations.
+                  <label
+                    htmlFor="retention"
+                    className="text-sm text-muted-foreground"
+                  >
+                    I agree to the data retention policy. Audit logs will be
+                    retained for 90 days, and user data will be handled in
+                    accordance with GDPR and applicable regulations.
                   </label>
                 </div>
               </div>
@@ -284,9 +324,12 @@ export default function OnboardingPage() {
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                   <Check className="h-8 w-8 text-primary" />
                 </div>
-                <h3 className="text-lg font-semibold">Your workspace is ready!</h3>
+                <h3 className="text-lg font-semibold">
+                  Your workspace is ready!
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  You can now start building workflows, invite your team, and configure integrations.
+                  You can now start building workflows, invite your team, and
+                  configure integrations.
                 </p>
               </div>
             )}

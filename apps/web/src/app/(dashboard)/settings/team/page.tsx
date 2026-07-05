@@ -158,7 +158,10 @@ export default function TeamPage() {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteSuccess, setInviteSuccess] = useState(false);
 
-  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -183,7 +186,12 @@ export default function TeamPage() {
         );
         setSystemRoles(assignable);
         if (assignable.length > 0 && !inviteRoleId) {
-          setInviteRoleId(String(assignable.find((r) => r.name.toLowerCase() === "builder")?.id ?? assignable[0]?.id));
+          setInviteRoleId(
+            String(
+              assignable.find((r) => r.name.toLowerCase() === "builder")?.id ??
+                assignable[0]?.id,
+            ),
+          );
         }
       }
     } catch (err) {
@@ -206,7 +214,10 @@ export default function TeamPage() {
       const res = await fetch(`${API}/invitations`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ email: inviteEmail.trim(), roleId: String(inviteRoleId) }),
+        body: JSON.stringify({
+          email: inviteEmail.trim(),
+          roleId: String(inviteRoleId),
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -220,7 +231,9 @@ export default function TeamPage() {
         setInviteSuccess(false);
       }, 2000);
     } catch (err) {
-      setInviteError(err instanceof Error ? err.message : "Failed to send invitation");
+      setInviteError(
+        err instanceof Error ? err.message : "Failed to send invitation",
+      );
     } finally {
       setInviting(false);
     }
@@ -243,7 +256,9 @@ export default function TeamPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="text-sm text-muted-foreground">Loading team members…</div>
+        <div className="text-sm text-muted-foreground">
+          Loading team members…
+        </div>
       </div>
     );
   }
@@ -286,12 +301,16 @@ export default function TeamPage() {
               key={key}
               className="rounded-lg border bg-card p-4 flex items-start gap-3"
             >
-              <div className={`mt-0.5 rounded-md p-1.5 ${cfg.color.replace("text-", "bg-").split(" ")[0]}/20`}>
+              <div
+                className={`mt-0.5 rounded-md p-1.5 ${cfg.color.replace("text-", "bg-").split(" ")[0]}/20`}
+              >
                 <Icon className="h-4 w-4" />
               </div>
               <div>
                 <p className="text-sm font-medium">{cfg.label}</p>
-                <p className="text-xs text-muted-foreground">{count} member{count !== 1 ? "s" : ""}</p>
+                <p className="text-xs text-muted-foreground">
+                  {count} member{count !== 1 ? "s" : ""}
+                </p>
               </div>
             </div>
           );
@@ -307,12 +326,22 @@ export default function TeamPage() {
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/30">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">User</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Role</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Joined</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Last active</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  User
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  Role
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">
+                  Joined
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">
+                  Last active
+                </th>
                 <PermissionGate permission="users:write">
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                    Actions
+                  </th>
                 </PermissionGate>
               </tr>
             </thead>
@@ -321,26 +350,41 @@ export default function TeamPage() {
                 const isMe = String(member.userId) === String(user?.id);
                 const isOwner = member.role?.name.toLowerCase() === "owner";
                 return (
-                  <tr key={member.userId} className="hover:bg-muted/20 transition-colors">
+                  <tr
+                    key={member.userId}
+                    className="hover:bg-muted/20 transition-colors"
+                  >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <MemberInitials name={member.name} avatarUrl={member.avatarUrl} />
+                        <MemberInitials
+                          name={member.name}
+                          avatarUrl={member.avatarUrl}
+                        />
                         <div className="min-w-0">
                           <p className="font-medium truncate">
                             {member.name}
                             {isMe && (
-                              <span className="ml-1.5 text-[10px] text-muted-foreground font-normal">(you)</span>
+                              <span className="ml-1.5 text-[10px] text-muted-foreground font-normal">
+                                (you)
+                              </span>
                             )}
                           </p>
-                          <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {member.email}
+                          </p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      {isAtLeast("admin") && !isMe && !isOwner && systemRoles.length > 0 ? (
+                      {isAtLeast("admin") &&
+                      !isMe &&
+                      !isOwner &&
+                      systemRoles.length > 0 ? (
                         <Select
                           value={String(member.role?.id ?? "")}
-                          onValueChange={(v) => handleRoleChange(member.userId as any, v)}
+                          onValueChange={(v) =>
+                            handleRoleChange(member.userId as any, v)
+                          }
                         >
                           <SelectTrigger className="h-7 w-32 text-xs">
                             <SelectValue />
@@ -348,7 +392,8 @@ export default function TeamPage() {
                           <SelectContent>
                             {systemRoles.map((r) => (
                               <SelectItem key={r.id} value={String(r.id)}>
-                                {r.name.charAt(0).toUpperCase() + r.name.slice(1)}
+                                {r.name.charAt(0).toUpperCase() +
+                                  r.name.slice(1)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -397,18 +442,31 @@ export default function TeamPage() {
             <table className="w-full text-sm">
               <thead className="border-b bg-muted/30">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Email</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Role</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Invited by</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Expires</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    Email
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    Role
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">
+                    Invited by
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">
+                    Expires
+                  </th>
                   <PermissionGate permission="users:write">
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                      Actions
+                    </th>
                   </PermissionGate>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {invitations.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-muted/20 transition-colors">
+                  <tr
+                    key={inv.id}
+                    className="hover:bg-muted/20 transition-colors"
+                  >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
@@ -464,7 +522,9 @@ export default function TeamPage() {
                   <Icon className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium text-sm">{cfg.label}</span>
                 </div>
-                <p className="text-xs text-muted-foreground">{cfg.description}</p>
+                <p className="text-xs text-muted-foreground">
+                  {cfg.description}
+                </p>
               </div>
             );
           })}
@@ -472,12 +532,20 @@ export default function TeamPage() {
       </section>
 
       {/* Invite dialog */}
-      <Dialog open={inviteOpen} onOpenChange={(o) => { setInviteOpen(o); setInviteError(null); setInviteSuccess(false); }}>
+      <Dialog
+        open={inviteOpen}
+        onOpenChange={(o) => {
+          setInviteOpen(o);
+          setInviteError(null);
+          setInviteSuccess(false);
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Invite team member</DialogTitle>
             <DialogDescription>
-              Send an invitation email with a role assignment. The link expires in 7 days.
+              Send an invitation email with a role assignment. The link expires
+              in 7 days.
             </DialogDescription>
           </DialogHeader>
           {inviteSuccess ? (
@@ -493,7 +561,9 @@ export default function TeamPage() {
           ) : (
             <form onSubmit={handleInvite} className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-sm font-medium">Email address</label>
+                <label className="mb-1.5 block text-sm font-medium">
+                  Email address
+                </label>
                 <Input
                   type="email"
                   placeholder="colleague@company.com"
@@ -519,7 +589,9 @@ export default function TeamPage() {
                               {r.name.charAt(0).toUpperCase() + r.name.slice(1)}
                             </p>
                             {cfg && (
-                              <p className="text-xs text-muted-foreground">{cfg.description}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {cfg.description}
+                              </p>
                             )}
                           </div>
                         </SelectItem>
@@ -532,10 +604,17 @@ export default function TeamPage() {
                 <p className="text-sm text-destructive">{inviteError}</p>
               )}
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setInviteOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setInviteOpen(false)}
+                >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={inviting || !inviteEmail || !inviteRoleId}>
+                <Button
+                  type="submit"
+                  disabled={inviting || !inviteEmail || !inviteRoleId}
+                >
                   {inviting ? "Sending…" : "Send invitation"}
                 </Button>
               </DialogFooter>

@@ -25,13 +25,19 @@ export interface AgentConfig {
 export interface AgentToolDefinition {
   name: string;
   description: string;
-  parameters: Record<string, {
-    type: string;
-    description: string;
-    required?: boolean;
-    enum?: string[];
-  }>;
-  handler: (args: Record<string, unknown>, context: AgentContext) => Promise<unknown>;
+  parameters: Record<
+    string,
+    {
+      type: string;
+      description: string;
+      required?: boolean;
+      enum?: string[];
+    }
+  >;
+  handler: (
+    args: Record<string, unknown>,
+    context: AgentContext,
+  ) => Promise<unknown>;
 }
 
 export interface AgentContext {

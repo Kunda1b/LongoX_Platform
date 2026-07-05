@@ -23,26 +23,21 @@ describe("ModerationService - scrubPII", () => {
   });
 
   it("redacts SSNs", async () => {
-    const result = await service.scrubPII(
-      "My SSN is 123-45-6789.",
-      ["ssn"],
-    );
+    const result = await service.scrubPII("My SSN is 123-45-6789.", ["ssn"]);
     expect(result).not.toContain("123-45-6789");
   });
 
   it("redacts credit card numbers", async () => {
-    const result = await service.scrubPII(
-      "Card: 4111-1111-1111-1111",
-      ["credit_card"],
-    );
+    const result = await service.scrubPII("Card: 4111-1111-1111-1111", [
+      "credit_card",
+    ]);
     expect(result).not.toContain("4111-1111-1111-1111");
   });
 
   it("redacts IP addresses", async () => {
-    const result = await service.scrubPII(
-      "Access from 192.168.1.1",
-      ["ip_address"],
-    );
+    const result = await service.scrubPII("Access from 192.168.1.1", [
+      "ip_address",
+    ]);
     expect(result).not.toContain("192.168.1.1");
   });
 
@@ -56,10 +51,9 @@ describe("ModerationService - scrubPII", () => {
   });
 
   it("returns original text when no PII matches", async () => {
-    const result = await service.scrubPII(
-      "This is safe text with no PII.",
-      ["email"],
-    );
+    const result = await service.scrubPII("This is safe text with no PII.", [
+      "email",
+    ]);
     expect(result).toBe("This is safe text with no PII.");
   });
 
@@ -69,11 +63,7 @@ describe("ModerationService - scrubPII", () => {
   });
 
   it("uses custom replacement string", async () => {
-    const result = await service.scrubPII(
-      "Email: a@b.com",
-      ["email"],
-      "***",
-    );
+    const result = await service.scrubPII("Email: a@b.com", ["email"], "***");
     expect(result).toBe("Email: ***");
   });
 });

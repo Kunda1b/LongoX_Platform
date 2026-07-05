@@ -9,7 +9,12 @@
  * a standalone SagaCoordinator for unit-testing compensation logic.
  */
 
-import type { SagaEntry, ExecutionContext, NodeExecutor, WorkflowNode } from "./types";
+import type {
+  SagaEntry,
+  ExecutionContext,
+  NodeExecutor,
+  WorkflowNode,
+} from "./types";
 
 // ─── SagaCoordinator ──────────────────────────────────────────────────────────
 

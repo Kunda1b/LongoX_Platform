@@ -24,28 +24,29 @@ Execute a three-phase migration from Drizzle to Prisma across all services.
 
 Migrate services one at a time, starting with those that only use `shared-db`:
 
-| Service | Drizzle Scope | Prisma Migration Effort | Priority |
-|---|---|---|---|
-| shared-db | Full schema re-export | 2d (base layer) | P0 |
-| auth-service | users, memberships, sessions | 1d | P0 |
-| workflow-service | workflows, versions, diffs | 2d | P0 |
-| execution-service | executions, checkpoints, leases | 2d | P0 |
-| connector-service | connectors, versions, installs | 1d | P1 |
-| billing-service | plans, invoices, usage | 1d | P1 |
-| metering-service | metering_events, rollups | 0.5d | P1 |
-| notification-service | notifications, templates | 0.5d | P1 |
-| audit-service | audit_logs | 0.5d | P1 |
-| ai-service | models, prompts, eval, rag | 2d | P1 |
-| scheduler-service | schedules | 0.5d | P1 |
-| dashboard-service | dashboards, widgets | 1d | P2 |
-| datasource-service | data_sources | 0.5d | P2 |
-| template-service | templates, versions | 0.5d | P2 |
-| search-service | search_index, suggestions | 0.5d | P2 |
-| marketplace-service | listings, installs, reviews | 1d | P2 |
-| compliance-service | evidence, gdpr | 0.5d | P2 |
-| admin-frontend | (none — API only) | 0d | P3 |
+| Service              | Drizzle Scope                   | Prisma Migration Effort | Priority |
+| -------------------- | ------------------------------- | ----------------------- | -------- |
+| shared-db            | Full schema re-export           | 2d (base layer)         | P0       |
+| auth-service         | users, memberships, sessions    | 1d                      | P0       |
+| workflow-service     | workflows, versions, diffs      | 2d                      | P0       |
+| execution-service    | executions, checkpoints, leases | 2d                      | P0       |
+| connector-service    | connectors, versions, installs  | 1d                      | P1       |
+| billing-service      | plans, invoices, usage          | 1d                      | P1       |
+| metering-service     | metering_events, rollups        | 0.5d                    | P1       |
+| notification-service | notifications, templates        | 0.5d                    | P1       |
+| audit-service        | audit_logs                      | 0.5d                    | P1       |
+| ai-service           | models, prompts, eval, rag      | 2d                      | P1       |
+| scheduler-service    | schedules                       | 0.5d                    | P1       |
+| dashboard-service    | dashboards, widgets             | 1d                      | P2       |
+| datasource-service   | data_sources                    | 0.5d                    | P2       |
+| template-service     | templates, versions             | 0.5d                    | P2       |
+| search-service       | search_index, suggestions       | 0.5d                    | P2       |
+| marketplace-service  | listings, installs, reviews     | 1d                      | P2       |
+| compliance-service   | evidence, gdpr                  | 0.5d                    | P2       |
+| admin-frontend       | (none — API only)               | 0d                      | P3       |
 
 **Strategy per service:**
+
 1. Add `PrismaService` wrapper alongside existing Drizzle client
 2. Migrate read queries first (SELECT) while writes still use Drizzle
 3. Migrate write queries in the same PR

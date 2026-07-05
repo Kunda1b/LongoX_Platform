@@ -22,7 +22,8 @@ export function getAuthKitAuthorizationUrl(opts: {
 
   const params = new URLSearchParams({
     client_id: config.clientId,
-    redirect_uri: opts.redirectUri ?? `${window.location.origin}/auth/workos/callback`,
+    redirect_uri:
+      opts.redirectUri ?? `${window.location.origin}/auth/workos/callback`,
     response_type: "code",
     provider: "authkit",
   });

@@ -15,7 +15,9 @@ describe("Auth login + MFA integration", () => {
   });
 
   it("RBAC module enforces session permissions via middleware", async () => {
-    const { authorize } = await import("@longox/shared-rbac").catch(() => ({} as any));
+    const { authorize } = await import("@longox/shared-rbac").catch(
+      () => ({}) as any,
+    );
     if (typeof authorize === "function") {
       const middleware = authorize("workflows:read");
       expect(middleware).toBeInstanceOf(Function);
@@ -23,7 +25,9 @@ describe("Auth login + MFA integration", () => {
   });
 
   it("audit event is created for auth actions", async () => {
-    const { createEventEnvelope } = await import("@longox/shared-types").catch(() => ({} as any));
+    const { createEventEnvelope } = await import("@longox/shared-types").catch(
+      () => ({}) as any,
+    );
     if (typeof createEventEnvelope === "function") {
       const auditEvent = createEventEnvelope("audit.action.executed", {
         auditEntryId: 1,
@@ -40,8 +44,10 @@ describe("Auth login + MFA integration", () => {
 
 describe("Workflow publish/run/retry integration", () => {
   it("workflow can be validated, published, and executed", async () => {
-    const engine = await import("@longox/workflow-engine").catch(() => ({} as any));
-    const types = await import("@longox/shared-types").catch(() => ({} as any));
+    const engine = await import("@longox/workflow-engine").catch(
+      () => ({}) as any,
+    );
+    const types = await import("@longox/shared-types").catch(() => ({}) as any);
 
     if (engine.validateGraphContract && types.createEventEnvelope) {
       expect(typeof engine.validateGraphContract).toBe("function");
@@ -51,19 +57,38 @@ describe("Workflow publish/run/retry integration", () => {
   });
 
   it("execution events are emitted through lifecycle", async () => {
-    const { createEventEnvelope } = await import("@longox/shared-types").catch(() => ({} as any));
+    const { createEventEnvelope } = await import("@longox/shared-types").catch(
+      () => ({}) as any,
+    );
     if (typeof createEventEnvelope === "function") {
-      const startEvent = createEventEnvelope("execution.started", { executionId: 1, workflowId: 1 });
-      const completeEvent = createEventEnvelope("execution.completed", { executionId: 1, workflowId: 1, durationMs: 1000, totalNodes: 3, status: "success" });
+      const startEvent = createEventEnvelope("execution.started", {
+        executionId: 1,
+        workflowId: 1,
+      });
+      const completeEvent = createEventEnvelope("execution.completed", {
+        executionId: 1,
+        workflowId: 1,
+        durationMs: 1000,
+        totalNodes: 3,
+        status: "success",
+      });
       expect(startEvent.type).toBe("execution.started");
       expect(completeEvent.data.status).toBe("success");
     }
   });
 
   it("retry events include attempt number", async () => {
-    const { createEventEnvelope } = await import("@longox/shared-types").catch(() => ({} as any));
+    const { createEventEnvelope } = await import("@longox/shared-types").catch(
+      () => ({}) as any,
+    );
     if (typeof createEventEnvelope === "function") {
-      const retryEvent = createEventEnvelope("execution.node.failed", { executionId: 1, nodeId: "n1", status: "failed", retryAttempt: 2, durationMs: 500 });
+      const retryEvent = createEventEnvelope("execution.node.failed", {
+        executionId: 1,
+        nodeId: "n1",
+        status: "failed",
+        retryAttempt: 2,
+        durationMs: 500,
+      });
       expect(retryEvent.data.retryAttempt).toBe(2);
     }
   });
@@ -71,18 +96,35 @@ describe("Workflow publish/run/retry integration", () => {
 
 describe("Human approval pause/resume integration", () => {
   it("approval gate metadata exists in workflow contracts", async () => {
-    const { ApprovalGateMetadata } = await import("@longox/workflow-engine").catch(() => ({} as any));
+    const { ApprovalGateMetadata } = await import(
+      "@longox/workflow-engine"
+    ).catch(() => ({}) as any);
     if (ApprovalGateMetadata) {
       expect(ApprovalGateMetadata).toBeTruthy();
     }
   });
 
   it("approval events exist for required/granted/rejected", async () => {
-    const { createEventEnvelope } = await import("@longox/shared-types").catch(() => ({} as any));
+    const { createEventEnvelope } = await import("@longox/shared-types").catch(
+      () => ({}) as any,
+    );
     if (typeof createEventEnvelope === "function") {
-      const required = createEventEnvelope("execution.approval.required", { executionId: 1, nodeId: "n1" });
-      const granted = createEventEnvelope("execution.approval.granted", { executionId: 1, nodeId: "n1", approvalTaskId: 42, decision: "approved" });
-      const rejected = createEventEnvelope("execution.approval.rejected", { executionId: 1, nodeId: "n1", approvalTaskId: 42, decision: "rejected" });
+      const required = createEventEnvelope("execution.approval.required", {
+        executionId: 1,
+        nodeId: "n1",
+      });
+      const granted = createEventEnvelope("execution.approval.granted", {
+        executionId: 1,
+        nodeId: "n1",
+        approvalTaskId: 42,
+        decision: "approved",
+      });
+      const rejected = createEventEnvelope("execution.approval.rejected", {
+        executionId: 1,
+        nodeId: "n1",
+        approvalTaskId: 42,
+        decision: "rejected",
+      });
       expect(required.type).toContain("approval");
       expect(granted.data.decision).toBe("approved");
       expect(rejected.data.decision).toBe("rejected");
@@ -92,16 +134,25 @@ describe("Human approval pause/resume integration", () => {
 
 describe("Saga compensation integration", () => {
   it("compensation handler type exists", async () => {
-    const { CompensationHandler } = await import("@longox/workflow-engine").catch(() => ({} as any));
+    const { CompensationHandler } = await import(
+      "@longox/workflow-engine"
+    ).catch(() => ({}) as any);
     if (CompensationHandler) {
       expect(CompensationHandler).toBeTruthy();
     }
   });
 
   it("saga compensation events exist", async () => {
-    const { createEventEnvelope } = await import("@longox/shared-types").catch(() => ({} as any));
+    const { createEventEnvelope } = await import("@longox/shared-types").catch(
+      () => ({}) as any,
+    );
     if (typeof createEventEnvelope === "function") {
-      const compensating = createEventEnvelope("execution.node.failed", { executionId: 1, nodeId: "n1", status: "compensated", durationMs: 100 });
+      const compensating = createEventEnvelope("execution.node.failed", {
+        executionId: 1,
+        nodeId: "n1",
+        status: "compensated",
+        durationMs: 100,
+      });
       expect(compensating.data.status).toBe("compensated");
     }
   });
@@ -109,15 +160,22 @@ describe("Saga compensation integration", () => {
 
 describe("Connector install/action/trigger integration", () => {
   it("connector manifest validation works end-to-end", async () => {
-    const { validateManifest, evaluateTrust } = await import("@longox/connector-runtime").catch(() => ({} as any));
-    if (typeof validateManifest === "function" && typeof evaluateTrust === "function") {
+    const { validateManifest, evaluateTrust } = await import(
+      "@longox/connector-runtime"
+    ).catch(() => ({}) as any);
+    if (
+      typeof validateManifest === "function" &&
+      typeof evaluateTrust === "function"
+    ) {
       expect(typeof validateManifest).toBe("function");
       expect(typeof evaluateTrust).toBe("function");
     }
   });
 
   it("connector lifecycle engine supports full lifecycle", async () => {
-    const { lifecycleEngine } = await import("@longox/connector-runtime").catch(() => ({} as any));
+    const { lifecycleEngine } = await import("@longox/connector-runtime").catch(
+      () => ({}) as any,
+    );
     if (lifecycleEngine) {
       expect(typeof lifecycleEngine.transition).toBe("function");
       expect(typeof lifecycleEngine.createInitialState).toBe("function");
@@ -125,10 +183,25 @@ describe("Connector install/action/trigger integration", () => {
   });
 
   it("connector events are emitted through event system", async () => {
-    const { createEventEnvelope } = await import("@longox/shared-types").catch(() => ({} as any));
+    const { createEventEnvelope } = await import("@longox/shared-types").catch(
+      () => ({}) as any,
+    );
     if (typeof createEventEnvelope === "function") {
-      const install = createEventEnvelope("connector.installed", { connectorName: "stripe", connectorVersion: "1.0.0", installationId: 1, installedBy: "user_1" });
-      const exec = createEventEnvelope("connector.execution.completed", { connectorName: "stripe", actionId: "charge", installationId: 1, executionId: "exec_1", durationMs: 200, success: true, networkRequests: 2 });
+      const install = createEventEnvelope("connector.installed", {
+        connectorName: "stripe",
+        connectorVersion: "1.0.0",
+        installationId: 1,
+        installedBy: "user_1",
+      });
+      const exec = createEventEnvelope("connector.execution.completed", {
+        connectorName: "stripe",
+        actionId: "charge",
+        installationId: 1,
+        executionId: "exec_1",
+        durationMs: 200,
+        success: true,
+        networkRequests: 2,
+      });
       expect(install.data.connectorName).toBe("stripe");
       expect(exec.data.success).toBe(true);
       expect(exec.data.networkRequests).toBe(2);
@@ -138,7 +211,7 @@ describe("Connector install/action/trigger integration", () => {
 
 describe("AI run/RAG/evaluation gate integration", () => {
   it("AI run response type includes all required fields", async () => {
-    const types = await import("@longox/shared-types").catch(() => ({} as any));
+    const types = await import("@longox/shared-types").catch(() => ({}) as any);
     if (types.AiRunResponse) {
       const resp = types.AiRunResponse;
       expect(resp).toBeTruthy();
@@ -146,7 +219,9 @@ describe("AI run/RAG/evaluation gate integration", () => {
   });
 
   it("AI events cover full run lifecycle", async () => {
-    const { createEventEnvelope } = await import("@longox/shared-types").catch(() => ({} as any));
+    const { createEventEnvelope } = await import("@longox/shared-types").catch(
+      () => ({}) as any,
+    );
     if (typeof createEventEnvelope === "function") {
       const started = createEventEnvelope("ai.run.started", {});
       const completed = createEventEnvelope("ai.run.completed", {});
@@ -221,7 +296,9 @@ describe("Billing rollup/invoice traceability integration", () => {
   });
 
   it("billing events cover all CRUD operations", async () => {
-    const { createEventEnvelope } = await import("@longox/shared-types").catch(() => ({} as any));
+    const { createEventEnvelope } = await import("@longox/shared-types").catch(
+      () => ({}) as any,
+    );
     if (typeof createEventEnvelope === "function") {
       const created = createEventEnvelope("billing.invoice.created", {});
       const paid = createEventEnvelope("billing.invoice.paid", {});
@@ -251,7 +328,9 @@ describe("Tenant isolation integration", () => {
     const dbModule = await import("@longox/db").catch(() => null);
     if (dbModule) {
       const exports = Object.keys(dbModule);
-      const tenantTables = exports.filter(k => k.includes("tenant") || k.includes("Tenant"));
+      const tenantTables = exports.filter(
+        (k) => k.includes("tenant") || k.includes("Tenant"),
+      );
       expect(tenantTables.length).toBeGreaterThan(0);
     }
   });

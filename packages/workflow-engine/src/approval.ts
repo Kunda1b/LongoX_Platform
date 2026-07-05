@@ -116,7 +116,12 @@ export class InMemoryApprovalStore implements ApprovalStore {
   }): Promise<void> {
     const task = this.tasks.get(opts.taskId);
     if (!task) throw new Error(`Approval task ${opts.taskId} not found`);
-    task.status = opts.decision === "timed_out" ? "timed_out" : opts.decision === "approved" ? "approved" : "rejected";
+    task.status =
+      opts.decision === "timed_out"
+        ? "timed_out"
+        : opts.decision === "approved"
+          ? "approved"
+          : "rejected";
     task.approverId = opts.decidedBy;
     task.note = opts.note ?? task.note;
     task.decidedAt = new Date();
@@ -126,7 +131,9 @@ export class InMemoryApprovalStore implements ApprovalStore {
     return this.tasks.get(taskId) ?? null;
   }
 
-  async getPendingTasksForExecution(executionId: string): Promise<ApprovalTask[]> {
+  async getPendingTasksForExecution(
+    executionId: string,
+  ): Promise<ApprovalTask[]> {
     return [...this.tasks.values()].filter(
       (t) => t.executionId === executionId && t.status === "pending",
     );
@@ -157,7 +164,10 @@ export class InMemoryApprovalStore implements ApprovalStore {
 export function startApprovalTimeoutSweeper(
   store: ApprovalStore,
   onTimeout: (task: ApprovalTask) => Promise<void>,
-  onReminder?: (task: ApprovalTask, hoursBeforeTimeout: number) => Promise<void>,
+  onReminder?: (
+    task: ApprovalTask,
+    hoursBeforeTimeout: number,
+  ) => Promise<void>,
   onEscalation?: (task: ApprovalTask, escalatedTo: string) => Promise<void>,
   intervalMs = 60_000,
 ): () => void {
@@ -245,7 +255,8 @@ export function startApprovalTimeoutSweeper(
 
           // Apply timeout action (auto-approve / auto-reject / extend)
           const timeoutAction =
-            (task.config["timeoutAction"] as string | undefined) ?? "auto_reject";
+            (task.config["timeoutAction"] as string | undefined) ??
+            "auto_reject";
 
           if (timeoutAction === "extend") {
             // Extend the deadline by the original timeout duration

@@ -3,10 +3,17 @@ export const notionSchemas = {
     input: {
       type: "object",
       properties: {
-        parentType: { type: "string", description: "Parent type: database or page", enum: ["database", "page"] },
+        parentType: {
+          type: "string",
+          description: "Parent type: database or page",
+          enum: ["database", "page"],
+        },
         parentId: { type: "string", description: "Parent database or page ID" },
         title: { type: "string", description: "Page title" },
-        properties: { type: "object", description: "Additional page properties" },
+        properties: {
+          type: "object",
+          description: "Additional page properties",
+        },
         children: { type: "array", description: "Block children content" },
       },
       required: ["parentId"],
@@ -43,7 +50,10 @@ export const notionSchemas = {
     input: {
       type: "object",
       properties: {
-        databaseId: { type: "string", description: "Notion database ID to query" },
+        databaseId: {
+          type: "string",
+          description: "Notion database ID to query",
+        },
         filter: { type: "object", description: "Filter conditions" },
         sorts: { type: "array", description: "Sort conditions" },
         pageSize: { type: "number", description: "Results per page (max 100)" },

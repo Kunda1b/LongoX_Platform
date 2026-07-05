@@ -21,7 +21,9 @@ router.get(
       Math.max(1, parseInt(req.query.pageSize as string, 10) || 20),
     );
 
-    const resourceTypes = type ? type.split(",").map((t) => t.trim()) : undefined;
+    const resourceTypes = type
+      ? type.split(",").map((t) => t.trim())
+      : undefined;
     const tenantId = req.user?.tenantId ?? null;
 
     const response = await ftsSearchService.search(q, {

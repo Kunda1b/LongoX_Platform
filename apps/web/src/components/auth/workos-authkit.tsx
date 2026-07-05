@@ -24,7 +24,8 @@ export function WorkOSAuthKit({
   const handleRedirect = useCallback(() => {
     setLoading(true);
     const cid = clientId ?? process.env.NEXT_PUBLIC_WORKOS_CLIENT_ID ?? "";
-    const redirect = redirectUri ?? `${window.location.origin}/auth/workos/callback`;
+    const redirect =
+      redirectUri ?? `${window.location.origin}/auth/workos/callback`;
 
     const params = new URLSearchParams({
       client_id: cid,
@@ -45,7 +46,9 @@ export function WorkOSAuthKit({
   }
 
   const isRegister = mode === "register";
-  const label = buttonLabel ?? (isRegister ? "Create account with WorkOS" : "Sign in with WorkOS");
+  const label =
+    buttonLabel ??
+    (isRegister ? "Create account with WorkOS" : "Sign in with WorkOS");
   const Icon = isRegister ? UserPlus : LogIn;
 
   return (

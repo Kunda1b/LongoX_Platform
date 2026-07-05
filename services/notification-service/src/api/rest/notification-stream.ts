@@ -38,12 +38,18 @@ type NotificationStreamClient = {
 
 const clients = new Map<string, Set<NotificationStreamClient>>();
 
-function addClient(recipientId: string, client: NotificationStreamClient): void {
+function addClient(
+  recipientId: string,
+  client: NotificationStreamClient,
+): void {
   if (!clients.has(recipientId)) clients.set(recipientId, new Set());
   clients.get(recipientId)!.add(client);
 }
 
-function removeClient(recipientId: string, client: NotificationStreamClient): void {
+function removeClient(
+  recipientId: string,
+  client: NotificationStreamClient,
+): void {
   clients.get(recipientId)?.delete(client);
   if (clients.get(recipientId)?.size === 0) clients.delete(recipientId);
 }
@@ -158,8 +164,7 @@ export function pushNotification(
           body: notification.body ?? null,
           channel: notification.channel ?? "in_app",
           status: notification.status ?? "unread",
-          createdAt:
-            notification.createdAt ?? new Date().toISOString(),
+          createdAt: notification.createdAt ?? new Date().toISOString(),
         },
       },
     });
@@ -188,14 +193,13 @@ export function pushNotificationRead(
 }
 
 router.get(
-  [
-    "/api/notifications/stream",
-    "/api/v1/notifications/stream",
-  ],
+  ["/api/notifications/stream", "/api/v1/notifications/stream"],
   async (req: Request, res: Response): Promise<void> => {
     const recipientId = String(req.query["recipientId"] ?? "");
     if (!recipientId) {
-      res.status(400).json({ error: "recipientId query parameter is required" });
+      res
+        .status(400)
+        .json({ error: "recipientId query parameter is required" });
       return;
     }
 

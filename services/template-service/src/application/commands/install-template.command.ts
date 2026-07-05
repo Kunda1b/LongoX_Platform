@@ -1,5 +1,8 @@
 import type { TemplateRepository } from "../../domain/template/template-repository";
-import type { Template, TemplateInstall } from "../../domain/template/template.entity";
+import type {
+  Template,
+  TemplateInstall,
+} from "../../domain/template/template.entity";
 
 export interface InstallTemplateInput {
   templateId: string;
@@ -25,7 +28,9 @@ export class InstallTemplateCommand {
   constructor(private repo: TemplateRepository) {}
 
   async execute(input: InstallTemplateInput): Promise<InstallTemplateResult> {
-    const template = (await this.repo.findById(input.templateId)) as Template | null;
+    const template = (await this.repo.findById(
+      input.templateId,
+    )) as Template | null;
     if (!template) throw new Error(`Template ${input.templateId} not found`);
 
     const installRecord: TemplateInstall = {
@@ -48,7 +53,9 @@ export class InstallTemplateCommand {
     for (const dep of deps) {
       let depTemplate: Template | null = null;
       if (dep.templateId) {
-        depTemplate = (await this.repo.findById(dep.templateId)) as Template | null;
+        depTemplate = (await this.repo.findById(
+          dep.templateId,
+        )) as Template | null;
       }
       if (depTemplate) {
         installedArtifacts.push(

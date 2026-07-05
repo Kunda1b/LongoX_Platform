@@ -44,7 +44,10 @@ export function DataRetention() {
       if (!res.ok) throw new Error("Failed to save");
       toast({ title: "Retention policies updated" });
     } catch {
-      toast({ title: "Failed to save retention policies", variant: "destructive" });
+      toast({
+        title: "Failed to save retention policies",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -81,7 +84,9 @@ export function DataRetention() {
         <div className="flex items-center gap-2">
           <Clock className="h-5 w-5" />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Data Retention</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Data Retention
+            </h1>
             <p className="text-sm text-muted-foreground">
               Configure how long data is retained before automatic cleanup
             </p>
@@ -161,7 +166,10 @@ export function DataRetention() {
                 type="number"
                 value={settings.notificationRetentionDays}
                 onChange={(e) =>
-                  updateField("notificationRetentionDays", Number(e.target.value))
+                  updateField(
+                    "notificationRetentionDays",
+                    Number(e.target.value),
+                  )
                 }
                 className="w-24"
                 min={1}
@@ -224,7 +232,8 @@ export function DataRetention() {
               <span className="text-sm text-muted-foreground">days</span>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              Tenant data is flagged for deletion after this period of inactivity
+              Tenant data is flagged for deletion after this period of
+              inactivity
             </p>
           </CardContent>
         </Card>

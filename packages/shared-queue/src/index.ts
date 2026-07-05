@@ -135,7 +135,9 @@ export const QUEUE_TOPOLOGY: Record<QueueName, QueueTopologyEntry> = {
 };
 
 /** Ordered list of all 10 queue names — useful for workers that drain all queues. */
-export const ALL_QUEUE_NAMES: QueueName[] = Object.keys(QUEUE_TOPOLOGY) as QueueName[];
+export const ALL_QUEUE_NAMES: QueueName[] = Object.keys(
+  QUEUE_TOPOLOGY,
+) as QueueName[];
 
 // ─── Job types & payloads ─────────────────────────────────────────────────────
 

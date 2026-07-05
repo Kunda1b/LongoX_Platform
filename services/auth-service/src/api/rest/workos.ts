@@ -417,7 +417,8 @@ async function resolveTenantForWorkOSOrg(
 async function resolveOrCreateUserForDirectoryUser(
   dirUser: WorkOSDirectoryUser,
 ): Promise<{ id: string } | null> {
-  const primaryEmail = dirUser.emails?.find((e) => e.primary)?.value ?? dirUser.emails?.[0]?.value;
+  const primaryEmail =
+    dirUser.emails?.find((e) => e.primary)?.value ?? dirUser.emails?.[0]?.value;
   if (!primaryEmail) return null;
 
   // Look up by WorkOS user id first (canonical), fall back to email.
@@ -715,7 +716,11 @@ router.post("/auth/scim", async (req, res): Promise<void> => {
   try {
     const event = verifyScimWebhook(rawBody, signature);
     // P1-21: process the event (create/update memberships, map groups to RBAC roles).
-    let result: { processed: boolean; action: string; detail: Record<string, unknown> };
+    let result: {
+      processed: boolean;
+      action: string;
+      detail: Record<string, unknown>;
+    };
     try {
       result = await processScimEvent(event);
     } catch (err) {

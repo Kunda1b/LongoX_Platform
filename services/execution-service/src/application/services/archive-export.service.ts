@@ -19,7 +19,8 @@ async function uploadToS3(
   contentType: string,
 ): Promise<string> {
   const cfg = getS3Config();
-  const endpoint = cfg.endpoint ?? `https://${cfg.bucket}.s3.${cfg.region}.amazonaws.com`;
+  const endpoint =
+    cfg.endpoint ?? `https://${cfg.bucket}.s3.${cfg.region}.amazonaws.com`;
   const url = `${endpoint}/${key}`;
 
   const res = await fetch(url, {
@@ -91,11 +92,12 @@ export class ArchiveExportService {
 
       const schemaFields = Object.keys(rowArray[0]).map((key) => ({
         name: key,
-        type: key.endsWith("_at") || key === "created_at" || key === "updated_at"
-          ? "TIMESTAMP_MILLIS"
-          : typeof rowArray[0][key] === "number"
-            ? "INT64"
-            : "UTF8",
+        type:
+          key.endsWith("_at") || key === "created_at" || key === "updated_at"
+            ? "TIMESTAMP_MILLIS"
+            : typeof rowArray[0][key] === "number"
+              ? "INT64"
+              : "UTF8",
       }));
 
       const schema = new parquet.ParquetSchema(
@@ -124,7 +126,11 @@ export class ArchiveExportService {
       let storageUrl: string | null = null;
       try {
         const fileBuffer = await fs.readFile(filePath);
-        storageUrl = await uploadToS3(storageKey, fileBuffer, "application/octet-stream");
+        storageUrl = await uploadToS3(
+          storageKey,
+          fileBuffer,
+          "application/octet-stream",
+        );
         await fs.unlink(filePath);
       } catch {
         storageUrl = `s3://${getS3Config().bucket}/${storageKey}`;
@@ -174,7 +180,11 @@ export class ArchiveExportService {
     const { promises: fs } = await import("node:fs");
     const fileBuffer = await fs.readFile(record.filePath);
     const storageKey = `${record.tenantId}/${record.partitionName}_${Date.now()}.parquet`;
-    const storageUrl = await uploadToS3(storageKey, fileBuffer, "application/octet-stream");
+    const storageUrl = await uploadToS3(
+      storageKey,
+      fileBuffer,
+      "application/octet-stream",
+    );
 
     await prisma.archiveExport.update({
       where: { id: exportId },

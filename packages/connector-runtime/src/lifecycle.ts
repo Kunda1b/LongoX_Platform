@@ -34,7 +34,11 @@ export interface LifecycleState {
   version: string;
   config: Record<string, unknown>;
   errorMessage: string | null;
-  eventHistory: { event: ConnectorLifecycleEvent; timestamp: string; details?: string }[];
+  eventHistory: {
+    event: ConnectorLifecycleEvent;
+    timestamp: string;
+    details?: string;
+  }[];
 }
 
 export interface LifecycleHook {
@@ -43,7 +47,10 @@ export interface LifecycleHook {
   onError?(state: LifecycleState, error: Error): Promise<void>;
 }
 
-type LifecycleListener = (event: ConnectorLifecycleEvent, state: LifecycleState) => void;
+type LifecycleListener = (
+  event: ConnectorLifecycleEvent,
+  state: LifecycleState,
+) => void;
 
 class LifecycleEngine {
   private hooks = new Map<ConnectorLifecycleEvent, LifecycleHook[]>();
@@ -99,7 +106,10 @@ class LifecycleEngine {
       newState.errorMessage = err instanceof Error ? err.message : String(err);
       for (const hook of eventHooks) {
         if (hook.onError) {
-          await hook.onError(newState, err instanceof Error ? err : new Error(String(err)));
+          await hook.onError(
+            newState,
+            err instanceof Error ? err : new Error(String(err)),
+          );
         }
       }
     }
@@ -119,7 +129,10 @@ class LifecycleEngine {
     return this.states.get(installationId);
   }
 
-  createInitialState(manifest: ConnectorManifest, tenantId: string): LifecycleState {
+  createInitialState(
+    manifest: ConnectorManifest,
+    tenantId: string,
+  ): LifecycleState {
     return {
       installationId: "",
       connectorId: "",
@@ -131,7 +144,9 @@ class LifecycleEngine {
       version: manifest.version,
       config: {},
       errorMessage: null,
-      eventHistory: [{ event: "installing", timestamp: new Date().toISOString() }],
+      eventHistory: [
+        { event: "installing", timestamp: new Date().toISOString() },
+      ],
     };
   }
 }

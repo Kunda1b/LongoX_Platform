@@ -2,7 +2,15 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, FileText, Workflow, Users, Settings, Globe, Command } from "lucide-react";
+import {
+  Search,
+  FileText,
+  Workflow,
+  Users,
+  Settings,
+  Globe,
+  Command,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const searchRoutes = [
@@ -110,7 +118,9 @@ export function GlobalSearch() {
             className="flex h-12 w-full bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
           />
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-xs">ESC</kbd>
+            <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-xs">
+              ESC
+            </kbd>
           </div>
         </div>
         <div className="max-h-72 overflow-y-auto p-2">
@@ -141,9 +151,17 @@ export function GlobalSearch() {
           )}
         </div>
         <div className="border-t px-3 py-2 text-xs text-muted-foreground flex items-center gap-4">
-          <span><kbd className="rounded border bg-muted px-1 font-mono">↑↓</kbd> Navigate</span>
-          <span><kbd className="rounded border bg-muted px-1 font-mono">↵</kbd> Open</span>
-          <span className="ml-auto"><kbd className="rounded border bg-muted px-1 font-mono">⌘K</kbd> Toggle</span>
+          <span>
+            <kbd className="rounded border bg-muted px-1 font-mono">↑↓</kbd>{" "}
+            Navigate
+          </span>
+          <span>
+            <kbd className="rounded border bg-muted px-1 font-mono">↵</kbd> Open
+          </span>
+          <span className="ml-auto">
+            <kbd className="rounded border bg-muted px-1 font-mono">⌘K</kbd>{" "}
+            Toggle
+          </span>
         </div>
       </div>
     </div>

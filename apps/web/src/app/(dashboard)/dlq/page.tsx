@@ -1,6 +1,10 @@
 "use client";
 
-import { useListDlqEntries, useRetryDlqEntry, getListDlqEntriesQueryKey } from "@longox/api-client-react";
+import {
+  useListDlqEntries,
+  useRetryDlqEntry,
+  getListDlqEntriesQueryKey,
+} from "@longox/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +20,9 @@ export default function DLQPage() {
   const retryMutation = useRetryDlqEntry({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListDlqEntriesQueryKey() });
+        queryClient.invalidateQueries({
+          queryKey: getListDlqEntriesQueryKey(),
+        });
         toast({ title: "Entry requeued" });
       },
     },
@@ -57,7 +63,10 @@ export default function DLQPage() {
         </div>
         {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="grid grid-cols-12 gap-4 border-b px-4 py-3 last:border-0">
+            <div
+              key={i}
+              className="grid grid-cols-12 gap-4 border-b px-4 py-3 last:border-0"
+            >
               <div className="col-span-12">
                 <Skeleton className="h-5 w-full" />
               </div>

@@ -17,7 +17,9 @@ export class AnalyticsProjection {
       // ai rows. All event fields are persisted in the JSON `data` column.
       await prisma.analyticsReadModel.create({
         data: {
-          tenantId: String((event.metadata.tenantId as string | number | undefined) ?? ""),
+          tenantId: String(
+            (event.metadata.tenantId as string | number | undefined) ?? "",
+          ),
           modelType: "event",
           data: {
             eventType: event.type,
@@ -40,20 +42,20 @@ export class AnalyticsProjection {
     try {
       const period = this.getPeriod(new Date(event.timestamp));
 
-      if (event.type === "execution.completed" || event.type === "execution.failed") {
+      if (
+        event.type === "execution.completed" ||
+        event.type === "execution.failed"
+      ) {
         const duration = (event.payload.durationMs as number) ?? 0;
         await this.upsertMetric("execution.duration", duration, period, event);
-        await this.upsertMetric(
-          "execution.count",
-          1,
-          period,
-          event,
-        );
+        await this.upsertMetric("execution.count", 1, period, event);
       }
 
       if (event.type === "ai.run.completed") {
         const cost = (event.payload.cost as number) ?? 0;
-        const tokens = ((event.payload.inputTokens as number) ?? 0) + ((event.payload.outputTokens as number) ?? 0);
+        const tokens =
+          ((event.payload.inputTokens as number) ?? 0) +
+          ((event.payload.outputTokens as number) ?? 0);
         await this.upsertMetric("ai.cost", cost, period, event);
         await this.upsertMetric("ai.tokens", tokens, period, event);
       }
@@ -74,7 +76,9 @@ export class AnalyticsProjection {
     // period) and accumulate. The numeric `metricValue` is stored as a string
     // in the JSON `data` column to preserve the legacy numeric-as-string
     // semantics of `analytics_metrics.metric_value`.
-    const tenantId = String((event.metadata.tenantId as string | number | undefined) ?? "");
+    const tenantId = String(
+      (event.metadata.tenantId as string | number | undefined) ?? "",
+    );
     const modelType = `metric:${name}`;
     const dimensions = {
       eventType: event.type,
@@ -120,7 +124,9 @@ export class AnalyticsProjection {
     const workflowId = Number(event.payload.workflowId);
     if (!workflowId) return;
 
-    const tenantId = String((event.metadata.tenantId as string | number | undefined) ?? "");
+    const tenantId = String(
+      (event.metadata.tenantId as string | number | undefined) ?? "",
+    );
     const period = this.getPeriod(new Date(event.timestamp));
 
     try {
@@ -174,7 +180,7 @@ export class AnalyticsProjection {
           failureCount: event.type === "execution.failed" ? 1 : 0,
           totalCost: String(
             event.type === "ai.run.completed"
-              ? (event.payload.cost as number) ?? 0
+              ? ((event.payload.cost as number) ?? 0)
               : 0,
           ),
           period,
@@ -190,7 +196,10 @@ export class AnalyticsProjection {
         } as any);
       }
     } catch (err) {
-      console.error("[AnalyticsProjection] Failed to update workflow analytics:", err);
+      console.error(
+        "[AnalyticsProjection] Failed to update workflow analytics:",
+        err,
+      );
     }
   }
 
@@ -199,7 +208,9 @@ export class AnalyticsProjection {
 
     const provider = (event.payload.provider as string) ?? "unknown";
     const model = (event.payload.model as string) ?? "unknown";
-    const tenantId = String((event.metadata.tenantId as string | number | undefined) ?? "");
+    const tenantId = String(
+      (event.metadata.tenantId as string | number | undefined) ?? "",
+    );
     const period = this.getPeriod(new Date(event.timestamp));
 
     try {
@@ -251,7 +262,10 @@ export class AnalyticsProjection {
         } as any);
       }
     } catch (err) {
-      console.error("[AnalyticsProjection] Failed to update AI analytics:", err);
+      console.error(
+        "[AnalyticsProjection] Failed to update AI analytics:",
+        err,
+      );
     }
   }
 

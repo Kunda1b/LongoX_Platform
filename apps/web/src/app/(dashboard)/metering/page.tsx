@@ -1,6 +1,9 @@
 "use client";
 
-import { useGetUsageSummary, useListUsageEvents } from "@longox/api-client-react";
+import {
+  useGetUsageSummary,
+  useListUsageEvents,
+} from "@longox/api-client-react";
 import {
   Card,
   CardContent,
@@ -63,7 +66,8 @@ export default function MeteringPage() {
                   {(usage as any)?.totalExecutions?.toLocaleString() ?? "0"}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {(usage as any)?.executionsThisMonth?.toLocaleString() ?? "0"} this month
+                  {(usage as any)?.executionsThisMonth?.toLocaleString() ?? "0"}{" "}
+                  this month
                 </p>
               </>
             )}
@@ -84,7 +88,8 @@ export default function MeteringPage() {
                   {(usage as any)?.totalWorkflows?.toLocaleString() ?? "0"}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {(usage as any)?.activeWorkflows?.toLocaleString() ?? "0"} active
+                  {(usage as any)?.activeWorkflows?.toLocaleString() ?? "0"}{" "}
+                  active
                 </p>
               </>
             )}
@@ -105,7 +110,8 @@ export default function MeteringPage() {
                   {(usage as any)?.usedConnectors?.toLocaleString() ?? "0"}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  of {(usage as any)?.totalConnectors?.toLocaleString() ?? "0"} available
+                  of {(usage as any)?.totalConnectors?.toLocaleString() ?? "0"}{" "}
+                  available
                 </p>
               </>
             )}
@@ -170,7 +176,9 @@ export default function MeteringPage() {
                         +{event.quantity}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
-                        {new Date(event.createdAt ?? event.timestamp).toLocaleString()}
+                        {new Date(
+                          event.createdAt ?? event.timestamp,
+                        ).toLocaleString()}
                       </span>
                     </div>
                   </div>

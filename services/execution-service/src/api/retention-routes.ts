@@ -165,7 +165,9 @@ router.post(
 
     if (tenantId && action) {
       await scheduler.runManual(tenantId, action);
-      res.json({ message: `Manual ${action} completed for tenant ${tenantId}` });
+      res.json({
+        message: `Manual ${action} completed for tenant ${tenantId}`,
+      });
       return;
     }
 

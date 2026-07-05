@@ -7,24 +7,33 @@ export const aiRequestsCounter = meter.createCounter("ai.requests", {
   description: "Total AI requests",
 });
 
-export const aiRequestsFailedCounter = meter.createCounter("ai.requests.failed", {
-  description: "Total failed AI requests",
-});
+export const aiRequestsFailedCounter = meter.createCounter(
+  "ai.requests.failed",
+  {
+    description: "Total failed AI requests",
+  },
+);
 
 export const aiTokensCounter = meter.createCounter("ai.tokens", {
   description: "Total AI tokens consumed",
 });
 
 // Histograms
-export const aiRequestDurationHistogram = meter.createHistogram("ai.request.duration", {
-  description: "AI request duration in seconds",
-  unit: "s",
-});
+export const aiRequestDurationHistogram = meter.createHistogram(
+  "ai.request.duration",
+  {
+    description: "AI request duration in seconds",
+    unit: "s",
+  },
+);
 
-export const aiTokensPerRequestHistogram = meter.createHistogram("ai.tokens.per_request", {
-  description: "Tokens per AI request",
-  unit: "1",
-});
+export const aiTokensPerRequestHistogram = meter.createHistogram(
+  "ai.tokens.per_request",
+  {
+    description: "Tokens per AI request",
+    unit: "1",
+  },
+);
 
 // Helper functions
 export function recordAiRequest(

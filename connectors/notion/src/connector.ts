@@ -44,7 +44,11 @@ export const notionConnector: ConnectorDefinition = {
         sorts: "array?",
         pageSize: "number?",
       },
-      outputSchema: { results: "array", hasMore: "boolean", nextCursor: "string?" },
+      outputSchema: {
+        results: "array",
+        hasMore: "boolean",
+        nextCursor: "string?",
+      },
       idempotent: true,
     },
   ],

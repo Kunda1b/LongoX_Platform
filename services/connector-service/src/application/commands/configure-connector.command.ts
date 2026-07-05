@@ -19,7 +19,9 @@ export interface ConfigureConnectorInput {
 export class ConfigureConnectorCommand {
   constructor(private connectorRepo: ConnectorRepository) {}
 
-  async execute(input: ConfigureConnectorInput): Promise<ConnectorInstallation> {
+  async execute(
+    input: ConfigureConnectorInput,
+  ): Promise<ConnectorInstallation> {
     let row: any;
     try {
       row = await prisma.tenantConnectorInstall.update({

@@ -167,7 +167,6 @@ components:
 
   # ─── Schemas ─────────────────────────────────────────────────────────────
   schemas:
-
     # ── Error Envelope (Section 13.3) ─────────────────────────────────────
     ErrorDetail:
       type: object
@@ -986,7 +985,6 @@ security:
   - bearerAuth: []
 
 paths:
-
   # ─── Auth ──────────────────────────────────────────────────────────────────
 
   /auth/login:

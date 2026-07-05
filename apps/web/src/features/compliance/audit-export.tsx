@@ -31,9 +31,14 @@ export function AuditExport() {
       if (startDate) params.set("startDate", startDate);
       if (endDate) params.set("endDate", endDate);
 
-      const res = await fetch(`/api/compliance/audit/export?${params.toString()}`, {
-        headers: { Accept: format === "csv" ? "text/csv" : "application/json" },
-      });
+      const res = await fetch(
+        `/api/compliance/audit/export?${params.toString()}`,
+        {
+          headers: {
+            Accept: format === "csv" ? "text/csv" : "application/json",
+          },
+        },
+      );
 
       if (!res.ok) throw new Error("Export failed");
 

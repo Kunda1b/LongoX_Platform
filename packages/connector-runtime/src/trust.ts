@@ -1,12 +1,17 @@
-import type { ConnectorCertificationLevel, ConnectorManifest, SignedManifest } from "./manifest";
+import type {
+  ConnectorCertificationLevel,
+  ConnectorManifest,
+  SignedManifest,
+} from "./manifest";
 import { signManifest } from "./manifest";
 
-export const TRUST_TIER_HIERARCHY: Record<ConnectorCertificationLevel, number> = {
-  official: 4,
-  verified: 3,
-  community: 2,
-  sandbox: 1,
-};
+export const TRUST_TIER_HIERARCHY: Record<ConnectorCertificationLevel, number> =
+  {
+    official: 4,
+    verified: 3,
+    community: 2,
+    sandbox: 1,
+  };
 
 export interface TrustPolicy {
   minTier: ConnectorCertificationLevel;
@@ -48,16 +53,25 @@ export const SANDBOX_TRUST_POLICY: TrustPolicy = {
   allowedCategories: [],
 };
 
-export function getTrustPolicy(level: ConnectorCertificationLevel): TrustPolicy {
+export function getTrustPolicy(
+  level: ConnectorCertificationLevel,
+): TrustPolicy {
   switch (level) {
-    case "official": return OFFICIAL_TRUST_POLICY;
-    case "verified": return VERIFIED_TRUST_POLICY;
-    case "community": return COMMUNITY_TRUST_POLICY;
-    case "sandbox": return SANDBOX_TRUST_POLICY;
+    case "official":
+      return OFFICIAL_TRUST_POLICY;
+    case "verified":
+      return VERIFIED_TRUST_POLICY;
+    case "community":
+      return COMMUNITY_TRUST_POLICY;
+    case "sandbox":
+      return SANDBOX_TRUST_POLICY;
   }
 }
 
-export function evaluateTrust(manifest: ConnectorManifest): { passed: boolean; reasons: string[] } {
+export function evaluateTrust(manifest: ConnectorManifest): {
+  passed: boolean;
+  reasons: string[];
+} {
   const policy = getTrustPolicy(manifest.certificationLevel);
   const reasons: string[] = [];
   if (policy.requireChecksum && manifest.checksum) {
@@ -70,12 +84,17 @@ export function evaluateTrust(manifest: ConnectorManifest): { passed: boolean; r
     reasons.push("Signature required but not provided");
   }
   if (manifest.actions.length > policy.maxActions) {
-    reasons.push(`Exceeds max actions: ${manifest.actions.length} > ${policy.maxActions}`);
+    reasons.push(
+      `Exceeds max actions: ${manifest.actions.length} > ${policy.maxActions}`,
+    );
   }
-  if (policy.allowedCategories.length > 0 && !manifest.categories.some(c => policy.allowedCategories.includes(c))) {
-    reasons.push(`No categories in allowed list: ${policy.allowedCategories.join(", ")}`);
+  if (
+    policy.allowedCategories.length > 0 &&
+    !manifest.categories.some((c) => policy.allowedCategories.includes(c))
+  ) {
+    reasons.push(
+      `No categories in allowed list: ${policy.allowedCategories.join(", ")}`,
+    );
   }
   return { passed: reasons.length === 0, reasons };
 }
-
-

@@ -29,7 +29,10 @@ export class DocumentIngestionService {
     private embedding: EmbeddingService = embeddingService,
   ) {}
 
-  async ingestDocument(kbId: string, data: DocumentInput): Promise<DocumentResult> {
+  async ingestDocument(
+    kbId: string,
+    data: DocumentInput,
+  ): Promise<DocumentResult> {
     const contentHash = this.hashContent(data.content);
 
     const doc = await prisma.knowledgeDocument.create({
@@ -74,7 +77,14 @@ export class DocumentIngestionService {
           valuesSql.push(
             `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, ${vectorLit}, $${base + 5}, $${base + 6}::jsonb)`,
           );
-          params.push(docId, kbId, chunk.index, chunk.content, chunk.tokens, "{}");
+          params.push(
+            docId,
+            kbId,
+            chunk.index,
+            chunk.content,
+            chunk.tokens,
+            "{}",
+          );
         });
         await prisma.$executeRawUnsafe(
           `INSERT INTO rag_chunks (document_id, knowledge_base_id, chunk_index, content, embedding, tokens, metadata)
@@ -175,7 +185,7 @@ export class DocumentIngestionService {
     let hash = 0;
     for (let i = 0; i < content.length; i++) {
       const char = content.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash |= 0;
     }
     return Math.abs(hash).toString(16);

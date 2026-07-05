@@ -65,7 +65,9 @@ export class DataResidencyService {
 
     return {
       allowed,
-      reason: allowed ? "Region is permitted" : `Region ${requestingRegion} is not in allowed regions`,
+      reason: allowed
+        ? "Region is permitted"
+        : `Region ${requestingRegion} is not in allowed regions`,
       primaryRegion: (tenant as any).primaryRegion,
       allowedRegions,
     };
@@ -89,7 +91,8 @@ export class DataResidencyService {
       default: ["SOC2"],
     };
 
-    const frameworks = complianceFrameworks[regionId] ?? complianceFrameworks.default;
+    const frameworks =
+      complianceFrameworks[regionId] ?? complianceFrameworks.default;
 
     return {
       region: regionId,
@@ -105,7 +108,11 @@ export class DataResidencyService {
     };
   }
 
-  async enforceDataResidency(tenantId: string, dataType: string, _data: unknown) {
+  async enforceDataResidency(
+    tenantId: string,
+    dataType: string,
+    _data: unknown,
+  ) {
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
 
     if (!tenant) throw new Error("Tenant not found");
@@ -141,7 +148,15 @@ export class DataResidencyService {
     const requirements: Record<string, string[]> = {
       free: ["GDPR (if EU residents)", "Data protection"],
       pro: ["GDPR", "SOC2", "Data residency", "Audit logging (90 days)"],
-      enterprise: ["GDPR", "SOC2", "HIPAA readiness", "Data residency", "Audit logging (365 days)", "SSO", "Encryption at rest"],
+      enterprise: [
+        "GDPR",
+        "SOC2",
+        "HIPAA readiness",
+        "Data residency",
+        "Audit logging (365 days)",
+        "SSO",
+        "Encryption at rest",
+      ],
     };
 
     return {

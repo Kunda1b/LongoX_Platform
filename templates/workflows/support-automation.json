@@ -32,6 +32,11 @@
   ],
   "edges": [
     { "id": "e1", "source": "trigger_zendesk", "target": "check_priority" },
-    { "id": "e2", "source": "check_priority", "sourceHandle": "true", "target": "notify_slack" }
+    {
+      "id": "e2",
+      "source": "check_priority",
+      "sourceHandle": "true",
+      "target": "notify_slack"
+    }
   ]
 }

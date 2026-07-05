@@ -37,7 +37,9 @@ export function RollbackPanel() {
   useEffect(() => {
     fetch("/api/environments/promotions")
       .then((res) => res.json())
-      .then((data) => setPromotions(data.filter((p: Promotion) => p.status === "promoted")))
+      .then((data) =>
+        setPromotions(data.filter((p: Promotion) => p.status === "promoted")),
+      )
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -111,7 +113,9 @@ export function RollbackPanel() {
                   <Badge variant="outline">{p.toEnvironment}</Badge>
                 </div>
               </TableCell>
-              <TableCell className="text-sm text-muted-foreground">{p.promotedBy}</TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {p.promotedBy}
+              </TableCell>
               <TableCell className="text-sm text-muted-foreground">
                 {new Date(p.createdAt).toLocaleDateString()}
               </TableCell>
@@ -123,7 +127,9 @@ export function RollbackPanel() {
                   disabled={rollingBack === String(p.id)}
                 >
                   <Undo2 className="h-3 w-3 mr-1" />
-                  {rollingBack === String(p.id) ? "Rolling back..." : "Rollback"}
+                  {rollingBack === String(p.id)
+                    ? "Rolling back..."
+                    : "Rollback"}
                 </Button>
               </TableCell>
             </TableRow>

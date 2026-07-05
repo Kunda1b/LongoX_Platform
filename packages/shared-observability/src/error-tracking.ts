@@ -9,10 +9,7 @@ export interface ErrorContext {
   [key: string]: unknown;
 }
 
-export function trackError(
-  error: Error,
-  context: ErrorContext
-): void {
+export function trackError(error: Error, context: ErrorContext): void {
   const span = trace.getActiveSpan();
   if (span) {
     span.setStatus({
@@ -41,19 +38,25 @@ export function trackError(
 
 export function withErrorTracking<T>(
   context: ErrorContext,
-  fn: () => T | Promise<T>
+  fn: () => T | Promise<T>,
 ): T | Promise<T> {
   try {
     const result = fn();
     if (result instanceof Promise) {
       return result.catch((error) => {
-        trackError(error instanceof Error ? error : new Error(String(error)), context);
+        trackError(
+          error instanceof Error ? error : new Error(String(error)),
+          context,
+        );
         throw error;
       });
     }
     return result;
   } catch (error) {
-    trackError(error instanceof Error ? error : new Error(String(error)), context);
+    trackError(
+      error instanceof Error ? error : new Error(String(error)),
+      context,
+    );
     throw error;
   }
 }

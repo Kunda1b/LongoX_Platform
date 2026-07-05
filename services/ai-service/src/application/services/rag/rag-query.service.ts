@@ -1,6 +1,18 @@
-import { VectorSearchService, vectorSearchService, type SearchResult, type SearchOptions } from "./vector-search.service";
-import { CitationService, citationService, type Source } from "./citation.service";
-import { TokenAccountingService, tokenAccountingService } from "../token-accounting.service";
+import {
+  VectorSearchService,
+  vectorSearchService,
+  type SearchResult,
+  type SearchOptions,
+} from "./vector-search.service";
+import {
+  CitationService,
+  citationService,
+  type Source,
+} from "./citation.service";
+import {
+  TokenAccountingService,
+  tokenAccountingService,
+} from "../token-accounting.service";
 import { OpenAIProvider } from "../../../providers";
 
 export interface RagQueryOptions extends SearchOptions {
@@ -32,7 +44,11 @@ export class RagQueryService {
     private accounting: TokenAccountingService = tokenAccountingService,
   ) {}
 
-  async query(kbId: string, question: string, options: RagQueryOptions = {}): Promise<RagQueryResult> {
+  async query(
+    kbId: string,
+    question: string,
+    options: RagQueryOptions = {},
+  ): Promise<RagQueryResult> {
     const model = options.model ?? "gpt-4o-mini";
     const maxTokens = options.maxTokens ?? 1024;
     const temperature = options.temperature ?? 0.3;
@@ -44,7 +60,9 @@ export class RagQueryService {
       filter: options.filter,
     });
 
-    const context = chunks.map((c, i) => `[Source ${i + 1}] ${c.content}`).join("\n\n");
+    const context = chunks
+      .map((c, i) => `[Source ${i + 1}] ${c.content}`)
+      .join("\n\n");
 
     const systemPrompt = `You are a helpful assistant that answers questions based on the provided context. \
 Answer concisely and accurately using only the information from the context. \
@@ -54,7 +72,10 @@ Cite your sources using [Source N] notation.`;
     const userPrompt = `Context:\n${context}\n\nQuestion: ${question}`;
 
     const openai = new OpenAIProvider({
-      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? process.env.OPENAI_API_KEY ?? "",
+      apiKey:
+        process.env.AI_INTEGRATIONS_OPENAI_API_KEY ??
+        process.env.OPENAI_API_KEY ??
+        "",
     });
 
     let answer: string;
@@ -62,7 +83,10 @@ Cite your sources using [Source N] notation.`;
     let outputTokens: number;
     let cost: number;
 
-    if (!process.env.OPENAI_API_KEY && !process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
+    if (
+      !process.env.OPENAI_API_KEY &&
+      !process.env.AI_INTEGRATIONS_OPENAI_API_KEY
+    ) {
       answer = this.mockAnswer(question, chunks);
       inputTokens = Math.ceil((systemPrompt.length + userPrompt.length) / 4);
       outputTokens = Math.ceil(answer.length / 4);
@@ -82,7 +106,10 @@ Cite your sources using [Source N] notation.`;
     }
 
     const sources = this.citation.extractSources(answer, chunks);
-    const formattedCitations = this.citation.formatCitations(chunks, citationFormat);
+    const formattedCitations = this.citation.formatCitations(
+      chunks,
+      citationFormat,
+    );
 
     await this.accounting.recordUsage({
       modelName: model,
@@ -112,8 +139,10 @@ Cite your sources using [Source N] notation.`;
     if (topChunks.length === 0) {
       return "I could not find any relevant information to answer your question.";
     }
-    const excerpt = topChunks.map((c, i) => `[Source ${i + 1}] ${c.content.substring(0, 200)}`).join("\n");
-    return `Based on the retrieved documents, here is what I found regarding "${question}":\n\n${excerpt}\n\nThis answer was generated from ${chunks.length} relevant passages across ${new Set(chunks.map(c => c.documentFilename)).size} document(s).`;
+    const excerpt = topChunks
+      .map((c, i) => `[Source ${i + 1}] ${c.content.substring(0, 200)}`)
+      .join("\n");
+    return `Based on the retrieved documents, here is what I found regarding "${question}":\n\n${excerpt}\n\nThis answer was generated from ${chunks.length} relevant passages across ${new Set(chunks.map((c) => c.documentFilename)).size} document(s).`;
   }
 }
 

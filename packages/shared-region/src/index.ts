@@ -66,14 +66,24 @@ export class RegionManager {
         priority: 100,
         isPrimary: true,
         isActive: true,
-        capabilities: ["workflows", "executions", "storage", "ai", "marketplace"],
+        capabilities: [
+          "workflows",
+          "executions",
+          "storage",
+          "ai",
+          "marketplace",
+        ],
         dataResidencyCompliant: true,
         failoverPriority: 1,
       };
       this.regions.set("local", localRegion);
     } else {
       for (const r of configured) {
-        this.regions.set(r.id, { ...r, isActive: r.isActive ?? true, isPrimary: r.isPrimary ?? false });
+        this.regions.set(r.id, {
+          ...r,
+          isActive: r.isActive ?? true,
+          isPrimary: r.isPrimary ?? false,
+        });
       }
     }
   }
@@ -201,7 +211,8 @@ export class RegionManager {
   getFailoverStatus(): FailoverStatus {
     const primary = this.getPrimaryRegion();
     const healthy = this.getHealthyRegions();
-    const activeRegion = this.activeRegionOverride ?? primary?.id ?? healthy[0]?.id ?? "local";
+    const activeRegion =
+      this.activeRegionOverride ?? primary?.id ?? healthy[0]?.id ?? "local";
     const standby = healthy.find((r) => r.id !== activeRegion);
 
     return {
@@ -216,7 +227,9 @@ export class RegionManager {
   async performFailover(preferredRegionId?: string): Promise<RegionConfig> {
     const target = preferredRegionId
       ? this.regions.get(preferredRegionId)
-      : this.getHealthyRegions().sort((a, b) => (b.failoverPriority ?? 99) - (a.failoverPriority ?? 99))[0];
+      : this.getHealthyRegions().sort(
+          (a, b) => (b.failoverPriority ?? 99) - (a.failoverPriority ?? 99),
+        )[0];
 
     if (!target) {
       throw new Error("No available region for failover");
@@ -226,7 +239,10 @@ export class RegionManager {
     this.failoverCount++;
     this.lastFailoverAt = new Date().toISOString();
 
-    logger.warn({ from: this.getLocalRegionId(), to: target.id }, "[Region] Failover initiated");
+    logger.warn(
+      { from: this.getLocalRegionId(), to: target.id },
+      "[Region] Failover initiated",
+    );
     return target;
   }
 
@@ -235,9 +251,14 @@ export class RegionManager {
     logger.info("[Region] Failover reset");
   }
 
-  isDataResidencyCompliant(tenantRegion: string, targetRegions: string[]): boolean {
+  isDataResidencyCompliant(
+    tenantRegion: string,
+    targetRegions: string[],
+  ): boolean {
     if (!tenantRegion) return true;
-    return targetRegions.includes(tenantRegion) || !this.regions.has(tenantRegion);
+    return (
+      targetRegions.includes(tenantRegion) || !this.regions.has(tenantRegion)
+    );
   }
 
   async forwardRequest(

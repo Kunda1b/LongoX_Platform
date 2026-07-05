@@ -12,7 +12,9 @@ import { describe, it, expect } from "vitest";
 
 describe("Backup restore rehearsal", () => {
   it("BackupRestoreService exists and exports createBackup", async () => {
-    const { BackupRestoreService } = await import("@longox/replication-service").catch(() => ({} as any));
+    const { BackupRestoreService } = await import(
+      "@longox/replication-service"
+    ).catch(() => ({}) as any);
     if (BackupRestoreService) {
       expect(BackupRestoreService).toBeTruthy();
     }
@@ -21,22 +23,29 @@ describe("Backup restore rehearsal", () => {
   it("backup schema has required fields", async () => {
     const dbModule = await import("@longox/db").catch(() => null);
     if (dbModule) {
-      const hasBackup = dbModule.backupRecordsTable || dbModule.backupsTable || false;
+      const hasBackup =
+        dbModule.backupRecordsTable || dbModule.backupsTable || false;
       expect(hasBackup || true).toBeTruthy();
     }
   });
 
   it("restore preserves data integrity with verification", async () => {
-    const { BackupRestoreService } = await import("@longox/replication-service").catch(() => ({} as any));
+    const { BackupRestoreService } = await import(
+      "@longox/replication-service"
+    ).catch(() => ({}) as any);
     if (BackupRestoreService) {
-      expect(BackupRestoreService.prototype.validateRestore || BackupRestoreService).toBeTruthy();
+      expect(
+        BackupRestoreService.prototype.validateRestore || BackupRestoreService,
+      ).toBeTruthy();
     }
   });
 });
 
 describe("Release rollback rehearsal", () => {
   it("ReleaseRollbackService exists", async () => {
-    const { ReleaseRollbackService } = await import("@longox/replication-service").catch(() => ({} as any));
+    const { ReleaseRollbackService } = await import(
+      "@longox/replication-service"
+    ).catch(() => ({}) as any);
     if (ReleaseRollbackService) {
       expect(ReleaseRollbackService).toBeTruthy();
     }
@@ -45,7 +54,8 @@ describe("Release rollback rehearsal", () => {
   it("release snapshot schema exists", async () => {
     const dbModule = await import("@longox/db").catch(() => null);
     if (dbModule) {
-      const hasReleases = dbModule.releaseSnapshotsTable || dbModule.releasesTable || false;
+      const hasReleases =
+        dbModule.releaseSnapshotsTable || dbModule.releasesTable || false;
       expect(hasReleases || true).toBeTruthy();
     }
   });
@@ -59,12 +69,17 @@ describe("Release rollback rehearsal", () => {
 
     const rollbackSteps = [...steps].reverse().map((s) => ({
       ...s,
-      action: s.action.replace("deploy", "rollback").replace("migrate", "revert").replace("update", "restore"),
+      action: s.action
+        .replace("deploy", "rollback")
+        .replace("migrate", "revert")
+        .replace("update", "restore"),
       status: "pending",
     }));
 
     expect(rollbackSteps[0].action).toContain("restore");
-    expect(rollbackSteps[rollbackSteps.length - 1].action).toContain("rollback");
+    expect(rollbackSteps[rollbackSteps.length - 1].action).toContain(
+      "rollback",
+    );
     expect(rollbackSteps).toHaveLength(3);
   });
 });
@@ -92,21 +107,27 @@ describe("Queue recovery rehearsal", () => {
 
 describe("Worker crash recovery rehearsal", () => {
   it("execution checkpoints enable resume after crash", async () => {
-    const { CheckpointStore } = await import("@longox/workflow-engine").catch(() => ({} as any));
+    const { CheckpointStore } = await import("@longox/workflow-engine").catch(
+      () => ({}) as any,
+    );
     if (CheckpointStore) {
       expect(CheckpointStore).toBeTruthy();
     }
   });
 
   it("node leases prevent duplicate execution after crash", async () => {
-    const { NodeLease } = await import("@longox/workflow-engine").catch(() => ({} as any));
+    const { NodeLease } = await import("@longox/workflow-engine").catch(
+      () => ({}) as any,
+    );
     if (NodeLease) {
       expect(NodeLease).toBeTruthy();
     }
   });
 
   it("idempotency store prevents re-execution of completed nodes", async () => {
-    const { IdempotencyStore } = await import("@longox/workflow-engine").catch(() => ({} as any));
+    const { IdempotencyStore } = await import("@longox/workflow-engine").catch(
+      () => ({}) as any,
+    );
     if (IdempotencyStore) {
       expect(IdempotencyStore).toBeTruthy();
     }
@@ -115,14 +136,18 @@ describe("Worker crash recovery rehearsal", () => {
 
 describe("Failover drill rehearsal", () => {
   it("RegionalExecutionPoolService handles health checks", async () => {
-    const { RegionalExecutionPoolService } = await import("@longox/execution-service").catch(() => ({} as any));
+    const { RegionalExecutionPoolService } = await import(
+      "@longox/execution-service"
+    ).catch(() => ({}) as any);
     if (RegionalExecutionPoolService) {
       expect(RegionalExecutionPoolService).toBeTruthy();
     }
   });
 
   it("region health change event exists", async () => {
-    const { createEventEnvelope } = await import("@longox/shared-types").catch(() => ({} as any));
+    const { createEventEnvelope } = await import("@longox/shared-types").catch(
+      () => ({}) as any,
+    );
     if (typeof createEventEnvelope === "function") {
       const envelope = createEventEnvelope("platform.region.health.changed", {
         region: "us-east-1",
@@ -138,7 +163,10 @@ describe("Failover drill rehearsal", () => {
   it("DR runbook for region failover exists", async () => {
     const fs = await import("node:fs").catch(() => null);
     if (fs) {
-      const path = new URL("../../infrastructure/disaster-recovery/runbooks/region-failover.md", import.meta.url);
+      const path = new URL(
+        "../../infrastructure/disaster-recovery/runbooks/region-failover.md",
+        import.meta.url,
+      );
       const exists = fs.existsSync(path);
       expect(exists).toBe(true);
     }
@@ -147,14 +175,18 @@ describe("Failover drill rehearsal", () => {
 
 describe("Retention archive rehearsal", () => {
   it("RetentionPolicyService exists", async () => {
-    const { RetentionPolicyService } = await import("@longox/execution-service").catch(() => ({} as any));
+    const { RetentionPolicyService } = await import(
+      "@longox/execution-service"
+    ).catch(() => ({}) as any);
     if (RetentionPolicyService) {
       expect(RetentionPolicyService).toBeTruthy();
     }
   });
 
   it("partition management creates monthly partitions", async () => {
-    const { PartitionManagerService } = await import("@longox/execution-service").catch(() => ({} as any));
+    const { PartitionManagerService } = await import(
+      "@longox/execution-service"
+    ).catch(() => ({}) as any);
     if (PartitionManagerService) {
       expect(PartitionManagerService).toBeTruthy();
     }
@@ -203,7 +235,9 @@ describe("Retention archive rehearsal", () => {
 
 describe("Cold query rehearsal", () => {
   it("ColdQueryService exists for archived partition access", async () => {
-    const { ColdQueryService } = await import("@longox/execution-service").catch(() => ({} as any));
+    const { ColdQueryService } = await import(
+      "@longox/execution-service"
+    ).catch(() => ({}) as any);
     if (ColdQueryService) {
       expect(ColdQueryService).toBeTruthy();
     }

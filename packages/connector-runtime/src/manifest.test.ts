@@ -10,7 +10,9 @@ import {
 } from "./manifest";
 import type { ConnectorManifest, ConnectorArtifact } from "./manifest";
 
-function makeValidManifest(overrides?: Partial<ConnectorManifest>): ConnectorManifest {
+function makeValidManifest(
+  overrides?: Partial<ConnectorManifest>,
+): ConnectorManifest {
   return {
     manifestVersion: "1.0",
     id: "stripe",
@@ -27,7 +29,12 @@ function makeValidManifest(overrides?: Partial<ConnectorManifest>): ConnectorMan
     signature: "abc123",
     checksum: "",
     permissions: [
-      { scope: "charges:read", description: "Read charges", required: true, dangerous: false },
+      {
+        scope: "charges:read",
+        description: "Read charges",
+        required: true,
+        dangerous: false,
+      },
     ],
     capabilities: {
       actions: true,
@@ -105,12 +112,18 @@ describe("validateManifest", () => {
   });
 
   it("rejects invalid certification level", () => {
-    const errors = validateManifest(makeValidManifest({ certificationLevel: "invalid" as any }));
-    expect(errors).toContain("certificationLevel must be one of: official, verified, community, sandbox");
+    const errors = validateManifest(
+      makeValidManifest({ certificationLevel: "invalid" as any }),
+    );
+    expect(errors).toContain(
+      "certificationLevel must be one of: official, verified, community, sandbox",
+    );
   });
 
   it("rejects missing capabilities", () => {
-    const errors = validateManifest(makeValidManifest({ capabilities: undefined as any }));
+    const errors = validateManifest(
+      makeValidManifest({ capabilities: undefined as any }),
+    );
     expect(errors).toContain("capabilities is required");
   });
 
@@ -120,48 +133,62 @@ describe("validateManifest", () => {
   });
 
   it("rejects action without id", () => {
-    const errors = validateManifest(makeValidManifest({
-      actions: [{ name: "No ID" }] as any[],
-    }));
+    const errors = validateManifest(
+      makeValidManifest({
+        actions: [{ name: "No ID" }] as any[],
+      }),
+    );
     expect(errors).toContain("each action must have an id");
   });
 
   it("rejects trigger without id", () => {
-    const errors = validateManifest(makeValidManifest({
-      triggers: [{ type: "webhook" }] as any[],
-    }));
+    const errors = validateManifest(
+      makeValidManifest({
+        triggers: [{ type: "webhook" }] as any[],
+      }),
+    );
     expect(errors).toContain("each trigger must have an id");
   });
 
   it("rejects trigger with invalid type", () => {
-    const errors = validateManifest(makeValidManifest({
-      triggers: [{ id: "t1", type: "invalid" }] as any[],
-    }));
-    expect(errors).toContain("trigger t1 type must be webhook, polling, or event");
+    const errors = validateManifest(
+      makeValidManifest({
+        triggers: [{ id: "t1", type: "invalid" }] as any[],
+      }),
+    );
+    expect(errors).toContain(
+      "trigger t1 type must be webhook, polling, or event",
+    );
   });
 
   it("rejects oauth2 without required domains", () => {
-    const errors = validateManifest(makeValidManifest({
-      capabilities: {
-        ...makeValidManifest().capabilities,
-        auth: { oauth2: true, apiKey: false, basic: false, custom: false },
-      },
-      networkAccess: { requiredDomains: [], allowDynamic: false },
-    }));
+    const errors = validateManifest(
+      makeValidManifest({
+        capabilities: {
+          ...makeValidManifest().capabilities,
+          auth: { oauth2: true, apiKey: false, basic: false, custom: false },
+        },
+        networkAccess: { requiredDomains: [], allowDynamic: false },
+      }),
+    );
     expect(errors).toContain("oauth2 requires at least one network domain");
   });
 
   it("rejects minMemoryMb < 8", () => {
-    const errors = validateManifest(makeValidManifest({
-      runtime: { ...makeValidManifest().runtime, minMemoryMb: 4 },
-    }));
+    const errors = validateManifest(
+      makeValidManifest({
+        runtime: { ...makeValidManifest().runtime, minMemoryMb: 4 },
+      }),
+    );
     expect(errors).toContain("minMemoryMb must be at least 8");
   });
 
   it("rejects timeoutMs < 1000", () => {
-    const errors = validateManifest(makeValidManifest({
-      runtime: { ...makeValidManifest().runtime, timeoutMs: 500 },
-    }));
+    const errors = validateManifest(
+      makeValidManifest({
+        runtime: { ...makeValidManifest().runtime, timeoutMs: 500 },
+      }),
+    );
     expect(errors).toContain("timeoutMs must be at least 1000");
   });
 });
@@ -169,13 +196,19 @@ describe("validateManifest", () => {
 describe("verifyChecksum", () => {
   it("returns true for matching checksum", () => {
     const manifest = makeValidManifest();
-    const checksum = "6aaa7daa161a33ad8f83c269f3e59a0dd6ab6464c0c38ce3be56a755b7d21f67";
+    const checksum =
+      "6aaa7daa161a33ad8f83c269f3e59a0dd6ab6464c0c38ce3be56a755b7d21f67";
     expect(verifyChecksum(manifest, checksum)).toBe(true);
   });
 
   it("returns false for mismatched checksum", () => {
     const manifest = makeValidManifest();
-    expect(verifyChecksum(manifest, "0000000000000000000000000000000000000000000000000000000000000000")).toBe(false);
+    expect(
+      verifyChecksum(
+        manifest,
+        "0000000000000000000000000000000000000000000000000000000000000000",
+      ),
+    ).toBe(false);
   });
 });
 
@@ -192,7 +225,13 @@ describe("signManifest", () => {
 describe("mergeSandboxPolicy", () => {
   it("merges base policy with manifest overrides", () => {
     const manifest = makeValidManifest();
-    const policy = mergeSandboxPolicy(manifest, { minTier: "official", requireSignature: true, requireChecksum: true, maxActions: 50, allowedCategories: [] });
+    const policy = mergeSandboxPolicy(manifest, {
+      minTier: "official",
+      requireSignature: true,
+      requireChecksum: true,
+      maxActions: 50,
+      allowedCategories: [],
+    });
     expect(policy.opTable).toContain("net:allow");
     expect(policy.maxCpuMs).toBe(500);
     expect(policy.maxMemoryMb).toBe(128);
@@ -201,16 +240,36 @@ describe("mergeSandboxPolicy", () => {
 
   it("includes requiredDomains in allowedDomains", () => {
     const manifest = makeValidManifest();
-    const policy = mergeSandboxPolicy(manifest, { minTier: "official", requireSignature: true, requireChecksum: true, maxActions: 50, allowedCategories: [] });
+    const policy = mergeSandboxPolicy(manifest, {
+      minTier: "official",
+      requireSignature: true,
+      requireChecksum: true,
+      maxActions: 50,
+      allowedCategories: [],
+    });
     expect(policy.allowedDomains).toContain("api.stripe.com");
   });
 
   it("restricts limits when trust policy maxActions is exceeded", () => {
-    const manifest = makeValidManifest({ actions: Array.from({ length: 60 }, (_, i) => ({
-      id: `action-${i}`, name: `Action ${i}`, description: "", inputSchema: {}, outputSchema: {},
-      idempotent: false, requiredAuth: [], requiredPermissions: [],
-    })) });
-    const policy = mergeSandboxPolicy(manifest, { minTier: "official", requireSignature: true, requireChecksum: true, maxActions: 50, allowedCategories: [] });
+    const manifest = makeValidManifest({
+      actions: Array.from({ length: 60 }, (_, i) => ({
+        id: `action-${i}`,
+        name: `Action ${i}`,
+        description: "",
+        inputSchema: {},
+        outputSchema: {},
+        idempotent: false,
+        requiredAuth: [],
+        requiredPermissions: [],
+      })),
+    });
+    const policy = mergeSandboxPolicy(manifest, {
+      minTier: "official",
+      requireSignature: true,
+      requireChecksum: true,
+      maxActions: 50,
+      allowedCategories: [],
+    });
     expect(policy.maxNetworkRequests).toBeLessThanOrEqual(10);
     expect(policy.timeoutMs).toBeLessThanOrEqual(15_000);
   });
@@ -222,7 +281,13 @@ describe("mergeSandboxPolicy", () => {
         allowedDomains: ["custom.example.com"],
       },
     });
-    const policy = mergeSandboxPolicy(manifest, { minTier: "official", requireSignature: true, requireChecksum: true, maxActions: 50, allowedCategories: [] });
+    const policy = mergeSandboxPolicy(manifest, {
+      minTier: "official",
+      requireSignature: true,
+      requireChecksum: true,
+      maxActions: 50,
+      allowedCategories: [],
+    });
     expect(policy.opTable).toContain("custom:op");
     expect(policy.allowedDomains).toContain("custom.example.com");
   });
@@ -244,7 +309,11 @@ describe("getRequiredDomains", () => {
 
   it("includes optional domains", () => {
     const manifest = makeValidManifest({
-      networkAccess: { requiredDomains: ["required.com"], optionalDomains: ["optional.com"], allowDynamic: false },
+      networkAccess: {
+        requiredDomains: ["required.com"],
+        optionalDomains: ["optional.com"],
+        allowDynamic: false,
+      },
     });
     const domains = getRequiredDomains(manifest);
     expect(domains).toContain("optional.com");
@@ -263,8 +332,16 @@ describe("computeArtifactChecksum", () => {
       artifactType: "npm",
       artifactChecksum: "",
       effectiveSandboxPolicy: {
-        opTable: [], maxCpuMs: 1000, maxMemoryMb: 64, maxNetworkRequests: 10, timeoutMs: 5000,
-        allowedDomains: [], allowedEnvVars: [], allowedReadPaths: [], allowedWritePaths: [], secretsAllowlist: [],
+        opTable: [],
+        maxCpuMs: 1000,
+        maxMemoryMb: 64,
+        maxNetworkRequests: 10,
+        timeoutMs: 5000,
+        allowedDomains: [],
+        allowedEnvVars: [],
+        allowedReadPaths: [],
+        allowedWritePaths: [],
+        secretsAllowlist: [],
       },
     };
     const hash = computeArtifactChecksum(artifact);

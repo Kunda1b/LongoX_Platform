@@ -7,14 +7,24 @@ import { describe, it, expect } from "vitest";
  */
 describe("Event schema contract", () => {
   it("EventEnvelope has all 18 mandatory fields", async () => {
-    const { createEventEnvelope } = await import("@longox/shared-types").catch(() => ({} as any));
+    const { createEventEnvelope } = await import("@longox/shared-types").catch(
+      () => ({}) as any,
+    );
     if (typeof createEventEnvelope !== "function") return;
-    
+
     const envelope = createEventEnvelope("workflow.created", {});
     const mandatoryFields = [
-      "id", "specVersion", "type", "source", "subject", "time",
-      "identity", "context", "data",
-      "priority", "classification",
+      "id",
+      "specVersion",
+      "type",
+      "source",
+      "subject",
+      "time",
+      "identity",
+      "context",
+      "data",
+      "priority",
+      "classification",
     ];
     for (const field of mandatoryFields) {
       expect(envelope).toHaveProperty(field);
@@ -22,50 +32,66 @@ describe("Event schema contract", () => {
   });
 
   it("specVersion is '1.0' for all events", async () => {
-    const { createEventEnvelope } = await import("@longox/shared-types").catch(() => ({} as any));
+    const { createEventEnvelope } = await import("@longox/shared-types").catch(
+      () => ({}) as any,
+    );
     if (typeof createEventEnvelope !== "function") return;
-    
+
     const envelope = createEventEnvelope("execution.started", {});
     expect(envelope.specVersion).toBe("1.0");
   });
 
   it("context includes correlationId", async () => {
-    const { createEventEnvelope } = await import("@longox/shared-types").catch(() => ({} as any));
+    const { createEventEnvelope } = await import("@longox/shared-types").catch(
+      () => ({}) as any,
+    );
     if (typeof createEventEnvelope !== "function") return;
-    
+
     const envelope = createEventEnvelope("execution.completed", {});
     expect(envelope.context).toHaveProperty("correlationId");
     expect(typeof envelope.context.correlationId).toBe("string");
   });
 
   it("context supports optional causationId chain", async () => {
-    const { createEventEnvelope } = await import("@longox/shared-types").catch(() => ({} as any));
+    const { createEventEnvelope } = await import("@longox/shared-types").catch(
+      () => ({}) as any,
+    );
     if (typeof createEventEnvelope !== "function") return;
-    
-    const envelope = createEventEnvelope("execution.failed", {}, {
-      correlationId: "parent-correlation",
-      causationId: "parent-event-id",
-    });
+
+    const envelope = createEventEnvelope(
+      "execution.failed",
+      {},
+      {
+        correlationId: "parent-correlation",
+        causationId: "parent-event-id",
+      },
+    );
     expect(envelope.context.causationId).toBe("parent-event-id");
   });
 
   it("context supports OpenTelemetry trace context", async () => {
-    const { createEventEnvelope } = await import("@longox/shared-types").catch(() => ({} as any));
+    const { createEventEnvelope } = await import("@longox/shared-types").catch(
+      () => ({}) as any,
+    );
     if (typeof createEventEnvelope !== "function") return;
-    
-    const envelope = createEventEnvelope("ai.run.started", {}, {
-      traceId: "trace-abc",
-      spanId: "span-xyz",
-    });
+
+    const envelope = createEventEnvelope(
+      "ai.run.started",
+      {},
+      {
+        traceId: "trace-abc",
+        spanId: "span-xyz",
+      },
+    );
     expect(envelope.context.traceId).toBe("trace-abc");
     expect(envelope.context.spanId).toBe("span-xyz");
   });
 
   it("serialize/deserialize roundtrip preserves all fields", async () => {
-    const { createEventEnvelope, serializeEvent, deserializeEvent } = 
-      await import("@longox/shared-types").catch(() => ({} as any));
+    const { createEventEnvelope, serializeEvent, deserializeEvent } =
+      await import("@longox/shared-types").catch(() => ({}) as any);
     if (typeof createEventEnvelope !== "function") return;
-    
+
     const original = createEventEnvelope("billing.invoice.created", {
       invoiceId: "inv_123",
       amount: 1000,
@@ -78,9 +104,11 @@ describe("Event schema contract", () => {
   });
 
   it("validateEventEnvelope rejects malformed events", async () => {
-    const { validateEventEnvelope } = await import("@longox/shared-types").catch(() => ({} as any));
+    const { validateEventEnvelope } = await import(
+      "@longox/shared-types"
+    ).catch(() => ({}) as any);
     if (typeof validateEventEnvelope !== "function") return;
-    
+
     expect(validateEventEnvelope(null)).toBe(false);
     expect(validateEventEnvelope({})).toBe(false);
     expect(validateEventEnvelope({ id: "x", specVersion: "1.0" })).toBe(false);
@@ -95,9 +123,11 @@ describe("Event schema contract", () => {
   });
 
   it("critical event types exist for billing, security, and platform operations", async () => {
-    const { createEventEnvelope } = await import("@longox/shared-types").catch(() => ({} as any));
+    const { createEventEnvelope } = await import("@longox/shared-types").catch(
+      () => ({}) as any,
+    );
     if (typeof createEventEnvelope !== "function") return;
-    
+
     const criticalTypes = [
       "execution.failed",
       "ai.guardrail.hit",
@@ -112,9 +142,11 @@ describe("Event schema contract", () => {
   });
 
   it("envelope data field accepts typed event data", async () => {
-    const { createEventEnvelope } = await import("@longox/shared-types").catch(() => ({} as any));
+    const { createEventEnvelope } = await import("@longox/shared-types").catch(
+      () => ({}) as any,
+    );
     if (typeof createEventEnvelope !== "function") return;
-    
+
     const envelope = createEventEnvelope("execution.approval.granted", {
       executionId: 1,
       nodeId: "n1",

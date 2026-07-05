@@ -49,7 +49,9 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export function SemanticDiff({ workflowDiff }: SemanticDiffProps) {
-  const rendered: RenderedDiff = renderSemanticDiff(workflowDiff.semanticChanges);
+  const rendered: RenderedDiff = renderSemanticDiff(
+    workflowDiff.semanticChanges,
+  );
 
   return (
     <div className="space-y-4">
@@ -58,7 +60,8 @@ export function SemanticDiff({ workflowDiff }: SemanticDiffProps) {
           v{workflowDiff.fromVersion} → v{workflowDiff.toVersion}
         </span>
         <span className="text-muted-foreground">
-          {workflowDiff.semanticChanges.length} change{workflowDiff.semanticChanges.length !== 1 ? "s" : ""}
+          {workflowDiff.semanticChanges.length} change
+          {workflowDiff.semanticChanges.length !== 1 ? "s" : ""}
         </span>
         {rendered.hasBreakingChanges && (
           <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
@@ -68,7 +71,9 @@ export function SemanticDiff({ workflowDiff }: SemanticDiffProps) {
       </div>
 
       {rendered.groups.length === 0 ? (
-        <p className="py-4 text-sm text-muted-foreground">No changes detected between versions.</p>
+        <p className="py-4 text-sm text-muted-foreground">
+          No changes detected between versions.
+        </p>
       ) : (
         <div className="space-y-3">
           {rendered.groups.map((group) => (
@@ -78,7 +83,9 @@ export function SemanticDiff({ workflowDiff }: SemanticDiffProps) {
               </h4>
               <div className="space-y-1">
                 {group.changes.map((change, i) => {
-                  const styles = TYPE_STYLES[change.type] ?? "bg-gray-50 border-gray-300 text-gray-800";
+                  const styles =
+                    TYPE_STYLES[change.type] ??
+                    "bg-gray-50 border-gray-300 text-gray-800";
                   const label = TYPE_LABELS[change.type] ?? change.type;
                   return (
                     <div

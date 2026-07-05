@@ -63,7 +63,9 @@ router.post("/webhooks/send", async (req, res): Promise<void> => {
   try {
     const { tenantId, eventType, payload } = req.body;
     if (!tenantId || !eventType || !payload) {
-      res.status(400).json({ error: "tenantId, eventType, and payload are required" });
+      res
+        .status(400)
+        .json({ error: "tenantId, eventType, and payload are required" });
       return;
     }
     const result = await sendWebhook.execute({ tenantId, eventType, payload });

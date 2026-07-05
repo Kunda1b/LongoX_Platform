@@ -401,7 +401,10 @@ export function WorkflowDetail() {
               <Button variant="outline">Cancel</Button>
             </DialogClose>
             <Button variant="secondary" asChild>
-              <Link href={`/workflows/${workflowId}/versions`} className="gap-2">
+              <Link
+                href={`/workflows/${workflowId}/versions`}
+                className="gap-2"
+              >
                 <GitCompare className="h-4 w-4" />
                 View Diff
               </Link>

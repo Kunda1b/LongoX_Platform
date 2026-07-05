@@ -30,9 +30,27 @@ export async function readRange(context: ActionContext): Promise<ActionResult> {
   const range = String(context.config.range ?? "");
   const majorDimension = String(context.config.majorDimension ?? "ROWS");
 
-  if (!token) return { success: false, data: {}, error: "Access token required", durationMs: Date.now() - start };
-  if (!spreadsheetId) return { success: false, data: {}, error: "spreadsheetId required", durationMs: Date.now() - start };
-  if (!range) return { success: false, data: {}, error: "range required", durationMs: Date.now() - start };
+  if (!token)
+    return {
+      success: false,
+      data: {},
+      error: "Access token required",
+      durationMs: Date.now() - start,
+    };
+  if (!spreadsheetId)
+    return {
+      success: false,
+      data: {},
+      error: "spreadsheetId required",
+      durationMs: Date.now() - start,
+    };
+  if (!range)
+    return {
+      success: false,
+      data: {},
+      error: "range required",
+      durationMs: Date.now() - start,
+    };
 
   try {
     const data = await sheetsRequest(
@@ -47,38 +65,79 @@ export async function readRange(context: ActionContext): Promise<ActionResult> {
       durationMs: Date.now() - start,
     };
   } catch (err) {
-    return { success: false, data: {}, error: err instanceof Error ? err.message : String(err), durationMs: Date.now() - start };
+    return {
+      success: false,
+      data: {},
+      error: err instanceof Error ? err.message : String(err),
+      durationMs: Date.now() - start,
+    };
   }
 }
 
-export async function writeRange(context: ActionContext): Promise<ActionResult> {
+export async function writeRange(
+  context: ActionContext,
+): Promise<ActionResult> {
   const start = Date.now();
   const token = context.auth.credentials.accessToken as string;
   const spreadsheetId = String(context.config.spreadsheetId ?? "");
   const range = String(context.config.range ?? "");
   const values = context.config.values as unknown[];
-  const valueInputOption = String(context.config.valueInputOption ?? "USER_ENTERED");
+  const valueInputOption = String(
+    context.config.valueInputOption ?? "USER_ENTERED",
+  );
 
-  if (!token) return { success: false, data: {}, error: "Access token required", durationMs: Date.now() - start };
-  if (!spreadsheetId) return { success: false, data: {}, error: "spreadsheetId required", durationMs: Date.now() - start };
-  if (!range) return { success: false, data: {}, error: "range required", durationMs: Date.now() - start };
-  if (!Array.isArray(values)) return { success: false, data: {}, error: "values must be an array", durationMs: Date.now() - start };
+  if (!token)
+    return {
+      success: false,
+      data: {},
+      error: "Access token required",
+      durationMs: Date.now() - start,
+    };
+  if (!spreadsheetId)
+    return {
+      success: false,
+      data: {},
+      error: "spreadsheetId required",
+      durationMs: Date.now() - start,
+    };
+  if (!range)
+    return {
+      success: false,
+      data: {},
+      error: "range required",
+      durationMs: Date.now() - start,
+    };
+  if (!Array.isArray(values))
+    return {
+      success: false,
+      data: {},
+      error: "values must be an array",
+      durationMs: Date.now() - start,
+    };
 
   try {
     const data = await sheetsRequest(
       token,
       `/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=${valueInputOption}`,
       "PUT",
-      { values: values.map(v => Array.isArray(v) ? v : [v]) },
+      { values: values.map((v) => (Array.isArray(v) ? v : [v])) },
     );
     return {
       success: true,
-      data: { updatedCells: data.updatedCells as number, updatedRange: data.updatedRange as string },
+      data: {
+        updatedCells: data.updatedCells as number,
+        updatedRange: data.updatedRange as string,
+      },
       error: null,
       durationMs: Date.now() - start,
     };
   } catch (err) {
-    return { success: false, data: {}, error: err instanceof Error ? err.message : String(err), durationMs: Date.now() - start };
+    return {
+      success: false,
+      data: {},
+      error: err instanceof Error ? err.message : String(err),
+      durationMs: Date.now() - start,
+    };
   }
 }
 
@@ -88,26 +147,54 @@ export async function appendRow(context: ActionContext): Promise<ActionResult> {
   const spreadsheetId = String(context.config.spreadsheetId ?? "");
   const range = String(context.config.range ?? "");
   const values = context.config.values as unknown[];
-  const valueInputOption = String(context.config.valueInputOption ?? "USER_ENTERED");
+  const valueInputOption = String(
+    context.config.valueInputOption ?? "USER_ENTERED",
+  );
 
-  if (!token) return { success: false, data: {}, error: "Access token required", durationMs: Date.now() - start };
-  if (!spreadsheetId) return { success: false, data: {}, error: "spreadsheetId required", durationMs: Date.now() - start };
-  if (!Array.isArray(values)) return { success: false, data: {}, error: "values must be an array", durationMs: Date.now() - start };
+  if (!token)
+    return {
+      success: false,
+      data: {},
+      error: "Access token required",
+      durationMs: Date.now() - start,
+    };
+  if (!spreadsheetId)
+    return {
+      success: false,
+      data: {},
+      error: "spreadsheetId required",
+      durationMs: Date.now() - start,
+    };
+  if (!Array.isArray(values))
+    return {
+      success: false,
+      data: {},
+      error: "values must be an array",
+      durationMs: Date.now() - start,
+    };
 
   try {
     const data = await sheetsRequest(
       token,
       `/${spreadsheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=${valueInputOption}&insertDataOption=INSERT_ROWS`,
       "POST",
-      { values: values.map(v => Array.isArray(v) ? v : [v]) },
+      { values: values.map((v) => (Array.isArray(v) ? v : [v])) },
     );
     return {
       success: true,
-      data: { appendedRange: data.tableRange ?? data.updates?.updatedRange, updatedCells: (data as any).updates?.updatedCells ?? 0 },
+      data: {
+        appendedRange: data.tableRange ?? data.updates?.updatedRange,
+        updatedCells: (data as any).updates?.updatedCells ?? 0,
+      },
       error: null,
       durationMs: Date.now() - start,
     };
   } catch (err) {
-    return { success: false, data: {}, error: err instanceof Error ? err.message : String(err), durationMs: Date.now() - start };
+    return {
+      success: false,
+      data: {},
+      error: err instanceof Error ? err.message : String(err),
+      durationMs: Date.now() - start,
+    };
   }
 }

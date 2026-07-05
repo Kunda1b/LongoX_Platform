@@ -131,7 +131,7 @@ export async function publishWorkflow(
         ? (latestVersion.graphJson as any[])
         : [],
       edges: Array.isArray((latestVersion as any).graphJson?.edges ?? [])
-        ? (latestVersion as any).graphJson?.edges ?? []
+        ? ((latestVersion as any).graphJson?.edges ?? [])
         : [],
     };
 

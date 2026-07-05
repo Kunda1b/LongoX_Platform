@@ -54,7 +54,9 @@ router.post(
     });
 
     if (configs.length === 0) {
-      res.status(400).json({ error: "No active replication config for this region and entity type" });
+      res.status(400).json({
+        error: "No active replication config for this region and entity type",
+      });
       return;
     }
 
@@ -109,7 +111,9 @@ router.post(
     } = req.body as Record<string, unknown>;
 
     if (!sourceRegionId || !targetRegionId || !entityType) {
-      res.status(400).json({ error: "sourceRegionId, targetRegionId, and entityType are required" });
+      res.status(400).json({
+        error: "sourceRegionId, targetRegionId, and entityType are required",
+      });
       return;
     }
 
@@ -178,8 +182,12 @@ router.get(
   "/replication/log",
   authorize({ resource: "admin", action: "read" }),
   async (req, res): Promise<void> => {
-    const { status, entityType, limit: limitStr, offset: offsetStr } =
-      req.query as Record<string, string | undefined>;
+    const {
+      status,
+      entityType,
+      limit: limitStr,
+      offset: offsetStr,
+    } = req.query as Record<string, string | undefined>;
 
     const where: Record<string, unknown> = {};
     if (status) where.status = status;
@@ -255,7 +263,9 @@ router.post(
     } = req.body as Record<string, unknown>;
 
     if (!name || !primaryRegionId || !failoverRegionId) {
-      res.status(400).json({ error: "name, primaryRegionId, and failoverRegionId are required" });
+      res.status(400).json({
+        error: "name, primaryRegionId, and failoverRegionId are required",
+      });
       return;
     }
 

@@ -38,7 +38,10 @@ import { authorize } from "@longox/shared-rbac";
 const router = Router();
 
 // Temporary CSRF state store (replace with Redis in multi-instance deployments)
-const stateStore = new Map<string, { redirectUrl: string; expiresAt: number }>();
+const stateStore = new Map<
+  string,
+  { redirectUrl: string; expiresAt: number }
+>();
 setInterval(() => {
   const now = Date.now();
   for (const [k, v] of stateStore) {
@@ -225,11 +228,17 @@ router.get(
     }
 
     try {
-      const link = await getAdminPortalLink({ intent, organizationId, returnUrl });
+      const link = await getAdminPortalLink({
+        intent,
+        organizationId,
+        returnUrl,
+      });
       res.json({ link });
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : "Failed to generate Admin Portal link";
+        err instanceof Error
+          ? err.message
+          : "Failed to generate Admin Portal link";
       res.status(500).json({ error: msg });
     }
   },
@@ -307,7 +316,9 @@ router.post(
       phone_number?: string;
     };
     if (!workos_user_id || !phone_number) {
-      res.status(400).json({ error: "workos_user_id and phone_number are required" });
+      res
+        .status(400)
+        .json({ error: "workos_user_id and phone_number are required" });
       return;
     }
 

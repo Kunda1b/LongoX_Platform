@@ -1,12 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { useListEnvironments, useDeleteEnvironment, getListEnvironmentsQueryKey } from "@longox/api-client-react";
+import {
+  useListEnvironments,
+  useDeleteEnvironment,
+  getListEnvironmentsQueryKey,
+} from "@longox/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Globe, Plus, Trash2, ArrowUpDown, Undo2, FileDiff } from "lucide-react";
+import {
+  Globe,
+  Plus,
+  Trash2,
+  ArrowUpDown,
+  Undo2,
+  FileDiff,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
@@ -20,7 +31,9 @@ export function EnvironmentsList() {
   const deleteMutation = useDeleteEnvironment({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListEnvironmentsQueryKey() });
+        queryClient.invalidateQueries({
+          queryKey: getListEnvironmentsQueryKey(),
+        });
         toast({ title: "Environment deleted" });
       },
     },
@@ -89,9 +102,7 @@ export function EnvironmentsList() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <Badge variant={getTypeColor(env.type)}>
-                    {env.type}
-                  </Badge>
+                  <Badge variant={getTypeColor(env.type)}>{env.type}</Badge>
                   <span className="text-xs text-muted-foreground">
                     {env.workflowCount} workflows
                   </span>
@@ -103,17 +114,29 @@ export function EnvironmentsList() {
                 )}
                 <div className="flex items-center gap-2 pt-1">
                   <Link href={`/environments/${env.id}/promote`}>
-                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                    >
                       <ArrowUpDown className="h-3 w-3" /> Promote
                     </Button>
                   </Link>
                   <Link href={`/environments/${env.id}/rollback`}>
-                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                    >
                       <Undo2 className="h-3 w-3" /> Rollback
                     </Button>
                   </Link>
                   <Link href={`/environments/${env.id}/diff`}>
-                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                    >
                       <FileDiff className="h-3 w-3" /> Diff
                     </Button>
                   </Link>

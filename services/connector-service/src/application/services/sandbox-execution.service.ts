@@ -1,7 +1,20 @@
-import { DenoIsolate, DEFAULT_CONNECTOR_POLICY, RESTRICTED_CONNECTOR_POLICY, UNTRUSTED_CONNECTOR_POLICY } from "@longox/connector-sandbox";
-import type { IsolateContext, SandboxPolicy, AuditLogger } from "@longox/connector-sandbox";
+import {
+  DenoIsolate,
+  DEFAULT_CONNECTOR_POLICY,
+  RESTRICTED_CONNECTOR_POLICY,
+  UNTRUSTED_CONNECTOR_POLICY,
+} from "@longox/connector-sandbox";
+import type {
+  IsolateContext,
+  SandboxPolicy,
+  AuditLogger,
+} from "@longox/connector-sandbox";
 import { evaluateTrust, lifecycleEngine } from "@longox/connector-runtime";
-import type { ConnectorManifest, ManifestAction, ConnectorCertificationLevel } from "@longox/connector-runtime";
+import type {
+  ConnectorManifest,
+  ManifestAction,
+  ConnectorCertificationLevel,
+} from "@longox/connector-runtime";
 
 const TIER_TO_POLICY: Record<ConnectorCertificationLevel, SandboxPolicy> = {
   official: DEFAULT_CONNECTOR_POLICY,
@@ -40,21 +53,44 @@ export class SandboxExecutionService {
   }
 
   async execute(input: SandboxExecutionInput): Promise<SandboxExecutionOutput> {
-    const certificationLevel: ConnectorCertificationLevel = input.manifest?.certificationLevel ?? "sandbox";
+    const certificationLevel: ConnectorCertificationLevel =
+      input.manifest?.certificationLevel ?? "sandbox";
     const basePolicy = TIER_TO_POLICY[certificationLevel];
-    const actionPolicy = this.deriveActionPolicy(basePolicy, input.manifest, input.actionId);
+    const actionPolicy = this.deriveActionPolicy(
+      basePolicy,
+      input.manifest,
+      input.actionId,
+    );
 
     const initial = lifecycleEngine.createInitialState(
-      (input.manifest ?? { name: input.connectorName, version: "0.0.0", certificationLevel }) as unknown as ConnectorManifest,
+      (input.manifest ?? {
+        name: input.connectorName,
+        version: "0.0.0",
+        certificationLevel,
+      }) as unknown as ConnectorManifest,
       input.tenantId,
     );
 
-    await lifecycleEngine.transition({ ...initial, installationId: input.installationId, connectorId: input.connectorId, connectorName: input.connectorName }, "executing");
+    await lifecycleEngine.transition(
+      {
+        ...initial,
+        installationId: input.installationId,
+        connectorId: input.connectorId,
+        connectorName: input.connectorName,
+      },
+      "executing",
+    );
 
     try {
-      const trustResult = input.manifest ? evaluateTrust(input.manifest as ConnectorManifest) : { passed: true, reasons: [] };
+      const trustResult = input.manifest
+        ? evaluateTrust(input.manifest as ConnectorManifest)
+        : { passed: true, reasons: [] };
       if (!trustResult.passed) {
-        await lifecycleEngine.transition(initial, "error", `Trust evaluation failed: ${trustResult.reasons.join("; ")}`);
+        await lifecycleEngine.transition(
+          initial,
+          "error",
+          `Trust evaluation failed: ${trustResult.reasons.join("; ")}`,
+        );
         return {
           success: false,
           data: {},
@@ -90,7 +126,12 @@ export class SandboxExecutionService {
       const result = await isolate.execute(context);
 
       const finalState = await lifecycleEngine.transition(
-        { ...initial, installationId: input.installationId, connectorId: input.connectorId, connectorName: input.connectorName },
+        {
+          ...initial,
+          installationId: input.installationId,
+          connectorId: input.connectorId,
+          connectorName: input.connectorName,
+        },
         result.success ? "executed" : "error",
         result.error ?? undefined,
       );
@@ -106,7 +147,12 @@ export class SandboxExecutionService {
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       await lifecycleEngine.transition(
-        { ...initial, installationId: input.installationId, connectorId: input.connectorId, connectorName: input.connectorName },
+        {
+          ...initial,
+          installationId: input.installationId,
+          connectorId: input.connectorId,
+          connectorName: input.connectorName,
+        },
         "error",
         errorMsg,
       );
@@ -121,8 +167,14 @@ export class SandboxExecutionService {
     }
   }
 
-  private deriveActionPolicy(base: SandboxPolicy, manifest: ConnectorManifest | undefined, actionId: string): SandboxPolicy {
-    const action = manifest?.actions?.find((a: ManifestAction) => a.id === actionId);
+  private deriveActionPolicy(
+    base: SandboxPolicy,
+    manifest: ConnectorManifest | undefined,
+    actionId: string,
+  ): SandboxPolicy {
+    const action = manifest?.actions?.find(
+      (a: ManifestAction) => a.id === actionId,
+    );
     const timeoutMs = action?.timeoutMs ?? base.timeoutMs;
 
     const domains = manifest?.networkAccess?.requiredDomains ?? [];
@@ -132,7 +184,11 @@ export class SandboxExecutionService {
       ...base,
       timeoutMs: Math.min(timeoutMs, base.timeoutMs),
       maxNetworkRequests: base.maxNetworkRequests,
-      allowedDomains: hasDynamicNet ? ["*"] : domains.length > 0 ? domains : base.allowedDomains,
+      allowedDomains: hasDynamicNet
+        ? ["*"]
+        : domains.length > 0
+          ? domains
+          : base.allowedDomains,
     };
   }
 }

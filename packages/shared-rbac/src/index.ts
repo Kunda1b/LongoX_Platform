@@ -538,11 +538,9 @@ async function getUserPermissions(
       // Prefer legacy `resource`/`action` columns when present; fall back to
       // parsing the canonical `code` (e.g. "workflows:read").
       const resource =
-        p.resource ??
-        (typeof p.code === "string" ? p.code.split(":")[0] : "");
+        p.resource ?? (typeof p.code === "string" ? p.code.split(":")[0] : "");
       const action =
-        p.action ??
-        (typeof p.code === "string" ? p.code.split(":")[1] : "");
+        p.action ?? (typeof p.code === "string" ? p.code.split(":")[1] : "");
       if (resource && action) {
         permissions.add(`${resource}:${action}`);
       }

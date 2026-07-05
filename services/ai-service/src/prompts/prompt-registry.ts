@@ -39,10 +39,7 @@ export class PromptRegistry {
       provider: p.provider,
       maxTokens: p.maxTokens,
       temperature: p.temperature,
-      variables:
-        typeof p.variables === "string"
-          ? JSON.parse(p.variables)
-          : [],
+      variables: typeof p.variables === "string" ? JSON.parse(p.variables) : [],
       version: this.getVersionNumber(p.createdAt),
     };
   }
@@ -105,10 +102,12 @@ export class PromptRegistry {
     if (data.variables !== undefined)
       updates.variables = JSON.stringify(data.variables);
 
-    const updated = await prisma.aiPrompt.update({
-      where: { id } as any,
-      data: updates as any,
-    }).catch(() => null);
+    const updated = await prisma.aiPrompt
+      .update({
+        where: { id } as any,
+        data: updates as any,
+      })
+      .catch(() => null);
     if (!updated) return null;
 
     return this.getPrompt(id);

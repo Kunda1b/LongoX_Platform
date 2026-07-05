@@ -75,10 +75,7 @@ router.get(
 
     const rows = await prisma.connector.findMany({
       where: where as any,
-      orderBy: [
-        { isFeatured: "desc" } as any,
-        { name: "asc" },
-      ],
+      orderBy: [{ isFeatured: "desc" } as any, { name: "asc" }],
     });
 
     res.json(rows.map(serializeConnector));
@@ -277,7 +274,9 @@ router.post(
         where: { id: (install as any).connectorId },
       });
 
-      const capabilities = (connector as any)?.capabilities as Record<string, unknown> | undefined;
+      const capabilities = (connector as any)?.capabilities as
+        | Record<string, unknown>
+        | undefined;
       const manifestJson = capabilities?.manifest as string | undefined;
       const manifest = manifestJson ? JSON.parse(manifestJson) : undefined;
 
@@ -287,25 +286,37 @@ router.post(
         installationId,
         tenantId,
         actionId: "test",
-        auth: ((install as any).config as Record<string, unknown>)?.auth as Record<string, unknown> ?? {},
-        config: (install as any).config as Record<string, unknown> ?? {},
+        auth:
+          (((install as any).config as Record<string, unknown>)?.auth as Record<
+            string,
+            unknown
+          >) ?? {},
+        config: ((install as any).config as Record<string, unknown>) ?? {},
         input: {},
         secrets: {},
         manifest,
       });
 
-      await prisma.tenantConnectorInstall.update({
-        where: { id: installationId } as any,
-        data: { lastUsedAt: new Date() } as any,
-      }).catch(() => undefined);
+      await prisma.tenantConnectorInstall
+        .update({
+          where: { id: installationId } as any,
+          data: { lastUsedAt: new Date() } as any,
+        })
+        .catch(() => undefined);
 
       res.json({
         status: result.success ? "success" : "failed",
         durationMs: result.durationMs,
-        message: result.success ? "Connection successful" : (result.error ?? "Connection failed"),
+        message: result.success
+          ? "Connection successful"
+          : (result.error ?? "Connection failed"),
       });
     } catch (err) {
-      res.json({ status: "failed", durationMs: 0, message: (err as Error).message });
+      res.json({
+        status: "failed",
+        durationMs: 0,
+        message: (err as Error).message,
+      });
     }
   },
 );
@@ -344,7 +355,9 @@ router.post(
         where: { id: (install as any).connectorId },
       });
 
-      const capabilities = (connector as any)?.capabilities as Record<string, unknown> | undefined;
+      const capabilities = (connector as any)?.capabilities as
+        | Record<string, unknown>
+        | undefined;
       const manifestJson = capabilities?.manifest as string | undefined;
       const manifest = manifestJson ? JSON.parse(manifestJson) : undefined;
 
@@ -354,26 +367,43 @@ router.post(
         installationId,
         tenantId,
         actionId,
-        auth: ((install as any).config as Record<string, unknown>)?.auth as Record<string, unknown> ?? {},
-        config: (install as any).config as Record<string, unknown> ?? {},
+        auth:
+          (((install as any).config as Record<string, unknown>)?.auth as Record<
+            string,
+            unknown
+          >) ?? {},
+        config: ((install as any).config as Record<string, unknown>) ?? {},
         input,
         secrets: {},
         manifest,
       });
 
-      await prisma.tenantConnectorInstall.update({
-        where: { id: installationId } as any,
-        data: { lastUsedAt: new Date() } as any,
-      }).catch(() => undefined);
+      await prisma.tenantConnectorInstall
+        .update({
+          where: { id: installationId } as any,
+          data: { lastUsedAt: new Date() } as any,
+        })
+        .catch(() => undefined);
 
       if (!result.success) {
-        res.status(400).json({ success: false, error: result.error, durationMs: result.durationMs });
+        res.status(400).json({
+          success: false,
+          error: result.error,
+          durationMs: result.durationMs,
+        });
         return;
       }
 
-      res.json({ success: true, data: result.data, durationMs: result.durationMs, trustTier: result.trustTier });
+      res.json({
+        success: true,
+        data: result.data,
+        durationMs: result.durationMs,
+        trustTier: result.trustTier,
+      });
     } catch (err) {
-      res.status(500).json({ success: false, error: (err as Error).message, durationMs: 0 });
+      res
+        .status(500)
+        .json({ success: false, error: (err as Error).message, durationMs: 0 });
     }
   },
 );
@@ -458,7 +488,9 @@ router.post(
         where: { id: (install as any).connectorId },
       });
 
-      const capabilities = (connector as any)?.capabilities as Record<string, unknown> | undefined;
+      const capabilities = (connector as any)?.capabilities as
+        | Record<string, unknown>
+        | undefined;
       const manifestJson = capabilities?.manifest as string | undefined;
       const manifest = manifestJson ? JSON.parse(manifestJson) : undefined;
 
@@ -468,19 +500,28 @@ router.post(
         installationId,
         tenantId,
         actionId: `poll:${triggerId}`,
-        auth: ((install as any).config as Record<string, unknown>)?.auth as Record<string, unknown> ?? {},
-        config: (install as any).config as Record<string, unknown> ?? {},
+        auth:
+          (((install as any).config as Record<string, unknown>)?.auth as Record<
+            string,
+            unknown
+          >) ?? {},
+        config: ((install as any).config as Record<string, unknown>) ?? {},
         input: { lastPollId },
         secrets: {},
         manifest,
       });
 
       if (!result.success) {
-        res.status(400).json({ events: [], error: result.error ?? "Poll failed" });
+        res
+          .status(400)
+          .json({ events: [], error: result.error ?? "Poll failed" });
         return;
       }
 
-      res.json({ events: Array.isArray(result.data?.events) ? result.data.events : [], triggerId });
+      res.json({
+        events: Array.isArray(result.data?.events) ? result.data.events : [],
+        triggerId,
+      });
     } catch (err) {
       res.status(500).json({ events: [], error: (err as Error).message });
     }
@@ -524,7 +565,9 @@ router.post(
       const previousVersion = versions[0];
 
       if (!previousVersion) {
-        res.status(400).json({ error: "No previous version available for rollback" });
+        res
+          .status(400)
+          .json({ error: "No previous version available for rollback" });
         return;
       }
 

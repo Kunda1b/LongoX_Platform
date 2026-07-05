@@ -31,7 +31,10 @@ router.post(
   authorize({ resource: "compliance", action: "read" }),
   async (req, res): Promise<void> => {
     try {
-      const request = await gdpr.createExportRequest(String(req.user!.id), req.tenantId!);
+      const request = await gdpr.createExportRequest(
+        String(req.user!.id),
+        req.tenantId!,
+      );
       const fulfillment = await gdpr.fulfillExportRequest(request.id);
       res.status(201).json(fulfillment);
     } catch (error) {
@@ -57,7 +60,10 @@ router.get(
   authorize({ resource: "compliance", action: "read" }),
   async (req, res): Promise<void> => {
     try {
-      const data = await gdpr.exportUserData(String(req.user!.id), req.tenantId!);
+      const data = await gdpr.exportUserData(
+        String(req.user!.id),
+        req.tenantId!,
+      );
       res.json(data);
     } catch (error) {
       res.status(404).json({ error: (error as Error).message });
@@ -70,12 +76,19 @@ router.post(
   authorize({ resource: "compliance", action: "admin" }),
   async (req, res): Promise<void> => {
     try {
-      const { userId, reason } = req.body as { userId?: string; reason?: string };
+      const { userId, reason } = req.body as {
+        userId?: string;
+        reason?: string;
+      };
       if (!userId || !reason) {
         res.status(400).json({ error: "userId and reason are required" });
         return;
       }
-      const request = await gdpr.createDeletionRequest(userId, req.tenantId!, reason);
+      const request = await gdpr.createDeletionRequest(
+        userId,
+        req.tenantId!,
+        reason,
+      );
       res.status(201).json(request);
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
@@ -113,13 +126,20 @@ router.post(
   authorize({ resource: "audit", action: "admin" }),
   async (req, res): Promise<void> => {
     try {
-      const { format = "json", dateFrom, dateTo, ...filters } = req.body as {
+      const {
+        format = "json",
+        dateFrom,
+        dateTo,
+        ...filters
+      } = req.body as {
         format?: string;
         dateFrom?: string;
         dateTo?: string;
         [key: string]: unknown;
       };
-      const from = dateFrom ? new Date(dateFrom) : new Date(Date.now() - 30 * 86400000);
+      const from = dateFrom
+        ? new Date(dateFrom)
+        : new Date(Date.now() - 30 * 86400000);
       const to = dateTo ? new Date(dateTo) : new Date();
 
       let result: string;
@@ -146,8 +166,14 @@ router.post(
         } as any,
       });
 
-      res.setHeader("Content-Type", format === "csv" ? "text/csv" : "application/json");
-      res.setHeader("Content-Disposition", `attachment; filename=audit-export.${format}`);
+      res.setHeader(
+        "Content-Type",
+        format === "csv" ? "text/csv" : "application/json",
+      );
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=audit-export.${format}`,
+      );
       res.send(result);
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
@@ -177,7 +203,10 @@ router.get(
       return;
     }
 
-    res.json({ downloadUrl: (exportRecord as any).storagePath, format: (exportRecord as any).format });
+    res.json({
+      downloadUrl: (exportRecord as any).storagePath,
+      format: (exportRecord as any).format,
+    });
   },
 );
 
@@ -186,14 +215,15 @@ router.post(
   authorize({ resource: "compliance", action: "write" }),
   async (req, res): Promise<void> => {
     try {
-      const { evidenceType, title, description, payload, source, severity } = req.body as {
-        evidenceType: string;
-        title: string;
-        description?: string;
-        payload: unknown;
-        source: string;
-        severity?: string;
-      };
+      const { evidenceType, title, description, payload, source, severity } =
+        req.body as {
+          evidenceType: string;
+          title: string;
+          description?: string;
+          payload: unknown;
+          source: string;
+          severity?: string;
+        };
       const record = await evidence.retainEvidence(
         evidenceType,
         { title, description, payload, source, severity },
@@ -256,7 +286,11 @@ router.post(
         incidentType: string;
         severity: string;
         description: string;
-        metadata?: { title?: string; affectedResources?: string[]; extra?: Record<string, unknown> };
+        metadata?: {
+          title?: string;
+          affectedResources?: string[];
+          extra?: Record<string, unknown>;
+        };
       };
       const incident = await securityIncidents.createIncident(
         req.tenantId!,
@@ -308,7 +342,12 @@ router.patch(
     try {
       const incident = await securityIncidents.updateIncident(
         String(req.params.id),
-        req.body as { status?: string; title?: string; description?: string; metadata?: Record<string, unknown> },
+        req.body as {
+          status?: string;
+          title?: string;
+          description?: string;
+          metadata?: Record<string, unknown>;
+        },
       );
       res.json(incident);
     } catch (error) {
@@ -344,8 +383,14 @@ router.post(
   authorize({ resource: "compliance", action: "write" }),
   async (req, res): Promise<void> => {
     try {
-      const { evidenceType, data } = req.body as { evidenceType: string; data: unknown };
-      const record = await securityIncidents.addEvidence(String(req.params.id), { evidenceType, data });
+      const { evidenceType, data } = req.body as {
+        evidenceType: string;
+        data: unknown;
+      };
+      const record = await securityIncidents.addEvidence(
+        String(req.params.id),
+        { evidenceType, data },
+      );
       res.status(201).json(record);
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
@@ -394,7 +439,9 @@ router.get(
         res.json({ region: null, policies: [], applicableFrameworks: [] });
         return;
       }
-      const policies = await residency.getRegionPolicies(regionInfo.primaryRegion);
+      const policies = await residency.getRegionPolicies(
+        regionInfo.primaryRegion,
+      );
       res.json(policies);
     } catch (error) {
       res.status(404).json({ error: (error as Error).message });
@@ -407,7 +454,9 @@ router.get(
   authorize({ resource: "compliance", action: "read" }),
   async (req, res): Promise<void> => {
     try {
-      const requirements = await residency.getComplianceRequirements(req.tenantId!);
+      const requirements = await residency.getComplianceRequirements(
+        req.tenantId!,
+      );
       res.json(requirements);
     } catch (error) {
       res.status(404).json({ error: (error as Error).message });

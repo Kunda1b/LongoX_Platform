@@ -48,7 +48,8 @@ export default function WebhookEndpointsPage() {
 
       <div className="rounded-lg border border-dashed p-4">
         <p className="text-sm text-muted-foreground text-center">
-          Webhook endpoints are managed through workflows. Create a workflow with a webhook trigger to add new endpoints.
+          Webhook endpoints are managed through workflows. Create a workflow
+          with a webhook trigger to add new endpoints.
         </p>
       </div>
 

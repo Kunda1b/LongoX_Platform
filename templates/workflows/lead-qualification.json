@@ -41,7 +41,17 @@
   ],
   "edges": [
     { "id": "e1", "source": "trigger_webhook", "target": "check_score" },
-    { "id": "e2", "source": "check_score", "sourceHandle": "true", "target": "add_to_crm" },
-    { "id": "e3", "source": "check_score", "sourceHandle": "false", "target": "discard" }
+    {
+      "id": "e2",
+      "source": "check_score",
+      "sourceHandle": "true",
+      "target": "add_to_crm"
+    },
+    {
+      "id": "e3",
+      "source": "check_score",
+      "sourceHandle": "false",
+      "target": "discard"
+    }
   ]
 }

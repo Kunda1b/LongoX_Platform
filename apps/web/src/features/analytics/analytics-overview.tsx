@@ -2,18 +2,29 @@
 
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, TrendingUp, Clock, AlertTriangle, PlayCircle } from "lucide-react";
-import { useGetExecutionAnalytics, useGetWorkflowAnalytics } from "@longox/api-client-react";
+import {
+  BarChart3,
+  TrendingUp,
+  Clock,
+  AlertTriangle,
+  PlayCircle,
+} from "lucide-react";
+import {
+  useGetExecutionAnalytics,
+  useGetWorkflowAnalytics,
+} from "@longox/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 
 export function AnalyticsOverview() {
-  const { data: dailyStats, isLoading: isLoadingDaily } = useGetExecutionAnalytics({ days: 14 });
-  const { data: workflowStats, isLoading: isLoadingWorkflows } = useGetWorkflowAnalytics();
+  const { data: dailyStats, isLoading: isLoadingDaily } =
+    useGetExecutionAnalytics({ days: 14 });
+  const { data: workflowStats, isLoading: isLoadingWorkflows } =
+    useGetWorkflowAnalytics();
 
   const aggregateStats = useMemo(() => {
     if (!dailyStats) return { total: 0, success: 0, failed: 0, successRate: 0 };
-    
+
     const total = dailyStats.reduce((acc, stat) => acc + stat.total, 0);
     const success = dailyStats.reduce((acc, stat) => acc + stat.success, 0);
     const failed = dailyStats.reduce((acc, stat) => acc + stat.failed, 0);
@@ -24,10 +35,15 @@ export function AnalyticsOverview() {
 
   const avgDurationMs = useMemo(() => {
     if (!workflowStats || workflowStats.length === 0) return 0;
-    const workflowsWithDuration = workflowStats.filter(w => w.avgDurationMs != null);
+    const workflowsWithDuration = workflowStats.filter(
+      (w) => w.avgDurationMs != null,
+    );
     if (workflowsWithDuration.length === 0) return 0;
-    
-    const totalAvg = workflowsWithDuration.reduce((acc, w) => acc + (w.avgDurationMs || 0), 0);
+
+    const totalAvg = workflowsWithDuration.reduce(
+      (acc, w) => acc + (w.avgDurationMs || 0),
+      0,
+    );
     return totalAvg / workflowsWithDuration.length;
   }, [workflowStats]);
 
@@ -52,11 +68,13 @@ export function AnalyticsOverview() {
             {isLoadingDaily ? (
               <Skeleton className="h-8 w-20" />
             ) : (
-              <div className="text-2xl font-bold">{aggregateStats.total.toLocaleString()}</div>
+              <div className="text-2xl font-bold">
+                {aggregateStats.total.toLocaleString()}
+              </div>
             )}
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
@@ -66,25 +84,31 @@ export function AnalyticsOverview() {
             {isLoadingDaily ? (
               <Skeleton className="h-8 w-20" />
             ) : (
-              <div className="text-2xl font-bold">{aggregateStats.successRate.toFixed(1)}%</div>
+              <div className="text-2xl font-bold">
+                {aggregateStats.successRate.toFixed(1)}%
+              </div>
             )}
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Failed Executions</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Failed Executions
+            </CardTitle>
             <AlertTriangle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
             {isLoadingDaily ? (
               <Skeleton className="h-8 w-20" />
             ) : (
-              <div className="text-2xl font-bold">{aggregateStats.failed.toLocaleString()}</div>
+              <div className="text-2xl font-bold">
+                {aggregateStats.failed.toLocaleString()}
+              </div>
             )}
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Avg. Duration</CardTitle>
@@ -94,7 +118,9 @@ export function AnalyticsOverview() {
             {isLoadingWorkflows ? (
               <Skeleton className="h-8 w-20" />
             ) : (
-              <div className="text-2xl font-bold">{(avgDurationMs / 1000).toFixed(2)}s</div>
+              <div className="text-2xl font-bold">
+                {(avgDurationMs / 1000).toFixed(2)}s
+              </div>
             )}
           </CardContent>
         </Card>
@@ -119,10 +145,16 @@ export function AnalyticsOverview() {
             ) : (
               <div className="flex h-48 items-end gap-2">
                 {dailyStats.map((stat, i) => {
-                  const maxTotal = Math.max(...dailyStats.map(s => s.total), 1);
+                  const maxTotal = Math.max(
+                    ...dailyStats.map((s) => s.total),
+                    1,
+                  );
                   const heightPct = (stat.total / maxTotal) * 100;
                   return (
-                    <div key={i} className="flex flex-1 flex-col items-center gap-1 group relative">
+                    <div
+                      key={i}
+                      className="flex flex-1 flex-col items-center gap-1 group relative"
+                    >
                       {/* Tooltip on hover */}
                       <div className="absolute -top-10 scale-0 transition-all rounded bg-popover px-2 py-1 text-xs text-popover-foreground shadow-sm group-hover:scale-100 z-10 whitespace-nowrap">
                         {stat.total} runs
@@ -132,9 +164,11 @@ export function AnalyticsOverview() {
                         style={{ height: `${Math.max(heightPct, 5)}%` }}
                       >
                         {stat.failed > 0 && (
-                          <div 
-                            className="w-full bg-red-500/50 rounded-b-md" 
-                            style={{ height: `${(stat.failed / stat.total) * 100}%` }} 
+                          <div
+                            className="w-full bg-red-500/50 rounded-b-md"
+                            style={{
+                              height: `${(stat.failed / stat.total) * 100}%`,
+                            }}
                           />
                         )}
                       </div>
@@ -173,23 +207,41 @@ export function AnalyticsOverview() {
                   <div className="col-span-2 text-right">Avg Duration</div>
                 </div>
                 <div className="divide-y">
-                  {workflowStats.sort((a,b) => b.total - a.total).map(ws => (
-                    <div key={ws.workflowId} className="grid grid-cols-12 p-3 text-sm items-center">
-                      <div className="col-span-5 font-medium flex items-center gap-2">
-                        <PlayCircle className="h-4 w-4 text-muted-foreground" />
-                        <span className="truncate">{ws.workflowName}</span>
+                  {workflowStats
+                    .sort((a, b) => b.total - a.total)
+                    .map((ws) => (
+                      <div
+                        key={ws.workflowId}
+                        className="grid grid-cols-12 p-3 text-sm items-center"
+                      >
+                        <div className="col-span-5 font-medium flex items-center gap-2">
+                          <PlayCircle className="h-4 w-4 text-muted-foreground" />
+                          <span className="truncate">{ws.workflowName}</span>
+                        </div>
+                        <div className="col-span-2 text-right">
+                          {ws.total.toLocaleString()}
+                        </div>
+                        <div className="col-span-3 text-right">
+                          <span
+                            className={
+                              ws.success / (ws.total || 1) < 0.9
+                                ? "text-red-500 font-medium"
+                                : "text-emerald-500"
+                            }
+                          >
+                            {ws.total > 0
+                              ? ((ws.success / ws.total) * 100).toFixed(1)
+                              : 0}
+                            %
+                          </span>
+                        </div>
+                        <div className="col-span-2 text-right text-muted-foreground">
+                          {ws.avgDurationMs
+                            ? `${(ws.avgDurationMs / 1000).toFixed(2)}s`
+                            : "-"}
+                        </div>
                       </div>
-                      <div className="col-span-2 text-right">{ws.total.toLocaleString()}</div>
-                      <div className="col-span-3 text-right">
-                        <span className={ws.success / (ws.total || 1) < 0.9 ? "text-red-500 font-medium" : "text-emerald-500"}>
-                          {ws.total > 0 ? ((ws.success / ws.total) * 100).toFixed(1) : 0}%
-                        </span>
-                      </div>
-                      <div className="col-span-2 text-right text-muted-foreground">
-                        {ws.avgDurationMs ? `${(ws.avgDurationMs / 1000).toFixed(2)}s` : "-"}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </div>
             )}

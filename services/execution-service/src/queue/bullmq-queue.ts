@@ -172,7 +172,11 @@ async function processWorkflowExecution(data: WorkflowJobData): Promise<void> {
 
   const raw = nodes as any;
   const graph: WorkflowGraph = {
-    nodes: Array.isArray(raw) ? raw : Array.isArray(raw?.nodes) ? raw.nodes : [],
+    nodes: Array.isArray(raw)
+      ? raw
+      : Array.isArray(raw?.nodes)
+        ? raw.nodes
+        : [],
     edges: Array.isArray(raw?.edges) ? raw.edges : [],
     timeoutMs: raw?.timeoutMs ?? 30 * 60 * 1000,
   };
@@ -276,7 +280,9 @@ async function processWorkflowExecutionRecovery(
   // MAX_RECOVERY_ATTEMPTS (default 3) and moves the execution to the DLQ
   // with `recovery_exhausted` status instead of enqueuing another recovery.
   const recoveryAttempt =
-    typeof data?.recoveryAttempt === "number" ? (data.recoveryAttempt as number) : 1;
+    typeof data?.recoveryAttempt === "number"
+      ? (data.recoveryAttempt as number)
+      : 1;
 
   // Recovery is handled by re-enqueuing the workflow-execution job; the
   // DAG runner's checkpoint store will skip already-completed nodes.
@@ -300,7 +306,9 @@ async function processWorkflowExecutionRecovery(
 }
 
 /** `billing-rollup` — aggregates usage events into UsageRollup rows. */
-async function processBillingRollup(data: Record<string, unknown>): Promise<void> {
+async function processBillingRollup(
+  data: Record<string, unknown>,
+): Promise<void> {
   // Real implementation lives in billing-service — import lazily so the
   // execution-service can boot even if billing-service isn't resolvable
   // (e.g. in unit tests that mock the queue).
@@ -317,51 +325,76 @@ async function processBillingRollup(data: Record<string, unknown>): Promise<void
 }
 
 /** `billing-reconciliation` — reconciles rollups against provider invoices. */
-async function processBillingReconciliation(data: Record<string, unknown>): Promise<void> {
+async function processBillingReconciliation(
+  data: Record<string, unknown>,
+): Promise<void> {
   try {
-    const { processBillingReconciliationJob } = await import("@longox/billing-service");
+    const { processBillingReconciliationJob } = await import(
+      "@longox/billing-service"
+    );
     await processBillingReconciliationJob(data as any);
   } catch (err) {
     console.warn(
       "[BullMQ] billing-reconciliation: billing-service processor unavailable, falling back to no-op:",
       (err as Error).message,
     );
-    console.log("[BullMQ] billing-reconciliation placeholder:", JSON.stringify(data));
+    console.log(
+      "[BullMQ] billing-reconciliation placeholder:",
+      JSON.stringify(data),
+    );
   }
 }
 
 /** `notification-outbound` — delivers notifications (email/slack/webhook). */
-async function processNotificationOutbound(data: Record<string, unknown>): Promise<void> {
+async function processNotificationOutbound(
+  data: Record<string, unknown>,
+): Promise<void> {
   try {
-    const { processNotificationOutboundJob } = await import("@longox/notification-service");
+    const { processNotificationOutboundJob } = await import(
+      "@longox/notification-service"
+    );
     await processNotificationOutboundJob(data as any);
   } catch (err) {
     console.warn(
       "[BullMQ] notification-outbound: notification-service processor unavailable, falling back to no-op:",
       (err as Error).message,
     );
-    console.log("[BullMQ] notification-outbound placeholder:", JSON.stringify(data));
+    console.log(
+      "[BullMQ] notification-outbound placeholder:",
+      JSON.stringify(data),
+    );
   }
 }
 
 /** `connector-install` — installs/registers a connector for a tenant. */
-async function processConnectorInstall(data: Record<string, unknown>): Promise<void> {
+async function processConnectorInstall(
+  data: Record<string, unknown>,
+): Promise<void> {
   try {
-    const { processConnectorInstallJob } = await import("@longox/connector-service");
+    const { processConnectorInstallJob } = await import(
+      "@longox/connector-service"
+    );
     await processConnectorInstallJob(data as any);
   } catch (err) {
     console.warn(
       "[BullMQ] connector-install: connector-service processor unavailable, falling back to no-op:",
       (err as Error).message,
     );
-    console.log("[BullMQ] connector-install placeholder:", JSON.stringify(data));
+    console.log(
+      "[BullMQ] connector-install placeholder:",
+      JSON.stringify(data),
+    );
   }
 }
 
 /** `template-publish` — publishes a workflow template to the marketplace. */
-async function processTemplatePublish(data: Record<string, unknown>): Promise<void> {
+async function processTemplatePublish(
+  data: Record<string, unknown>,
+): Promise<void> {
   try {
-    const { processTemplatePublishJob } = await import("@longox/template-service");
+    const { processTemplatePublishJob } = await import(
+      "@longox/template-service"
+    );
     await processTemplatePublishJob(data as any);
   } catch (err) {
     console.warn(
@@ -373,7 +406,9 @@ async function processTemplatePublish(data: Record<string, unknown>): Promise<vo
 }
 
 /** `audit-export` — generates an audit-log export (CSV/JSON). */
-async function processAuditExport(data: Record<string, unknown>): Promise<void> {
+async function processAuditExport(
+  data: Record<string, unknown>,
+): Promise<void> {
   try {
     const { processAuditExportJob } = await import("@longox/audit-service");
     await processAuditExportJob(data as any);
@@ -413,9 +448,21 @@ class BullMQJobQueue implements JobQueue {
    *  Worker per named queue that this process is responsible for consuming. */
   private workers: Worker[] = [];
 
-  async addJob(type: "workflow-execution", data: WorkflowJobData, maxAttempts?: number): Promise<void>;
-  async addJob(type: "webhook-delivery", data: WebhookJobData, maxAttempts?: number): Promise<void>;
-  async addJob(type: "ai-run", data: AiRunJobData, maxAttempts?: number): Promise<void>;
+  async addJob(
+    type: "workflow-execution",
+    data: WorkflowJobData,
+    maxAttempts?: number,
+  ): Promise<void>;
+  async addJob(
+    type: "webhook-delivery",
+    data: WebhookJobData,
+    maxAttempts?: number,
+  ): Promise<void>;
+  async addJob(
+    type: "ai-run",
+    data: AiRunJobData,
+    maxAttempts?: number,
+  ): Promise<void>;
   async addJob(type: JobType, data: any, maxAttempts?: number): Promise<void> {
     const q = resolveQueue(type);
     const opts: JobsOptions = maxAttempts
@@ -428,7 +475,12 @@ class BullMQJobQueue implements JobQueue {
     await q.add(type, data, opts);
   }
 
-  async addDelayedJob(type: JobType, data: any, delayMs: number, maxAttempts?: number): Promise<void> {
+  async addDelayedJob(
+    type: JobType,
+    data: any,
+    delayMs: number,
+    maxAttempts?: number,
+  ): Promise<void> {
     const q = resolveQueue(type);
     const opts: JobsOptions = {
       delay: delayMs,
@@ -438,7 +490,12 @@ class BullMQJobQueue implements JobQueue {
     await q.add(type, data, opts);
   }
 
-  async addScheduledJob(type: JobType, data: any, cronExpression: string, maxAttempts?: number): Promise<void> {
+  async addScheduledJob(
+    type: JobType,
+    data: any,
+    cronExpression: string,
+    maxAttempts?: number,
+  ): Promise<void> {
     const q = resolveQueue(type);
     const opts: JobsOptions = {
       repeat: { pattern: cronExpression },
@@ -462,7 +519,8 @@ class BullMQJobQueue implements JobQueue {
     // etc.) override this by spinning up their own worker that consumes only
     // their queue; this default starts workers for ALL queues for dev/single-
     // process mode. Override with WORKER_QUEUES=comma-separated list.
-    const workerQueuesRaw = process.env["WORKER_QUEUES"] ?? ALL_QUEUE_NAMES.join(",");
+    const workerQueuesRaw =
+      process.env["WORKER_QUEUES"] ?? ALL_QUEUE_NAMES.join(",");
     const workerQueues = workerQueuesRaw
       .split(",")
       .map((s) => s.trim())
@@ -489,7 +547,9 @@ class BullMQJobQueue implements JobQueue {
               try {
                 const processor = JOB_PROCESSORS[job.name];
                 if (!processor) {
-                  console.warn(`[BullMQ] Unknown job type: ${job.name} (queue ${queueName})`);
+                  console.warn(
+                    `[BullMQ] Unknown job type: ${job.name} (queue ${queueName})`,
+                  );
                 } else {
                   await processor(job.data);
                 }
@@ -503,10 +563,14 @@ class BullMQJobQueue implements JobQueue {
               } catch (error) {
                 span.setStatus({
                   code: SpanStatusCode.ERROR,
-                  message: error instanceof Error ? error.message : "Unknown error",
+                  message:
+                    error instanceof Error ? error.message : "Unknown error",
                 });
                 span.recordException(error as Error);
-                recordJobFailed(job.name, error instanceof Error ? error.message : "unknown");
+                recordJobFailed(
+                  job.name,
+                  error instanceof Error ? error.message : "unknown",
+                );
                 throw error;
               } finally {
                 span.end();
@@ -518,13 +582,20 @@ class BullMQJobQueue implements JobQueue {
           connection: connection as any,
           concurrency,
           ...(topology.limiter
-            ? { limiter: { max: topology.limiter.max, duration: topology.limiter.duration } }
+            ? {
+                limiter: {
+                  max: topology.limiter.max,
+                  duration: topology.limiter.duration,
+                },
+              }
             : {}),
         },
       );
 
       worker.on("completed", (job) => {
-        console.log(`[BullMQ] Job ${job.id} (${job.name} @ ${queueName}) completed`);
+        console.log(
+          `[BullMQ] Job ${job.id} (${job.name} @ ${queueName}) completed`,
+        );
         this.getStats().then((stats) => {
           updateQueueDepth(stats.waiting, stats.active);
         });
@@ -572,7 +643,10 @@ class BullMQJobQueue implements JobQueue {
 
   async getStats() {
     // Aggregate stats across all named queues that have been instantiated.
-    const queues = [...queueCache.values(), ...(legacyQueue ? [legacyQueue] : [])];
+    const queues = [
+      ...queueCache.values(),
+      ...(legacyQueue ? [legacyQueue] : []),
+    ];
     if (queues.length === 0) {
       return { waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0 };
     }
@@ -704,23 +778,25 @@ export async function startWorkflowExecution(
     });
     const nextVersion = (latest?.versionNumber ?? 0) + 1;
     if (nextVersion <= 1 || nodes.length > 0) {
-      await prisma.workflowVersion.create({
-        data: {
-          workflowId,
-          versionNumber: nextVersion,
-          graphJson: { nodes, name: workflowName } as any,
-          checksum: "",
-          // Drizzle-compat fields stored alongside canonical Prisma fields.
-          ...({
-            version: nextVersion,
-            name: workflowName,
-            nodes,
-            changeNote: `Auto-snapshot on execution (${triggerType})`,
-          } as any),
-        } as any,
-      }).catch(() => {
-        // onConflictDoNothing() equivalent — ignore duplicate version conflicts.
-      });
+      await prisma.workflowVersion
+        .create({
+          data: {
+            workflowId,
+            versionNumber: nextVersion,
+            graphJson: { nodes, name: workflowName } as any,
+            checksum: "",
+            // Drizzle-compat fields stored alongside canonical Prisma fields.
+            ...({
+              version: nextVersion,
+              name: workflowName,
+              nodes,
+              changeNote: `Auto-snapshot on execution (${triggerType})`,
+            } as any),
+          } as any,
+        })
+        .catch(() => {
+          // onConflictDoNothing() equivalent — ignore duplicate version conflicts.
+        });
     }
   }
 
@@ -763,7 +839,13 @@ async function addWorkflowJob(
 export async function enqueueWorkflow(opts: {
   workflowId: string;
   triggerPayload?: Record<string, unknown>;
-  triggerType?: "manual" | "webhook" | "schedule" | "api" | "recovery" | "child_workflow";
+  triggerType?:
+    | "manual"
+    | "webhook"
+    | "schedule"
+    | "api"
+    | "recovery"
+    | "child_workflow";
   parentExecutionId?: string;
 }): Promise<string> {
   const { workflowId, triggerPayload = {}, parentExecutionId } = opts;
@@ -794,7 +876,11 @@ export async function enqueueWorkflow(opts: {
     "execution.started",
     "workflow",
     String(workflowId),
-    { executionId: execution.id, parentExecutionId, workflowName: workflow.name },
+    {
+      executionId: execution.id,
+      parentExecutionId,
+      workflowName: workflow.name,
+    },
     "system",
   );
 

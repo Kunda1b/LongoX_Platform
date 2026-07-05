@@ -1,7 +1,10 @@
 import { Router, type IRouter } from "express";
 import { authorize, requireTenantContext } from "@longox/shared-rbac";
 import { PostgresMeteringRepository } from "../../infrastructure/postgres-metering-repository";
-import { RecordEventCommand, GetUsageSummaryQuery } from "../../application/record-event.command";
+import {
+  RecordEventCommand,
+  GetUsageSummaryQuery,
+} from "../../application/record-event.command";
 import type { EventType } from "../../domain";
 
 const router: IRouter = Router();
@@ -15,7 +18,16 @@ router.post(
   requireTenantContext,
   async (req, res): Promise<void> => {
     const tenantId = req.user!.tenantId!;
-    const { eventType, quantity, unit, metadata, source, sourceId, workflowId, executionId } = req.body as Record<string, unknown>;
+    const {
+      eventType,
+      quantity,
+      unit,
+      metadata,
+      source,
+      sourceId,
+      workflowId,
+      executionId,
+    } = req.body as Record<string, unknown>;
 
     if (!eventType || !source) {
       res.status(400).json({ error: "eventType and source are required" });
@@ -51,7 +63,11 @@ router.get(
     const to = req.query.to ? new Date(String(req.query.to)) : undefined;
 
     try {
-      const summary = await getUsageSummaryQuery.execute({ tenantId, from, to });
+      const summary = await getUsageSummaryQuery.execute({
+        tenantId,
+        from,
+        to,
+      });
       res.json(summary);
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
@@ -68,7 +84,9 @@ router.get(
     const eventType = req.query.eventType as string | undefined;
     const from = req.query.from ? new Date(String(req.query.from)) : undefined;
     const to = req.query.to ? new Date(String(req.query.to)) : undefined;
-    const workflowId = req.query.workflowId ? String(req.query.workflowId) : undefined;
+    const workflowId = req.query.workflowId
+      ? String(req.query.workflowId)
+      : undefined;
     const limit = Number(req.query.limit) || 100;
 
     try {

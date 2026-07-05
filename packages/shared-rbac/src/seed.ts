@@ -3,143 +3,354 @@ import { prisma } from "@longox/db/prisma";
 // ─── Role definitions ──────────────────────────────────────────────────────────
 
 const CUSTOMER_ROLES = [
-  { name: "owner", description: "Workspace owner — full control over the workspace, billing, and users" },
-  { name: "admin", description: "Workspace Admin — manages users, workflows, and integrations" },
-  { name: "editor", description: "Editor — creates and edits workflows, dashboards, and AI agents" },
-  { name: "operator", description: "Operator — runs and monitors workflows, manages executions" },
-  { name: "billing_admin", description: "Billing Admin — manages billing, subscriptions, and usage" },
-  { name: "viewer", description: "Viewer — read-only access to dashboards, analytics, and workflow history" },
+  {
+    name: "owner",
+    description:
+      "Workspace owner — full control over the workspace, billing, and users",
+  },
+  {
+    name: "admin",
+    description: "Workspace Admin — manages users, workflows, and integrations",
+  },
+  {
+    name: "editor",
+    description:
+      "Editor — creates and edits workflows, dashboards, and AI agents",
+  },
+  {
+    name: "operator",
+    description: "Operator — runs and monitors workflows, manages executions",
+  },
+  {
+    name: "billing_admin",
+    description: "Billing Admin — manages billing, subscriptions, and usage",
+  },
+  {
+    name: "viewer",
+    description:
+      "Viewer — read-only access to dashboards, analytics, and workflow history",
+  },
 ] as const;
 
 const PLATFORM_ROLES = [
-  { name: "platform_admin", description: "LongoX platform administrator — full platform access" },
-  { name: "support", description: "LongoX support — read-only access to tenant data for troubleshooting" },
-  { name: "finance", description: "LongoX finance — billing and revenue data access" },
+  {
+    name: "platform_admin",
+    description: "LongoX platform administrator — full platform access",
+  },
+  {
+    name: "support",
+    description:
+      "LongoX support — read-only access to tenant data for troubleshooting",
+  },
+  {
+    name: "finance",
+    description: "LongoX finance — billing and revenue data access",
+  },
 ] as const;
 
 // ─── All permissions ───────────────────────────────────────────────────────────
 
-const ALL_PERMISSIONS: Array<{ resource: string; action: string; description: string }> = [
+const ALL_PERMISSIONS: Array<{
+  resource: string;
+  action: string;
+  description: string;
+}> = [
   { resource: "workflows", action: "read", description: "View workflows" },
-  { resource: "workflows", action: "write", description: "Create and edit workflows" },
-  { resource: "workflows", action: "run", description: "Trigger workflow executions" },
+  {
+    resource: "workflows",
+    action: "write",
+    description: "Create and edit workflows",
+  },
+  {
+    resource: "workflows",
+    action: "run",
+    description: "Trigger workflow executions",
+  },
   { resource: "workflows", action: "delete", description: "Delete workflows" },
 
   { resource: "connectors", action: "read", description: "View connectors" },
-  { resource: "connectors", action: "write", description: "Manage connector configurations" },
-  { resource: "connectors", action: "install", description: "Install connectors from marketplace" },
+  {
+    resource: "connectors",
+    action: "write",
+    description: "Manage connector configurations",
+  },
+  {
+    resource: "connectors",
+    action: "install",
+    description: "Install connectors from marketplace",
+  },
 
-  { resource: "credentials", action: "read", description: "View stored credentials" },
-  { resource: "credentials", action: "write", description: "Create and update credentials" },
+  {
+    resource: "credentials",
+    action: "read",
+    description: "View stored credentials",
+  },
+  {
+    resource: "credentials",
+    action: "write",
+    description: "Create and update credentials",
+  },
 
   { resource: "apps", action: "read", description: "View internal apps" },
-  { resource: "apps", action: "write", description: "Create and edit internal apps" },
+  {
+    resource: "apps",
+    action: "write",
+    description: "Create and edit internal apps",
+  },
   { resource: "apps", action: "delete", description: "Delete internal apps" },
 
-  { resource: "analytics", action: "read", description: "View analytics and reports" },
+  {
+    resource: "analytics",
+    action: "read",
+    description: "View analytics and reports",
+  },
 
-  { resource: "billing", action: "read", description: "View billing and subscription details" },
-  { resource: "billing", action: "write", description: "Manage billing and subscriptions" },
+  {
+    resource: "billing",
+    action: "read",
+    description: "View billing and subscription details",
+  },
+  {
+    resource: "billing",
+    action: "write",
+    description: "Manage billing and subscriptions",
+  },
 
   { resource: "users", action: "read", description: "View workspace members" },
-  { resource: "users", action: "write", description: "Invite and manage workspace members" },
+  {
+    resource: "users",
+    action: "write",
+    description: "Invite and manage workspace members",
+  },
 
-  { resource: "templates", action: "read", description: "View workflow templates" },
-  { resource: "templates", action: "write", description: "Create and publish templates" },
+  {
+    resource: "templates",
+    action: "read",
+    description: "View workflow templates",
+  },
+  {
+    resource: "templates",
+    action: "write",
+    description: "Create and publish templates",
+  },
 
   { resource: "dashboards", action: "read", description: "View dashboards" },
-  { resource: "dashboards", action: "write", description: "Create and edit dashboards" },
-  { resource: "dashboards", action: "delete", description: "Delete dashboards" },
+  {
+    resource: "dashboards",
+    action: "write",
+    description: "Create and edit dashboards",
+  },
+  {
+    resource: "dashboards",
+    action: "delete",
+    description: "Delete dashboards",
+  },
 
-  { resource: "ai", action: "read", description: "View AI models and configurations" },
-  { resource: "ai", action: "write", description: "Configure AI agents and prompts" },
-  { resource: "ai", action: "run", description: "Execute AI agents and prompts" },
+  {
+    resource: "ai",
+    action: "read",
+    description: "View AI models and configurations",
+  },
+  {
+    resource: "ai",
+    action: "write",
+    description: "Configure AI agents and prompts",
+  },
+  {
+    resource: "ai",
+    action: "run",
+    description: "Execute AI agents and prompts",
+  },
 
   { resource: "audit", action: "read", description: "View audit logs" },
 
-  { resource: "executions", action: "read", description: "View execution history" },
-  { resource: "executions", action: "run", description: "Trigger and rerun executions" },
+  {
+    resource: "executions",
+    action: "read",
+    description: "View execution history",
+  },
+  {
+    resource: "executions",
+    action: "run",
+    description: "Trigger and rerun executions",
+  },
 
-  { resource: "environments", action: "read", description: "View environments" },
-  { resource: "environments", action: "write", description: "Create and edit environments" },
-  { resource: "environments", action: "admin", description: "Delete and manage environment policies" },
-  { resource: "environments", action: "promote", description: "Promote workflows between environments" },
+  {
+    resource: "environments",
+    action: "read",
+    description: "View environments",
+  },
+  {
+    resource: "environments",
+    action: "write",
+    description: "Create and edit environments",
+  },
+  {
+    resource: "environments",
+    action: "admin",
+    description: "Delete and manage environment policies",
+  },
+  {
+    resource: "environments",
+    action: "promote",
+    description: "Promote workflows between environments",
+  },
 
-  { resource: "tenants", action: "admin", description: "Platform: manage all tenants" },
-  { resource: "feature_flags", action: "write", description: "Platform: manage feature flags" },
-  { resource: "regions", action: "admin", description: "Platform: manage deployment regions" },
-  { resource: "revenue", action: "read", description: "Platform: view revenue data" },
+  {
+    resource: "tenants",
+    action: "admin",
+    description: "Platform: manage all tenants",
+  },
+  {
+    resource: "feature_flags",
+    action: "write",
+    description: "Platform: manage feature flags",
+  },
+  {
+    resource: "regions",
+    action: "admin",
+    description: "Platform: manage deployment regions",
+  },
+  {
+    resource: "revenue",
+    action: "read",
+    description: "Platform: view revenue data",
+  },
 ];
 
 // ─── Role → permission mapping ─────────────────────────────────────────────────
 
 const ROLE_PERMISSIONS: Record<string, Array<[string, string]>> = {
   owner: [
-    ["workflows", "read"], ["workflows", "write"], ["workflows", "run"], ["workflows", "delete"],
-    ["environments", "read"], ["environments", "write"], ["environments", "admin"], ["environments", "promote"],
-    ["connectors", "read"], ["connectors", "write"], ["connectors", "install"],
-    ["credentials", "read"], ["credentials", "write"],
-    ["apps", "read"], ["apps", "write"], ["apps", "delete"],
-    ["analytics", "read"],
-    ["billing", "read"], ["billing", "write"],
-    ["users", "read"], ["users", "write"],
-    ["templates", "read"], ["templates", "write"],
-    ["dashboards", "read"], ["dashboards", "write"], ["dashboards", "delete"],
-    ["ai", "read"], ["ai", "write"], ["ai", "run"],
-    ["audit", "read"],
-    ["executions", "read"], ["executions", "run"],
-  ],
-  admin: [
-    ["workflows", "read"], ["workflows", "write"], ["workflows", "run"], ["workflows", "delete"],
-    ["environments", "read"], ["environments", "write"], ["environments", "promote"],
-    ["connectors", "read"], ["connectors", "write"], ["connectors", "install"],
-    ["credentials", "read"], ["credentials", "write"],
-    ["apps", "read"], ["apps", "write"], ["apps", "delete"],
+    ["workflows", "read"],
+    ["workflows", "write"],
+    ["workflows", "run"],
+    ["workflows", "delete"],
+    ["environments", "read"],
+    ["environments", "write"],
+    ["environments", "admin"],
+    ["environments", "promote"],
+    ["connectors", "read"],
+    ["connectors", "write"],
+    ["connectors", "install"],
+    ["credentials", "read"],
+    ["credentials", "write"],
+    ["apps", "read"],
+    ["apps", "write"],
+    ["apps", "delete"],
     ["analytics", "read"],
     ["billing", "read"],
-    ["users", "read"], ["users", "write"],
-    ["templates", "read"], ["templates", "write"],
-    ["dashboards", "read"], ["dashboards", "write"], ["dashboards", "delete"],
-    ["ai", "read"], ["ai", "write"], ["ai", "run"],
+    ["billing", "write"],
+    ["users", "read"],
+    ["users", "write"],
+    ["templates", "read"],
+    ["templates", "write"],
+    ["dashboards", "read"],
+    ["dashboards", "write"],
+    ["dashboards", "delete"],
+    ["ai", "read"],
+    ["ai", "write"],
+    ["ai", "run"],
     ["audit", "read"],
-    ["executions", "read"], ["executions", "run"],
+    ["executions", "read"],
+    ["executions", "run"],
+  ],
+  admin: [
+    ["workflows", "read"],
+    ["workflows", "write"],
+    ["workflows", "run"],
+    ["workflows", "delete"],
+    ["environments", "read"],
+    ["environments", "write"],
+    ["environments", "promote"],
+    ["connectors", "read"],
+    ["connectors", "write"],
+    ["connectors", "install"],
+    ["credentials", "read"],
+    ["credentials", "write"],
+    ["apps", "read"],
+    ["apps", "write"],
+    ["apps", "delete"],
+    ["analytics", "read"],
+    ["billing", "read"],
+    ["users", "read"],
+    ["users", "write"],
+    ["templates", "read"],
+    ["templates", "write"],
+    ["dashboards", "read"],
+    ["dashboards", "write"],
+    ["dashboards", "delete"],
+    ["ai", "read"],
+    ["ai", "write"],
+    ["ai", "run"],
+    ["audit", "read"],
+    ["executions", "read"],
+    ["executions", "run"],
   ],
   builder: [
-    ["workflows", "read"], ["workflows", "write"], ["workflows", "run"], ["workflows", "delete"],
-    ["environments", "read"], ["environments", "promote"],
-    ["connectors", "read"], ["connectors", "install"],
-    ["credentials", "read"], ["credentials", "write"],
-    ["apps", "read"], ["apps", "write"],
+    ["workflows", "read"],
+    ["workflows", "write"],
+    ["workflows", "run"],
+    ["workflows", "delete"],
+    ["environments", "read"],
+    ["environments", "promote"],
+    ["connectors", "read"],
+    ["connectors", "install"],
+    ["credentials", "read"],
+    ["credentials", "write"],
+    ["apps", "read"],
+    ["apps", "write"],
     ["analytics", "read"],
-    ["templates", "read"], ["templates", "write"],
-    ["dashboards", "read"], ["dashboards", "write"], ["dashboards", "delete"],
-    ["ai", "read"], ["ai", "write"], ["ai", "run"],
-    ["executions", "read"], ["executions", "run"],
+    ["templates", "read"],
+    ["templates", "write"],
+    ["dashboards", "read"],
+    ["dashboards", "write"],
+    ["dashboards", "delete"],
+    ["ai", "read"],
+    ["ai", "write"],
+    ["ai", "run"],
+    ["executions", "read"],
+    ["executions", "run"],
   ],
   editor: [
-    ["workflows", "read"], ["workflows", "write"], ["workflows", "run"],
-    ["environments", "read"], ["environments", "promote"],
-    ["connectors", "read"], ["connectors", "install"],
-    ["credentials", "read"], ["credentials", "write"],
-    ["apps", "read"], ["apps", "write"],
+    ["workflows", "read"],
+    ["workflows", "write"],
+    ["workflows", "run"],
+    ["environments", "read"],
+    ["environments", "promote"],
+    ["connectors", "read"],
+    ["connectors", "install"],
+    ["credentials", "read"],
+    ["credentials", "write"],
+    ["apps", "read"],
+    ["apps", "write"],
     ["analytics", "read"],
-    ["templates", "read"], ["templates", "write"],
-    ["dashboards", "read"], ["dashboards", "write"],
-    ["ai", "read"], ["ai", "write"], ["ai", "run"],
-    ["executions", "read"], ["executions", "run"],
+    ["templates", "read"],
+    ["templates", "write"],
+    ["dashboards", "read"],
+    ["dashboards", "write"],
+    ["ai", "read"],
+    ["ai", "write"],
+    ["ai", "run"],
+    ["executions", "read"],
+    ["executions", "run"],
   ],
   operator: [
-    ["workflows", "read"], ["workflows", "run"],
+    ["workflows", "read"],
+    ["workflows", "run"],
     ["environments", "read"],
     ["connectors", "read"],
     ["analytics", "read"],
     ["dashboards", "read"],
-    ["ai", "read"], ["ai", "run"],
-    ["executions", "read"], ["executions", "run"],
+    ["ai", "read"],
+    ["ai", "run"],
+    ["executions", "read"],
+    ["executions", "run"],
     ["audit", "read"],
   ],
   billing_admin: [
-    ["billing", "read"], ["billing", "write"],
+    ["billing", "read"],
+    ["billing", "write"],
     ["analytics", "read"],
     ["environments", "read"],
     ["users", "read"],
@@ -153,19 +364,38 @@ const ROLE_PERMISSIONS: Record<string, Array<[string, string]>> = {
     ["templates", "read"],
   ],
   platform_admin: [
-    ["workflows", "read"], ["workflows", "write"], ["workflows", "run"], ["workflows", "delete"],
-    ["environments", "read"], ["environments", "write"], ["environments", "admin"], ["environments", "promote"],
-    ["connectors", "read"], ["connectors", "write"], ["connectors", "install"],
-    ["credentials", "read"], ["credentials", "write"],
-    ["apps", "read"], ["apps", "write"], ["apps", "delete"],
+    ["workflows", "read"],
+    ["workflows", "write"],
+    ["workflows", "run"],
+    ["workflows", "delete"],
+    ["environments", "read"],
+    ["environments", "write"],
+    ["environments", "admin"],
+    ["environments", "promote"],
+    ["connectors", "read"],
+    ["connectors", "write"],
+    ["connectors", "install"],
+    ["credentials", "read"],
+    ["credentials", "write"],
+    ["apps", "read"],
+    ["apps", "write"],
+    ["apps", "delete"],
     ["analytics", "read"],
-    ["billing", "read"], ["billing", "write"],
-    ["users", "read"], ["users", "write"],
-    ["templates", "read"], ["templates", "write"],
-    ["dashboards", "read"], ["dashboards", "write"], ["dashboards", "delete"],
-    ["ai", "read"], ["ai", "write"], ["ai", "run"],
+    ["billing", "read"],
+    ["billing", "write"],
+    ["users", "read"],
+    ["users", "write"],
+    ["templates", "read"],
+    ["templates", "write"],
+    ["dashboards", "read"],
+    ["dashboards", "write"],
+    ["dashboards", "delete"],
+    ["ai", "read"],
+    ["ai", "write"],
+    ["ai", "run"],
     ["audit", "read"],
-    ["executions", "read"], ["executions", "run"],
+    ["executions", "read"],
+    ["executions", "run"],
     ["tenants", "admin"],
     ["feature_flags", "write"],
     ["regions", "admin"],
@@ -180,7 +410,8 @@ const ROLE_PERMISSIONS: Record<string, Array<[string, string]>> = {
   ],
   finance: [
     ["environments", "read"],
-    ["billing", "read"], ["billing", "write"],
+    ["billing", "read"],
+    ["billing", "write"],
     ["analytics", "read"],
     ["revenue", "read"],
   ],
@@ -222,13 +453,17 @@ export async function seedRoles(): Promise<void> {
         scope: "platform",
       } as any,
     } as any)) as any;
-    insertedRoles.push({ id: created.id as string, name: created.name as string });
+    insertedRoles.push({
+      id: created.id as string,
+      name: created.name as string,
+    });
   }
 
   const roleIdByName: Record<string, string> = {};
   for (const r of insertedRoles) roleIdByName[r.name] = r.id;
 
-  const insertedPerms: Array<{ id: string; resource: string; action: string }> = [];
+  const insertedPerms: Array<{ id: string; resource: string; action: string }> =
+    [];
   for (const p of ALL_PERMISSIONS) {
     const code = `${p.resource}:${p.action}`;
     // `code` is the canonical unique key on `rbac_permissions`. The legacy
@@ -250,7 +485,8 @@ export async function seedRoles(): Promise<void> {
   }
 
   const permIdByKey: Record<string, string> = {};
-  for (const p of insertedPerms) permIdByKey[`${p.resource}:${p.action}`] = p.id;
+  for (const p of insertedPerms)
+    permIdByKey[`${p.resource}:${p.action}`] = p.id;
 
   const rolePermValues: Array<{ roleId: string; permissionId: string }> = [];
   for (const [roleName, pairs] of Object.entries(ROLE_PERMISSIONS)) {

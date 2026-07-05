@@ -24,19 +24,21 @@ function requireServiceKey(req: any, res: any, next: any): void {
 router.use(requireServiceKey);
 
 router.post("/api/metering/events", async (req, res): Promise<void> => {
-  const { events } = req.body as { events?: Array<{
-    eventId: string;
-    eventType: string;
-    tenantId: string;
-    quantity: string | number;
-    unit: string;
-    workflowId?: string | null;
-    executionId?: string | null;
-    connectorId?: string | null;
-    dashboardId?: string | null;
-    metadata?: Record<string, unknown>;
-    timestamp?: string;
-  }> };
+  const { events } = req.body as {
+    events?: Array<{
+      eventId: string;
+      eventType: string;
+      tenantId: string;
+      quantity: string | number;
+      unit: string;
+      workflowId?: string | null;
+      executionId?: string | null;
+      connectorId?: string | null;
+      dashboardId?: string | null;
+      metadata?: Record<string, unknown>;
+      timestamp?: string;
+    }>;
+  };
 
   if (!events || !Array.isArray(events) || events.length === 0) {
     res.status(400).json({ error: "events array is required" });

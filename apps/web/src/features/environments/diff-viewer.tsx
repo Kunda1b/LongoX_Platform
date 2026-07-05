@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useListWorkflows, useListEnvironments } from "@longox/api-client-react";
+import {
+  useListWorkflows,
+  useListEnvironments,
+} from "@longox/api-client-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -89,7 +92,10 @@ export function DiffViewer() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={handleDiff} disabled={!workflowId || !fromEnv || !toEnv || loading}>
+        <Button
+          onClick={handleDiff}
+          disabled={!workflowId || !fromEnv || !toEnv || loading}
+        >
           <FileDiff className="h-4 w-4 mr-1" />
           {loading ? "Loading..." : "Compare"}
         </Button>
@@ -102,11 +108,20 @@ export function DiffViewer() {
               <div className="flex items-center gap-2 mb-3">
                 <Badge variant="outline">{fromEnv}</Badge>
                 <span className="text-xs text-muted-foreground">
-                  v{String((diff.from as Record<string, unknown>)?.version ?? "-")}
+                  v
+                  {String(
+                    (diff.from as Record<string, unknown>)?.version ?? "-",
+                  )}
                 </span>
               </div>
               <pre className="text-xs bg-muted rounded p-3 overflow-auto max-h-96 font-mono">
-                {String(JSON.stringify((diff.from as Record<string, unknown>)?.nodes ?? null, null, 2) ?? "")}
+                {String(
+                  JSON.stringify(
+                    (diff.from as Record<string, unknown>)?.nodes ?? null,
+                    null,
+                    2,
+                  ) ?? "",
+                )}
               </pre>
             </CardContent>
           </Card>
@@ -115,11 +130,18 @@ export function DiffViewer() {
               <div className="flex items-center gap-2 mb-3">
                 <Badge variant="outline">{toEnv}</Badge>
                 <span className="text-xs text-muted-foreground">
-                  v{String((diff.to as Record<string, unknown>)?.version ?? "-")}
+                  v
+                  {String((diff.to as Record<string, unknown>)?.version ?? "-")}
                 </span>
               </div>
               <pre className="text-xs bg-muted rounded p-3 overflow-auto max-h-96 font-mono">
-                {String(JSON.stringify((diff.to as Record<string, unknown>)?.nodes ?? null, null, 2) ?? "")}
+                {String(
+                  JSON.stringify(
+                    (diff.to as Record<string, unknown>)?.nodes ?? null,
+                    null,
+                    2,
+                  ) ?? "",
+                )}
               </pre>
             </CardContent>
           </Card>

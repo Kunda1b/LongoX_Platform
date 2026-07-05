@@ -441,17 +441,29 @@ export class TenantMigrationService {
       dataVerified: migration.dataVerified,
       trafficSwitched: migration.trafficSwitched,
       startedAt: migration.startedAt
-        ? (migration.startedAt instanceof Date ? migration.startedAt.toISOString() : new Date(migration.startedAt).toISOString())
+        ? migration.startedAt instanceof Date
+          ? migration.startedAt.toISOString()
+          : new Date(migration.startedAt).toISOString()
         : null,
       completedAt: migration.completedAt
-        ? (migration.completedAt instanceof Date ? migration.completedAt.toISOString() : new Date(migration.completedAt).toISOString())
+        ? migration.completedAt instanceof Date
+          ? migration.completedAt.toISOString()
+          : new Date(migration.completedAt).toISOString()
         : null,
       errorMessage: migration.errorMessage,
       rolledBackAt: migration.rolledBackAt
-        ? (migration.rolledBackAt instanceof Date ? migration.rolledBackAt.toISOString() : new Date(migration.rolledBackAt).toISOString())
+        ? migration.rolledBackAt instanceof Date
+          ? migration.rolledBackAt.toISOString()
+          : new Date(migration.rolledBackAt).toISOString()
         : null,
-      createdAt: migration.createdAt instanceof Date ? migration.createdAt.toISOString() : new Date(migration.createdAt).toISOString(),
-      updatedAt: migration.updatedAt instanceof Date ? migration.updatedAt.toISOString() : new Date(migration.updatedAt).toISOString(),
+      createdAt:
+        migration.createdAt instanceof Date
+          ? migration.createdAt.toISOString()
+          : new Date(migration.createdAt).toISOString(),
+      updatedAt:
+        migration.updatedAt instanceof Date
+          ? migration.updatedAt.toISOString()
+          : new Date(migration.updatedAt).toISOString(),
     };
   }
 
@@ -473,17 +485,29 @@ export class TenantMigrationService {
       dataVerified: m.dataVerified,
       trafficSwitched: m.trafficSwitched,
       startedAt: m.startedAt
-        ? (m.startedAt instanceof Date ? m.startedAt.toISOString() : new Date(m.startedAt).toISOString())
+        ? m.startedAt instanceof Date
+          ? m.startedAt.toISOString()
+          : new Date(m.startedAt).toISOString()
         : null,
       completedAt: m.completedAt
-        ? (m.completedAt instanceof Date ? m.completedAt.toISOString() : new Date(m.completedAt).toISOString())
+        ? m.completedAt instanceof Date
+          ? m.completedAt.toISOString()
+          : new Date(m.completedAt).toISOString()
         : null,
       errorMessage: m.errorMessage,
       rolledBackAt: m.rolledBackAt
-        ? (m.rolledBackAt instanceof Date ? m.rolledBackAt.toISOString() : new Date(m.rolledBackAt).toISOString())
+        ? m.rolledBackAt instanceof Date
+          ? m.rolledBackAt.toISOString()
+          : new Date(m.rolledBackAt).toISOString()
         : null,
-      createdAt: m.createdAt instanceof Date ? m.createdAt.toISOString() : new Date(m.createdAt).toISOString(),
-      updatedAt: m.updatedAt instanceof Date ? m.updatedAt.toISOString() : new Date(m.updatedAt).toISOString(),
+      createdAt:
+        m.createdAt instanceof Date
+          ? m.createdAt.toISOString()
+          : new Date(m.createdAt).toISOString(),
+      updatedAt:
+        m.updatedAt instanceof Date
+          ? m.updatedAt.toISOString()
+          : new Date(m.updatedAt).toISOString(),
     }));
   }
 

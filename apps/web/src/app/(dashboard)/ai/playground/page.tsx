@@ -65,7 +65,9 @@ export default function AIPlaygroundPage() {
   const { token } = useAuth();
   const { toast } = useToast();
   const [prompt, setPrompt] = useState("");
-  const [systemPrompt, setSystemPrompt] = useState("You are a helpful assistant.");
+  const [systemPrompt, setSystemPrompt] = useState(
+    "You are a helpful assistant.",
+  );
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [temperature, setTemperature] = useState("0.7");
@@ -130,7 +132,11 @@ export default function AIPlaygroundPage() {
       setPrompt("");
     },
     onError: (err) => {
-      toast({ title: "Run failed", description: err.message, variant: "destructive" });
+      toast({
+        title: "Run failed",
+        description: err.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -170,7 +176,11 @@ export default function AIPlaygroundPage() {
       setPrompt("");
     },
     onError: (err) => {
-      toast({ title: "Compare failed", description: err.message, variant: "destructive" });
+      toast({
+        title: "Compare failed",
+        description: err.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -337,13 +347,15 @@ export default function AIPlaygroundPage() {
                   {m.meta && !m.meta.compare && (
                     <div className="flex items-center gap-3 text-xs text-muted-foreground ml-2">
                       <span className="flex items-center gap-1">
-                        <Bot className="h-3 w-3" /> {m.meta.provider}/{m.meta.model}
+                        <Bot className="h-3 w-3" /> {m.meta.provider}/
+                        {m.meta.model}
                       </span>
                       <span className="flex items-center gap-1">
                         <Zap className="h-3 w-3" /> {m.meta.tokens} tokens
                       </span>
                       <span className="flex items-center gap-1">
-                        <DollarSign className="h-3 w-3" /> ${m.meta.cost.toFixed(6)}
+                        <DollarSign className="h-3 w-3" /> $
+                        {m.meta.cost.toFixed(6)}
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" /> {m.meta.latency}ms
@@ -363,7 +375,13 @@ export default function AIPlaygroundPage() {
                                 <span className="font-medium">
                                   {r.provider}/{r.model}
                                 </span>
-                                <Badge variant={r.status === "success" ? "success" : "destructive"}>
+                                <Badge
+                                  variant={
+                                    r.status === "success"
+                                      ? "success"
+                                      : "destructive"
+                                  }
+                                >
                                   {r.status}
                                 </Badge>
                               </div>
@@ -375,7 +393,9 @@ export default function AIPlaygroundPage() {
                               <div className="flex items-center gap-3 text-muted-foreground">
                                 <span>{r.latencyMs}ms</span>
                                 <span>${r.cost.toFixed(6)}</span>
-                                <span>{r.inputTokens + r.outputTokens} tokens</span>
+                                <span>
+                                  {r.inputTokens + r.outputTokens} tokens
+                                </span>
                               </div>
                             </CardContent>
                           </Card>
@@ -409,7 +429,11 @@ export default function AIPlaygroundPage() {
                   className="flex-1"
                   disabled={isLoading}
                 />
-                <Button type="submit" size="icon" disabled={isLoading || !prompt.trim()}>
+                <Button
+                  type="submit"
+                  size="icon"
+                  disabled={isLoading || !prompt.trim()}
+                >
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (

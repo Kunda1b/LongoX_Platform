@@ -88,7 +88,12 @@ router.get(
         patchHash: d.patchHash,
         summary: d.summary,
         createdBy: d.createdBy,
-        createdAt: d.createdAt instanceof Date ? d.createdAt.toISOString() : (d.createdAt ? new Date(d.createdAt).toISOString() : null),
+        createdAt:
+          d.createdAt instanceof Date
+            ? d.createdAt.toISOString()
+            : d.createdAt
+              ? new Date(d.createdAt).toISOString()
+              : null,
       })),
     );
   },
@@ -131,12 +136,12 @@ router.get(
 
     // Load both versions
     const [fromVerRow, toVerRow] = await Promise.all([
-      (prisma.workflowVersion.findFirst({
+      prisma.workflowVersion.findFirst({
         where: { workflowId, versionNumber: fromVersion } as any,
-      })) as Promise<any>,
-      (prisma.workflowVersion.findFirst({
+      }) as Promise<any>,
+      prisma.workflowVersion.findFirst({
         where: { workflowId, versionNumber: toVersion } as any,
-      })) as Promise<any>,
+      }) as Promise<any>,
     ]);
     const fromVer = fromVerRow ? [fromVerRow] : [];
     const toVer = toVerRow ? [toVerRow] : [];
@@ -164,7 +169,12 @@ router.get(
         patch: (cached as any).patch ?? cached.patchJson,
         summary: cached.summary,
         createdBy: cached.createdBy,
-        createdAt: cached.createdAt instanceof Date ? cached.createdAt.toISOString() : (cached.createdAt ? new Date(cached.createdAt).toISOString() : null),
+        createdAt:
+          cached.createdAt instanceof Date
+            ? cached.createdAt.toISOString()
+            : cached.createdAt
+              ? new Date(cached.createdAt).toISOString()
+              : null,
       });
       return;
     }
@@ -217,12 +227,12 @@ router.get(
     }
 
     const [fromVerRow, toVerRow] = await Promise.all([
-      (prisma.workflowVersion.findFirst({
+      prisma.workflowVersion.findFirst({
         where: { workflowId, versionNumber: fromVersion } as any,
-      })) as Promise<any>,
-      (prisma.workflowVersion.findFirst({
+      }) as Promise<any>,
+      prisma.workflowVersion.findFirst({
         where: { workflowId, versionNumber: toVersion } as any,
-      })) as Promise<any>,
+      }) as Promise<any>,
     ]);
     const fromVer = fromVerRow ? [fromVerRow] : [];
     const toVer = toVerRow ? [toVerRow] : [];

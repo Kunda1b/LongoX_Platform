@@ -66,7 +66,8 @@ export default function ForgotPasswordPage() {
                 you&apos;ll receive a password reset link shortly.
               </p>
               <p className="text-xs text-muted-foreground">
-                Check your spam folder if you don&apos;t see it within a few minutes.
+                Check your spam folder if you don&apos;t see it within a few
+                minutes.
               </p>
               <Link
                 href="/login"

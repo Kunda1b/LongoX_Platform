@@ -32,8 +32,10 @@ export class PartitionManagerService {
     const current = new Date(startDate);
 
     while (current < endDate) {
-      const { rangeStart, rangeEnd, partitionSuffix } =
-        this.getPartitionRange(current, interval);
+      const { rangeStart, rangeEnd, partitionSuffix } = this.getPartitionRange(
+        current,
+        interval,
+      );
       const partitionName = `${tableName}_${partitionSuffix}`;
 
       const sql = `
@@ -145,7 +147,11 @@ export class PartitionManagerService {
         const rangeStart = `${y}-${String(q).padStart(2, "0")}-01`;
         const next = new Date(y, q + 2, 1);
         const rangeEnd = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-01`;
-        return { rangeStart, rangeEnd, partitionSuffix: `${y}Q${Math.ceil(date.getMonth() / 3 + 1)}` };
+        return {
+          rangeStart,
+          rangeEnd,
+          partitionSuffix: `${y}Q${Math.ceil(date.getMonth() / 3 + 1)}`,
+        };
       }
       case "year": {
         const rangeStart = `${y}-01-01`;
@@ -155,7 +161,10 @@ export class PartitionManagerService {
     }
   }
 
-  private advanceDate(date: Date, interval: "month" | "quarter" | "year"): void {
+  private advanceDate(
+    date: Date,
+    interval: "month" | "quarter" | "year",
+  ): void {
     switch (interval) {
       case "month":
         date.setMonth(date.getMonth() + 1);

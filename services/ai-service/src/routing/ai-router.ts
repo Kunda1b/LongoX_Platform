@@ -83,11 +83,14 @@ const PROVIDER_SPEED_RANK: Record<AIProviderType, number> = {
 };
 
 export class AIRouter {
-  private providers = new Map<AIProviderType, {
-    client: ProviderClient;
-    config: ProviderConfig;
-    health: ProviderHealth;
-  }>();
+  private providers = new Map<
+    AIProviderType,
+    {
+      client: ProviderClient;
+      config: ProviderConfig;
+      health: ProviderHealth;
+    }
+  >();
 
   private defaultPolicy: RoutingPolicy = {
     strategy: "cheapest",
@@ -97,7 +100,11 @@ export class AIRouter {
 
   constructor(configs: ProviderConfig[]) {
     for (const cfg of configs) {
-      const client = this.createProvider(cfg.type, cfg.apiKey, cfg.defaultModel);
+      const client = this.createProvider(
+        cfg.type,
+        cfg.apiKey,
+        cfg.defaultModel,
+      );
       this.providers.set(cfg.type, {
         client,
         config: cfg,
@@ -106,7 +113,11 @@ export class AIRouter {
     }
   }
 
-  private createProvider(type: AIProviderType, apiKey: string, defaultModel: string): ProviderClient {
+  private createProvider(
+    type: AIProviderType,
+    apiKey: string,
+    defaultModel: string,
+  ): ProviderClient {
     switch (type) {
       case "openai":
         return new OpenAIProvider({ apiKey, defaultModel });
@@ -154,8 +165,10 @@ export class AIRouter {
       case "fastest":
         return available
           .sort(([, a], [, b]) => {
-            const speedA = PROVIDER_SPEED_RANK[a.config.type] * a.health.successRate;
-            const speedB = PROVIDER_SPEED_RANK[b.config.type] * b.health.successRate;
+            const speedA =
+              PROVIDER_SPEED_RANK[a.config.type] * a.health.successRate;
+            const speedB =
+              PROVIDER_SPEED_RANK[b.config.type] * b.health.successRate;
             return speedB - speedA;
           })
           .map(([type]) => type);
@@ -163,14 +176,19 @@ export class AIRouter {
       case "highest_quality":
         return available
           .sort(([, a], [, b]) => {
-            const qualA = PROVIDER_QUALITY_RANK[a.config.type] * a.health.successRate;
-            const qualB = PROVIDER_QUALITY_RANK[b.config.type] * b.health.successRate;
+            const qualA =
+              PROVIDER_QUALITY_RANK[a.config.type] * a.health.successRate;
+            const qualB =
+              PROVIDER_QUALITY_RANK[b.config.type] * b.health.successRate;
             return qualB - qualA;
           })
           .map(([type]) => type);
 
       case "custom":
-        if (policy.providerPreferences && policy.providerPreferences.length > 0) {
+        if (
+          policy.providerPreferences &&
+          policy.providerPreferences.length > 0
+        ) {
           return policy.providerPreferences.filter((p) =>
             available.some(([type]) => type === p),
           );
@@ -182,7 +200,10 @@ export class AIRouter {
     }
   }
 
-  private estimateCost(provider: { config: ProviderConfig; health: ProviderHealth }): number {
+  private estimateCost(provider: {
+    config: ProviderConfig;
+    health: ProviderHealth;
+  }): number {
     const baseCost = 1 / (provider.config.priority + 1);
     const healthPenalty = 1 - provider.health.successRate;
     return baseCost * (1 + healthPenalty);
@@ -234,7 +255,11 @@ export class AIRouter {
     );
   }
 
-  private updateHealth(type: AIProviderType, success: boolean, latencyMs: number): void {
+  private updateHealth(
+    type: AIProviderType,
+    success: boolean,
+    latencyMs: number,
+  ): void {
     const provider = this.providers.get(type);
     if (!provider) return;
 
@@ -274,7 +299,10 @@ export class AIRouter {
 const defaultConfigs: ProviderConfig[] = [
   {
     type: "openai",
-    apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? process.env.OPENAI_API_KEY ?? "",
+    apiKey:
+      process.env.AI_INTEGRATIONS_OPENAI_API_KEY ??
+      process.env.OPENAI_API_KEY ??
+      "",
     defaultModel: "gpt-4o-mini",
     priority: 100,
     weight: 1,

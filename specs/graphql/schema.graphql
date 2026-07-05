@@ -1935,14 +1935,26 @@ type Mutation {
   approveExecutionTask(id: ID!, input: ApproveTaskInput!): Execution!
 
   # Connectors
-  installConnector(id: ID!, input: InstallConnectorInput!): ConnectorInstallation!
-  configureConnector(installationId: ID!, input: ConfigureConnectorInput!): ConnectorInstallation!
-  executeConnector(installationId: ID!, input: ExecuteConnectorInput!): ConnectorExecuteResult!
+  installConnector(
+    id: ID!
+    input: InstallConnectorInput!
+  ): ConnectorInstallation!
+  configureConnector(
+    installationId: ID!
+    input: ConfigureConnectorInput!
+  ): ConnectorInstallation!
+  executeConnector(
+    installationId: ID!
+    input: ExecuteConnectorInput!
+  ): ConnectorExecuteResult!
   testConnector(installationId: ID!): ConnectorTestResult!
   upgradeConnector(installationId: ID!, versionId: ID!): ConnectorInstallation!
   rollbackConnector(installationId: ID!): ConnectorRollbackResult!
   uninstallConnector(installationId: ID!): Boolean!
-  registerWebhook(installationId: ID!, input: WebhookInput!): WebhookRegistration!
+  registerWebhook(
+    installationId: ID!
+    input: WebhookInput!
+  ): WebhookRegistration!
   pollConnector(installationId: ID!, input: PollInput!): PollResult!
 
   # AI
@@ -1954,8 +1966,13 @@ type Mutation {
   scrubPii(input: ScrubPiiInput!): ScrubPiiResult!
 
   # AI Evaluation
-  createEvaluationDataset(input: CreateEvaluationDatasetInput!): EvaluationDataset!
-  addEvaluationEntries(datasetId: ID!, entries: [EvaluationEntryInput!]!): EvaluationDataset!
+  createEvaluationDataset(
+    input: CreateEvaluationDatasetInput!
+  ): EvaluationDataset!
+  addEvaluationEntries(
+    datasetId: ID!
+    entries: [EvaluationEntryInput!]!
+  ): EvaluationDataset!
   removeEvaluationEntry(datasetId: ID!, entryId: ID!): Boolean!
   deleteEvaluationDataset(id: ID!): Boolean!
   createEvaluationRun(input: CreateEvaluationRunInput!): EvaluationRun!
@@ -1983,7 +2000,11 @@ type Mutation {
   createReview(listingId: ID!, input: CreateReviewInput!): MarketplaceReview!
   updateReview(id: ID!, input: UpdateReviewInput!): MarketplaceReview!
   deleteReview(id: ID!): Boolean!
-  moderateReview(id: ID!, action: ReviewAction!, reason: String): MarketplaceReview!
+  moderateReview(
+    id: ID!
+    action: ReviewAction!
+    reason: String
+  ): MarketplaceReview!
 
   # Billing
   createCheckoutSession(input: CheckoutInput!): CheckoutSession!
@@ -2019,7 +2040,10 @@ type Mutation {
   createAuditExport(input: AuditExportInput!): AuditExport!
   storeEvidence(input: EvidenceInput!): ComplianceEvidence!
   createSecurityIncident(input: CreateIncidentInput!): SecurityIncident!
-  updateSecurityIncident(id: ID!, input: UpdateIncidentInput!): SecurityIncident!
+  updateSecurityIncident(
+    id: ID!
+    input: UpdateIncidentInput!
+  ): SecurityIncident!
   resolveSecurityIncident(id: ID!, resolution: String!): SecurityIncident!
   addIncidentEvidence(incidentId: ID!, input: EvidenceInput!): SecurityIncident!
   setDataResidency(region: String!): DataResidency!

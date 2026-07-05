@@ -66,54 +66,154 @@ export const sidebarNav: NavItem[] = [
   // ── Build ─────────────────────────────────────────────────────────────────
   { separator: true, label: "Build" },
   { label: "Connectors", href: "/connectors", icon: Cable, minRole: "builder" },
-  { label: "Credentials", href: "/credentials", icon: KeyRound, minRole: "builder" },
+  {
+    label: "Credentials",
+    href: "/credentials",
+    icon: KeyRound,
+    minRole: "builder",
+  },
   { label: "Templates", href: "/templates", icon: LayoutTemplate },
-  { label: "Marketplace", href: "/marketplace", icon: ShoppingCart, minRole: "builder" },
+  {
+    label: "Marketplace",
+    href: "/marketplace",
+    icon: ShoppingCart,
+    minRole: "builder",
+  },
   { label: "Apps", href: "/apps", icon: Puzzle, minRole: "builder" },
-  { label: "Webhook Endpoints", href: "/webhook-endpoints", icon: Webhook, minRole: "builder" },
+  {
+    label: "Webhook Endpoints",
+    href: "/webhook-endpoints",
+    icon: Webhook,
+    minRole: "builder",
+  },
 
   // ── AI ────────────────────────────────────────────────────────────────────
   { separator: true, label: "AI" },
-  { label: "AI Playground", href: "/ai/playground", icon: Bot, minRole: "builder" },
+  {
+    label: "AI Playground",
+    href: "/ai/playground",
+    icon: Bot,
+    minRole: "builder",
+  },
   { label: "Prompts", href: "/ai/prompts", icon: FileText, minRole: "builder" },
   { label: "Agents", href: "/ai/agents", icon: Brain, minRole: "builder" },
-  { label: "Agent Marketplace", href: "/ai/marketplace", icon: ShoppingCart, minRole: "builder" },
-  { label: "AI Analytics", href: "/ai/analytics", icon: BarChart3, minRole: "builder" },
+  {
+    label: "Agent Marketplace",
+    href: "/ai/marketplace",
+    icon: ShoppingCart,
+    minRole: "builder",
+  },
+  {
+    label: "AI Analytics",
+    href: "/ai/analytics",
+    icon: BarChart3,
+    minRole: "builder",
+  },
   { label: "AI Models", href: "/ai/models", icon: HardDrive, minRole: "admin" },
   { label: "AI Router", href: "/ai/router", icon: Route, minRole: "admin" },
 
   // ── Environments ──────────────────────────────────────────────────────────
   { separator: true, label: "Environments" },
-  { label: "Environments", href: "/environments", icon: Globe, minRole: "builder" },
-  { label: "Promote", href: "/environments/promote", icon: ArrowUpDown, minRole: "admin" },
-  { label: "Rollback", href: "/environments/rollback", icon: Undo2, minRole: "admin" },
-  { label: "Diff", href: "/environments/diff", icon: FileDiff, minRole: "builder" },
+  {
+    label: "Environments",
+    href: "/environments",
+    icon: Globe,
+    minRole: "builder",
+  },
+  {
+    label: "Promote",
+    href: "/environments/promote",
+    icon: ArrowUpDown,
+    minRole: "admin",
+  },
+  {
+    label: "Rollback",
+    href: "/environments/rollback",
+    icon: Undo2,
+    minRole: "admin",
+  },
+  {
+    label: "Diff",
+    href: "/environments/diff",
+    icon: FileDiff,
+    minRole: "builder",
+  },
 
   // ── Manage ────────────────────────────────────────────────────────────────
   { separator: true, label: "Manage" },
-  { label: "Audit Log", href: "/audit-log", icon: ScrollText, minRole: "admin" },
+  {
+    label: "Audit Log",
+    href: "/audit-log",
+    icon: ScrollText,
+    minRole: "admin",
+  },
   { label: "DLQ", href: "/dlq", icon: HardDrive, minRole: "admin" },
-  { label: "Notifications", href: "/notifications", icon: Bell, minRole: "admin" },
-  { label: "Compliance", href: "/compliance", icon: ShieldCheck, minRole: "admin" },
+  {
+    label: "Notifications",
+    href: "/notifications",
+    icon: Bell,
+    minRole: "admin",
+  },
+  {
+    label: "Compliance",
+    href: "/compliance",
+    icon: ShieldCheck,
+    minRole: "admin",
+  },
   { label: "SSO", href: "/settings/sso", icon: Shield, minRole: "admin" },
 
   // ── Account ───────────────────────────────────────────────────────────────
   { separator: true, label: "Account" },
   { label: "Billing", href: "/billing", icon: CreditCard, minRole: "owner" },
-  { label: "Usage & Metering", href: "/metering", icon: Activity, minRole: "owner" },
-  { label: "Team Members", href: "/settings/team", icon: Users, minRole: "admin" },
+  {
+    label: "Usage & Metering",
+    href: "/metering",
+    icon: Activity,
+    minRole: "owner",
+  },
+  {
+    label: "Team Members",
+    href: "/settings/team",
+    icon: Users,
+    minRole: "admin",
+  },
   { label: "Settings", href: "/settings", icon: Settings },
 
   // ── Platform (LongoX internal only) ──────────────────────────────────────
   { separator: true, label: "Platform" },
   { label: "Tenants", href: "/tenants", icon: Users, minRole: "platform" },
   { label: "RBAC", href: "/rbac", icon: Shield, minRole: "platform" },
-  { label: "Feature Flags", href: "/feature-flags", icon: Flag, minRole: "platform" },
-  { label: "Regions", href: "/settings/regions", icon: MapPin, minRole: "platform" },
+  {
+    label: "Feature Flags",
+    href: "/feature-flags",
+    icon: Flag,
+    minRole: "platform",
+  },
+  {
+    label: "Regions",
+    href: "/settings/regions",
+    icon: MapPin,
+    minRole: "platform",
+  },
   { label: "Revenue", href: "/revenue", icon: DollarSign, minRole: "platform" },
-  { label: "Audit Export", href: "/compliance/audit-export", icon: ScrollText, minRole: "platform" },
-  { label: "Data Retention", href: "/compliance/retention", icon: Clock, minRole: "platform" },
-  { label: "GDPR", href: "/compliance/gdpr", icon: ShieldCheck, minRole: "platform" },
+  {
+    label: "Audit Export",
+    href: "/compliance/audit-export",
+    icon: ScrollText,
+    minRole: "platform",
+  },
+  {
+    label: "Data Retention",
+    href: "/compliance/retention",
+    icon: Clock,
+    minRole: "platform",
+  },
+  {
+    label: "GDPR",
+    href: "/compliance/gdpr",
+    icon: ShieldCheck,
+    minRole: "platform",
+  },
 ];
 
 const ROLE_LABEL: Record<string, string> = {

@@ -27,16 +27,23 @@ function CallbackHandler() {
       });
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Authentication failed" }));
+        const err = await res
+          .json()
+          .catch(() => ({ error: "Authentication failed" }));
         throw new Error(err.error);
       }
 
       const data = (await res.json()) as { token: string; user: User };
-      localStorage.setItem("auth", JSON.stringify({ token: data.token, user: data.user }));
+      localStorage.setItem(
+        "auth",
+        JSON.stringify({ token: data.token, user: data.user }),
+      );
       router.push("/dashboard");
     }
 
-    exchangeCode().catch((err) => setError(err instanceof Error ? err.message : "Authentication failed"));
+    exchangeCode().catch((err) =>
+      setError(err instanceof Error ? err.message : "Authentication failed"),
+    );
   }, [searchParams, router]);
 
   if (error) {
@@ -57,11 +64,13 @@ function CallbackHandler() {
 
 export default function CallbackPage() {
   return (
-    <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center bg-muted/30">
-        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-muted/30">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      }
+    >
       <CallbackHandler />
     </Suspense>
   );

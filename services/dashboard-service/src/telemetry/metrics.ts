@@ -7,19 +7,28 @@ export const dashboardViewsCounter = meter.createCounter("dashboard.views", {
   description: "Total dashboard views",
 });
 
-export const dashboardUpdatesCounter = meter.createCounter("dashboard.updates", {
-  description: "Total dashboard updates",
-});
+export const dashboardUpdatesCounter = meter.createCounter(
+  "dashboard.updates",
+  {
+    description: "Total dashboard updates",
+  },
+);
 
-export const dashboardPublishesCounter = meter.createCounter("dashboard.publishes", {
-  description: "Total dashboard publishes",
-});
+export const dashboardPublishesCounter = meter.createCounter(
+  "dashboard.publishes",
+  {
+    description: "Total dashboard publishes",
+  },
+);
 
 // Histograms
-export const dashboardLoadDurationHistogram = meter.createHistogram("dashboard.load.duration", {
-  description: "Dashboard load duration in milliseconds",
-  unit: "ms",
-});
+export const dashboardLoadDurationHistogram = meter.createHistogram(
+  "dashboard.load.duration",
+  {
+    description: "Dashboard load duration in milliseconds",
+    unit: "ms",
+  },
+);
 
 // Gauges
 export const activeDashboardsGauge = meter.createGauge("dashboards.active", {
@@ -30,7 +39,7 @@ export const activeDashboardsGauge = meter.createGauge("dashboards.active", {
 export function recordDashboardView(
   dashboardId: string,
   tenantId: string,
-  durationMs: number
+  durationMs: number,
 ): void {
   const attrs = { dashboard_id: dashboardId, tenant_id: tenantId };
   dashboardViewsCounter.add(1, attrs);
@@ -39,16 +48,22 @@ export function recordDashboardView(
 
 export function recordDashboardUpdate(
   dashboardId: string,
-  tenantId: string
+  tenantId: string,
 ): void {
-  dashboardUpdatesCounter.add(1, { dashboard_id: dashboardId, tenant_id: tenantId });
+  dashboardUpdatesCounter.add(1, {
+    dashboard_id: dashboardId,
+    tenant_id: tenantId,
+  });
 }
 
 export function recordDashboardPublish(
   dashboardId: string,
-  tenantId: string
+  tenantId: string,
 ): void {
-  dashboardPublishesCounter.add(1, { dashboard_id: dashboardId, tenant_id: tenantId });
+  dashboardPublishesCounter.add(1, {
+    dashboard_id: dashboardId,
+    tenant_id: tenantId,
+  });
 }
 
 export function updateActiveDashboards(count: number): void {

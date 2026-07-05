@@ -21,7 +21,8 @@ export function NotificationCenter() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  const unreadCount = notifications?.filter((n) => n.status === "unread").length ?? 0;
+  const unreadCount =
+    notifications?.filter((n) => n.status === "unread").length ?? 0;
   const recent = notifications?.slice(0, 5) ?? [];
 
   return (
@@ -36,14 +37,22 @@ export function NotificationCenter() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[min(calc(100vw-2rem),20rem)]">
+      <DropdownMenuContent
+        align="end"
+        className="w-[min(calc(100vw-2rem),20rem)]"
+      >
         <DropdownMenuLabel className="flex items-center justify-between">
           <span>Notifications</span>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" className="h-7 w-7">
               <CheckCheck className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => router.push("/notifications")}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => router.push("/notifications")}
+            >
               <ExternalLink className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -61,18 +70,26 @@ export function NotificationCenter() {
               onSelect={() => router.push("/notifications")}
             >
               <div className="flex items-center gap-2 w-full">
-                <span className="text-sm font-medium truncate flex-1">{n.title}</span>
+                <span className="text-sm font-medium truncate flex-1">
+                  {n.title}
+                </span>
                 {n.status === "unread" && (
                   <div className="h-2 w-2 shrink-0 rounded-full bg-primary" />
                 )}
               </div>
               {n.body && (
-                <p className="text-xs text-muted-foreground line-clamp-2">{n.body}</p>
+                <p className="text-xs text-muted-foreground line-clamp-2">
+                  {n.body}
+                </p>
               )}
               <div className="flex items-center gap-2 mt-0.5">
-                <Badge variant="outline" className="text-[10px] px-1 py-0">{n.type}</Badge>
+                <Badge variant="outline" className="text-[10px] px-1 py-0">
+                  {n.type}
+                </Badge>
                 <span className="text-[10px] text-muted-foreground">
-                  {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
+                  {formatDistanceToNow(new Date(n.createdAt), {
+                    addSuffix: true,
+                  })}
                 </span>
               </div>
             </DropdownMenuItem>

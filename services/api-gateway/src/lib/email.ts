@@ -54,8 +54,10 @@ export async function sendInvitationEmail(
 }
 
 function getFrontendUrl(): string {
-  if (process.env.FRONTEND_URL) return process.env.FRONTEND_URL.replace(/\/$/, "");
-  if (process.env.REPLIT_DEV_DOMAIN) return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  if (process.env.FRONTEND_URL)
+    return process.env.FRONTEND_URL.replace(/\/$/, "");
+  if (process.env.REPLIT_DEV_DOMAIN)
+    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
   return "http://localhost:5000";
 }
 

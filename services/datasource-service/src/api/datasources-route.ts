@@ -27,13 +27,22 @@ function serializeDs(row: any) {
     name: row.name,
     description: row.description ?? null,
     kind: row.kind,
-    config: (row.configJson ?? row.config) ?? {},
+    config: row.configJson ?? row.config ?? {},
     status: row.status ?? (row.isActive ? "active" : "inactive"),
-    lastTestedAt: row.lastTestedAt instanceof Date ? row.lastTestedAt.toISOString() : (row.lastTestedAt ?? null),
+    lastTestedAt:
+      row.lastTestedAt instanceof Date
+        ? row.lastTestedAt.toISOString()
+        : (row.lastTestedAt ?? null),
     lastTestError: row.lastTestError ?? null,
     createdBy: row.createdBy ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt:
+      row.createdAt instanceof Date
+        ? row.createdAt.toISOString()
+        : row.createdAt,
+    updatedAt:
+      row.updatedAt instanceof Date
+        ? row.updatedAt.toISOString()
+        : row.updatedAt,
   };
 }
 

@@ -22,34 +22,50 @@ describe("canAccess", () => {
   };
 
   it("allows admin role", () => {
-    expect(canAccess("admin", "workflows", "read", rolePermissions as any)).toBe(true);
-    expect(canAccess("admin", "workflows", "delete", rolePermissions as any)).toBe(true);
+    expect(
+      canAccess("admin", "workflows", "read", rolePermissions as any),
+    ).toBe(true);
+    expect(
+      canAccess("admin", "workflows", "delete", rolePermissions as any),
+    ).toBe(true);
   });
 
   it("allows super_admin role", () => {
-    expect(canAccess("super_admin", "tenants", "admin", rolePermissions as any)).toBe(true);
+    expect(
+      canAccess("super_admin", "tenants", "admin", rolePermissions as any),
+    ).toBe(true);
   });
 
   it("allows when permission exists", () => {
-    expect(canAccess("viewer", "workflows", "read", rolePermissions as any)).toBe(true);
+    expect(
+      canAccess("viewer", "workflows", "read", rolePermissions as any),
+    ).toBe(true);
   });
 
   it("denies when permission does not exist", () => {
-    expect(canAccess("viewer", "workflows", "delete", rolePermissions as any)).toBe(false);
+    expect(
+      canAccess("viewer", "workflows", "delete", rolePermissions as any),
+    ).toBe(false);
   });
 
   it("allows 'admin' action as wildcard", () => {
-    expect(canAccess("editor", "workflows", "admin", {
-      editor: { workflows: ["read", "write", "admin"] },
-    } as any)).toBe(true);
+    expect(
+      canAccess("editor", "workflows", "admin", {
+        editor: { workflows: ["read", "write", "admin"] },
+      } as any),
+    ).toBe(true);
   });
 
   it("denies for unknown role", () => {
-    expect(canAccess("nonexistent", "workflows", "read", rolePermissions as any)).toBe(false);
+    expect(
+      canAccess("nonexistent", "workflows", "read", rolePermissions as any),
+    ).toBe(false);
   });
 
   it("denies for null role", () => {
-    expect(canAccess("", "workflows", "read", rolePermissions as any)).toBe(false);
+    expect(canAccess("", "workflows", "read", rolePermissions as any)).toBe(
+      false,
+    );
   });
 });
 
@@ -73,12 +89,30 @@ describe("parsePermissionString", () => {
   });
 
   it("resolves aliases", () => {
-    expect(parsePermissionString("workflow.read")).toEqual({ resource: "workflows", action: "read" });
-    expect(parsePermissionString("workflow.execute")).toEqual({ resource: "workflows", action: "run" });
-    expect(parsePermissionString("workflow.run")).toEqual({ resource: "workflows", action: "run" });
-    expect(parsePermissionString("workflow.delete")).toEqual({ resource: "workflows", action: "delete" });
-    expect(parsePermissionString("tenant.admin")).toEqual({ resource: "tenants", action: "admin" });
-    expect(parsePermissionString("tenant.read")).toEqual({ resource: "tenants", action: "admin" });
+    expect(parsePermissionString("workflow.read")).toEqual({
+      resource: "workflows",
+      action: "read",
+    });
+    expect(parsePermissionString("workflow.execute")).toEqual({
+      resource: "workflows",
+      action: "run",
+    });
+    expect(parsePermissionString("workflow.run")).toEqual({
+      resource: "workflows",
+      action: "run",
+    });
+    expect(parsePermissionString("workflow.delete")).toEqual({
+      resource: "workflows",
+      action: "delete",
+    });
+    expect(parsePermissionString("tenant.admin")).toEqual({
+      resource: "tenants",
+      action: "admin",
+    });
+    expect(parsePermissionString("tenant.read")).toEqual({
+      resource: "tenants",
+      action: "admin",
+    });
   });
 
   it("returns null for unresolvable string", () => {
@@ -89,8 +123,8 @@ describe("parsePermissionString", () => {
 
 describe("Permissions", () => {
   it("includes all resource action keys", () => {
-    const allPermissions = Object.entries(Permissions).flatMap(([resource, actions]) =>
-      Object.values(actions)
+    const allPermissions = Object.entries(Permissions).flatMap(
+      ([resource, actions]) => Object.values(actions),
     );
     expect(allPermissions).toContain("workflows:read");
     expect(allPermissions).toContain("workflows:write");
@@ -105,7 +139,12 @@ describe("Permissions", () => {
 
 describe("RESOURCE_ACTIONS", () => {
   it("workflows has read, write, run, delete", () => {
-    expect(RESOURCE_ACTIONS.workflows).toEqual(["read", "write", "run", "delete"]);
+    expect(RESOURCE_ACTIONS.workflows).toEqual([
+      "read",
+      "write",
+      "run",
+      "delete",
+    ]);
   });
 
   it("environments has promote", () => {

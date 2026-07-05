@@ -65,7 +65,9 @@ export function TenantSwitcher() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{t.name}</p>
-              <p className="text-xs text-muted-foreground capitalize">{t.plan}</p>
+              <p className="text-xs text-muted-foreground capitalize">
+                {t.plan}
+              </p>
             </div>
             {String(t.id) === activeTenantId && (
               <Check className="h-4 w-4 text-primary shrink-0" />

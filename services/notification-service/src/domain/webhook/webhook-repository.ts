@@ -14,8 +14,20 @@ export interface WebhookEndpointRepository {
 
 export interface WebhookDeliveryRepository {
   list(filter: ListWebhookDeliveriesFilter): Promise<WebhookDelivery[]>;
-  create(endpointId: string, eventType: string, payload: Record<string, unknown>): Promise<WebhookDelivery>;
-  markDelivered(id: string, statusCode: number, response: string): Promise<WebhookDelivery | null>;
-  markFailed(id: string, statusCode: number | null, errorMessage: string): Promise<WebhookDelivery | null>;
+  create(
+    endpointId: string,
+    eventType: string,
+    payload: Record<string, unknown>,
+  ): Promise<WebhookDelivery>;
+  markDelivered(
+    id: string,
+    statusCode: number,
+    response: string,
+  ): Promise<WebhookDelivery | null>;
+  markFailed(
+    id: string,
+    statusCode: number | null,
+    errorMessage: string,
+  ): Promise<WebhookDelivery | null>;
   incrementRetryCount(id: string): Promise<void>;
 }

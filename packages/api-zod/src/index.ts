@@ -59,7 +59,9 @@ export const ListExecutionsQueryParams = z.object({
   limit: z.coerce.number().int().positive().optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });
-export type ListExecutionsQueryParams = z.infer<typeof ListExecutionsQueryParams>;
+export type ListExecutionsQueryParams = z.infer<
+  typeof ListExecutionsQueryParams
+>;
 
 export const GetExecutionParams = IdParams;
 export type GetExecutionParams = z.infer<typeof GetExecutionParams>;
@@ -69,4 +71,6 @@ export type GetExecutionParams = z.infer<typeof GetExecutionParams>;
 export const GetRecentActivityQueryParams = z.object({
   limit: z.coerce.number().int().positive().optional(),
 });
-export type GetRecentActivityQueryParams = z.infer<typeof GetRecentActivityQueryParams>;
+export type GetRecentActivityQueryParams = z.infer<
+  typeof GetRecentActivityQueryParams
+>;

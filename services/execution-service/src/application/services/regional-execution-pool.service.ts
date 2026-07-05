@@ -61,7 +61,9 @@ export class RegionalExecutionPoolService {
     const tenantRegion = tenantRegionResult[0]?.region_id as string | undefined;
 
     if (tenantRegion) {
-      const preferredPool = activePools.find((p) => p.regionId === tenantRegion);
+      const preferredPool = activePools.find(
+        (p) => p.regionId === tenantRegion,
+      );
       if (preferredPool) {
         return {
           regionId: preferredPool.regionId,
@@ -72,8 +74,10 @@ export class RegionalExecutionPoolService {
     }
 
     const sorted = activePools.sort((a, b) => {
-      const aScore = a.queueDepth + a.cpuUtilization * 10 + a.activeExecutions * 2;
-      const bScore = b.queueDepth + b.cpuUtilization * 10 + b.activeExecutions * 2;
+      const aScore =
+        a.queueDepth + a.cpuUtilization * 10 + a.activeExecutions * 2;
+      const bScore =
+        b.queueDepth + b.cpuUtilization * 10 + b.activeExecutions * 2;
       return aScore - bScore;
     });
 
@@ -113,7 +117,10 @@ export class RegionalExecutionPoolService {
     };
   }
 
-  async routeToRegion(executionId: string, region: string): Promise<{ routed: boolean; executionId: string; region: string }> {
+  async routeToRegion(
+    executionId: string,
+    region: string,
+  ): Promise<{ routed: boolean; executionId: string; region: string }> {
     const pool = await prisma.regionalPool.findFirst({
       where: { regionId: region } as any,
     });
@@ -123,7 +130,9 @@ export class RegionalExecutionPoolService {
     }
 
     if (pool.status === "inactive" || pool.status === "draining") {
-      throw new Error(`Region ${region} is not accepting executions (status: ${pool.status})`);
+      throw new Error(
+        `Region ${region} is not accepting executions (status: ${pool.status})`,
+      );
     }
 
     await prisma.regionalPool.update({
@@ -145,7 +154,13 @@ export class RegionalExecutionPoolService {
     if (!pool) {
       return {
         ready: false,
-        checks: { db: false, redis: false, workers: false, gateway: false, storage: false },
+        checks: {
+          db: false,
+          redis: false,
+          workers: false,
+          gateway: false,
+          storage: false,
+        },
         lastHeartbeat: null,
       };
     }
@@ -166,7 +181,8 @@ export class RegionalExecutionPoolService {
       : Infinity;
     const heartbeatRecent = heartbeatAge < 120;
 
-    const ready = dbHealthy && workersHealthy && gatewayHealthy && heartbeatRecent;
+    const ready =
+      dbHealthy && workersHealthy && gatewayHealthy && heartbeatRecent;
 
     return {
       ready,
@@ -202,12 +218,18 @@ export class RegionalExecutionPoolService {
     };
 
     if (metrics) {
-      if (metrics.workerCount !== undefined) updateData.workerCount = metrics.workerCount;
-      if (metrics.activeExecutions !== undefined) updateData.activeExecutions = metrics.activeExecutions;
-      if (metrics.queueDepth !== undefined) updateData.queueDepth = metrics.queueDepth;
-      if (metrics.cpuUtilization !== undefined) updateData.cpuUtilization = metrics.cpuUtilization;
-      if (metrics.memoryUtilization !== undefined) updateData.memoryUtilization = metrics.memoryUtilization;
-      if (metrics.dbReplicaLagSeconds !== undefined) updateData.dbReplicaLagSeconds = metrics.dbReplicaLagSeconds;
+      if (metrics.workerCount !== undefined)
+        updateData.workerCount = metrics.workerCount;
+      if (metrics.activeExecutions !== undefined)
+        updateData.activeExecutions = metrics.activeExecutions;
+      if (metrics.queueDepth !== undefined)
+        updateData.queueDepth = metrics.queueDepth;
+      if (metrics.cpuUtilization !== undefined)
+        updateData.cpuUtilization = metrics.cpuUtilization;
+      if (metrics.memoryUtilization !== undefined)
+        updateData.memoryUtilization = metrics.memoryUtilization;
+      if (metrics.dbReplicaLagSeconds !== undefined)
+        updateData.dbReplicaLagSeconds = metrics.dbReplicaLagSeconds;
     }
 
     if (existing) {
@@ -237,7 +259,11 @@ export class RegionalExecutionPoolService {
     return created;
   }
 
-  async handleRegionDegradation(region: string): Promise<{ failedOver: boolean; targetRegion: string | null; actions: string[] }> {
+  async handleRegionDegradation(region: string): Promise<{
+    failedOver: boolean;
+    targetRegion: string | null;
+    actions: string[];
+  }> {
     const pool = await prisma.regionalPool.findFirst({
       where: { regionId: region } as any,
     });

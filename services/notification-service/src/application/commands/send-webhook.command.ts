@@ -16,7 +16,9 @@ export class SendWebhookCommand {
     private readonly deliveryService: WebhookDeliveryService,
   ) {}
 
-  async execute(input: SendWebhookInput): Promise<{ delivered: number; failed: number }> {
+  async execute(
+    input: SendWebhookInput,
+  ): Promise<{ delivered: number; failed: number }> {
     const endpoints = await this.endpointRepository.findByEvent(
       input.tenantId,
       input.eventType,

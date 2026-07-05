@@ -11,7 +11,10 @@ const REDIS_CHANNEL = "longox:execution-events";
 
 interface RedisClient {
   publish(channel: string, message: string): Promise<number>;
-  subscribe(channel: string, listener: (message: string) => void): Promise<void>;
+  subscribe(
+    channel: string,
+    listener: (message: string) => void,
+  ): Promise<void>;
   unsubscribe(channel: string): Promise<void>;
 }
 

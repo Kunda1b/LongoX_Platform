@@ -7,7 +7,12 @@ import { registerVersionedRoutes } from "../lib/api-versioning";
 const router: IRouter = Router();
 
 registerVersionedRoutes(router, [
-  { path: "/api/v1/environments", handler: (_req, _res, next) => next(), deprecatedSince: "2026-01-01", sunsetDate: "2026-07-03" },
+  {
+    path: "/api/v1/environments",
+    handler: (_req, _res, next) => next(),
+    deprecatedSince: "2026-01-01",
+    sunsetDate: "2026-07-03",
+  },
 ]);
 
 router.get(
@@ -18,18 +23,28 @@ router.get(
       orderBy: { id: "asc" },
     })) as any[];
     const totalWorkflows = await prisma.workflow.count();
-    const perEnv = rows.length > 0 ? Math.floor(totalWorkflows / rows.length) : 0;
+    const perEnv =
+      rows.length > 0 ? Math.floor(totalWorkflows / rows.length) : 0;
 
-    res.json(rows.map((e, i) => ({
-      id: e.id,
-      name: e.name,
-      type: e.type,
-      description: (e as any).description,
-      isDefault: (e as any).isDefault ?? false,
-      workflowCount: i === 0 ? totalWorkflows - perEnv * (rows.length - 1) : perEnv,
-      createdAt: e.createdAt instanceof Date ? e.createdAt.toISOString() : new Date(e.createdAt).toISOString(),
-      updatedAt: e.updatedAt instanceof Date ? e.updatedAt.toISOString() : new Date(e.updatedAt).toISOString(),
-    })));
+    res.json(
+      rows.map((e, i) => ({
+        id: e.id,
+        name: e.name,
+        type: e.type,
+        description: (e as any).description,
+        isDefault: (e as any).isDefault ?? false,
+        workflowCount:
+          i === 0 ? totalWorkflows - perEnv * (rows.length - 1) : perEnv,
+        createdAt:
+          e.createdAt instanceof Date
+            ? e.createdAt.toISOString()
+            : new Date(e.createdAt).toISOString(),
+        updatedAt:
+          e.updatedAt instanceof Date
+            ? e.updatedAt.toISOString()
+            : new Date(e.updatedAt).toISOString(),
+      })),
+    );
   },
 );
 
@@ -49,8 +64,14 @@ router.get(
       type: row.type,
       description: row.description,
       isDefault: row.isDefault ?? false,
-      createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : new Date(row.createdAt).toISOString(),
-      updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : new Date(row.updatedAt).toISOString(),
+      createdAt:
+        row.createdAt instanceof Date
+          ? row.createdAt.toISOString()
+          : new Date(row.createdAt).toISOString(),
+      updatedAt:
+        row.updatedAt instanceof Date
+          ? row.updatedAt.toISOString()
+          : new Date(row.updatedAt).toISOString(),
     });
   },
 );
@@ -77,8 +98,14 @@ router.post(
       type: row.type,
       description: row.description,
       isDefault: row.isDefault ?? false,
-      createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : new Date(row.createdAt).toISOString(),
-      updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : new Date(row.updatedAt).toISOString(),
+      createdAt:
+        row.createdAt instanceof Date
+          ? row.createdAt.toISOString()
+          : new Date(row.createdAt).toISOString(),
+      updatedAt:
+        row.updatedAt instanceof Date
+          ? row.updatedAt.toISOString()
+          : new Date(row.updatedAt).toISOString(),
     });
   },
 );
@@ -111,8 +138,14 @@ router.patch(
       type: row.type,
       description: row.description,
       isDefault: row.isDefault ?? false,
-      createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : new Date(row.createdAt).toISOString(),
-      updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : new Date(row.updatedAt).toISOString(),
+      createdAt:
+        row.createdAt instanceof Date
+          ? row.createdAt.toISOString()
+          : new Date(row.createdAt).toISOString(),
+      updatedAt:
+        row.updatedAt instanceof Date
+          ? row.updatedAt.toISOString()
+          : new Date(row.updatedAt).toISOString(),
     });
   },
 );
@@ -137,9 +170,20 @@ router.post(
     const toEnvironment = body.toEnvironment as string;
     const notes = body.notes as string | undefined;
     const approvalRequired = body.approvalRequired as boolean | undefined;
-    if (!workflowId || typeof workflowId !== "string") { res.status(400).json({ error: "workflowId is required and must be a string" }); return; }
-    if (!fromEnvironment || typeof fromEnvironment !== "string") { res.status(400).json({ error: "fromEnvironment is required" }); return; }
-    if (!toEnvironment || typeof toEnvironment !== "string") { res.status(400).json({ error: "toEnvironment is required" }); return; }
+    if (!workflowId || typeof workflowId !== "string") {
+      res
+        .status(400)
+        .json({ error: "workflowId is required and must be a string" });
+      return;
+    }
+    if (!fromEnvironment || typeof fromEnvironment !== "string") {
+      res.status(400).json({ error: "fromEnvironment is required" });
+      return;
+    }
+    if (!toEnvironment || typeof toEnvironment !== "string") {
+      res.status(400).json({ error: "toEnvironment is required" });
+      return;
+    }
     const promotedBy = req.user?.email ?? "system";
 
     try {
@@ -158,7 +202,8 @@ router.post(
         requiresApproval: result.requiresApproval,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Promotion failed";
+      const message =
+        error instanceof Error ? error.message : "Promotion failed";
       res.status(400).json({ error: message });
     }
   },
@@ -169,18 +214,27 @@ router.post(
   authorize({ resource: "environments", action: "write" }),
   async (req: Request, res: Response): Promise<void> => {
     const { promotionId } = req.body as Record<string, unknown>;
-    if (!promotionId || typeof promotionId !== "string") { res.status(400).json({ error: "promotionId is required and must be a string" }); return; }
+    if (!promotionId || typeof promotionId !== "string") {
+      res
+        .status(400)
+        .json({ error: "promotionId is required and must be a string" });
+      return;
+    }
     const rolledBackBy = req.user?.email ?? "system";
 
     try {
-      const result = await promotionApprovalService.rollbackPromotion(promotionId, rolledBackBy);
+      const result = await promotionApprovalService.rollbackPromotion(
+        promotionId,
+        rolledBackBy,
+      );
       res.json({
         message: `Rolled back ${result.promotion.workflowName} from ${result.promotion.toEnvironment} to ${result.promotion.fromEnvironment}`,
         promotion: result.promotion,
         release: result.release,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Rollback failed";
+      const message =
+        error instanceof Error ? error.message : "Rollback failed";
       res.status(400).json({ error: message });
     }
   },
@@ -195,13 +249,18 @@ router.post(
     const note = req.body.note as string | undefined;
 
     try {
-      const result = await promotionApprovalService.approvePromotion(promotionId, approvedBy, note);
+      const result = await promotionApprovalService.approvePromotion(
+        promotionId,
+        approvedBy,
+        note,
+      );
       res.json({
         promotion: result.promotion,
         release: result.release,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Approval failed";
+      const message =
+        error instanceof Error ? error.message : "Approval failed";
       res.status(400).json({ error: message });
     }
   },
@@ -220,13 +279,18 @@ router.post(
     const rejectedBy = req.user?.email ?? "system";
 
     try {
-      const result = await promotionApprovalService.rejectPromotion(promotionId, reason, rejectedBy);
+      const result = await promotionApprovalService.rejectPromotion(
+        promotionId,
+        reason,
+        rejectedBy,
+      );
       res.json({
         promotion: result.promotion,
         release: result.release,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Rejection failed";
+      const message =
+        error instanceof Error ? error.message : "Rejection failed";
       res.status(400).json({ error: message });
     }
   },
@@ -287,14 +351,22 @@ router.get(
         approvalRequired: (r as any).approvalRequired ?? false,
         approvedBy: r.approvedBy,
         approvedAt: r.approvedAt
-          ? (r.approvedAt instanceof Date ? r.approvedAt.toISOString() : new Date(r.approvedAt).toISOString())
+          ? r.approvedAt instanceof Date
+            ? r.approvedAt.toISOString()
+            : new Date(r.approvedAt).toISOString()
           : null,
         diffReview: (r as any).diffReview,
         rollbackOf: (r as any).rollbackOf,
         deployedBy: r.deployedBy,
         notes: r.notes,
-        createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : new Date(r.createdAt).toISOString(),
-        updatedAt: r.updatedAt instanceof Date ? r.updatedAt.toISOString() : new Date(r.updatedAt).toISOString(),
+        createdAt:
+          r.createdAt instanceof Date
+            ? r.createdAt.toISOString()
+            : new Date(r.createdAt).toISOString(),
+        updatedAt:
+          r.updatedAt instanceof Date
+            ? r.updatedAt.toISOString()
+            : new Date(r.updatedAt).toISOString(),
       })),
     );
   },
@@ -306,7 +378,8 @@ router.get(
   async (req: Request, res: Response): Promise<void> => {
     const workflowId = String(req.params.workflowId);
     const { from, to } = req.query as { from?: string; to?: string };
-    void from; void to;
+    void from;
+    void to;
 
     const versions = (await prisma.workflowVersion.findMany({
       where: { workflowId },
@@ -317,8 +390,24 @@ router.get(
     const toVersion = versions.length > 1 ? versions[1] : null;
 
     res.json({
-      from: fromVersion ? { version: fromVersion.versionNumber ?? fromVersion.version, name: (fromVersion as any).name, nodes: (fromVersion as any).nodes ?? fromVersion.graphJson, changeNote: (fromVersion as any).changeNote, createdAt: fromVersion.createdAt } : null,
-      to: toVersion ? { version: toVersion.versionNumber ?? toVersion.version, name: (toVersion as any).name, nodes: (toVersion as any).nodes ?? toVersion.graphJson, changeNote: (toVersion as any).changeNote, createdAt: toVersion.createdAt } : null,
+      from: fromVersion
+        ? {
+            version: fromVersion.versionNumber ?? fromVersion.version,
+            name: (fromVersion as any).name,
+            nodes: (fromVersion as any).nodes ?? fromVersion.graphJson,
+            changeNote: (fromVersion as any).changeNote,
+            createdAt: fromVersion.createdAt,
+          }
+        : null,
+      to: toVersion
+        ? {
+            version: toVersion.versionNumber ?? toVersion.version,
+            name: (toVersion as any).name,
+            nodes: (toVersion as any).nodes ?? toVersion.graphJson,
+            changeNote: (toVersion as any).changeNote,
+            createdAt: toVersion.createdAt,
+          }
+        : null,
     });
   },
 );
@@ -330,25 +419,34 @@ router.get(
     const rows = (await prisma.workflowPromotion.findMany({
       orderBy: { createdAt: "desc" },
     })) as any[];
-    res.json(rows.map((p) => ({
-      id: p.id,
-      workflowId: p.workflowId,
-      workflowName: p.workflowName,
-      fromEnvironment: p.fromEnvironment,
-      toEnvironment: p.toEnvironment,
-      status: p.status,
-      promotedBy: p.promotedBy,
-      approvedBy: p.approvedBy,
-      approvedAt: p.approvedAt
-        ? (p.approvedAt instanceof Date ? p.approvedAt.toISOString() : new Date(p.approvedAt).toISOString())
-        : null,
-      rejectionReason: p.rejectionReason,
-      rejectedAt: p.rejectedAt
-        ? (p.rejectedAt instanceof Date ? p.rejectedAt.toISOString() : new Date(p.rejectedAt).toISOString())
-        : null,
-      notes: p.notes,
-      createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : new Date(p.createdAt).toISOString(),
-    })));
+    res.json(
+      rows.map((p) => ({
+        id: p.id,
+        workflowId: p.workflowId,
+        workflowName: p.workflowName,
+        fromEnvironment: p.fromEnvironment,
+        toEnvironment: p.toEnvironment,
+        status: p.status,
+        promotedBy: p.promotedBy,
+        approvedBy: p.approvedBy,
+        approvedAt: p.approvedAt
+          ? p.approvedAt instanceof Date
+            ? p.approvedAt.toISOString()
+            : new Date(p.approvedAt).toISOString()
+          : null,
+        rejectionReason: p.rejectionReason,
+        rejectedAt: p.rejectedAt
+          ? p.rejectedAt instanceof Date
+            ? p.rejectedAt.toISOString()
+            : new Date(p.rejectedAt).toISOString()
+          : null,
+        notes: p.notes,
+        createdAt:
+          p.createdAt instanceof Date
+            ? p.createdAt.toISOString()
+            : new Date(p.createdAt).toISOString(),
+      })),
+    );
   },
 );
 

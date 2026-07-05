@@ -19,11 +19,7 @@ export default defineConfig({
         "services/*/src/**/*.ts",
         "lib/**/*.ts",
       ],
-      exclude: [
-        "**/*.test.ts",
-        "**/*.spec.ts",
-        "**/node_modules/**",
-      ],
+      exclude: ["**/*.test.ts", "**/*.spec.ts", "**/node_modules/**"],
     },
   },
 });

@@ -37,7 +37,9 @@ function AcceptInvitationContent() {
 
   const inviteToken = searchParams.get("token");
 
-  const [status, setStatus] = useState<"loading" | "needsRegistration" | "accepted" | "error">("loading");
+  const [status, setStatus] = useState<
+    "loading" | "needsRegistration" | "accepted" | "error"
+  >("loading");
   const [invitation, setInvitation] = useState<InvitationInfo | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -65,7 +67,10 @@ function AcceptInvitationContent() {
           // If the user is already logged in, re-login to refresh token
           if (authToken && user) {
             // The token returned already has the right tenantId
-            localStorage.setItem("auth", JSON.stringify({ token: accepted.token, user: accepted.user }));
+            localStorage.setItem(
+              "auth",
+              JSON.stringify({ token: accepted.token, user: accepted.user }),
+            );
           }
           setStatus("accepted");
           setTimeout(() => router.push("/dashboard"), 2000);
@@ -80,7 +85,9 @@ function AcceptInvitationContent() {
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-sm text-muted-foreground">Validating invitation…</div>
+        <div className="text-sm text-muted-foreground">
+          Validating invitation…
+        </div>
       </div>
     );
   }
@@ -113,7 +120,9 @@ function AcceptInvitationContent() {
             <span className="text-xl">✓</span>
           </div>
           <h1 className="mb-2 text-xl font-semibold">Invitation accepted!</h1>
-          <p className="text-sm text-muted-foreground">Redirecting you to the dashboard…</p>
+          <p className="text-sm text-muted-foreground">
+            Redirecting you to the dashboard…
+          </p>
         </div>
       </div>
     );
@@ -165,7 +174,13 @@ function AcceptInvitationContent() {
 
 export default function AcceptInvitationPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">Validating invitation…</div>}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
+          Validating invitation…
+        </div>
+      }
+    >
       <AcceptInvitationContent />
     </Suspense>
   );

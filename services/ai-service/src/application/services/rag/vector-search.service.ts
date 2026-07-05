@@ -77,7 +77,7 @@ export class VectorSearchService {
     // Build the parameterized query. The vector literal is interpolated as a
     // raw SQL fragment (pgvector accepts the `'[1,2,3]'::vector` literal form);
     // all other inputs are bound parameters.
-    const rows = await prisma.$queryRawUnsafe(
+    const rows = (await prisma.$queryRawUnsafe(
       `
       SELECT
         rc.id AS "chunkId",
@@ -96,7 +96,7 @@ export class VectorSearchService {
       LIMIT ${topK}
       `,
       ...params,
-    ) as any[];
+    )) as any[];
 
     return (rows ?? [])
       .filter((r: any) => r.score >= minScore)
@@ -187,7 +187,7 @@ export class VectorSearchService {
       .filter(Boolean);
     if (ftsQuery.length > 0) {
       try {
-        const ftsRows = await prisma.$queryRawUnsafe(
+        const ftsRows = (await prisma.$queryRawUnsafe(
           `
           SELECT
             rc.id AS "chunkId",
@@ -209,7 +209,7 @@ export class VectorSearchService {
           kbId,
           query,
           (options.topK ?? Number(process.env.RAG_DEFAULT_TOP_K ?? 5)) * 2,
-        ) as any[];
+        )) as any[];
 
         ftsResults = (ftsRows ?? []).map((r: any) => ({
           chunkId: r.chunkId,

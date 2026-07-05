@@ -34,10 +34,7 @@ interface ReleaseState {
 }
 
 export class ReleaseRollbackService {
-  async createReleaseSnapshot(
-    service: string,
-    version: string,
-  ): Promise<any> {
+  async createReleaseSnapshot(service: string, version: string): Promise<any> {
     const helmRevision = await this.getCurrentHelmRevision(service);
     const configChecksum = await this.computeConfigChecksum(service);
     const migrationVersion = await this.getCurrentMigrationVersion(service);
@@ -71,9 +68,14 @@ export class ReleaseRollbackService {
       throw new Error(`No release snapshot found for service: ${service}`);
     }
 
-    const targetSnapshot = await this.getSnapshotByVersion(service, targetVersion);
+    const targetSnapshot = await this.getSnapshotByVersion(
+      service,
+      targetVersion,
+    );
     if (!targetSnapshot) {
-      throw new Error(`No snapshot found for ${service} at version ${targetVersion}`);
+      throw new Error(
+        `No snapshot found for ${service} at version ${targetVersion}`,
+      );
     }
 
     const steps: RollbackStep[] = [];
@@ -88,9 +90,13 @@ export class ReleaseRollbackService {
       estimatedDuration: "30s",
     });
 
-    if (currentSnapshot.migrationVersion != null && targetSnapshot.migrationVersion != null) {
+    if (
+      currentSnapshot.migrationVersion != null &&
+      targetSnapshot.migrationVersion != null
+    ) {
       if (currentSnapshot.migrationVersion > targetSnapshot.migrationVersion) {
-        const migrationsToReverse = currentSnapshot.migrationVersion - targetSnapshot.migrationVersion;
+        const migrationsToReverse =
+          currentSnapshot.migrationVersion - targetSnapshot.migrationVersion;
         steps.push({
           order: 2,
           action: `Reverse ${migrationsToReverse} database migration(s) from v${currentSnapshot.migrationVersion} to v${targetSnapshot.migrationVersion}`,
@@ -99,7 +105,9 @@ export class ReleaseRollbackService {
           estimatedDuration: `${migrationsToReverse * 10}s`,
         });
         dataMigrationRequired = migrationsToReverse > 1;
-        risks.push(`Rolling back ${migrationsToReverse} migration(s) — data loss possible if migrations included destructive changes`);
+        risks.push(
+          `Rolling back ${migrationsToReverse} migration(s) — data loss possible if migrations included destructive changes`,
+        );
       }
     }
 
@@ -111,7 +119,9 @@ export class ReleaseRollbackService {
         automated: true,
         estimatedDuration: "10s",
       });
-      risks.push("Configuration has changed — restored from snapshot; verify all settings");
+      risks.push(
+        "Configuration has changed — restored from snapshot; verify all settings",
+      );
     }
 
     steps.push({
@@ -122,10 +132,16 @@ export class ReleaseRollbackService {
       estimatedDuration: "60s",
     });
 
-    if (currentSnapshot.helmRevision != null && targetSnapshot.helmRevision != null) {
-      const revisionDiff = currentSnapshot.helmRevision - targetSnapshot.helmRevision;
+    if (
+      currentSnapshot.helmRevision != null &&
+      targetSnapshot.helmRevision != null
+    ) {
+      const revisionDiff =
+        currentSnapshot.helmRevision - targetSnapshot.helmRevision;
       if (revisionDiff > 2) {
-        risks.push(`Skipping ${revisionDiff - 1} intermediate revision(s) — may skip dependent changes`);
+        risks.push(
+          `Skipping ${revisionDiff - 1} intermediate revision(s) — may skip dependent changes`,
+        );
       }
     }
 
@@ -161,10 +177,7 @@ export class ReleaseRollbackService {
     };
   }
 
-  async executeRollback(
-    service: string,
-    targetVersion: string,
-  ): Promise<any> {
+  async executeRollback(service: string, targetVersion: string): Promise<any> {
     const plan = await this.planRollback(service, targetVersion);
     const currentSnapshot = await this.getLatestSnapshot(service);
     if (!currentSnapshot) {
@@ -176,7 +189,9 @@ export class ReleaseRollbackService {
         try {
           execSync(step.command, { stdio: "pipe", timeout: 300000 });
         } catch {
-          console.warn(`Rollback step ${step.order} ("${step.action}") failed — continuing`);
+          console.warn(
+            `Rollback step ${step.order} ("${step.action}") failed — continuing`,
+          );
         }
       }
     }
@@ -254,7 +269,10 @@ export class ReleaseRollbackService {
     return snapshots[0] ?? null;
   }
 
-  private async getSnapshotByVersion(service: string, version: string): Promise<any | null> {
+  private async getSnapshotByVersion(
+    service: string,
+    version: string,
+  ): Promise<any | null> {
     const snapshots = await prisma.releaseSnapshot.findMany({
       where: {
         serviceName: service,
@@ -284,10 +302,13 @@ export class ReleaseRollbackService {
   private async computeConfigChecksum(service: string): Promise<string> {
     const hash = crypto.createHash("sha256");
     try {
-      const output = execSync(`kubectl get configmap ${service}-config -o json 2>/dev/null`, {
-        encoding: "utf-8",
-        timeout: 10000,
-      });
+      const output = execSync(
+        `kubectl get configmap ${service}-config -o json 2>/dev/null`,
+        {
+          encoding: "utf-8",
+          timeout: 10000,
+        },
+      );
       hash.update(output);
     } catch {
       hash.update(service + Date.now());

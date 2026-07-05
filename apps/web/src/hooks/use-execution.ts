@@ -98,7 +98,9 @@ async function openSseStreamWithAuth(opts: {
       credentials: "include",
     });
     if (!response.ok || !response.body) {
-      throw new Error(`SSE connection failed: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `SSE connection failed: ${response.status} ${response.statusText}`,
+      );
     }
     opts.onOpen();
     reader = response.body.getReader();
@@ -210,7 +212,9 @@ export function useExecution(executionId?: string) {
             event.event === "approval" ||
             event.event === "dlq"
           ) {
-            queryClient.invalidateQueries({ queryKey: ["execution", executionId] });
+            queryClient.invalidateQueries({
+              queryKey: ["execution", executionId],
+            });
           }
         } catch {
           /* ignore parse errors */

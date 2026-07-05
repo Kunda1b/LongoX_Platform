@@ -105,8 +105,7 @@ export const PHASE2_CONNECTORS: ConnectorSeed[] = [
     name: "hubspot",
     displayName: "HubSpot",
     category: "crm",
-    description:
-      "Manage contacts, companies, and deals in HubSpot CRM.",
+    description: "Manage contacts, companies, and deals in HubSpot CRM.",
     icon: "hubspot",
     color: "#FF7A59",
     author: "LongoX",
@@ -164,14 +163,14 @@ export const PHASE2_CONNECTORS: ConnectorSeed[] = [
     name: "salesforce",
     displayName: "Salesforce",
     category: "crm",
-    description:
-      "Sync leads, opportunities, and accounts with Salesforce.",
+    description: "Sync leads, opportunities, and accounts with Salesforce.",
     icon: "salesforce",
     color: "#00A1E0",
     author: "LongoX",
     authType: "oauth2",
     authConfig: {
-      authorizationUrl: "https://login.salesforce.com/services/oauth2/authorize",
+      authorizationUrl:
+        "https://login.salesforce.com/services/oauth2/authorize",
       tokenUrl: "https://login.salesforce.com/services/oauth2/token",
       scopes: ["api", "refresh_token"],
     },
@@ -290,8 +289,7 @@ export const PHASE2_CONNECTORS: ConnectorSeed[] = [
     name: "mongodb",
     displayName: "MongoDB",
     category: "database",
-    description:
-      "Query and manipulate documents in MongoDB collections.",
+    description: "Query and manipulate documents in MongoDB collections.",
     icon: "mongodb",
     color: "#47A248",
     author: "LongoX",
@@ -340,8 +338,7 @@ export const PHASE2_CONNECTORS: ConnectorSeed[] = [
     name: "postgres",
     displayName: "PostgreSQL",
     category: "database",
-    description:
-      "Execute SQL queries and manage PostgreSQL databases.",
+    description: "Execute SQL queries and manage PostgreSQL databases.",
     icon: "postgres",
     color: "#336791",
     author: "LongoX",
@@ -397,8 +394,7 @@ export const PHASE2_CONNECTORS: ConnectorSeed[] = [
     name: "mysql",
     displayName: "MySQL",
     category: "database",
-    description:
-      "Execute SQL queries and manage MySQL databases.",
+    description: "Execute SQL queries and manage MySQL databases.",
     icon: "mysql",
     color: "#4479A1",
     author: "LongoX",
@@ -442,8 +438,7 @@ export const PHASE2_CONNECTORS: ConnectorSeed[] = [
     name: "google-sheets",
     displayName: "Google Sheets",
     category: "data",
-    description:
-      "Read, write, and sync data with Google Sheets spreadsheets.",
+    description: "Read, write, and sync data with Google Sheets spreadsheets.",
     icon: "google-sheets",
     color: "#34A853",
     author: "LongoX",

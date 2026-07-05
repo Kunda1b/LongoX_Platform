@@ -36,7 +36,9 @@ router.get(
       offset: offsetStr ? parseInt(offsetStr) : 0,
     });
 
-    let listings = Array.isArray(result) ? result : (result as any).listings ?? result;
+    let listings = Array.isArray(result)
+      ? result
+      : ((result as any).listings ?? result);
 
     if (isPublic === "true") {
       listings = listings.filter((l: any) => l.isPublic === true);
@@ -91,7 +93,9 @@ router.post(
       return;
     }
 
-    const pricing = req.body.pricing as { free: boolean; price?: number; subscription?: boolean } | undefined;
+    const pricing = req.body.pricing as
+      | { free: boolean; price?: number; subscription?: boolean }
+      | undefined;
 
     const listing = await repository.create({
       title: String(title),
@@ -108,7 +112,9 @@ router.post(
       reviewCount: 0,
       featured: false,
       verified: false,
-      pricing: pricing ? { free: pricing.free, price: pricing.price, tier: undefined } : { free: true },
+      pricing: pricing
+        ? { free: pricing.free, price: pricing.price, tier: undefined }
+        : { free: true },
       metadata: (metadata ?? {}) as Record<string, unknown>,
       isPublic: Boolean(isPublic ?? false),
       communityTemplate: Boolean(communityTemplate ?? false),
@@ -118,7 +124,11 @@ router.post(
 
     const listingData = listing.toJSON();
 
-    if (listingData.pricing && !listingData.pricing.free && listingData.authorId) {
+    if (
+      listingData.pricing &&
+      !listingData.pricing.free &&
+      listingData.authorId
+    ) {
       await prisma.revenueShare.create({
         data: {
           listingId: listingData.id,
@@ -218,8 +228,16 @@ router.put(
       return;
     }
 
-    const { title, description, category, tags, pricing, metadata, isPublic, communityTemplate } =
-      req.body as Record<string, unknown>;
+    const {
+      title,
+      description,
+      category,
+      tags,
+      pricing,
+      metadata,
+      isPublic,
+      communityTemplate,
+    } = req.body as Record<string, unknown>;
 
     const listing = await repository.update(id, {
       title: title ? String(title) : undefined,
@@ -229,7 +247,10 @@ router.put(
       pricing: pricing as any,
       metadata: metadata as any,
       isPublic: isPublic !== undefined ? Boolean(isPublic) : undefined,
-      communityTemplate: communityTemplate !== undefined ? Boolean(communityTemplate) : undefined,
+      communityTemplate:
+        communityTemplate !== undefined
+          ? Boolean(communityTemplate)
+          : undefined,
     } as any);
     res.json(listing.toJSON());
   },
@@ -376,16 +397,27 @@ router.get(
       where: { sellerTenantId: tenantId } as any,
     });
 
-    const totalEarned = shares.reduce((sum, s: any) => sum + Number(s.totalEarned ?? 0), 0);
-    const totalPayout = shares.reduce((sum, s: any) => sum + Number(s.sellerPayout ?? 0), 0);
-    const pendingPayouts = shares.filter((s: any) => s.payoutStatus === "pending");
+    const totalEarned = shares.reduce(
+      (sum, s: any) => sum + Number(s.totalEarned ?? 0),
+      0,
+    );
+    const totalPayout = shares.reduce(
+      (sum, s: any) => sum + Number(s.sellerPayout ?? 0),
+      0,
+    );
+    const pendingPayouts = shares.filter(
+      (s: any) => s.payoutStatus === "pending",
+    );
 
     res.json({
       totalListings: shares.length,
       totalEarned,
       totalPayout,
       pendingPayouts: pendingPayouts.length,
-      pendingAmount: pendingPayouts.reduce((sum, s: any) => sum + Number(s.sellerPayout ?? 0), 0),
+      pendingAmount: pendingPayouts.reduce(
+        (sum, s: any) => sum + Number(s.sellerPayout ?? 0),
+        0,
+      ),
       shares,
     });
   },
@@ -427,8 +459,15 @@ router.post(
     }
 
     const { rating, title, body } = req.body as Record<string, unknown>;
-    if (!rating || typeof Number(rating) !== "number" || Number(rating) < 0.5 || Number(rating) > 5) {
-      res.status(400).json({ error: "rating is required and must be between 0.5 and 5" });
+    if (
+      !rating ||
+      typeof Number(rating) !== "number" ||
+      Number(rating) < 0.5 ||
+      Number(rating) > 5
+    ) {
+      res
+        .status(400)
+        .json({ error: "rating is required and must be between 0.5 and 5" });
       return;
     }
 
@@ -568,7 +607,9 @@ router.post(
       return;
     }
 
-    const listing = await prisma.marketplaceListing.findUnique({ where: { id } });
+    const listing = await prisma.marketplaceListing.findUnique({
+      where: { id },
+    });
 
     if (!listing) {
       res.status(404).json({ error: "Listing not found" });
@@ -576,7 +617,9 @@ router.post(
     }
 
     if (listing.status !== "draft") {
-      res.status(400).json({ error: `Cannot submit listing with status "${listing.status}" for review; must be "draft"` });
+      res.status(400).json({
+        error: `Cannot submit listing with status "${listing.status}" for review; must be "draft"`,
+      });
       return;
     }
 
@@ -585,7 +628,11 @@ router.post(
       data: { status: "pending_review", updatedAt: new Date() } as any,
     });
 
-    res.json({ id, status: "pending_review", message: "Listing submitted for review" });
+    res.json({
+      id,
+      status: "pending_review",
+      message: "Listing submitted for review",
+    });
   },
 );
 
@@ -599,7 +646,9 @@ router.post(
       return;
     }
 
-    const listing = await prisma.marketplaceListing.findUnique({ where: { id } });
+    const listing = await prisma.marketplaceListing.findUnique({
+      where: { id },
+    });
 
     if (!listing) {
       res.status(404).json({ error: "Listing not found" });
@@ -607,7 +656,9 @@ router.post(
     }
 
     if (listing.status !== "pending_review") {
-      res.status(400).json({ error: `Cannot approve listing with status "${listing.status}"; must be "pending_review"` });
+      res.status(400).json({
+        error: `Cannot approve listing with status "${listing.status}"; must be "pending_review"`,
+      });
       return;
     }
 
@@ -616,7 +667,11 @@ router.post(
       data: { status: "published", updatedAt: new Date() } as any,
     });
 
-    res.json({ id, status: "published", message: "Listing approved and published" });
+    res.json({
+      id,
+      status: "published",
+      message: "Listing approved and published",
+    });
   },
 );
 
@@ -630,7 +685,9 @@ router.post(
       return;
     }
 
-    const listing = await prisma.marketplaceListing.findUnique({ where: { id } });
+    const listing = await prisma.marketplaceListing.findUnique({
+      where: { id },
+    });
 
     if (!listing) {
       res.status(404).json({ error: "Listing not found" });
@@ -638,18 +695,27 @@ router.post(
     }
 
     if (listing.status !== "pending_review") {
-      res.status(400).json({ error: `Cannot reject listing with status "${listing.status}"; must be "pending_review"` });
+      res.status(400).json({
+        error: `Cannot reject listing with status "${listing.status}"; must be "pending_review"`,
+      });
       return;
     }
 
-    const reason = String(req.body.reason ?? "Listing did not meet marketplace guidelines");
+    const reason = String(
+      req.body.reason ?? "Listing did not meet marketplace guidelines",
+    );
 
     await prisma.marketplaceListing.update({
       where: { id },
       data: { status: "draft", updatedAt: new Date() } as any,
     });
 
-    res.json({ id, status: "draft", reason, message: "Listing rejected and returned to draft" });
+    res.json({
+      id,
+      status: "draft",
+      reason,
+      message: "Listing rejected and returned to draft",
+    });
   },
 );
 
@@ -689,8 +755,14 @@ router.post(
         where: { id: reviewId },
         data: {
           status: action === "approve" ? "approved" : "rejected",
-          moderationReason: action === "reject" ? (reason ?? "Review did not meet guidelines") : null,
-          rejectionReason: action === "reject" ? (reason ?? "Review did not meet guidelines") : null,
+          moderationReason:
+            action === "reject"
+              ? (reason ?? "Review did not meet guidelines")
+              : null,
+          rejectionReason:
+            action === "reject"
+              ? (reason ?? "Review did not meet guidelines")
+              : null,
           moderatedBy: req.user!.id,
           moderatedAt: new Date(),
           updatedAt: new Date(),

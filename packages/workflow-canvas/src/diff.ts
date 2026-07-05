@@ -92,14 +92,22 @@ export function computeFullDiff(
 
   const summary: DiffSummary = {
     nodesAdded: semanticChanges.filter((c) => c.type === "node_added").length,
-    nodesRemoved: semanticChanges.filter((c) => c.type === "node_removed").length,
-    nodesRenamed: semanticChanges.filter((c) => c.type === "node_renamed").length,
+    nodesRemoved: semanticChanges.filter((c) => c.type === "node_removed")
+      .length,
+    nodesRenamed: semanticChanges.filter((c) => c.type === "node_renamed")
+      .length,
     nodesMoved: semanticChanges.filter((c) => c.type === "node_moved").length,
-    nodesConfigChanged: semanticChanges.filter((c) => c.type === "node_config_changed").length,
-    nodesTypeChanged: semanticChanges.filter((c) => c.type === "node_type_changed").length,
+    nodesConfigChanged: semanticChanges.filter(
+      (c) => c.type === "node_config_changed",
+    ).length,
+    nodesTypeChanged: semanticChanges.filter(
+      (c) => c.type === "node_type_changed",
+    ).length,
     edgesAdded: semanticChanges.filter((c) => c.type === "edge_added").length,
-    edgesRemoved: semanticChanges.filter((c) => c.type === "edge_removed").length,
-    edgesRewired: semanticChanges.filter((c) => c.type === "edge_rewired").length,
+    edgesRemoved: semanticChanges.filter((c) => c.type === "edge_removed")
+      .length,
+    edgesRewired: semanticChanges.filter((c) => c.type === "edge_rewired")
+      .length,
     totalChanges: semanticChanges.length,
   };
 
@@ -314,19 +322,43 @@ function buildLegacyChanges(
         break;
       case "edge_added": {
         const e = toEdgeMap.get(c.edgeId!);
-        if (e) changes.push({ type: "edge_added", edgeId: c.edgeId!, source: e.source, target: e.target });
+        if (e)
+          changes.push({
+            type: "edge_added",
+            edgeId: c.edgeId!,
+            source: e.source,
+            target: e.target,
+          });
         break;
       }
       case "edge_removed": {
         const e = fromEdgeMap.get(c.edgeId!);
-        if (e) changes.push({ type: "edge_removed", edgeId: c.edgeId!, source: e.source, target: e.target });
+        if (e)
+          changes.push({
+            type: "edge_removed",
+            edgeId: c.edgeId!,
+            source: e.source,
+            target: e.target,
+          });
         break;
       }
       case "edge_rewired": {
         const fe = fromEdgeMap.get(c.edgeId!);
-        if (fe) changes.push({ type: "edge_removed", edgeId: c.edgeId!, source: fe.source, target: fe.target });
+        if (fe)
+          changes.push({
+            type: "edge_removed",
+            edgeId: c.edgeId!,
+            source: fe.source,
+            target: fe.target,
+          });
         const te = toEdgeMap.get(c.edgeId!);
-        if (te) changes.push({ type: "edge_added", edgeId: c.edgeId!, source: te.source, target: te.target });
+        if (te)
+          changes.push({
+            type: "edge_added",
+            edgeId: c.edgeId!,
+            source: te.source,
+            target: te.target,
+          });
         break;
       }
     }

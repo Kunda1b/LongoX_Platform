@@ -28,7 +28,9 @@ export function AIAnalytics() {
               {isLoading ? (
                 <Skeleton className="h-8 w-20" />
               ) : (
-                <div className="text-2xl font-bold">{summary?.totalRequests?.toLocaleString() || 0}</div>
+                <div className="text-2xl font-bold">
+                  {summary?.totalRequests?.toLocaleString() || 0}
+                </div>
               )}
             </div>
           </CardContent>
@@ -43,7 +45,9 @@ export function AIAnalytics() {
               {isLoading ? (
                 <Skeleton className="h-8 w-20" />
               ) : (
-                <div className="text-2xl font-bold">{summary?.totalTokens?.toLocaleString() || 0}</div>
+                <div className="text-2xl font-bold">
+                  {summary?.totalTokens?.toLocaleString() || 0}
+                </div>
               )}
             </div>
           </CardContent>
@@ -58,7 +62,9 @@ export function AIAnalytics() {
               {isLoading ? (
                 <Skeleton className="h-8 w-20" />
               ) : (
-                <div className="text-2xl font-bold">${summary?.totalCost?.toFixed(4) || "0.00"}</div>
+                <div className="text-2xl font-bold">
+                  ${summary?.totalCost?.toFixed(4) || "0.00"}
+                </div>
               )}
             </div>
           </CardContent>
@@ -74,7 +80,9 @@ export function AIAnalytics() {
                 <Skeleton className="h-8 w-20" />
               ) : (
                 <div className="text-2xl font-bold">
-                  {summary?.avgLatencyMs ? `${(summary.avgLatencyMs / 1000).toFixed(2)}s` : "-"}
+                  {summary?.avgLatencyMs
+                    ? `${(summary.avgLatencyMs / 1000).toFixed(2)}s`
+                    : "-"}
                 </div>
               )}
             </div>

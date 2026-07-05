@@ -14,7 +14,8 @@ export class WorkflowHandler {
   constructor(private readonly workflowRepo: WorkflowRepository) {}
 
   async handleCreate(command: CreateWorkflowCommand): Promise<Workflow> {
-    const workflow = new Workflow("",
+    const workflow = new Workflow(
+      "",
       command.name,
       command.description ?? null,
       "draft",

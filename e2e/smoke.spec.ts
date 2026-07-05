@@ -6,7 +6,9 @@ test.describe("LongoX smoke", () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.getByText("LongoX").first()).toBeVisible();
     await expect(
-      page.getByRole("link", { name: /get started|open dashboard|start building/i }),
+      page.getByRole("link", {
+        name: /get started|open dashboard|start building/i,
+      }),
     ).toBeVisible();
   });
 
@@ -19,7 +21,9 @@ test.describe("LongoX smoke", () => {
 });
 
 test.describe("Workflow builder E2E", () => {
-  test("workflow builder page loads with canvas and node palette", async ({ page }) => {
+  test("workflow builder page loads with canvas and node palette", async ({
+    page,
+  }) => {
     await page.goto("/workflows/new");
     await expect(page).toHaveURL(/\/workflows\/new/);
   });
@@ -31,7 +35,9 @@ test.describe("Workflow builder E2E", () => {
 });
 
 test.describe("Environment promotion E2E", () => {
-  test("environments page renders with promotion controls", async ({ page }) => {
+  test("environments page renders with promotion controls", async ({
+    page,
+  }) => {
     await page.goto("/environments");
     await expect(page.getByText(/environment/i).first()).toBeVisible();
   });
@@ -40,21 +46,27 @@ test.describe("Environment promotion E2E", () => {
 test.describe("Marketplace E2E", () => {
   test("marketplace page renders with connector listings", async ({ page }) => {
     await page.goto("/marketplace");
-    await expect(page.getByText(/marketplace|connector|template/i).first()).toBeVisible();
+    await expect(
+      page.getByText(/marketplace|connector|template/i).first(),
+    ).toBeVisible();
   });
 });
 
 test.describe("Billing console E2E", () => {
   test("billing page shows usage and plan information", async ({ page }) => {
     await page.goto("/billing");
-    await expect(page.getByText(/billing|usage|plan|invoice/i).first()).toBeVisible();
+    await expect(
+      page.getByText(/billing|usage|plan|invoice/i).first(),
+    ).toBeVisible();
   });
 });
 
 test.describe("Audit search E2E", () => {
   test("audit page has search input and results table", async ({ page }) => {
     await page.goto("/admin/audit");
-    await expect(page.getByRole("textbox").or(page.getByPlaceholder(/search/i))).toBeVisible();
+    await expect(
+      page.getByRole("textbox").or(page.getByPlaceholder(/search/i)),
+    ).toBeVisible();
   });
 });
 

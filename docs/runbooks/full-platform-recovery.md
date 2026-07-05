@@ -1,9 +1,11 @@
 # Full Platform Recovery Runbook
 
 ## Overview
+
 Complete platform recovery from catastrophic failure including full region loss, data center destruction, or multi-region outage.
 
 ## Assumptions
+
 - Infrastructure-as-code (Terraform) is available and up-to-date
 - Backups are stored in a separate region/location
 - DNS is managed externally (Route53) with separate credentials
@@ -12,17 +14,18 @@ Complete platform recovery from catastrophic failure including full region loss,
 
 ## Recovery Tiers
 
-| Tier | Services | RTO | Priority |
-|------|---------|-----|----------|
-| Tier 0 | Auth, Routing, Database | 30 min | Critical |
-| Tier 1 | Workflows, Executions | 60 min | High |
-| Tier 2 | Billing, Notifications | 120 min | Medium |
-| Tier 3 | Analytics, Reporting | 4 hours | Low |
-| Tier 4 | Marketplace, Search | 8 hours | Best effort |
+| Tier   | Services                | RTO     | Priority    |
+| ------ | ----------------------- | ------- | ----------- |
+| Tier 0 | Auth, Routing, Database | 30 min  | Critical    |
+| Tier 1 | Workflows, Executions   | 60 min  | High        |
+| Tier 2 | Billing, Notifications  | 120 min | Medium      |
+| Tier 3 | Analytics, Reporting    | 4 hours | Low         |
+| Tier 4 | Marketplace, Search     | 8 hours | Best effort |
 
 ## Infrastructure Provisioning Order
 
 ### Phase 1: Networking (15 minutes)
+
 ```bash
 # Provision VPC and subnets
 cd infrastructure/terraform/environments/dr
@@ -37,6 +40,7 @@ aws ec2 describe-vpcs --vpc-ids $(terraform output -raw vpc_id)
 ```
 
 ### Phase 2: Kubernetes Cluster (20 minutes)
+
 ```bash
 # Provision EKS cluster
 terraform apply -target=module.eks -auto-approve
@@ -50,6 +54,7 @@ kubectl get nodes
 ```
 
 ### Phase 3: Database (20 minutes)
+
 ```bash
 # Provision RDS instance from latest snapshot
 terraform apply -target=module.rds -auto-approve
@@ -60,6 +65,7 @@ PGPASSWORD=$DB_PASSWORD psql -h $DB_ENDPOINT -U postgres -d longox -c "SELECT 1"
 ```
 
 ### Phase 4: Core Services (15 minutes)
+
 ```bash
 # Deploy Helm chart with minimal services first
 helm upgrade --install longox-platform infrastructure/helm/longox \
@@ -77,6 +83,7 @@ kubectl wait --for=condition=available deployment/auth-service -n longox --timeo
 ## Data Restore Order
 
 ### Critical Data (Phase 3 parallel)
+
 ```bash
 # 1. Restore users and tenants (required for auth)
 RESTORE_ID_1=$(curl -s -X POST https://api.longox.ai/api/v1/dr/backups/${BACKUP_ID}/restore \
@@ -92,6 +99,7 @@ RESTORE_ID_3=$(curl -s -X POST https://api.longox.ai/api/v1/dr/backups/${BACKUP_
 ```
 
 ### Transactional Data (Tier 1)
+
 ```bash
 # 4. Restore executions and checkpoints
 RESTORE_ID_4=$(curl -s -X POST https://api.longox.ai/api/v1/dr/backups/${BACKUP_ID}/restore \
@@ -103,6 +111,7 @@ RESTORE_ID_5=$(curl -s -X POST https://api.longox.ai/api/v1/dr/backups/${BACKUP_
 ```
 
 ### Supporting Data (Tier 2+)
+
 ```bash
 # 6. Restore remaining services in dependency order
 for table in billing billing_plans notifications templates connectors; do
@@ -114,6 +123,7 @@ done
 ## Verification Gates
 
 ### Gate 1: Network Provisioned
+
 ```bash
 # Check
 curl -s -o /dev/null -w "%{http_code}" https://api.longox.ai/healthz
@@ -121,6 +131,7 @@ curl -s -o /dev/null -w "%{http_code}" https://api.longox.ai/healthz
 ```
 
 ### Gate 2: Database Online
+
 ```bash
 # Check
 kubectl exec -n longox deploy/api-gateway -- curl -s localhost:3000/healthz | jq .db
@@ -128,6 +139,7 @@ kubectl exec -n longox deploy/api-gateway -- curl -s localhost:3000/healthz | jq
 ```
 
 ### Gate 3: Auth Service Working
+
 ```bash
 # Check
 curl -s -X POST https://api.longox.ai/auth/login \
@@ -136,6 +148,7 @@ curl -s -X POST https://api.longox.ai/auth/login \
 ```
 
 ### Gate 4: Core API Functional
+
 ```bash
 # Check
 curl -s https://api.longox.ai/api/v1/workflows \
@@ -144,6 +157,7 @@ curl -s https://api.longox.ai/api/v1/workflows \
 ```
 
 ### Gate 5: Execution Runtime Ready
+
 ```bash
 # Check
 curl -s https://api.longox.ai/api/v1/executions \
@@ -152,6 +166,7 @@ curl -s https://api.longox.ai/api/v1/executions \
 ```
 
 ### Gate 6: Full Suite Passes
+
 ```bash
 # Check
 ./scripts/synthetic-test.sh --full-suite
@@ -162,15 +177,16 @@ curl -s https://api.longox.ai/api/v1/executions \
 
 ### Internal Communications
 
-| Time | Audience | Channel | Message |
-|------|----------|---------|---------|
-| T+0 | SRE Team | PagerDuty | Incident declared |
-| T+5 | Engineering | Slack #incidents | Recovery initiated |
-| T+15 | Leadership | Email/Slack | ETA updated |
-| T+60 | All-hands | Status page | Recovery progress |
-| T+180 | Customer-facing | Status page | ETR for full recovery |
+| Time  | Audience        | Channel          | Message               |
+| ----- | --------------- | ---------------- | --------------------- |
+| T+0   | SRE Team        | PagerDuty        | Incident declared     |
+| T+5   | Engineering     | Slack #incidents | Recovery initiated    |
+| T+15  | Leadership      | Email/Slack      | ETA updated           |
+| T+60  | All-hands       | Status page      | Recovery progress     |
+| T+180 | Customer-facing | Status page      | ETR for full recovery |
 
 ### External Communications
+
 ```text
 SUBJECT: LongoX Platform Availability Incident
 Status: INVESTIGATING / MITIGATING / RESOLVED
@@ -184,6 +200,7 @@ Root Cause: <TBD>
 ## Estimated RTO: 2-4 hours
 
 ## Post-Recovery Checklist
+
 - [ ] All Tier 0 services confirmed operational (< 30 min)
 - [ ] All Tier 1 services confirmed operational (< 60 min)
 - [ ] All Tier 2 services confirmed operational (< 2 hrs)
@@ -196,6 +213,7 @@ Root Cause: <TBD>
 - [ ] Runbook updated with lessons learned
 
 ## Related Resources
+
 - region-failover.md — Regional failover procedures
 - kubernetes-cluster-failure.md — K8s recovery procedures
 - database-failover.md — Database failover procedures

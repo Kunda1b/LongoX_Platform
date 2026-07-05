@@ -46,13 +46,16 @@ export function recordJobFailed(jobType: string, error: string): void {
 }
 
 export function recordJobRetried(jobType: string, attempt: number): void {
-  jobsRetriedCounter.add(1, { "job.type": jobType, "attempt": attempt.toString() });
+  jobsRetriedCounter.add(1, {
+    "job.type": jobType,
+    attempt: attempt.toString(),
+  });
 }
 
 export function recordNodeExecution(
   nodeType: string,
   durationMs: number,
-  success: boolean
+  success: boolean,
 ): void {
   nodeDurationHistogram.record(durationMs, {
     "node.type": nodeType,

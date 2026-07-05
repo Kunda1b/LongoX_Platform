@@ -84,7 +84,9 @@ export function AIPromptsList() {
               </CardHeader>
               <CardContent className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Badge variant={p.status === "approved" ? "success" : "secondary"}>
+                  <Badge
+                    variant={p.status === "approved" ? "success" : "secondary"}
+                  >
                     {p.status}
                   </Badge>
                   <Badge variant="outline">v{p.version}</Badge>

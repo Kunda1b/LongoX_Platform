@@ -54,7 +54,10 @@ export class PromptVersioningService {
     promptId: string,
     fromVersion: number,
     toEnvironment: string,
-  ): Promise<{ success: boolean; gateResult?: Awaited<ReturnType<EvaluationGateService["checkRegression"]>> }> {
+  ): Promise<{
+    success: boolean;
+    gateResult?: Awaited<ReturnType<EvaluationGateService["checkRegression"]>>;
+  }> {
     const versionRow = await prisma.aiPromptVersion.findFirst({
       where: {
         promptId,
@@ -132,13 +135,25 @@ export class PromptVersioningService {
     const diffs: VersionDiff[] = [];
 
     if ((version1 as any).content !== (version2 as any).content) {
-      diffs.push({ field: "content", from: (version1 as any).content, to: (version2 as any).content });
+      diffs.push({
+        field: "content",
+        from: (version1 as any).content,
+        to: (version2 as any).content,
+      });
     }
     if ((version1 as any).status !== (version2 as any).status) {
-      diffs.push({ field: "status", from: (version1 as any).status, to: (version2 as any).status });
+      diffs.push({
+        field: "status",
+        from: (version1 as any).status,
+        to: (version2 as any).status,
+      });
     }
     if ((version1 as any).notes !== (version2 as any).notes) {
-      diffs.push({ field: "notes", from: (version1 as any).notes, to: (version2 as any).notes });
+      diffs.push({
+        field: "notes",
+        from: (version1 as any).notes,
+        to: (version2 as any).notes,
+      });
     }
 
     return diffs;

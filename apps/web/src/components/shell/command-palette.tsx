@@ -38,19 +38,110 @@ export function CommandPalette() {
   const router = useRouter();
 
   const commands: Command[] = [
-    { id: "go-dashboard", label: "Go to Dashboard", description: "Navigate to dashboard", icon: BarChart3, action: () => router.push("/dashboard"), keywords: ["dashboard", "home", "main"] },
-    { id: "go-workflows", label: "Go to Workflows", description: "Navigate to workflows", icon: Workflow, action: () => router.push("/workflows"), keywords: ["workflow", "automation"] },
-    { id: "go-executions", label: "Go to Executions", description: "View execution history", icon: PlayCircle, action: () => router.push("/executions"), keywords: ["execution", "run", "history"] },
-    { id: "go-connectors", label: "Go to Connectors", description: "Manage connectors", icon: Cable, action: () => router.push("/connectors"), keywords: ["connector", "integration"] },
-    { id: "go-environments", label: "Go to Environments", description: "Manage environments", icon: Globe, action: () => router.push("/environments"), keywords: ["env", "deploy", "promote"] },
-    { id: "promote-workflow", label: "Promote Workflow", description: "Promote a workflow between environments", icon: Plus, action: () => router.push("/environments/promote"), keywords: ["promote", "deploy", "release"] },
-    { id: "go-settings", label: "Go to Settings", description: "Open settings", icon: Settings, action: () => router.push("/settings"), keywords: ["settings", "preferences", "config"] },
-    { id: "go-tenants", label: "Go to Tenants", description: "Manage tenants", icon: Users, action: () => router.push("/tenants"), keywords: ["tenant", "organization"] },
-    { id: "go-rbac", label: "Go to RBAC", description: "Manage roles and permissions", icon: Shield, action: () => router.push("/rbac"), keywords: ["role", "permission", "access", "rbac"] },
-    { id: "go-audit", label: "Go to Audit Log", description: "View audit log", icon: FileText, action: () => router.push("/audit-log"), keywords: ["audit", "log", "event"] },
-    { id: "go-notifications", label: "Go to Notifications", description: "View notifications", icon: Bell, action: () => router.push("/notifications"), keywords: ["notification", "alert"] },
-    { id: "go-search", label: "Global Search", description: "Search across the platform", icon: Search, action: () => router.push("/search"), keywords: ["search", "find"] },
-    { id: "export-audit", label: "Export Audit Log", description: "Export audit log to CSV/JSON", icon: Download, action: () => router.push("/compliance/audit-export"), keywords: ["export", "audit", "csv", "json"] },
+    {
+      id: "go-dashboard",
+      label: "Go to Dashboard",
+      description: "Navigate to dashboard",
+      icon: BarChart3,
+      action: () => router.push("/dashboard"),
+      keywords: ["dashboard", "home", "main"],
+    },
+    {
+      id: "go-workflows",
+      label: "Go to Workflows",
+      description: "Navigate to workflows",
+      icon: Workflow,
+      action: () => router.push("/workflows"),
+      keywords: ["workflow", "automation"],
+    },
+    {
+      id: "go-executions",
+      label: "Go to Executions",
+      description: "View execution history",
+      icon: PlayCircle,
+      action: () => router.push("/executions"),
+      keywords: ["execution", "run", "history"],
+    },
+    {
+      id: "go-connectors",
+      label: "Go to Connectors",
+      description: "Manage connectors",
+      icon: Cable,
+      action: () => router.push("/connectors"),
+      keywords: ["connector", "integration"],
+    },
+    {
+      id: "go-environments",
+      label: "Go to Environments",
+      description: "Manage environments",
+      icon: Globe,
+      action: () => router.push("/environments"),
+      keywords: ["env", "deploy", "promote"],
+    },
+    {
+      id: "promote-workflow",
+      label: "Promote Workflow",
+      description: "Promote a workflow between environments",
+      icon: Plus,
+      action: () => router.push("/environments/promote"),
+      keywords: ["promote", "deploy", "release"],
+    },
+    {
+      id: "go-settings",
+      label: "Go to Settings",
+      description: "Open settings",
+      icon: Settings,
+      action: () => router.push("/settings"),
+      keywords: ["settings", "preferences", "config"],
+    },
+    {
+      id: "go-tenants",
+      label: "Go to Tenants",
+      description: "Manage tenants",
+      icon: Users,
+      action: () => router.push("/tenants"),
+      keywords: ["tenant", "organization"],
+    },
+    {
+      id: "go-rbac",
+      label: "Go to RBAC",
+      description: "Manage roles and permissions",
+      icon: Shield,
+      action: () => router.push("/rbac"),
+      keywords: ["role", "permission", "access", "rbac"],
+    },
+    {
+      id: "go-audit",
+      label: "Go to Audit Log",
+      description: "View audit log",
+      icon: FileText,
+      action: () => router.push("/audit-log"),
+      keywords: ["audit", "log", "event"],
+    },
+    {
+      id: "go-notifications",
+      label: "Go to Notifications",
+      description: "View notifications",
+      icon: Bell,
+      action: () => router.push("/notifications"),
+      keywords: ["notification", "alert"],
+    },
+    {
+      id: "go-search",
+      label: "Global Search",
+      description: "Search across the platform",
+      icon: Search,
+      action: () => router.push("/search"),
+      keywords: ["search", "find"],
+    },
+    {
+      id: "export-audit",
+      label: "Export Audit Log",
+      description: "Export audit log to CSV/JSON",
+      icon: Download,
+      action: () => router.push("/compliance/audit-export"),
+      keywords: ["export", "audit", "csv", "json"],
+    },
   ];
 
   useEffect(() => {
@@ -151,7 +242,9 @@ export function CommandPalette() {
                   <Icon className="h-4 w-4 text-muted-foreground" />
                   <div className="flex-1 text-left">
                     <div className="font-medium">{cmd.label}</div>
-                    <div className="text-xs text-muted-foreground">{cmd.description}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {cmd.description}
+                    </div>
                   </div>
                 </button>
               );
@@ -159,9 +252,17 @@ export function CommandPalette() {
           )}
         </div>
         <div className="border-t px-3 py-2 text-xs text-muted-foreground flex items-center gap-4">
-          <span><kbd className="rounded border bg-muted px-1 font-mono">↑↓</kbd> Navigate</span>
-          <span><kbd className="rounded border bg-muted px-1 font-mono">↵</kbd> Run</span>
-          <span className="ml-auto"><kbd className="rounded border bg-muted px-1 font-mono">⌘⇧P</kbd> Toggle</span>
+          <span>
+            <kbd className="rounded border bg-muted px-1 font-mono">↑↓</kbd>{" "}
+            Navigate
+          </span>
+          <span>
+            <kbd className="rounded border bg-muted px-1 font-mono">↵</kbd> Run
+          </span>
+          <span className="ml-auto">
+            <kbd className="rounded border bg-muted px-1 font-mono">⌘⇧P</kbd>{" "}
+            Toggle
+          </span>
         </div>
       </div>
     </div>

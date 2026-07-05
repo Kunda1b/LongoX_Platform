@@ -24,92 +24,112 @@ function tenantIdFrom(req: Request): string {
   return req.user!.tenantId!;
 }
 
-router.get("/search", authorize("workflows.read"), requireTenantContext, async (req, res): Promise<void> => {
-  const q = ((req.query.q as string) ?? "").trim();
-  const typesParam =
-    (req.query.types as string) ?? "workflows,apps,templates,connectors";
-  const types = typesParam
-    .split(",")
-    .map((t) => t.trim())
-    .filter((t): t is SearchableType =>
-      ALL_TYPES.includes(t as SearchableType),
-    );
+router.get(
+  "/search",
+  authorize("workflows.read"),
+  requireTenantContext,
+  async (req, res): Promise<void> => {
+    const q = ((req.query.q as string) ?? "").trim();
+    const typesParam =
+      (req.query.types as string) ?? "workflows,apps,templates,connectors";
+    const types = typesParam
+      .split(",")
+      .map((t) => t.trim())
+      .filter((t): t is SearchableType =>
+        ALL_TYPES.includes(t as SearchableType),
+      );
 
-  const response = await searchQuery.execute({ query: q, types });
-  res.json(response);
-});
+    const response = await searchQuery.execute({ query: q, types });
+    res.json(response);
+  },
+);
 
-router.get("/search/executions", authorize("executions.read"), requireTenantContext, async (req, res): Promise<void> => {
-  const q = ((req.query.q as string) ?? "").trim();
-  const status = req.query.status as string | undefined;
-  const workflowId = req.query.workflowId as string | undefined;
-  const startDate = req.query.startDate
-    ? new Date(req.query.startDate as string)
-    : undefined;
-  const endDate = req.query.endDate
-    ? new Date(req.query.endDate as string)
-    : undefined;
-  const limit = req.query.limit
-    ? parseInt(req.query.limit as string, 10)
-    : undefined;
+router.get(
+  "/search/executions",
+  authorize("executions.read"),
+  requireTenantContext,
+  async (req, res): Promise<void> => {
+    const q = ((req.query.q as string) ?? "").trim();
+    const status = req.query.status as string | undefined;
+    const workflowId = req.query.workflowId as string | undefined;
+    const startDate = req.query.startDate
+      ? new Date(req.query.startDate as string)
+      : undefined;
+    const endDate = req.query.endDate
+      ? new Date(req.query.endDate as string)
+      : undefined;
+    const limit = req.query.limit
+      ? parseInt(req.query.limit as string, 10)
+      : undefined;
 
-  const response = await searchQuery.searchExecutions({
-    query: q,
-    tenantId: tenantIdFrom(req),
-    status,
-    workflowId,
-    startDate,
-    endDate,
-    limit,
-  });
+    const response = await searchQuery.searchExecutions({
+      query: q,
+      tenantId: tenantIdFrom(req),
+      status,
+      workflowId,
+      startDate,
+      endDate,
+      limit,
+    });
 
-  res.json(response);
-});
+    res.json(response);
+  },
+);
 
-router.get("/search/audit-logs", authorize("audit.read"), requireTenantContext, async (req, res): Promise<void> => {
-  const q = ((req.query.q as string) ?? "").trim();
-  const action = req.query.action as string | undefined;
-  const resource = req.query.resource as string | undefined;
-  const userId = req.query.userId as string | undefined;
-  const startDate = req.query.startDate
-    ? new Date(req.query.startDate as string)
-    : undefined;
-  const endDate = req.query.endDate
-    ? new Date(req.query.endDate as string)
-    : undefined;
-  const limit = req.query.limit
-    ? parseInt(req.query.limit as string, 10)
-    : undefined;
+router.get(
+  "/search/audit-logs",
+  authorize("audit.read"),
+  requireTenantContext,
+  async (req, res): Promise<void> => {
+    const q = ((req.query.q as string) ?? "").trim();
+    const action = req.query.action as string | undefined;
+    const resource = req.query.resource as string | undefined;
+    const userId = req.query.userId as string | undefined;
+    const startDate = req.query.startDate
+      ? new Date(req.query.startDate as string)
+      : undefined;
+    const endDate = req.query.endDate
+      ? new Date(req.query.endDate as string)
+      : undefined;
+    const limit = req.query.limit
+      ? parseInt(req.query.limit as string, 10)
+      : undefined;
 
-  const response = await searchQuery.searchAuditLogs({
-    query: q,
-    tenantId: tenantIdFrom(req),
-    action,
-    resource,
-    userId,
-    startDate,
-    endDate,
-    limit,
-  });
+    const response = await searchQuery.searchAuditLogs({
+      query: q,
+      tenantId: tenantIdFrom(req),
+      action,
+      resource,
+      userId,
+      startDate,
+      endDate,
+      limit,
+    });
 
-  res.json(response);
-});
+    res.json(response);
+  },
+);
 
-router.get("/search/prompts", authorize("ai.read"), requireTenantContext, async (req, res): Promise<void> => {
-  const q = ((req.query.q as string) ?? "").trim();
-  const model = req.query.model as string | undefined;
-  const limit = req.query.limit
-    ? parseInt(req.query.limit as string, 10)
-    : undefined;
+router.get(
+  "/search/prompts",
+  authorize("ai.read"),
+  requireTenantContext,
+  async (req, res): Promise<void> => {
+    const q = ((req.query.q as string) ?? "").trim();
+    const model = req.query.model as string | undefined;
+    const limit = req.query.limit
+      ? parseInt(req.query.limit as string, 10)
+      : undefined;
 
-  const response = await searchQuery.searchAiPrompts({
-    query: q,
-    tenantId: tenantIdFrom(req),
-    model,
-    limit,
-  });
+    const response = await searchQuery.searchAiPrompts({
+      query: q,
+      tenantId: tenantIdFrom(req),
+      model,
+      limit,
+    });
 
-  res.json(response);
-});
+    res.json(response);
+  },
+);
 
 export default router;

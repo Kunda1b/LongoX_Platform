@@ -197,7 +197,10 @@ router.get(
         hasClientId: !!c.providerClientId,
         hasIssuerUrl: !!c.providerIssuerUrl,
         metadata: c.metadata,
-        createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : new Date(c.createdAt).toISOString(),
+        createdAt:
+          c.createdAt instanceof Date
+            ? c.createdAt.toISOString()
+            : new Date(c.createdAt).toISOString(),
       })),
     );
   },
@@ -223,8 +226,14 @@ router.get(
       enabled: connection.enabled,
       domain: connection.domain,
       metadata: connection.metadata,
-      createdAt: connection.createdAt instanceof Date ? connection.createdAt.toISOString() : new Date(connection.createdAt).toISOString(),
-      updatedAt: connection.updatedAt instanceof Date ? connection.updatedAt.toISOString() : new Date(connection.updatedAt).toISOString(),
+      createdAt:
+        connection.createdAt instanceof Date
+          ? connection.createdAt.toISOString()
+          : new Date(connection.createdAt).toISOString(),
+      updatedAt:
+        connection.updatedAt instanceof Date
+          ? connection.updatedAt.toISOString()
+          : new Date(connection.updatedAt).toISOString(),
     });
   },
 );
@@ -250,10 +259,19 @@ router.post(
     }
 
     const validProviders = [
-      "google", "github", "microsoft", "azure_ad", "okta", "saml", "oidc", "custom",
+      "google",
+      "github",
+      "microsoft",
+      "azure_ad",
+      "okta",
+      "saml",
+      "oidc",
+      "custom",
     ];
     if (!validProviders.includes(provider)) {
-      res.status(400).json({ error: `Invalid provider. Must be one of: ${validProviders.join(", ")}` });
+      res.status(400).json({
+        error: `Invalid provider. Must be one of: ${validProviders.join(", ")}`,
+      });
       return;
     }
 
@@ -410,8 +428,12 @@ async function exchangeCodeForUserInfo(
     if (provider === "saml") {
       const samlResponse = code;
       const decoded = Buffer.from(samlResponse, "base64").toString("utf-8");
-      const emailMatch = decoded.match(/<saml:Attribute Name="email"[^>]*>\s*<saml:AttributeValue[^>]*>([^<]+)/);
-      const nameMatch = decoded.match(/<saml:Attribute Name="name"[^>]*>\s*<saml:AttributeValue[^>]*>([^<]+)/);
+      const emailMatch = decoded.match(
+        /<saml:Attribute Name="email"[^>]*>\s*<saml:AttributeValue[^>]*>([^<]+)/,
+      );
+      const nameMatch = decoded.match(
+        /<saml:Attribute Name="name"[^>]*>\s*<saml:AttributeValue[^>]*>([^<]+)/,
+      );
       const nameIdMatch = decoded.match(/<saml:NameID[^>]*>([^<]+)/);
 
       return {

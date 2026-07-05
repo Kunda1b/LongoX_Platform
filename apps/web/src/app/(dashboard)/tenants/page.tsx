@@ -52,9 +52,7 @@ export default function TenantsPage() {
               <CardHeader className="flex flex-row items-start justify-between pb-2">
                 <div>
                   <CardTitle className="text-sm">{t.name}</CardTitle>
-                  <p className="text-xs text-muted-foreground">
-                    {t.slug}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t.slug}</p>
                 </div>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>

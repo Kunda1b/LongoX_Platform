@@ -11,7 +11,8 @@ const PLANS = [
   {
     name: "starter",
     displayName: "Starter",
-    description: "Perfect for individuals and small projects getting started with automation",
+    description:
+      "Perfect for individuals and small projects getting started with automation",
     tier: "starter",
     monthlyPrice: 0,
     annualPrice: 0,
@@ -70,7 +71,8 @@ const PLANS = [
   {
     name: "business",
     displayName: "Business",
-    description: "For organizations that need scale, security, and dedicated support",
+    description:
+      "For organizations that need scale, security, and dedicated support",
     tier: "business",
     monthlyPrice: 299,
     annualPrice: 239,

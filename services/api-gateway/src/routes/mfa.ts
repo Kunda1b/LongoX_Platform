@@ -64,16 +64,18 @@ router.post(
     const secret = existing?.secret ?? generateTotpSecret();
 
     if (!existing) {
-      await prisma.userMfa.create({
-        data: {
-          userId,
-          method: "totp",
-          secret,
-          enabled: false,
-        } as any,
-      }).catch(() => {
-        // Conflict (already exists) — ignore, matching onConflictDoNothing.
-      });
+      await prisma.userMfa
+        .create({
+          data: {
+            userId,
+            method: "totp",
+            secret,
+            enabled: false,
+          } as any,
+        })
+        .catch(() => {
+          // Conflict (already exists) — ignore, matching onConflictDoNothing.
+        });
     }
 
     const user = (await prisma.user.findUnique({
@@ -179,7 +181,9 @@ router.get(
       enabled: mfa?.enabled ?? false,
       method: mfa?.method ?? null,
       verifiedAt: mfa?.verifiedAt
-        ? (mfa.verifiedAt instanceof Date ? mfa.verifiedAt.toISOString() : new Date(mfa.verifiedAt).toISOString())
+        ? mfa.verifiedAt instanceof Date
+          ? mfa.verifiedAt.toISOString()
+          : new Date(mfa.verifiedAt).toISOString()
         : null,
     });
   },

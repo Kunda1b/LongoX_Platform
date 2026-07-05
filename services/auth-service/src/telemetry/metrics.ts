@@ -27,17 +27,14 @@ export const activeSessionsGauge = meter.createGauge("auth.sessions.active", {
 });
 
 // Helper functions
-export function recordAuthAttempt(
-  method: string,
-  provider: string
-): void {
+export function recordAuthAttempt(method: string, provider: string): void {
   authAttemptsCounter.add(1, { method, provider });
 }
 
 export function recordAuthSuccess(
   method: string,
   provider: string,
-  durationMs: number
+  durationMs: number,
 ): void {
   const attrs = { method, provider };
   authSuccessCounter.add(1, attrs);
@@ -47,7 +44,7 @@ export function recordAuthSuccess(
 export function recordAuthFailure(
   method: string,
   provider: string,
-  errorType: string
+  errorType: string,
 ): void {
   authFailuresCounter.add(1, { method, provider, error_type: errorType });
 }

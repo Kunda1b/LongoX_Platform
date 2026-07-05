@@ -96,7 +96,9 @@ describe("GraphQL schema contract", () => {
     const schema = buildSchema(sdl);
     const types = schema.getTypeMap();
     const connectionPattern = /Connection$/;
-    const connectionTypes = Object.keys(types).filter((n) => connectionPattern.test(n));
+    const connectionTypes = Object.keys(types).filter((n) =>
+      connectionPattern.test(n),
+    );
     expect(connectionTypes.length).toBeGreaterThan(0);
   });
 
@@ -119,7 +121,11 @@ describe("GraphQL schema contract", () => {
 
   it("defines scalar types (DateTime, JSON, etc.)", () => {
     const schema = buildSchema(sdl);
-    expect(schema.getType("DateTime") || schema.getType("JSON") || schema.getType("BigInt")).toBeTruthy();
+    expect(
+      schema.getType("DateTime") ||
+        schema.getType("JSON") ||
+        schema.getType("BigInt"),
+    ).toBeTruthy();
   });
 
   it("schema has at least 34 queries and 72 mutations as specified", () => {

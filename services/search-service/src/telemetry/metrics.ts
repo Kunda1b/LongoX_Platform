@@ -12,14 +12,20 @@ export const searchResultsCounter = meter.createCounter("search.results", {
 });
 
 // Histograms
-export const searchDurationHistogram = meter.createHistogram("search.duration", {
-  description: "Search query duration in milliseconds",
-  unit: "ms",
-});
+export const searchDurationHistogram = meter.createHistogram(
+  "search.duration",
+  {
+    description: "Search query duration in milliseconds",
+    unit: "ms",
+  },
+);
 
-export const searchResultsPerQueryHistogram = meter.createHistogram("search.results.per_query", {
-  description: "Number of results per search query",
-});
+export const searchResultsPerQueryHistogram = meter.createHistogram(
+  "search.results.per_query",
+  {
+    description: "Number of results per search query",
+  },
+);
 
 // Gauges
 export const searchIndexSizeGauge = meter.createGauge("search.index.size", {
@@ -31,7 +37,7 @@ export function recordSearchQuery(
   queryType: string,
   tenantId: string,
   durationMs: number,
-  resultCount: number
+  resultCount: number,
 ): void {
   const attrs = { query_type: queryType, tenant_id: tenantId };
   searchQueriesCounter.add(1, attrs);

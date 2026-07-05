@@ -29,7 +29,8 @@ async function uploadToS3(
   contentType: string,
 ): Promise<string> {
   const cfg = getS3Config();
-  const endpoint = cfg.endpoint ?? `https://${cfg.bucket}.s3.${cfg.region}.amazonaws.com`;
+  const endpoint =
+    cfg.endpoint ?? `https://${cfg.bucket}.s3.${cfg.region}.amazonaws.com`;
 
   const url = `${endpoint}/${key}`;
 
@@ -141,15 +142,17 @@ export class GdprService {
         createdAt: e.createdAt ?? e.occurredAt,
       })),
       billing: {
-        account: billingAccount.length > 0
-          ? {
-              id: (billingAccount[0] as any).id,
-              planId: (billingAccount[0] as any).planId,
-              status: (billingAccount[0] as any).status,
-              currentPeriodStart: (billingAccount[0] as any).currentPeriodStart,
-              currentPeriodEnd: (billingAccount[0] as any).currentPeriodEnd,
-            }
-          : null,
+        account:
+          billingAccount.length > 0
+            ? {
+                id: (billingAccount[0] as any).id,
+                planId: (billingAccount[0] as any).planId,
+                status: (billingAccount[0] as any).status,
+                currentPeriodStart: (billingAccount[0] as any)
+                  .currentPeriodStart,
+                currentPeriodEnd: (billingAccount[0] as any).currentPeriodEnd,
+              }
+            : null,
         invoices: invoices.map((inv: any) => ({
           invoiceNumber: inv.invoiceNumber,
           status: inv.status,
@@ -238,7 +241,11 @@ export class GdprService {
       } as any,
     });
 
-    return { requestId, storagePath: storageUrl, dataSizeBytes: Buffer.byteLength(jsonData) };
+    return {
+      requestId,
+      storagePath: storageUrl,
+      dataSizeBytes: Buffer.byteLength(jsonData),
+    };
   }
 
   async deleteUserData(userId: string, tenantId: string) {
@@ -314,7 +321,11 @@ export class GdprService {
     });
   }
 
-  async createDeletionRequest(userId: string, tenantId: string, reason: string) {
+  async createDeletionRequest(
+    userId: string,
+    tenantId: string,
+    reason: string,
+  ) {
     const request = await prisma.gdprRequest.create({
       data: {
         tenantId,

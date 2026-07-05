@@ -14,9 +14,18 @@ describe("computeBackoffDelay", () => {
   });
 
   it("increases exponentially with each attempt", () => {
-    const delay1 = computeBackoffDelay({ ...DEFAULT_RETRY_POLICY, jitter: 0 }, 1);
-    const delay2 = computeBackoffDelay({ ...DEFAULT_RETRY_POLICY, jitter: 0 }, 2);
-    const delay3 = computeBackoffDelay({ ...DEFAULT_RETRY_POLICY, jitter: 0 }, 3);
+    const delay1 = computeBackoffDelay(
+      { ...DEFAULT_RETRY_POLICY, jitter: 0 },
+      1,
+    );
+    const delay2 = computeBackoffDelay(
+      { ...DEFAULT_RETRY_POLICY, jitter: 0 },
+      2,
+    );
+    const delay3 = computeBackoffDelay(
+      { ...DEFAULT_RETRY_POLICY, jitter: 0 },
+      3,
+    );
     expect(delay2).toBeGreaterThanOrEqual(delay1 * 2);
     expect(delay3).toBeGreaterThanOrEqual(delay2 * 2);
   });
@@ -35,7 +44,7 @@ describe("computeBackoffDelay", () => {
 
   it("applies jitter within expected range", () => {
     const delays = Array.from({ length: 50 }, () =>
-      computeBackoffDelay(DEFAULT_RETRY_POLICY, 2)
+      computeBackoffDelay(DEFAULT_RETRY_POLICY, 2),
     );
     const base = 500 * Math.pow(2, 1);
     const minExpected = base;

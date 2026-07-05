@@ -50,7 +50,11 @@ export function GdprTooling() {
       toast({ title: "Please enter a user ID", variant: "destructive" });
       return;
     }
-    if (!confirm("This will anonymize the user account per GDPR. This action cannot be undone. Continue?")) {
+    if (
+      !confirm(
+        "This will anonymize the user account per GDPR. This action cannot be undone. Continue?",
+      )
+    ) {
       return;
     }
     setDeleting(true);
@@ -68,7 +72,8 @@ export function GdprTooling() {
       setDeleteUserId("");
     } catch (err) {
       toast({
-        title: err instanceof Error ? err.message : "Failed to anonymize account",
+        title:
+          err instanceof Error ? err.message : "Failed to anonymize account",
         variant: "destructive",
       });
     } finally {
@@ -98,11 +103,13 @@ export function GdprTooling() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Download all personal data associated with your account in JSON format.
-              This includes your profile information and audit trail.
+              Download all personal data associated with your account in JSON
+              format. This includes your profile information and audit trail.
             </p>
             <div className="rounded-lg border bg-muted/50 p-3 text-xs text-muted-foreground">
-              <p className="font-medium text-foreground mb-1">What&apos;s included:</p>
+              <p className="font-medium text-foreground mb-1">
+                What&apos;s included:
+              </p>
               <ul className="list-disc pl-4 space-y-1">
                 <li>User profile (name, email, role)</li>
                 <li>Account activity and login history</li>
@@ -110,7 +117,11 @@ export function GdprTooling() {
                 <li>Workspace memberships</li>
               </ul>
             </div>
-            <Button onClick={handleExportData} disabled={exporting} className="w-full">
+            <Button
+              onClick={handleExportData}
+              disabled={exporting}
+              className="w-full"
+            >
               <Download className="mr-1 h-4 w-4" />
               {exporting ? "Exporting..." : "Export My Data"}
             </Button>
@@ -126,15 +137,19 @@ export function GdprTooling() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Anonymize a user account in accordance with GDPR Article 17 (&quot;Right to erasure&quot;).
-              The account will be permanently anonymized.
+              Anonymize a user account in accordance with GDPR Article 17
+              (&quot;Right to erasure&quot;). The account will be permanently
+              anonymized.
             </p>
             <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-xs text-destructive">
               <p className="flex items-center gap-1 font-medium mb-1">
                 <AlertTriangle className="h-3 w-3" />
                 Warning
               </p>
-              <p>This action anonymizes the account irreversibly. The user will lose access permanently. Export their data first if needed.</p>
+              <p>
+                This action anonymizes the account irreversibly. The user will
+                lose access permanently. Export their data first if needed.
+              </p>
             </div>
             <div className="flex gap-2">
               <Input
@@ -164,28 +179,37 @@ export function GdprTooling() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              LongoX acts as a Data Processor on behalf of your organization (Data Controller).
-              All data is processed in accordance with our DPA and GDPR compliance framework.
+              LongoX acts as a Data Processor on behalf of your organization
+              (Data Controller). All data is processed in accordance with our
+              DPA and GDPR compliance framework.
             </p>
             <div className="space-y-2">
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
-                  <p className="text-sm font-medium">Data Processing Agreement</p>
-                  <p className="text-xs text-muted-foreground">Standard contractual clauses</p>
+                  <p className="text-sm font-medium">
+                    Data Processing Agreement
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Standard contractual clauses
+                  </p>
                 </div>
                 <Badge variant="success">Active</Badge>
               </div>
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <p className="text-sm font-medium">Data Residency</p>
-                  <p className="text-xs text-muted-foreground">Configured in tenant settings</p>
+                  <p className="text-xs text-muted-foreground">
+                    Configured in tenant settings
+                  </p>
                 </div>
                 <Badge variant="secondary">EU / US</Badge>
               </div>
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <p className="text-sm font-medium">Sub-processors</p>
-                  <p className="text-xs text-muted-foreground">AWS, Stripe, SendGrid</p>
+                  <p className="text-xs text-muted-foreground">
+                    AWS, Stripe, SendGrid
+                  </p>
                 </div>
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
               </div>

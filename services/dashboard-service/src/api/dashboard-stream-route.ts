@@ -45,7 +45,10 @@ function addClient(dashboardId: string, client: DashboardStreamClient): void {
   clients.get(dashboardId)!.add(client);
 }
 
-function removeClient(dashboardId: string, client: DashboardStreamClient): void {
+function removeClient(
+  dashboardId: string,
+  client: DashboardStreamClient,
+): void {
   clients.get(dashboardId)?.delete(client);
   if (clients.get(dashboardId)?.size === 0) clients.delete(dashboardId);
 }
@@ -175,10 +178,7 @@ export function triggerDashboardRefresh(dashboardId: string): void {
 }
 
 router.get(
-  [
-    "/api/dashboards/:id/stream",
-    "/api/v1/dashboards/:id/stream",
-  ],
+  ["/api/dashboards/:id/stream", "/api/v1/dashboards/:id/stream"],
   authorize("dashboards:read"),
   async (req: Request, res: Response): Promise<void> => {
     const dashboardId = String(req.params["id"] ?? "");

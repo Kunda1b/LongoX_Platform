@@ -118,7 +118,10 @@ router.post(
         const inputText = messages.map((m) => m.content).join("\n");
         let inputModeration;
         try {
-          inputModeration = await moderationService.moderateInput(inputText, guardrailIds);
+          inputModeration = await moderationService.moderateInput(
+            inputText,
+            guardrailIds,
+          );
         } catch (err) {
           // Guardrail execution itself failed — fail closed (block the run)
           // so a broken guardrail never lets a request through silently.
@@ -162,7 +165,10 @@ router.post(
         // scrubbed text for the provider call. We replace the first message
         // content with the scrubbed text — this is the same behavior as the
         // non-streaming path in aiRunLifecycleService.executeRun().
-        if (inputModeration.scrubbedText && inputModeration.scrubbedText !== inputText) {
+        if (
+          inputModeration.scrubbedText &&
+          inputModeration.scrubbedText !== inputText
+        ) {
           const scrubbed = inputModeration.scrubbedText;
           messages[0] = { ...messages[0], content: scrubbed };
         }
@@ -257,8 +263,9 @@ router.post(
 
           // Dynamically import the OpenAI provider to avoid pulling the
           // openai SDK into the route module when not streaming.
-          const { OpenAIProvider } =
-            await import("../providers/openai/openai-provider");
+          const { OpenAIProvider } = await import(
+            "../providers/openai/openai-provider"
+          );
           const openaiProvider = new OpenAIProvider({
             apiKey: process.env.OPENAI_API_KEY ?? "",
           });
@@ -689,10 +696,12 @@ router.patch(
     if (b.enabled !== undefined) updates.enabled = b.enabled;
     if (b.severity !== undefined) updates.severity = b.severity;
 
-    const row = await prisma.aiGuardrail.update({
-      where: { id } as any,
-      data: updates as any,
-    }).catch(() => null);
+    const row = await prisma.aiGuardrail
+      .update({
+        where: { id } as any,
+        data: updates as any,
+      })
+      .catch(() => null);
 
     if (!row) {
       res.status(404).json({ error: "Not found" });
@@ -717,9 +726,11 @@ router.delete(
   "/ai/guardrails/:id",
   authorize("ai:delete"),
   async (req, res): Promise<void> => {
-    await prisma.aiGuardrail.delete({
-      where: { id: String(req.params.id) } as any,
-    }).catch(() => undefined);
+    await prisma.aiGuardrail
+      .delete({
+        where: { id: String(req.params.id) } as any,
+      })
+      .catch(() => undefined);
     res.status(204).end();
   },
 );

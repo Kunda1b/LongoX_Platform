@@ -12,13 +12,13 @@ const typeDefs = readFileSync(
   "utf-8",
 );
 
-
-
 export const schema = makeExecutableSchema({ typeDefs, resolvers });
 
 export const yoga = createYoga({
   schema,
-  context: async ({ request }): Promise<{ user?: Record<string, unknown> | null }> => {
+  context: async ({
+    request,
+  }): Promise<{ user?: Record<string, unknown> | null }> => {
     const req = request as unknown as Record<string, unknown>;
     return { user: (req.user as Record<string, unknown>) ?? null };
   },
@@ -38,12 +38,15 @@ export const yoga = createYoga({
         customValidationRules: [],
       }
     : {}),
-  graphiql: process.env.NODE_ENV === "production" ? false : {
-    title: "LongoX GraphQL",
-    defaultQuery: `# Welcome to the LongoX GraphQL API
+  graphiql:
+    process.env.NODE_ENV === "production"
+      ? false
+      : {
+          title: "LongoX GraphQL",
+          defaultQuery: `# Welcome to the LongoX GraphQL API
 query {
   me { id email name }
   tenants { id name planId }
 }`,
-  },
+        },
 });

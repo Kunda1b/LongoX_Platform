@@ -10,7 +10,9 @@ if (!promptId || !datasetId) {
 }
 
 async function main() {
-  console.log(`Running eval gate for prompt=${promptId} dataset=${datasetId} threshold=${threshold}`);
+  console.log(
+    `Running eval gate for prompt=${promptId} dataset=${datasetId} threshold=${threshold}`,
+  );
 
   const result = await evaluationGateService.checkPromotionGate(
     promptId,
@@ -22,7 +24,9 @@ async function main() {
     console.log(`PASS: score=${result.score} threshold=${threshold}`);
     process.exit(0);
   } else {
-    console.error(`FAIL: score=${result.score} threshold=${threshold} reason=${result.reason}`);
+    console.error(
+      `FAIL: score=${result.score} threshold=${threshold} reason=${result.reason}`,
+    );
     process.exit(1);
   }
 }

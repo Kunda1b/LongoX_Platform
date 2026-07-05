@@ -30,7 +30,9 @@ describe("Appendix D - Auth login", () => {
 
 describe("Appendix D - Workflow draft create", () => {
   it("Graph validation works - validateGraphContract exists", async () => {
-    const { validateGraphContract } = await import("@longox/workflow-engine").catch(() => ({} as any));
+    const { validateGraphContract } = await import(
+      "@longox/workflow-engine"
+    ).catch(() => ({}) as any);
     expect(typeof validateGraphContract).toBe("function");
   });
 
@@ -42,7 +44,9 @@ describe("Appendix D - Workflow draft create", () => {
 
 describe("Appendix D - Workflow publish", () => {
   it("Valid workflow publishes immutable version - computeDiff exists", async () => {
-    const { computeDiff } = await import("@longox/workflow-engine").catch(() => ({} as any));
+    const { computeDiff } = await import("@longox/workflow-engine").catch(
+      () => ({}) as any,
+    );
     expect(typeof computeDiff).toBe("function");
   });
 
@@ -56,21 +60,29 @@ describe("Appendix D - Workflow publish", () => {
 
 describe("Appendix D - Workflow run", () => {
   it("Workflow executes from trigger to completion - topologicalSort exists", async () => {
-    const { topologicalSort } = await import("@longox/workflow-engine").catch(() => ({} as any));
+    const { topologicalSort } = await import("@longox/workflow-engine").catch(
+      () => ({}) as any,
+    );
     expect(typeof topologicalSort).toBe("function");
   });
 
   it("Execution service exports DAG runner types", async () => {
-    const typesModule = await import("@longox/workflow-engine").catch(() => null);
+    const typesModule = await import("@longox/workflow-engine").catch(
+      () => null,
+    );
     if (typesModule) {
-      expect(typesModule.WorkflowGraph || typesModule.DAGRunnerOptions || true).toBeTruthy();
+      expect(
+        typesModule.WorkflowGraph || typesModule.DAGRunnerOptions || true,
+      ).toBeTruthy();
     }
   });
 });
 
 describe("Appendix D - Workflow retry", () => {
   it("Retry policy exists with correct shape", async () => {
-    const { computeBackoffDelay, DEFAULT_RETRY_POLICY } = await import("@longox/workflow-engine").catch(() => ({} as any));
+    const { computeBackoffDelay, DEFAULT_RETRY_POLICY } = await import(
+      "@longox/workflow-engine"
+    ).catch(() => ({}) as any);
     if (DEFAULT_RETRY_POLICY) {
       expect(DEFAULT_RETRY_POLICY.maxAttempts).toBeGreaterThanOrEqual(1);
       expect(typeof computeBackoffDelay).toBe("function");
@@ -78,7 +90,9 @@ describe("Appendix D - Workflow retry", () => {
   });
 
   it("IdempotencyStore interface exists", async () => {
-    const typesModule = await import("@longox/workflow-engine").catch(() => null);
+    const typesModule = await import("@longox/workflow-engine").catch(
+      () => null,
+    );
     if (typesModule) {
       expect(typesModule.IdempotencyStore || true).toBeTruthy();
     }
@@ -87,16 +101,23 @@ describe("Appendix D - Workflow retry", () => {
 
 describe("Appendix D - Long-running workflow", () => {
   it("Human approval gate metadata type exists", async () => {
-    const { ApprovalGateMetadata } = await import("@longox/workflow-engine").catch(() => ({} as any));
+    const { ApprovalGateMetadata } = await import(
+      "@longox/workflow-engine"
+    ).catch(() => ({}) as any);
     if (ApprovalGateMetadata) {
       expect(ApprovalGateMetadata).toBeTruthy();
     }
   });
 
   it("Approval resume signal type exists", async () => {
-    const typesModule = await import("@longox/workflow-engine").catch(() => null);
+    const typesModule = await import("@longox/workflow-engine").catch(
+      () => null,
+    );
     if (typesModule) {
-      const hasType = typesModule.ApprovalResumeSignal || typesModule.ApprovalGateConfig || false;
+      const hasType =
+        typesModule.ApprovalResumeSignal ||
+        typesModule.ApprovalGateConfig ||
+        false;
       expect(hasType || true).toBeTruthy();
     }
   });
@@ -104,16 +125,21 @@ describe("Appendix D - Long-running workflow", () => {
 
 describe("Appendix D - Saga compensation", () => {
   it("Compensation handler type exists", async () => {
-    const { CompensationHandler } = await import("@longox/workflow-engine").catch(() => ({} as any));
+    const { CompensationHandler } = await import(
+      "@longox/workflow-engine"
+    ).catch(() => ({}) as any);
     if (CompensationHandler) {
       expect(CompensationHandler).toBeTruthy();
     }
   });
 
   it("Saga entry type exists with compensation config", async () => {
-    const typesModule = await import("@longox/workflow-engine").catch(() => null);
+    const typesModule = await import("@longox/workflow-engine").catch(
+      () => null,
+    );
     if (typesModule) {
-      const hasSaga = typesModule.SagaEntry || typesModule.SagaEntry !== undefined || false;
+      const hasSaga =
+        typesModule.SagaEntry || typesModule.SagaEntry !== undefined || false;
       expect(hasSaga || true).toBeTruthy();
     }
   });
@@ -130,7 +156,12 @@ describe("Appendix D - Dashboard preview", () => {
   it("Dashboard builder component exists", async () => {
     const fs = await import("node:fs").catch(() => null);
     if (fs) {
-      const exists = fs.existsSync(new URL("../../apps/web/src/features/dashboards/dashboard-builder.tsx", import.meta.url).pathname);
+      const exists = fs.existsSync(
+        new URL(
+          "../../apps/web/src/features/dashboards/dashboard-builder.tsx",
+          import.meta.url,
+        ).pathname,
+      );
       expect(exists).toBe(true);
     }
   });
@@ -138,22 +169,30 @@ describe("Appendix D - Dashboard preview", () => {
 
 describe("Appendix D - Connector install", () => {
   it("Connector manifest validation exists", async () => {
-    const { validateManifest, evaluateTrust } = await import("@longox/connector-runtime").catch(() => ({} as any));
+    const { validateManifest, evaluateTrust } = await import(
+      "@longox/connector-runtime"
+    ).catch(() => ({}) as any);
     expect(typeof validateManifest).toBe("function");
     expect(typeof evaluateTrust).toBe("function");
   });
 
   it("Trust tiers defined", async () => {
-    const { TRUST_TIER_HIERARCHY } = await import("@longox/connector-runtime").catch(() => ({} as any));
+    const { TRUST_TIER_HIERARCHY } = await import(
+      "@longox/connector-runtime"
+    ).catch(() => ({}) as any);
     if (TRUST_TIER_HIERARCHY) {
-      expect(TRUST_TIER_HIERARCHY.official).toBeGreaterThan(TRUST_TIER_HIERARCHY.sandbox);
+      expect(TRUST_TIER_HIERARCHY.official).toBeGreaterThan(
+        TRUST_TIER_HIERARCHY.sandbox,
+      );
     }
   });
 });
 
 describe("Appendix D - Template install", () => {
   it("Template service command exists", async () => {
-    const { InstallTemplateCommand } = await import("@longox/template-service").catch(() => ({} as any));
+    const { InstallTemplateCommand } = await import(
+      "@longox/template-service"
+    ).catch(() => ({}) as any);
     if (InstallTemplateCommand) {
       expect(InstallTemplateCommand).toBeTruthy();
     }
@@ -187,7 +226,10 @@ describe("Appendix D - AI RAG retrieval", () => {
   it("Knowledge base schema exists", async () => {
     const dbModule = await import("@longox/db").catch(() => null);
     if (dbModule) {
-      const hasKB = dbModule.knowledgeBasesTable || db_module?.knowledgeBasesTable !== undefined || false;
+      const hasKB =
+        dbModule.knowledgeBasesTable ||
+        db_module?.knowledgeBasesTable !== undefined ||
+        false;
       expect(hasKB || true).toBeTruthy();
     }
   });
@@ -211,7 +253,9 @@ describe("Appendix D - AI guardrail block", () => {
 
 describe("Appendix D - AI eval gate", () => {
   it("Evaluation gate service exists", async () => {
-    const { EvaluationGateService } = await import("@longox/ai-service").catch(() => ({} as any));
+    const { EvaluationGateService } = await import("@longox/ai-service").catch(
+      () => ({}) as any,
+    );
     if (EvaluationGateService) {
       expect(EvaluationGateService).toBeTruthy();
     }
@@ -220,7 +264,10 @@ describe("Appendix D - AI eval gate", () => {
   it("Evaluation run schema with threshold exists", async () => {
     const dbModule = await import("@longox/db").catch(() => null);
     if (dbModule) {
-      const hasEval = dbModule.aiEvaluationRunResultsTable || dbModule.aiEvalRunsTable || false;
+      const hasEval =
+        dbModule.aiEvaluationRunResultsTable ||
+        dbModule.aiEvalRunsTable ||
+        false;
       expect(hasEval || true).toBeTruthy();
     }
   });
@@ -228,7 +275,9 @@ describe("Appendix D - AI eval gate", () => {
 
 describe("Appendix D - Billing rollup", () => {
   it("Metering service records events with idempotency", async () => {
-    const { MeteringService } = await import("@longox/billing-service").catch(() => ({} as any));
+    const { MeteringService } = await import("@longox/billing-service").catch(
+      () => ({}) as any,
+    );
     if (MeteringService) {
       expect(MeteringService).toBeTruthy();
     }
@@ -243,7 +292,9 @@ describe("Appendix D - Billing rollup", () => {
   });
 
   it("Stripe webhook handler exists", async () => {
-    const { StripeService } = await import("@longox/billing-service").catch(() => ({} as any));
+    const { StripeService } = await import("@longox/billing-service").catch(
+      () => ({}) as any,
+    );
     if (StripeService) {
       expect(StripeService).toBeTruthy();
     }
@@ -252,14 +303,18 @@ describe("Appendix D - Billing rollup", () => {
 
 describe("Appendix D - Audit search", () => {
   it("FTS search service exists", async () => {
-    const { FtsSearchService } = await import("@longox/search-service").catch(() => ({} as any));
+    const { FtsSearchService } = await import("@longox/search-service").catch(
+      () => ({}) as any,
+    );
     if (FtsSearchService) {
       expect(FtsSearchService).toBeTruthy();
     }
   });
 
   it("Search supports tenant scoping", async () => {
-    const searchModule = await import("@longox/search-service").catch(() => null);
+    const searchModule = await import("@longox/search-service").catch(
+      () => null,
+    );
     if (searchModule) {
       expect(searchModule.FtsSearchService || true).toBeTruthy();
     }
@@ -268,7 +323,9 @@ describe("Appendix D - Audit search", () => {
 
 describe("Appendix D - Region failover", () => {
   it("Regional execution pool service exists", async () => {
-    const { RegionalExecutionPoolService } = await import("@longox/execution-service").catch(() => ({} as any));
+    const { RegionalExecutionPoolService } = await import(
+      "@longox/execution-service"
+    ).catch(() => ({}) as any);
     if (RegionalExecutionPoolService) {
       expect(RegionalExecutionPoolService).toBeTruthy();
     }
@@ -277,7 +334,9 @@ describe("Appendix D - Region failover", () => {
 
 describe("Appendix D - Backup restore", () => {
   it("Backup restore service exists", async () => {
-    const { BackupRestoreService } = await import("@longox/replication-service").catch(() => ({} as any));
+    const { BackupRestoreService } = await import(
+      "@longox/replication-service"
+    ).catch(() => ({}) as any);
     if (BackupRestoreService) {
       expect(BackupRestoreService).toBeTruthy();
     }
@@ -286,7 +345,9 @@ describe("Appendix D - Backup restore", () => {
 
 describe("Appendix D - Release rollback", () => {
   it("Release rollback service exists", async () => {
-    const { ReleaseRollbackService } = await import("@longox/replication-service").catch(() => ({} as any));
+    const { ReleaseRollbackService } = await import(
+      "@longox/replication-service"
+    ).catch(() => ({}) as any);
     if (ReleaseRollbackService) {
       expect(ReleaseRollbackService).toBeTruthy();
     }
@@ -295,7 +356,9 @@ describe("Appendix D - Release rollback", () => {
 
 describe("Appendix D - Tenant isolation (Tier 1)", () => {
   it("RBAC module enforces tenant context", async () => {
-    const { requireTenantContext } = await import("@longox/shared-rbac").catch(() => ({} as any));
+    const { requireTenantContext } = await import("@longox/shared-rbac").catch(
+      () => ({}) as any,
+    );
     expect(typeof requireTenantContext).toBe("function");
   });
 
@@ -309,7 +372,9 @@ describe("Appendix D - Tenant isolation (Tier 1)", () => {
 
 describe("Appendix D - Tenant isolation (Tier 2)", () => {
   it("Tenant migration service exists for dedicated placement", async () => {
-    const { TenantMigrationService } = await import("@longox/api-gateway").catch(() => ({} as any));
+    const { TenantMigrationService } = await import(
+      "@longox/api-gateway"
+    ).catch(() => ({}) as any);
     if (TenantMigrationService) {
       expect(TenantMigrationService).toBeTruthy();
     }
@@ -318,7 +383,10 @@ describe("Appendix D - Tenant isolation (Tier 2)", () => {
   it("Tenant placement schema has dedicated options", async () => {
     const dbModule = await import("@longox/db").catch(() => null);
     if (dbModule) {
-      const hasPlacement = dbModule.tenantPlacementTable || dbModule.tenantPlacementsTable || false;
+      const hasPlacement =
+        dbModule.tenantPlacementTable ||
+        dbModule.tenantPlacementsTable ||
+        false;
       expect(hasPlacement || true).toBeTruthy();
     }
   });

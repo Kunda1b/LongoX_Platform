@@ -3,7 +3,10 @@ export const mysqlSchemas = {
     input: {
       type: "object",
       properties: {
-        connectionString: { type: "string", description: "MySQL connection string" },
+        connectionString: {
+          type: "string",
+          description: "MySQL connection string",
+        },
         query: { type: "string", description: "SQL query to execute" },
         params: { type: "array", description: "Query parameters" },
       },
@@ -22,7 +25,10 @@ export const mysqlSchemas = {
     input: {
       type: "object",
       properties: {
-        connectionString: { type: "string", description: "MySQL connection string" },
+        connectionString: {
+          type: "string",
+          description: "MySQL connection string",
+        },
       },
       required: ["connectionString"],
     },
@@ -37,7 +43,10 @@ export const mysqlSchemas = {
     input: {
       type: "object",
       properties: {
-        connectionString: { type: "string", description: "MySQL connection string" },
+        connectionString: {
+          type: "string",
+          description: "MySQL connection string",
+        },
         table: { type: "string", description: "Table name" },
       },
       required: ["connectionString", "table"],
