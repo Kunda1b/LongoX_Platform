@@ -12,6 +12,15 @@
 
 import { prisma } from "@longox/db/prisma";
 import type { NotificationOutboundJobData } from "@longox/shared-queue";
+import { PostgresEmailRepository } from "../../infrastructure/postgres/email-repository";
+import { createEmailSender } from "../../infrastructure/email/ses-sender";
+import { SendEmailCommand } from "../commands/send-email.command";
+
+// Same wiring as api/rest/emails.ts — this is now the one real send path,
+// not a second, disconnected implementation.
+const emailRepository = new PostgresEmailRepository();
+const emailSender = createEmailSender();
+const sendEmail = new SendEmailCommand(emailRepository, emailSender);
 
 export interface NotificationOutboundJobResult {
   notificationId: string | null;
@@ -52,27 +61,34 @@ export async function processNotificationOutboundJob(
 
     switch (channel) {
       case "email": {
-        // Email delivery — uses the email_messages table + SMTP/SES
+        // Routes through the same SendEmailCommand used by the REST API
+        // and event-handler, so this actually calls the SES/SMTP sender
+        // instead of only writing a "pending" row and reporting success.
         const recipient =
           data?.recipient ?? (notification as any).recipientEmail;
         if (recipient) {
-          await prisma.emailMessage
-            .create({
-              data: {
-                tenantId: (notification as any).tenantId ?? "",
-                to: recipient,
-                subject: (notification as any).title ?? "Notification",
-                body:
-                  (notification as any).body ??
-                  (notification as any).message ??
-                  "",
-                status: "pending",
-              } as any,
-            })
-            .catch((err: unknown) => {
-              console.error(`[notification-outbound] email send failed:`, err);
+          try {
+            const sent = await sendEmail.execute({
+              to: recipient,
+              subject: (notification as any).title ?? "Notification",
+              body:
+                (notification as any).body ??
+                (notification as any).message ??
+                "",
             });
-          delivered = true;
+            delivered = sent.status === "sent";
+            if (!delivered) {
+              console.error(
+                `[notification-outbound] email send failed for ${notificationId}: ${sent.errorMessage ?? "unknown error"}`,
+              );
+            }
+          } catch (err) {
+            console.error(`[notification-outbound] email send threw:`, err);
+          }
+        } else {
+          console.warn(
+            `[notification-outbound] no recipient email for ${notificationId}, skipping`,
+          );
         }
         break;
       }

@@ -79,15 +79,20 @@ Last audit: **2026-07-05** — statuses reflect post-import findings from parall
 These are not gaps — they document by-design decisions captured during the
 architecture-compliance sweep:
 
-- **Item 43 — tsvector columns on core domain tables.** Per ADR-010, only
-  the `search_index` projection carries pre-computed `title_tsv` /
-  `content_tsv` tsvector columns. Core domain tables (`workflows`,
-  `connectors`, `templates`, `apps`, `executions`, `audit_log`, `prompts`)
-  deliberately do **not** carry tsvector columns — search goes through the
-  `search_index` projection (managed by SearchService), which is the
-  single indexed FTS surface. Runtime `to_tsvector()` calls on core tables
-  are retained only as a backwards-compat fallback for callers that bypass
-  the SearchService API; they will be removed once all callers migrate.
+- **Item 43 — tsvector columns on core domain tables.** Resolved per
+  ADR-010's actual requirement ("every searchable table gets a generated
+  tsvector column"), not the narrower "only `search_index` needs it"
+  reading this note previously gave. `workflows`, `apps`, `templates`, and
+  `connectors` have generated `name_tsv`/`desc_tsv` columns + GIN indexes
+  (migration 009), used directly by `SearchRepository`. `executions` joins
+  to `workflows.name_tsv` rather than carrying its own column, since an
+  execution's searchable name *is* its workflow's name. `audit_log` and
+  `prompts` already had a generated `fts` column + GIN index from migration
+  002 — the actual gap was that `SearchRepository` never used it: the
+  `ts_rank(...) AS rank` alias had been written inside a SQL `--` comment,
+  so it was never applied, `ORDER BY rank` always threw, and both queries
+  silently fell back to an unranked, non-FTS Prisma query on every call.
+  Fixed by pointing both at `fts` and moving the alias out of the comment.
 - **Item 46 — `execution-service` layout.** The execution-service uses a
   _hybrid_ directory layout (`src/queue/`, `src/runners/`, `src/executors/`,
   `src/telemetry/`) that is **functionally equivalent** to the strict DDD
