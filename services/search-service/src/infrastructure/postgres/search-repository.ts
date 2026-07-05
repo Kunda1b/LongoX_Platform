@@ -368,9 +368,17 @@ export class PostgresSearchRepository implements SearchRepository {
     const tsq = toTsQuery(query);
     if (tsq) {
       try {
+        // Uses the `fts` generated column + GIN index already created by
+        // migration 002 (idx_audit_log_fts) instead of computing
+        // to_tsvector() at query time — this is the runtime-cost problem
+        // ADR-010 exists to prevent. Also fixes a latent bug: the previous
+        // version's "AS rank" text was inside a `--` comment, so it was
+        // never actually applied as a SQL alias, meaning `ORDER BY rank`
+        // always threw and this path silently fell back to the unranked
+        // Prisma query below on every call.
         let sqlStr = `
           SELECT id, action, resource_type, resource_id, actor_id, actor_type, metadata, created_at,
-            ts_rank(to_tsvector($1, COALESCE(action, '') || ' ' || COALESCE(resource_type, '') || ' ' || COALESCE(actor_id, '')), to_tsquery($1, $2)) -- TODO: add tsvector to audit_logs as rank
+            ts_rank(fts, to_tsquery($1, $2)) AS rank
           FROM audit_log
           WHERE tenant_id = $3
         `;
@@ -385,7 +393,7 @@ export class PostgresSearchRepository implements SearchRepository {
           params.push(filters.resource);
         }
         sqlStr += `
-          AND to_tsvector($1, COALESCE(action, '') || ' ' || COALESCE(resource_type, '') || ' ' || COALESCE(actor_id, '')) @@ to_tsquery($1, $2)
+          AND fts @@ to_tsquery($1, $2)
           ORDER BY rank DESC
           LIMIT $${paramIdx++}
         `;
@@ -449,11 +457,14 @@ export class PostgresSearchRepository implements SearchRepository {
     const tsq = toTsQuery(query);
     if (tsq) {
       try {
+        // Uses the `fts` generated column + GIN index already created by
+        // migration 002 (idx_prompts_fts). Also fixes the same missing
+        // "AS rank" alias bug described in searchAuditLogs above.
         let sqlStr = `
           SELECT id, name, content, model, created_at,
-            ts_rank(to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(content, '')), to_tsquery($1, $2)) -- TODO: add tsvector to prompts as rank
+            ts_rank(fts, to_tsquery($1, $2)) AS rank
           FROM prompts
-          WHERE to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(content, '')) @@ to_tsquery($1, $2)
+          WHERE fts @@ to_tsquery($1, $2)
         `;
         const params: any[] = [FTS_CONFIG, tsq];
         let paramIdx = 3;
