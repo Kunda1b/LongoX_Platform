@@ -8,15 +8,27 @@ router.get(
   "/compliance/audit/export",
   authorize({ resource: "audit", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const { format = "json", startDate, endDate } = req.query as {
+    const {
+      format = "json",
+      startDate,
+      endDate,
+    } = req.query as {
       format?: string;
       startDate?: string;
       endDate?: string;
     };
 
     const where: any = { tenantId: req.tenantId ?? "" };
-    if (startDate) where.occurredAt = { ...(where.occurredAt ?? {}), gte: new Date(startDate) };
-    if (endDate) where.occurredAt = { ...(where.occurredAt ?? {}), lte: new Date(endDate) };
+    if (startDate)
+      where.occurredAt = {
+        ...(where.occurredAt ?? {}),
+        gte: new Date(startDate),
+      };
+    if (endDate)
+      where.occurredAt = {
+        ...(where.occurredAt ?? {}),
+        lte: new Date(endDate),
+      };
 
     const entries = (await prisma.auditLog.findMany({
       where,
@@ -24,13 +36,17 @@ router.get(
     })) as any[];
 
     if (format === "csv") {
-      const header = "id,actor_type,actor_id,action,resource_type,resource_id,created_at";
+      const header =
+        "id,actor_type,actor_id,action,resource_type,resource_id,created_at";
       const rows = entries.map(
         (e) =>
           `${e.id},${(e as any).actorType ?? "system"},${e.actorId ?? ""},${e.action},${e.targetType},${e.targetId},${e.occurredAt instanceof Date ? e.occurredAt.toISOString() : new Date(e.occurredAt).toISOString()}`,
       );
       res.setHeader("Content-Type", "text/csv");
-      res.setHeader("Content-Disposition", "attachment; filename=audit-log.csv");
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=audit-log.csv",
+      );
       res.send([header, ...rows].join("\n"));
       return;
     }
@@ -70,7 +86,7 @@ router.get(
       recentEntries,
       uniqueActors: uniqueActors.length,
       retentionDays: 90,
-      storageEstimateMb: Math.round((totalEntries * 0.5) * 100) / 100,
+      storageEstimateMb: Math.round(totalEntries * 0.5 * 100) / 100,
     });
   },
 );
@@ -80,16 +96,20 @@ router.get(
   authorize({ resource: "compliance", action: "read" }),
   async (req: Request, res: Response): Promise<void> => {
     const tenantId = req.tenantId ?? "";
-    const tenant = (await prisma.tenant.findUnique({ where: { id: tenantId } })) as any;
+    const tenant = (await prisma.tenant.findUnique({
+      where: { id: tenantId },
+    })) as any;
 
     const settings = (tenant?.settings ?? {}) as Record<string, unknown>;
 
     res.json({
       auditLogRetentionDays: (settings.auditLogRetentionDays as number) ?? 90,
       executionRetentionDays: (settings.executionRetentionDays as number) ?? 30,
-      notificationRetentionDays: (settings.notificationRetentionDays as number) ?? 90,
+      notificationRetentionDays:
+        (settings.notificationRetentionDays as number) ?? 90,
       autoDeleteAfterDays: (settings.autoDeleteAfterDays as number) ?? 180,
-      gdprDataExportEnabled: (settings.gdprDataExportEnabled as boolean) ?? true,
+      gdprDataExportEnabled:
+        (settings.gdprDataExportEnabled as boolean) ?? true,
       anonymizeAfterDays: (settings.anonymizeAfterDays as number) ?? 365,
     });
   },
@@ -109,7 +129,9 @@ router.patch(
       anonymizeAfterDays,
     } = req.body as Record<string, unknown>;
 
-    const tenant = (await prisma.tenant.findUnique({ where: { id: tenantId } })) as any;
+    const tenant = (await prisma.tenant.findUnique({
+      where: { id: tenantId },
+    })) as any;
 
     if (!tenant) {
       res.status(404).json({ error: "Tenant not found" });
@@ -121,7 +143,9 @@ router.patch(
       ...currentSettings,
       ...(auditLogRetentionDays !== undefined && { auditLogRetentionDays }),
       ...(executionRetentionDays !== undefined && { executionRetentionDays }),
-      ...(notificationRetentionDays !== undefined && { notificationRetentionDays }),
+      ...(notificationRetentionDays !== undefined && {
+        notificationRetentionDays,
+      }),
       ...(autoDeleteAfterDays !== undefined && { autoDeleteAfterDays }),
       ...(gdprDataExportEnabled !== undefined && { gdprDataExportEnabled }),
       ...(anonymizeAfterDays !== undefined && { anonymizeAfterDays }),
@@ -148,7 +172,9 @@ router.post(
       return;
     }
 
-    const user = (await prisma.user.findUnique({ where: { id: userId } })) as any;
+    const user = (await prisma.user.findUnique({
+      where: { id: userId },
+    })) as any;
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
@@ -184,7 +210,10 @@ router.post(
     };
 
     res.setHeader("Content-Type", "application/json");
-    res.setHeader("Content-Disposition", "attachment; filename=gdpr-data-export.json");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=gdpr-data-export.json",
+    );
     res.json(gdprData);
   },
 );
@@ -193,14 +222,19 @@ router.post(
   "/compliance/gdpr/delete-account",
   authorize({ resource: "compliance", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const { userId, confirm } = req.body as { userId?: string; confirm?: boolean };
+    const { userId, confirm } = req.body as {
+      userId?: string;
+      confirm?: boolean;
+    };
 
     if (!userId || !confirm) {
       res.status(400).json({ error: "userId and confirm=true are required" });
       return;
     }
 
-    const user = (await prisma.user.findUnique({ where: { id: userId } })) as any;
+    const user = (await prisma.user.findUnique({
+      where: { id: userId },
+    })) as any;
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
@@ -233,7 +267,9 @@ router.post(
       return;
     }
 
-    const user = (await prisma.user.findUnique({ where: { id: userId } })) as any;
+    const user = (await prisma.user.findUnique({
+      where: { id: userId },
+    })) as any;
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
@@ -282,7 +318,10 @@ router.post(
     };
 
     res.setHeader("Content-Type", "application/json");
-    res.setHeader("Content-Disposition", "attachment; filename=gdpr-data-export.json");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=gdpr-data-export.json",
+    );
     res.json(gdprData);
   },
 );
@@ -298,7 +337,9 @@ router.post(
       return;
     }
 
-    const user = (await prisma.user.findUnique({ where: { id: userId } })) as any;
+    const user = (await prisma.user.findUnique({
+      where: { id: userId },
+    })) as any;
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
@@ -311,7 +352,10 @@ router.post(
         userId,
         requestType: "deletion",
         status: "completed",
-        dataScope: { reason: reason ?? "Requested by admin", allUserData: true } as any,
+        dataScope: {
+          reason: reason ?? "Requested by admin",
+          allUserData: true,
+        } as any,
         completedAt: new Date(),
       },
     })) as any;
@@ -326,7 +370,11 @@ router.post(
       } as any,
     });
 
-    res.json({ success: true, requestId: deletionRequest.id, message: "Account anonymized per GDPR request" });
+    res.json({
+      success: true,
+      requestId: deletionRequest.id,
+      message: "Account anonymized per GDPR request",
+    });
   },
 );
 

@@ -56,7 +56,10 @@ export function getK8sNamespaceForTier(tier: number): string {
   return getTierConfig(tier).k8sNamespace;
 }
 
-export function getRateLimitsForTier(tier: number): { perMin: number; burst: number } {
+export function getRateLimitsForTier(tier: number): {
+  perMin: number;
+  burst: number;
+} {
   const cfg = getTierConfig(tier);
   return { perMin: cfg.rateLimitPerMin, burst: cfg.rateLimitBurst };
 }

@@ -45,9 +45,9 @@ export function AuditLogList() {
 
       <div className="relative w-full max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input 
-          placeholder="Search audit log..." 
-          className="pl-9" 
+        <Input
+          placeholder="Search audit log..."
+          className="pl-9"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -61,11 +61,16 @@ export function AuditLogList() {
           <div className="col-span-3">Timestamp</div>
           <div className="col-span-2">Severity</div>
         </div>
-        
+
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="grid grid-cols-12 gap-4 border-b px-4 py-3 last:border-0">
-              <div className="col-span-12"><Skeleton className="h-5 w-full" /></div>
+            <div
+              key={i}
+              className="grid grid-cols-12 gap-4 border-b px-4 py-3 last:border-0"
+            >
+              <div className="col-span-12">
+                <Skeleton className="h-5 w-full" />
+              </div>
             </div>
           ))
         ) : filteredEntries?.length === 0 ? (
@@ -76,40 +81,48 @@ export function AuditLogList() {
           filteredEntries?.map((e) => {
             const severity = auditSeverity(e.action);
             return (
-            <div
-              key={e.id}
-              className="grid grid-cols-12 gap-4 border-b px-4 py-3 text-sm last:border-0"
-            >
-              <div className="col-span-3 font-mono text-xs truncate" title={e.action}>
-                {e.action}
-              </div>
-              <div className="col-span-2 text-xs truncate">
-                {e.actorType}
-                {e.actorId ? (
-                  <span className="text-muted-foreground"> ({e.actorId})</span>
-                ) : null}
-              </div>
-              <div className="col-span-2 text-muted-foreground text-xs truncate">
-                {e.resourceType}/{e.resourceId}
-              </div>
-              <div className="col-span-3 text-muted-foreground text-xs">
-                {formatDistanceToNow(new Date(e.createdAt), { addSuffix: true })}
-              </div>
-              <div className="col-span-2">
-                <Badge
-                  variant={
-                    severity === "error"
-                      ? "destructive"
-                      : severity === "warning"
-                        ? "warning"
-                        : "info"
-                  }
+              <div
+                key={e.id}
+                className="grid grid-cols-12 gap-4 border-b px-4 py-3 text-sm last:border-0"
+              >
+                <div
+                  className="col-span-3 font-mono text-xs truncate"
+                  title={e.action}
                 >
-                  {severity}
-                </Badge>
+                  {e.action}
+                </div>
+                <div className="col-span-2 text-xs truncate">
+                  {e.actorType}
+                  {e.actorId ? (
+                    <span className="text-muted-foreground">
+                      {" "}
+                      ({e.actorId})
+                    </span>
+                  ) : null}
+                </div>
+                <div className="col-span-2 text-muted-foreground text-xs truncate">
+                  {e.resourceType}/{e.resourceId}
+                </div>
+                <div className="col-span-3 text-muted-foreground text-xs">
+                  {formatDistanceToNow(new Date(e.createdAt), {
+                    addSuffix: true,
+                  })}
+                </div>
+                <div className="col-span-2">
+                  <Badge
+                    variant={
+                      severity === "error"
+                        ? "destructive"
+                        : severity === "warning"
+                          ? "warning"
+                          : "info"
+                    }
+                  >
+                    {severity}
+                  </Badge>
+                </div>
               </div>
-            </div>
-          );
+            );
           })
         )}
       </div>

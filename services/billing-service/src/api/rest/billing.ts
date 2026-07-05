@@ -9,18 +9,28 @@ const repository = new PostgresUsageRepository();
 const getCurrentBilling = new GetCurrentBillingQuery(repository);
 const listInvoices = new ListInvoicesQuery(repository);
 
-router.get("/billing/current", authorize("billing.read"), requireTenantContext, async (req, res): Promise<void> => {
-  const tenantId = req.user!.tenantId!;
+router.get(
+  "/billing/current",
+  authorize("billing.read"),
+  requireTenantContext,
+  async (req, res): Promise<void> => {
+    const tenantId = req.user!.tenantId!;
 
-  const period = await getCurrentBilling.execute(tenantId);
-  res.json(period);
-});
+    const period = await getCurrentBilling.execute(tenantId);
+    res.json(period);
+  },
+);
 
-router.get("/billing/invoices", authorize("billing.read"), requireTenantContext, async (req, res): Promise<void> => {
-  const tenantId = req.user!.tenantId!;
+router.get(
+  "/billing/invoices",
+  authorize("billing.read"),
+  requireTenantContext,
+  async (req, res): Promise<void> => {
+    const tenantId = req.user!.tenantId!;
 
-  const invoices = await listInvoices.execute(tenantId);
-  res.json(invoices);
-});
+    const invoices = await listInvoices.execute(tenantId);
+    res.json(invoices);
+  },
+);
 
 export default router;

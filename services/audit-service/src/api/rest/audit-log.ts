@@ -126,9 +126,7 @@ async function searchAuditEntries(params: {
       countSql,
       ...countParams,
     );
-    const total = Number(
-      (countResult?.[0] as { total?: number })?.total ?? 0,
-    );
+    const total = Number((countResult?.[0] as { total?: number })?.total ?? 0);
     return {
       entries: rows ?? [],
       total,

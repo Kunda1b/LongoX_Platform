@@ -1,7 +1,11 @@
 import type { TrustPolicy } from "./trust";
 import { createHash } from "node:crypto";
 
-export type ConnectorCertificationLevel = "official" | "verified" | "community" | "sandbox";
+export type ConnectorCertificationLevel =
+  | "official"
+  | "verified"
+  | "community"
+  | "sandbox";
 
 export interface ConnectorPermission {
   scope: string;
@@ -211,44 +215,73 @@ export function validateManifest(manifest: ConnectorManifest): string[] {
   if (!manifest.name) errors.push("name is required");
   if (!manifest.displayName) errors.push("displayName is required");
   if (!manifest.version) errors.push("version is required");
-  if (!/^\d+\.\d+\.\d+$/.test(manifest.version)) errors.push("version must be semver");
+  if (!/^\d+\.\d+\.\d+$/.test(manifest.version))
+    errors.push("version must be semver");
   if (!manifest.manifestVersion) errors.push("manifestVersion is required");
   if (!manifest.author) errors.push("author is required");
-  if (!manifest.certificationLevel) errors.push("certificationLevel is required");
-  if (!["official", "verified", "community", "sandbox"].includes(manifest.certificationLevel)) {
-    errors.push("certificationLevel must be one of: official, verified, community, sandbox");
+  if (!manifest.certificationLevel)
+    errors.push("certificationLevel is required");
+  if (
+    !["official", "verified", "community", "sandbox"].includes(
+      manifest.certificationLevel,
+    )
+  ) {
+    errors.push(
+      "certificationLevel must be one of: official, verified, community, sandbox",
+    );
   }
   if (!manifest.capabilities) errors.push("capabilities is required");
-  if (manifest.permissions.length === 0) errors.push("at least one permission is required");
+  if (manifest.permissions.length === 0)
+    errors.push("at least one permission is required");
   for (const action of manifest.actions) {
     if (!action.id) errors.push("each action must have an id");
-    if (!action.name) errors.push(`action ${action.id || "(unnamed)"} must have a name`);
+    if (!action.name)
+      errors.push(`action ${action.id || "(unnamed)"} must have a name`);
   }
   for (const trigger of manifest.triggers) {
     if (!trigger.id) errors.push("each trigger must have an id");
-    if (!trigger.type) errors.push(`trigger ${trigger.id || "(unnamed)"} must have a type`);
+    if (!trigger.type)
+      errors.push(`trigger ${trigger.id || "(unnamed)"} must have a type`);
     if (!["webhook", "polling", "event"].includes(trigger.type)) {
-      errors.push(`trigger ${trigger.id} type must be webhook, polling, or event`);
+      errors.push(
+        `trigger ${trigger.id} type must be webhook, polling, or event`,
+      );
     }
   }
-  if (manifest.capabilities.auth.oauth2 && manifest.networkAccess.requiredDomains.length === 0) {
+  if (
+    manifest.capabilities.auth.oauth2 &&
+    manifest.networkAccess.requiredDomains.length === 0
+  ) {
     errors.push("oauth2 requires at least one network domain");
   }
-  if (manifest.runtime.minMemoryMb < 8) errors.push("minMemoryMb must be at least 8");
-  if (manifest.runtime.minCpuMs < 100) errors.push("minCpuMs must be at least 100");
-  if (manifest.runtime.timeoutMs < 1000) errors.push("timeoutMs must be at least 1000");
+  if (manifest.runtime.minMemoryMb < 8)
+    errors.push("minMemoryMb must be at least 8");
+  if (manifest.runtime.minCpuMs < 100)
+    errors.push("minCpuMs must be at least 100");
+  if (manifest.runtime.timeoutMs < 1000)
+    errors.push("timeoutMs must be at least 1000");
   return errors;
 }
 
-export function verifyChecksum(manifest: ConnectorManifest, expectedChecksum: string): boolean {
-  const hash = createHash("sha256").update(JSON.stringify(manifest)).digest("hex");
+export function verifyChecksum(
+  manifest: ConnectorManifest,
+  expectedChecksum: string,
+): boolean {
+  const hash = createHash("sha256")
+    .update(JSON.stringify(manifest))
+    .digest("hex");
   return hash === expectedChecksum;
 }
 
-export function signManifest(manifest: ConnectorManifest, signerId: string): SignedManifest {
+export function signManifest(
+  manifest: ConnectorManifest,
+  signerId: string,
+): SignedManifest {
   return {
     ...manifest,
-    signature: `signed:${createHash("sha256").update(JSON.stringify({ id: manifest.id, version: manifest.version })).digest("hex")}`,
+    signature: `signed:${createHash("sha256")
+      .update(JSON.stringify({ id: manifest.id, version: manifest.version }))
+      .digest("hex")}`,
     signerId,
     signedAt: new Date().toISOString(),
   };
@@ -265,7 +298,9 @@ export function computeArtifactChecksum(artifact: ConnectorArtifact): string {
   return createHash("sha256").update(data).digest("hex");
 }
 
-function getBasePolicyForTier(level: ConnectorCertificationLevel): SandboxPolicy {
+function getBasePolicyForTier(
+  level: ConnectorCertificationLevel,
+): SandboxPolicy {
   switch (level) {
     case "official":
       return {
@@ -338,23 +373,28 @@ export function mergeSandboxPolicy(
       ...new Set([
         ...basePolicy.opTable,
         ...(manifest.sandboxPolicy?.opTable ?? []),
-        ...manifest.runtime.requiredOps as any[],
+        ...(manifest.runtime.requiredOps as any[]),
       ]),
     ],
     maxCpuMs: manifest.runtime.minCpuMs ?? basePolicy.maxCpuMs,
     maxMemoryMb: manifest.runtime.minMemoryMb ?? basePolicy.maxMemoryMb,
     timeoutMs: manifest.runtime.timeoutMs ?? basePolicy.timeoutMs,
-    maxNetworkRequests: manifest.runtime.maxNetworkRequests ?? basePolicy.maxNetworkRequests,
+    maxNetworkRequests:
+      manifest.runtime.maxNetworkRequests ?? basePolicy.maxNetworkRequests,
     allowedDomains: [
       ...new Set([
         ...domains,
         ...(manifest.sandboxPolicy?.allowedDomains ?? []),
       ]),
     ],
-    allowedEnvVars: manifest.sandboxPolicy?.allowedEnvVars ?? basePolicy.allowedEnvVars,
-    allowedReadPaths: manifest.sandboxPolicy?.allowedReadPaths ?? basePolicy.allowedReadPaths,
-    allowedWritePaths: manifest.sandboxPolicy?.allowedWritePaths ?? basePolicy.allowedWritePaths,
-    secretsAllowlist: manifest.sandboxPolicy?.secretsAllowlist ?? basePolicy.secretsAllowlist,
+    allowedEnvVars:
+      manifest.sandboxPolicy?.allowedEnvVars ?? basePolicy.allowedEnvVars,
+    allowedReadPaths:
+      manifest.sandboxPolicy?.allowedReadPaths ?? basePolicy.allowedReadPaths,
+    allowedWritePaths:
+      manifest.sandboxPolicy?.allowedWritePaths ?? basePolicy.allowedWritePaths,
+    secretsAllowlist:
+      manifest.sandboxPolicy?.secretsAllowlist ?? basePolicy.secretsAllowlist,
   };
 
   if (trustPolicy.maxActions < manifest.actions.length) {

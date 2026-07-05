@@ -81,7 +81,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  user?.name?.charAt(0)?.toUpperCase() ?? "U"
+                  (user?.name?.charAt(0)?.toUpperCase() ?? "U")
                 )}
               </div>
               <span className="hidden max-w-[120px] truncate font-medium md:inline">

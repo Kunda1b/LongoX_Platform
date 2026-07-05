@@ -24,7 +24,11 @@ export class SecurityIncidentService {
     type: string,
     severity: string,
     description: string,
-    metadata?: { title?: string; affectedResources?: string[]; extra?: Record<string, unknown> },
+    metadata?: {
+      title?: string;
+      affectedResources?: string[];
+      extra?: Record<string, unknown>;
+    },
   ) {
     const incident = await prisma.securityIncident.create({
       data: {
@@ -32,47 +36,65 @@ export class SecurityIncidentService {
         incidentType: type,
         severity,
         status: "open",
-        title: metadata?.title ?? type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+        title:
+          metadata?.title ??
+          type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
         description,
         detectedBy: "system",
-        affectedResources: (metadata?.affectedResources ?? []) as unknown as Record<string, unknown>[],
+        affectedResources: (metadata?.affectedResources ??
+          []) as unknown as Record<string, unknown>[],
         metadata: (metadata?.extra ?? {}) as Record<string, unknown>,
       } as any,
     });
     return incident;
   }
 
-  async updateIncident(id: string, updates: { status?: string; title?: string; description?: string; metadata?: Record<string, unknown> }) {
-    const incident = await prisma.securityIncident.update({
-      where: { id },
-      data: {
-        ...(updates.status && { status: updates.status }),
-        ...(updates.title && { title: updates.title }),
-        ...(updates.description && { description: updates.description }),
-        ...(updates.metadata && { metadata: updates.metadata }),
-      } as any,
-    }).catch(() => null);
+  async updateIncident(
+    id: string,
+    updates: {
+      status?: string;
+      title?: string;
+      description?: string;
+      metadata?: Record<string, unknown>;
+    },
+  ) {
+    const incident = await prisma.securityIncident
+      .update({
+        where: { id },
+        data: {
+          ...(updates.status && { status: updates.status }),
+          ...(updates.title && { title: updates.title }),
+          ...(updates.description && { description: updates.description }),
+          ...(updates.metadata && { metadata: updates.metadata }),
+        } as any,
+      })
+      .catch(() => null);
 
     if (!incident) throw new Error("Incident not found");
     return incident;
   }
 
   async resolveIncident(id: string, resolution: string, resolvedBy: string) {
-    const incident = await prisma.securityIncident.update({
-      where: { id },
-      data: {
-        status: "resolved",
-        resolution,
-        resolvedBy,
-        resolvedAt: new Date(),
-      } as any,
-    }).catch(() => null);
+    const incident = await prisma.securityIncident
+      .update({
+        where: { id },
+        data: {
+          status: "resolved",
+          resolution,
+          resolvedBy,
+          resolvedAt: new Date(),
+        } as any,
+      })
+      .catch(() => null);
 
     if (!incident) throw new Error("Incident not found");
     return incident;
   }
 
-  async addEvidence(incidentId: string, evidenceData: { evidenceType: string; data: unknown }) {
+  async addEvidence(
+    incidentId: string,
+    evidenceData: { evidenceType: string; data: unknown },
+  ) {
     const hash = createHash("sha256")
       .update(JSON.stringify(evidenceData.data))
       .digest("hex");
@@ -89,7 +111,9 @@ export class SecurityIncidentService {
   }
 
   async getIncident(id: string) {
-    const incident = await prisma.securityIncident.findUnique({ where: { id } });
+    const incident = await prisma.securityIncident.findUnique({
+      where: { id },
+    });
 
     if (!incident) throw new Error("Incident not found");
 
@@ -108,7 +132,11 @@ export class SecurityIncidentService {
     if (filters.severity) where.severity = filters.severity;
     if (filters.incidentType) where.incidentType = filters.incidentType;
     if (filters.detectedBy) where.detectedBy = filters.detectedBy;
-    if (filters.from) where.detectedAt = { gte: filters.from, ...(filters.to ? { lte: filters.to } : {}) };
+    if (filters.from)
+      where.detectedAt = {
+        gte: filters.from,
+        ...(filters.to ? { lte: filters.to } : {}),
+      };
     else if (filters.to) where.detectedAt = { lte: filters.to };
 
     const incidents = await prisma.securityIncident.findMany({
@@ -130,7 +158,12 @@ export class SecurityIncidentService {
 
   async createFromDetection(
     detectionRule: { name: string; type: string; severity: string },
-    matchData: { tenantId: string; description: string; affectedResources?: string[]; metadata?: Record<string, unknown> },
+    matchData: {
+      tenantId: string;
+      description: string;
+      affectedResources?: string[];
+      metadata?: Record<string, unknown>;
+    },
   ) {
     const incident = await this.createIncident(
       matchData.tenantId,

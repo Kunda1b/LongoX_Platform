@@ -26,9 +26,7 @@ export interface SandboxPolicy {
 }
 
 export const DEFAULT_CONNECTOR_POLICY: SandboxPolicy = {
-  opTable: [
-    "net:allow",
-  ],
+  opTable: ["net:allow"],
   maxCpuMs: 10_000,
   maxMemoryMb: 128,
   maxNetworkRequests: 50,
@@ -41,9 +39,7 @@ export const DEFAULT_CONNECTOR_POLICY: SandboxPolicy = {
 };
 
 export const RESTRICTED_CONNECTOR_POLICY: SandboxPolicy = {
-  opTable: [
-    "net:allow",
-  ],
+  opTable: ["net:allow"],
   maxCpuMs: 5_000,
   maxMemoryMb: 64,
   maxNetworkRequests: 20,
@@ -89,8 +85,11 @@ export function validatePolicy(policy: SandboxPolicy): string[] {
   if (policy.maxCpuMs < 100) errors.push("maxCpuMs must be at least 100");
   if (policy.maxMemoryMb < 8) errors.push("maxMemoryMb must be at least 8");
   if (policy.timeoutMs < 1_000) errors.push("timeoutMs must be at least 1000");
-  if (policy.maxNetworkRequests < 0) errors.push("maxNetworkRequests must be >= 0");
-  if (policy.opTable.includes("run:allow")) errors.push("run:allow is forbidden for connector sandboxes");
-  if (policy.opTable.includes("ffi:allow")) errors.push("ffi:allow is forbidden for connector sandboxes");
+  if (policy.maxNetworkRequests < 0)
+    errors.push("maxNetworkRequests must be >= 0");
+  if (policy.opTable.includes("run:allow"))
+    errors.push("run:allow is forbidden for connector sandboxes");
+  if (policy.opTable.includes("ffi:allow"))
+    errors.push("ffi:allow is forbidden for connector sandboxes");
   return errors;
 }

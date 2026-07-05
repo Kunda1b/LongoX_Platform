@@ -9,25 +9,37 @@ const repository = new PostgresUsageRepository();
 const getUsageSummary = new GetUsageSummaryQuery(repository);
 const listUsageEvents = new ListUsageEventsQuery(repository);
 
-router.get("/usage", authorize("billing.read"), requireTenantContext, async (req, res): Promise<void> => {
-  const tenantId = req.user!.tenantId!;
+router.get(
+  "/usage",
+  authorize("billing.read"),
+  requireTenantContext,
+  async (req, res): Promise<void> => {
+    const tenantId = req.user!.tenantId!;
 
-  const summary = await getUsageSummary.execute(tenantId);
-  res.json(summary);
-});
+    const summary = await getUsageSummary.execute(tenantId);
+    res.json(summary);
+  },
+);
 
-router.get("/usage/events", authorize("billing.read"), requireTenantContext, async (req, res): Promise<void> => {
-  const tenantId = req.user!.tenantId!;
+router.get(
+  "/usage/events",
+  authorize("billing.read"),
+  requireTenantContext,
+  async (req, res): Promise<void> => {
+    const tenantId = req.user!.tenantId!;
 
-  const limit = Number(req.query.limit) || 50;
-  const workflowId = req.query.workflowId ? String(req.query.workflowId) : null;
-  const eventType = req.query.eventType as string | undefined;
-  const events = await listUsageEvents.execute(tenantId, {
-    limit,
-    workflowId,
-    eventType,
-  });
-  res.json(events);
-});
+    const limit = Number(req.query.limit) || 50;
+    const workflowId = req.query.workflowId
+      ? String(req.query.workflowId)
+      : null;
+    const eventType = req.query.eventType as string | undefined;
+    const events = await listUsageEvents.execute(tenantId, {
+      limit,
+      workflowId,
+      eventType,
+    });
+    res.json(events);
+  },
+);
 
 export default router;

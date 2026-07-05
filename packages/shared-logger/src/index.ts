@@ -46,7 +46,8 @@ export const logger = pino({
     // (set by the api-gateway middleware). Falls back to undefined if not
     // in a request context.
     const tenantId = (globalThis as any).__longoxTenantId ?? undefined;
-    const correlationId = (globalThis as any).__longoxCorrelationId ?? undefined;
+    const correlationId =
+      (globalThis as any).__longoxCorrelationId ?? undefined;
     return {
       ...traceContext,
       ...(tenantId !== undefined ? { tenant_id: tenantId } : {}),
@@ -67,7 +68,7 @@ export type Logger = typeof logger;
 
 export function createChildLogger(
   name: string,
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, unknown>,
 ) {
   return logger.child({ module: name, ...metadata });
 }
@@ -75,7 +76,7 @@ export function createChildLogger(
 export function logWithTrace(
   level: "info" | "warn" | "error" | "debug",
   message: string,
-  data?: Record<string, unknown>
+  data?: Record<string, unknown>,
 ) {
   const traceContext = getTraceContext();
   logger[level]({ ...traceContext, ...data }, message);

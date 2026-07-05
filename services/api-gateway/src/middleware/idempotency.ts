@@ -75,7 +75,11 @@ export function idempotencyMiddleware(
           code: "VALIDATION_ERROR",
           message: "x-idempotency-key must be a valid UUID",
           details: [
-            { field: "x-idempotency-key", rule: "format", message: "Must be a UUID v4" },
+            {
+              field: "x-idempotency-key",
+              rule: "format",
+              message: "Must be a UUID v4",
+            },
           ],
           correlation_id: (req as any).correlationId ?? null,
           retry_after_seconds: null,
@@ -114,9 +118,14 @@ export function requireIdempotencyKey(
     res.status(400).json({
       error: {
         code: "IDEMPOTENCY_KEY_REQUIRED",
-        message: "This endpoint requires an x-idempotency-key header (UUID) for replay protection",
+        message:
+          "This endpoint requires an x-idempotency-key header (UUID) for replay protection",
         details: [
-          { field: "x-idempotency-key", rule: "required", message: "Provide a UUID v4" },
+          {
+            field: "x-idempotency-key",
+            rule: "required",
+            message: "Provide a UUID v4",
+          },
         ],
         correlation_id: (req as any).correlationId ?? null,
         retry_after_seconds: null,

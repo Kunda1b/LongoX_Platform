@@ -1,6 +1,12 @@
 // DEV-ONLY: Kong handles tenant tier routing in production
 import type { Request, Response, NextFunction } from "express";
-import { getTenantTier, getRateLimitsForTier, getK8sNamespaceForTier, getVaultPrefixForTier, getRedisIndexForTier } from "../services/tier-routing.service";
+import {
+  getTenantTier,
+  getRateLimitsForTier,
+  getK8sNamespaceForTier,
+  getVaultPrefixForTier,
+  getRedisIndexForTier,
+} from "../services/tier-routing.service";
 
 declare global {
   namespace Express {

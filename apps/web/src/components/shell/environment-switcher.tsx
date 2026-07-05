@@ -60,11 +60,11 @@ export function EnvironmentSwitcher() {
             <div className={cn("h-2 w-2 rounded-full", getEnvColor(e.type))} />
             <div className="flex-1 flex items-center justify-between">
               <span className="text-sm">{e.name}</span>
-              <span className="text-xs text-muted-foreground capitalize">{e.type}</span>
+              <span className="text-xs text-muted-foreground capitalize">
+                {e.type}
+              </span>
             </div>
-            {e.name === activeEnv && (
-              <Check className="h-4 w-4 text-primary" />
-            )}
+            {e.name === activeEnv && <Check className="h-4 w-4 text-primary" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

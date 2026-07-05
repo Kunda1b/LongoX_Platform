@@ -15,7 +15,10 @@
 
 import type { BillingReconciliationJobData } from "@longox/shared-queue";
 import { logger } from "@longox/shared-logger";
-import { ReconciliationService, type ReconciliationReport } from "../services/reconciliation.service";
+import {
+  ReconciliationService,
+  type ReconciliationReport,
+} from "../services/reconciliation.service";
 
 const reconciliationService = new ReconciliationService();
 

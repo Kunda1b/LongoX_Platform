@@ -6,7 +6,10 @@ export { default as queryRouter } from "./query/query-route";
 export { default as permissionsRouter } from "./permissions/permissions-route";
 export { default as templatesRouter } from "./templates/templates-route";
 export { default as publishingRouter } from "./publishing/dashboards-route";
-export { default as dashboardStreamRouter, triggerDashboardRefresh } from "./api/dashboard-stream-route";
+export {
+  default as dashboardStreamRouter,
+  triggerDashboardRefresh,
+} from "./api/dashboard-stream-route";
 
 export * from "./component/component-catalog";
 export * from "./templates/dashboard-template-catalog";

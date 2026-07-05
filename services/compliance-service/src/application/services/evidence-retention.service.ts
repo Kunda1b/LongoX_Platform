@@ -29,14 +29,18 @@ export interface EvidenceFilters {
 
 export class EvidenceRetentionService {
   private computeHash(payload: unknown): string {
-    return createHash("sha256")
-      .update(JSON.stringify(payload))
-      .digest("hex");
+    return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
   }
 
   async retainEvidence(
     eventType: string,
-    data: { title: string; description?: string; payload: unknown; source: string; severity?: string },
+    data: {
+      title: string;
+      description?: string;
+      payload: unknown;
+      source: string;
+      severity?: string;
+    },
     metadata?: { tenantId: string },
   ) {
     const payload = data.payload;
@@ -63,7 +67,9 @@ export class EvidenceRetentionService {
   }
 
   async verifyEvidence(id: string) {
-    const evidence = await prisma.complianceEvidence.findUnique({ where: { id } });
+    const evidence = await prisma.complianceEvidence.findUnique({
+      where: { id },
+    });
 
     if (!evidence) throw new Error("Evidence not found");
 
@@ -78,7 +84,9 @@ export class EvidenceRetentionService {
   }
 
   async getEvidence(id: string) {
-    const evidence = await prisma.complianceEvidence.findUnique({ where: { id } });
+    const evidence = await prisma.complianceEvidence.findUnique({
+      where: { id },
+    });
 
     if (!evidence) throw new Error("Evidence not found");
     return evidence;

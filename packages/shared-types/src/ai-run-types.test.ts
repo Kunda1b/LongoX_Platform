@@ -53,11 +53,13 @@ describe("AiRunRequest", () => {
         {
           role: "assistant",
           content: "",
-          toolCalls: [{
-            id: "call_1",
-            type: "function",
-            function: { name: "get_weather", arguments: '{"city":"London"}' },
-          }],
+          toolCalls: [
+            {
+              id: "call_1",
+              type: "function",
+              function: { name: "get_weather", arguments: '{"city":"London"}' },
+            },
+          ],
         },
       ],
     };
@@ -99,14 +101,16 @@ describe("AiRunResponse", () => {
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       cost: 0,
       currency: "USD",
-      citations: [{
-        documentId: "1",
-        documentName: "doc.pdf",
-        chunkId: 10,
-        chunkContent: "Important info",
-        score: 0.95,
-        source: "s3://bucket/doc.pdf",
-      }],
+      citations: [
+        {
+          documentId: "1",
+          documentName: "doc.pdf",
+          chunkId: 10,
+          chunkContent: "Important info",
+          score: 0.95,
+          source: "s3://bucket/doc.pdf",
+        },
+      ],
       traceId: "trace-xyz",
       durationMs: 500,
       startedAt: "",
@@ -138,13 +142,15 @@ describe("AiGuardrailResult", () => {
       guardrailName: "PII Filter",
       guardrailType: "pii",
       passed: false,
-      violations: [{
-        type: "email",
-        detail: "Email detected",
-        severity: "high",
-        matchedContent: "test@test.com",
-        category: "pii",
-      }],
+      violations: [
+        {
+          type: "email",
+          detail: "Email detected",
+          severity: "high",
+          matchedContent: "test@test.com",
+          category: "pii",
+        },
+      ],
       blocked: true,
     };
     expect(result.passed).toBe(false);
@@ -206,9 +212,18 @@ describe("AiStreamChunk", () => {
   });
 
   it("supports all finish reasons", () => {
-    const reasons: AiStreamChunk["finishReason"][] = ["stop", "length", "content_filter", "tool_calls"];
+    const reasons: AiStreamChunk["finishReason"][] = [
+      "stop",
+      "length",
+      "content_filter",
+      "tool_calls",
+    ];
     for (const reason of reasons) {
-      const chunk: AiStreamChunk = { index: 0, delta: "", finishReason: reason };
+      const chunk: AiStreamChunk = {
+        index: 0,
+        delta: "",
+        finishReason: reason,
+      };
       expect(chunk.finishReason).toBe(reason);
     }
   });

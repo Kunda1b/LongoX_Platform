@@ -13,7 +13,10 @@ export const FORMAT_FOOTNOTE = "footnote";
 export const FORMAT_NUMBERED = "numbered";
 
 export class CitationService {
-  formatCitations(results: SearchResult[], format: string = FORMAT_NUMBERED): string {
+  formatCitations(
+    results: SearchResult[],
+    format: string = FORMAT_NUMBERED,
+  ): string {
     if (results.length === 0) return "";
 
     switch (format) {
@@ -47,19 +50,28 @@ export class CitationService {
 
   private formatInline(results: SearchResult[]): string {
     return results
-      .map((r, i) => `[${i + 1}] ${r.documentFilename} (score: ${r.score.toFixed(3)})`)
+      .map(
+        (r, i) =>
+          `[${i + 1}] ${r.documentFilename} (score: ${r.score.toFixed(3)})`,
+      )
       .join("; ");
   }
 
   private formatFootnote(results: SearchResult[]): string {
     return results
-      .map((r, i) => `^${i + 1}: ${r.documentFilename} — "${r.content.substring(0, 100)}..."`)
+      .map(
+        (r, i) =>
+          `^${i + 1}: ${r.documentFilename} — "${r.content.substring(0, 100)}..."`,
+      )
       .join("\n");
   }
 
   private formatNumbered(results: SearchResult[]): string {
     return results
-      .map((r, i) => `${i + 1}. ${r.documentFilename} (relevance: ${(r.score * 100).toFixed(1)}%)`)
+      .map(
+        (r, i) =>
+          `${i + 1}. ${r.documentFilename} (relevance: ${(r.score * 100).toFixed(1)}%)`,
+      )
       .join("\n");
   }
 }

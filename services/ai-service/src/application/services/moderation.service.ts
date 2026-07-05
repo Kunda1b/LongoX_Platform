@@ -23,7 +23,13 @@ export interface ModerationResult {
   blocked: boolean;
 }
 
-export type PiiMode = "email" | "phone" | "ssn" | "credit_card" | "ip_address" | "custom_regex";
+export type PiiMode =
+  | "email"
+  | "phone"
+  | "ssn"
+  | "credit_card"
+  | "ip_address"
+  | "custom_regex";
 
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 const PHONE_REGEX = /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
@@ -157,7 +163,11 @@ export class ModerationService {
 
       case "pii": {
         const piiModes: PiiMode[] = (guardrail.config as any)?.piiModes ?? [
-          "email", "phone", "ssn", "credit_card", "ip_address",
+          "email",
+          "phone",
+          "ssn",
+          "credit_card",
+          "ip_address",
         ];
         scrubbedText = await this.scrubPII(text, piiModes);
         if (scrubbedText !== text) {
@@ -173,9 +183,8 @@ export class ModerationService {
       }
 
       case "content_filter": {
-        const blockedCategories: string[] = (guardrail.config as any)?.blockedCategories ?? [
-          "hate", "violence", "self-harm", "sexual",
-        ];
+        const blockedCategories: string[] = (guardrail.config as any)
+          ?.blockedCategories ?? ["hate", "violence", "self-harm", "sexual"];
         for (const category of blockedCategories) {
           if (text.toLowerCase().includes(category)) {
             violations.push({
@@ -193,7 +202,9 @@ export class ModerationService {
       case "moderation": {
         const openaiThreshold = (guardrail.config as any)?.threshold ?? 0.5;
         try {
-          const { moderationService } = await import("../../moderation/moderation-service");
+          const { moderationService } = await import(
+            "../../moderation/moderation-service"
+          );
           const result = await moderationService.moderateContent(text, {
             hate: openaiThreshold,
             "hate/threatening": openaiThreshold,

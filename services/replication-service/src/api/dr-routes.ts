@@ -12,7 +12,10 @@ router.post(
   "/dr/backup",
   authorize({ resource: "tenants", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const { tenantId, scope } = req.body as { tenantId?: string; scope?: string };
+    const { tenantId, scope } = req.body as {
+      tenantId?: string;
+      scope?: string;
+    };
     if (!tenantId) {
       res.status(400).json({ error: "tenantId is required" });
       return;
@@ -33,8 +36,10 @@ router.get(
   "/dr/backups",
   authorize({ resource: "tenants", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const { tenantId, dateFrom, dateTo, scope, status } =
-      req.query as Record<string, string | undefined>;
+    const { tenantId, dateFrom, dateTo, scope, status } = req.query as Record<
+      string,
+      string | undefined
+    >;
     if (!tenantId) {
       res.status(400).json({ error: "tenantId is required" });
       return;
@@ -102,8 +107,14 @@ router.post(
       res.status(400).json({ error: "Invalid backup id" });
       return;
     }
-    const { tenantId, restoreType, targetEnvironment, tables, restoredBy, notes } =
-      req.body as Record<string, unknown>;
+    const {
+      tenantId,
+      restoreType,
+      targetEnvironment,
+      tables,
+      restoredBy,
+      notes,
+    } = req.body as Record<string, unknown>;
     if (!tenantId) {
       res.status(400).json({ error: "tenantId is required" });
       return;
@@ -149,7 +160,10 @@ router.post(
   "/dr/rollback/plan",
   authorize({ resource: "tenants", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const { service, targetVersion } = req.body as { service?: string; targetVersion?: string };
+    const { service, targetVersion } = req.body as {
+      service?: string;
+      targetVersion?: string;
+    };
     if (!service || !targetVersion) {
       res.status(400).json({ error: "service and targetVersion are required" });
       return;
@@ -167,13 +181,19 @@ router.post(
   "/dr/rollback/execute",
   authorize({ resource: "tenants", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
-    const { service, targetVersion } = req.body as { service?: string; targetVersion?: string };
+    const { service, targetVersion } = req.body as {
+      service?: string;
+      targetVersion?: string;
+    };
     if (!service || !targetVersion) {
       res.status(400).json({ error: "service and targetVersion are required" });
       return;
     }
     try {
-      const result = await releaseRollback.executeRollback(service, targetVersion);
+      const result = await releaseRollback.executeRollback(
+        service,
+        targetVersion,
+      );
       res.json(result);
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
@@ -218,7 +238,9 @@ router.get(
   async (req: Request, res: Response): Promise<void> => {
     const { region } = req.params;
     try {
-      const { RegionalExecutionPoolService } = require("@longox/execution-service");
+      const {
+        RegionalExecutionPoolService,
+      } = require("@longox/execution-service");
       const poolService = new RegionalExecutionPoolService();
       const readiness = await poolService.getPoolReadiness(region);
       res.json(readiness);
@@ -235,7 +257,9 @@ router.post(
     const { region } = req.params;
     const metrics = req.body;
     try {
-      const { RegionalExecutionPoolService } = require("@longox/execution-service");
+      const {
+        RegionalExecutionPoolService,
+      } = require("@longox/execution-service");
       const poolService = new RegionalExecutionPoolService();
       const result = await poolService.registerPoolHeartbeat(region, metrics);
       res.json(result);
@@ -251,7 +275,9 @@ router.post(
   async (req: Request, res: Response): Promise<void> => {
     const { targetRegionId } = req.body as { targetRegionId?: string };
     try {
-      const { RegionalExecutionPoolService } = require("@longox/execution-service");
+      const {
+        RegionalExecutionPoolService,
+      } = require("@longox/execution-service");
       const poolService = new RegionalExecutionPoolService();
       const result = await poolService.handleRegionDegradation(
         targetRegionId ?? "primary",

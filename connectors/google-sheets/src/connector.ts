@@ -53,7 +53,11 @@ export const googleSheetsConnector: ConnectorDefinition = {
       name: "Row Added",
       description: "Poll for new rows in a sheet",
       type: "polling",
-      outputSchema: { spreadsheetId: "string", range: "string", values: "array" },
+      outputSchema: {
+        spreadsheetId: "string",
+        range: "string",
+        values: "array",
+      },
     },
   ],
   permissions: ["sheets:read", "sheets:write"],

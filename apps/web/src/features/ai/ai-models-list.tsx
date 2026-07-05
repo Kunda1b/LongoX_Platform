@@ -44,7 +44,13 @@ export function AIModelsList() {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: async ({ id, isEnabled }: { id: string; isEnabled: boolean }) => {
+    mutationFn: async ({
+      id,
+      isEnabled,
+    }: {
+      id: string;
+      isEnabled: boolean;
+    }) => {
       const res = await fetch(`/api/ai-models/${id}`, {
         method: "PATCH",
         headers: {
@@ -104,16 +110,23 @@ export function AIModelsList() {
                     {m.modelId}
                   </span>
                 </div>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
-                  onClick={() => toggleMutation.mutate({ id: m.id, isEnabled: !m.isEnabled })}
+                  onClick={() =>
+                    toggleMutation.mutate({ id: m.id, isEnabled: !m.isEnabled })
+                  }
                   disabled={toggleMutation.isPending}
                 >
                   {m.isEnabled ? (
-                    <><PowerOff className="mr-1 h-4 w-4 text-muted-foreground" /> Disable</>
+                    <>
+                      <PowerOff className="mr-1 h-4 w-4 text-muted-foreground" />{" "}
+                      Disable
+                    </>
                   ) : (
-                    <><Power className="mr-1 h-4 w-4 text-emerald-500" /> Enable</>
+                    <>
+                      <Power className="mr-1 h-4 w-4 text-emerald-500" /> Enable
+                    </>
                   )}
                 </Button>
               </CardContent>

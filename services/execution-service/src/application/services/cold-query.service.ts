@@ -14,13 +14,15 @@ function getS3Config() {
 
 function getPresignedUrl(key: string): string {
   const cfg = getS3Config();
-  const endpoint = cfg.endpoint ?? `https://${cfg.bucket}.s3.${cfg.region}.amazonaws.com`;
+  const endpoint =
+    cfg.endpoint ?? `https://${cfg.bucket}.s3.${cfg.region}.amazonaws.com`;
   return `${endpoint}/${key}`;
 }
 
 async function downloadFromS3(key: string): Promise<Buffer> {
   const cfg = getS3Config();
-  const endpoint = cfg.endpoint ?? `https://${cfg.bucket}.s3.${cfg.region}.amazonaws.com`;
+  const endpoint =
+    cfg.endpoint ?? `https://${cfg.bucket}.s3.${cfg.region}.amazonaws.com`;
   const url = `${endpoint}/${key}`;
 
   const res = await fetch(url);
@@ -60,7 +62,10 @@ async function queryParquetFromS3(
         if (filters.id !== undefined && record.id !== filters.id) {
           match = false;
         }
-        if (filters.tenantId !== undefined && record.tenant_id !== filters.tenantId) {
+        if (
+          filters.tenantId !== undefined &&
+          record.tenant_id !== filters.tenantId
+        ) {
           match = false;
         }
         if (match) {
@@ -87,10 +92,7 @@ export class ColdQueryService {
     this.policyService = policyService ?? new RetentionPolicyService();
   }
 
-  async queryExecution(
-    id: string,
-    tenantId: string,
-  ): Promise<any | null> {
+  async queryExecution(id: string, tenantId: string): Promise<any | null> {
     const execution = await prisma.workflowExecution.findFirst({
       where: {
         id,
@@ -153,9 +155,7 @@ export class ColdQueryService {
     return restored;
   }
 
-  async getColdQueryPresignedUrl(
-    exportId: string,
-  ): Promise<string | null> {
+  async getColdQueryPresignedUrl(exportId: string): Promise<string | null> {
     const record = await prisma.archiveExport.findUnique({
       where: { id: exportId },
     });

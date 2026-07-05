@@ -50,9 +50,13 @@ function createLeaseStore(): LeaseStore {
   const redisUrl = process.env["REDIS_URL"];
   if (!redisUrl) return new InMemoryLeaseStore();
 
-  const client = new IORedis(redisUrl, { maxRetriesPerRequest: null, enableReadyCheck: false });
+  const client = new IORedis(redisUrl, {
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false,
+  });
   return new RedisLeaseStore({
-    set: (key, value, option, ms, cond) => client.set(key, value, option, ms, cond),
+    set: (key, value, option, ms, cond) =>
+      client.set(key, value, option, ms, cond),
     del: (key) => client.del(key),
     get: (key) => client.get(key),
   });
@@ -126,7 +130,10 @@ export class DbLeaseStore implements LeaseStore {
       // Non-fatal — the INSERT below will fail if an expired row blocks us,
       // which surfaces as a null lease (the runner will retry on the next
       // recovery pass per §9.8).
-      console.error(`[DbLeaseStore] expired-lease cleanup failed for ${executionId}/${nodeId}:`, err);
+      console.error(
+        `[DbLeaseStore] expired-lease cleanup failed for ${executionId}/${nodeId}:`,
+        err,
+      );
     }
 
     // ── Step 2: INSERT ... ON CONFLICT DO NOTHING (architecture §9.1) ──
@@ -144,7 +151,10 @@ export class DbLeaseStore implements LeaseStore {
         leasedUntil,
       );
     } catch (err) {
-      console.error(`[DbLeaseStore] acquire failed for ${executionId}/${nodeId}:`, err);
+      console.error(
+        `[DbLeaseStore] acquire failed for ${executionId}/${nodeId}:`,
+        err,
+      );
       return null;
     }
 
@@ -232,7 +242,11 @@ class CompositeLeaseStore implements LeaseStore {
   ): Promise<NodeLease | null> {
     const primaryLease = await this.primary.acquire(executionId, nodeId, ttlMs);
     if (!primaryLease) return null;
-    const secondaryLease = await this.secondary.acquire(executionId, nodeId, ttlMs);
+    const secondaryLease = await this.secondary.acquire(
+      executionId,
+      nodeId,
+      ttlMs,
+    );
     if (!secondaryLease) {
       // Secondary refused — release the primary and bail.
       await primaryLease.release();
@@ -246,7 +260,10 @@ class CompositeLeaseStore implements LeaseStore {
       acquiredAt: primaryLease.acquiredAt,
       expiresAt: primaryLease.expiresAt,
       async release() {
-        await Promise.allSettled([primaryLease.release(), secondaryLease.release()]);
+        await Promise.allSettled([
+          primaryLease.release(),
+          secondaryLease.release(),
+        ]);
       },
     };
   }
@@ -340,7 +357,9 @@ export class DbCheckpointStore implements CheckpointStore {
     return row.id;
   }
 
-  async loadCompleted(executionId: string): Promise<Array<{ nodeId: string; outputData: Record<string, unknown> }>> {
+  async loadCompleted(
+    executionId: string,
+  ): Promise<Array<{ nodeId: string; outputData: Record<string, unknown> }>> {
     const rows = await prisma.nodeExecutionCheckpoint.findMany({
       where: { executionId },
       select: { nodeId: true, stateJson: true } as any,
@@ -349,7 +368,10 @@ export class DbCheckpointStore implements CheckpointStore {
     return rows
       .map((r: any) => ({
         nodeId: r.nodeId,
-        outputData: ((r.stateJson as any)?.outputData ?? null) as Record<string, unknown> | null,
+        outputData: ((r.stateJson as any)?.outputData ?? null) as Record<
+          string,
+          unknown
+        > | null,
       }))
       .filter((r) => r.outputData !== null)
       .map((r) => ({
@@ -358,15 +380,18 @@ export class DbCheckpointStore implements CheckpointStore {
       }));
   }
 
-  async update(checkpointId: string, updates: {
-    status: "success" | "failed" | "paused";
-    outputData?: Record<string, unknown>;
-    errorMessage?: string;
-    durationMs?: number;
-    metadata?: Record<string, unknown>;
-    compensationStatus?: "pending" | "done" | "failed" | "skipped";
-    finishedAt?: Date | null;
-  }): Promise<void> {
+  async update(
+    checkpointId: string,
+    updates: {
+      status: "success" | "failed" | "paused";
+      outputData?: Record<string, unknown>;
+      errorMessage?: string;
+      durationMs?: number;
+      metadata?: Record<string, unknown>;
+      compensationStatus?: "pending" | "done" | "failed" | "skipped";
+      finishedAt?: Date | null;
+    },
+  ): Promise<void> {
     const existing = await prisma.nodeExecutionCheckpoint.findUnique({
       where: { id: checkpointId },
     });
@@ -435,8 +460,14 @@ export class DbIdempotencyStore implements IdempotencyStore {
       select: { id: true, stateJson: true } as any,
     });
 
-    const state = (row as any)?.stateJson as Record<string, unknown> | undefined;
-    if (row && (state?.status === "success" || state?.status === "completed") && state?.outputData) {
+    const state = (row as any)?.stateJson as
+      | Record<string, unknown>
+      | undefined;
+    if (
+      row &&
+      (state?.status === "success" || state?.status === "completed") &&
+      state?.outputData
+    ) {
       this.successful.set(
         resumeKey,
         state.outputData as Record<string, unknown>,
@@ -456,9 +487,7 @@ export class DbIdempotencyStore implements IdempotencyStore {
   async getOutput(
     input: IdempotencyKeyInput,
   ): Promise<Record<string, unknown> | null> {
-    return (
-      this.successful.get(DbIdempotencyStore.resumeKey(input)) ?? null
-    );
+    return this.successful.get(DbIdempotencyStore.resumeKey(input)) ?? null;
   }
 }
 
@@ -531,50 +560,70 @@ export async function runWorkflowDAG(opts: {
         break;
 
       case "node.started":
-        sseExecutionBus.broadcast({ executionId, eventType: "node", data: {
+        sseExecutionBus.broadcast({
           executionId,
-          nodeId: event.nodeId,
-          nodeName: event.nodeName,
-          status: "running",
-          attempt: event.attempt,
-        }});
+          eventType: "node",
+          data: {
+            executionId,
+            nodeId: event.nodeId,
+            nodeName: event.nodeName,
+            status: "running",
+            attempt: event.attempt,
+          },
+        });
         break;
 
       case "node.completed":
-        sseExecutionBus.broadcast({ executionId, eventType: "node", data: {
+        sseExecutionBus.broadcast({
           executionId,
-          nodeId: event.nodeId,
-          status: "success",
-          durationMs: event.durationMs,
-        }});
+          eventType: "node",
+          data: {
+            executionId,
+            nodeId: event.nodeId,
+            status: "success",
+            durationMs: event.durationMs,
+          },
+        });
         break;
 
       case "node.failed":
-        sseExecutionBus.broadcast({ executionId, eventType: "node", data: {
+        sseExecutionBus.broadcast({
           executionId,
-          nodeId: event.nodeId,
-          status: "failed",
-          error: event.error,
-          attempt: event.attempt,
-        }});
+          eventType: "node",
+          data: {
+            executionId,
+            nodeId: event.nodeId,
+            status: "failed",
+            error: event.error,
+            attempt: event.attempt,
+          },
+        });
         break;
 
       case "node.retrying":
-        sseExecutionBus.broadcast({ executionId, eventType: "retry", data: {
+        sseExecutionBus.broadcast({
           executionId,
-          nodeId: event.nodeId,
-          attempt: event.attempt,
-          delayMs: event.delayMs,
-        }});
+          eventType: "retry",
+          data: {
+            executionId,
+            nodeId: event.nodeId,
+            attempt: event.attempt,
+            delayMs: event.delayMs,
+          },
+        });
         break;
 
       case "node.paused":
-        sseExecutionBus.broadcast({ executionId, eventType: "approval", data: {
+        sseExecutionBus.broadcast({
           executionId,
-          nodeId: event.nodeId,
-          approvalTaskId: event.approvalTaskId,
-          status: "pending",
-        }});
+          eventType: "approval",
+          data: {
+            executionId,
+            nodeId: event.nodeId,
+            approvalTaskId: event.approvalTaskId,
+            status: "pending",
+          },
+        });
         break;
 
       case "dlq.entry":
@@ -595,11 +644,15 @@ export async function runWorkflowDAG(opts: {
             } as any,
           } as any,
         });
-        sseExecutionBus.broadcast({ executionId, eventType: "dlq", data: {
+        sseExecutionBus.broadcast({
           executionId,
-          nodeId: event.nodeId,
-          error: event.error,
-        }});
+          eventType: "dlq",
+          data: {
+            executionId,
+            nodeId: event.nodeId,
+            error: event.error,
+          },
+        });
         break;
 
       case "execution.completed":
@@ -615,15 +668,24 @@ export async function runWorkflowDAG(opts: {
           where: { id: workflowId },
           data: { lastRunStatus: "success", lastRunAt: new Date() } as any,
         });
-        sseExecutionBus.broadcast({ executionId, eventType: "execution", data: {
+        sseExecutionBus.broadcast({
           executionId,
-          status: "success",
-          durationMs: event.durationMs,
-        }});
-        await writeAudit("execution.completed", "execution", String(executionId), {
-          workflowId,
-          durationMs: event.durationMs,
+          eventType: "execution",
+          data: {
+            executionId,
+            status: "success",
+            durationMs: event.durationMs,
+          },
         });
+        await writeAudit(
+          "execution.completed",
+          "execution",
+          String(executionId),
+          {
+            workflowId,
+            durationMs: event.durationMs,
+          },
+        );
         break;
 
       case "execution.failed": {
@@ -639,11 +701,15 @@ export async function runWorkflowDAG(opts: {
           where: { id: workflowId },
           data: { lastRunStatus: "failed", lastRunAt: new Date() } as any,
         });
-        sseExecutionBus.broadcast({ executionId, eventType: "execution", data: {
+        sseExecutionBus.broadcast({
           executionId,
-          status: "failed",
-          error: event.error,
-        }});
+          eventType: "execution",
+          data: {
+            executionId,
+            status: "failed",
+            error: event.error,
+          },
+        });
         await writeAudit("execution.failed", "execution", String(executionId), {
           workflowId,
           error: event.error,
@@ -813,7 +879,7 @@ export async function runWorkflowDAG(opts: {
             ...input,
             // Propagate the parent's depth so the child DAG run starts at
             // depth+1 and can reject any further spawn past the cap.
-            _childWorkflowDepth: (ctx.childWorkflowDepth ?? 0),
+            _childWorkflowDepth: ctx.childWorkflowDepth ?? 0,
           },
           triggerType: "child_workflow",
           parentExecutionId: executionId,
@@ -859,11 +925,15 @@ export async function runWorkflowDAG(opts: {
       } as any,
     });
 
-    sseExecutionBus.broadcast({ executionId, eventType: "execution", data: {
+    sseExecutionBus.broadcast({
       executionId,
-      status: "failed",
-      error: msg,
-    }});
+      eventType: "execution",
+      data: {
+        executionId,
+        status: "failed",
+        error: msg,
+      },
+    });
 
     // ── P1-14: same recovery_exhausted logic as the execution.failed event ──
     // This catch covers exceptions thrown out of `runner.run()` itself

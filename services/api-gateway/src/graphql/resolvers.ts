@@ -56,7 +56,11 @@ export const resolvers = {
       const u = user(ctx);
       const memberships = (await prisma.membership.findMany({
         where: { userId: u.id },
-        include: { tenant: { select: { id: true, name: true, planId: true, primaryRegion: true } } } as any,
+        include: {
+          tenant: {
+            select: { id: true, name: true, planId: true, primaryRegion: true },
+          },
+        } as any,
       })) as any[];
       return memberships
         .filter((m) => m.tenant)
@@ -69,81 +73,150 @@ export const resolvers = {
         }));
     },
 
-    workflows: async (_p: unknown, args: Record<string, unknown>, ctx: Record<string, unknown>) => {
+    workflows: async (
+      _p: unknown,
+      args: Record<string, unknown>,
+      ctx: Record<string, unknown>,
+    ) => {
       const u = user(ctx);
       const limit = clamp(args.first as number | null);
       const offset = args.after ? dec(args.after as string) : 0;
       const filter = args.filter as Record<string, unknown> | undefined;
       const where: any = { tenantId: u.tenantId };
-      if (filter?.status) where.status = (filter.status as string).toLowerCase();
-      if (filter?.search) where.name = { contains: filter.search as string, mode: "insensitive" };
+      if (filter?.status)
+        where.status = (filter.status as string).toLowerCase();
+      if (filter?.search)
+        where.name = { contains: filter.search as string, mode: "insensitive" };
 
       const [rows, total] = await Promise.all([
-        (prisma.workflow.findMany({
+        prisma.workflow.findMany({
           where,
           orderBy: { updatedAt: "desc" },
           take: limit,
           skip: offset,
-        })) as Promise<any[]>,
+        }) as Promise<any[]>,
         prisma.workflow.count({ where }),
       ]);
 
       return {
-        edges: rows.map((r) => ({ node: { id: String(r.id), tenantId: String(r.tenantId), name: r.name, status: toGqlStatus(r.status), currentVersionId: null, tags: [] }, cursor: enc(r.id) })),
+        edges: rows.map((r) => ({
+          node: {
+            id: String(r.id),
+            tenantId: String(r.tenantId),
+            name: r.name,
+            status: toGqlStatus(r.status),
+            currentVersionId: null,
+            tags: [],
+          },
+          cursor: enc(r.id),
+        })),
         pageInfo: pageInfo(rows.length === limit, offset, rows),
         totalCount: total ?? 0,
       };
     },
 
-    workflow: async (_p: unknown, args: Record<string, unknown>, ctx: Record<string, unknown>) => {
+    workflow: async (
+      _p: unknown,
+      args: Record<string, unknown>,
+      ctx: Record<string, unknown>,
+    ) => {
       const u = user(ctx);
       const r = (await prisma.workflow.findFirst({
         where: { id: String(args.id), tenantId: u.tenantId },
       })) as any;
-      return r ? { id: String(r.id), tenantId: String(r.tenantId), name: r.name, status: toGqlStatus(r.status), currentVersionId: null, tags: [] } : null;
+      return r
+        ? {
+            id: String(r.id),
+            tenantId: String(r.tenantId),
+            name: r.name,
+            status: toGqlStatus(r.status),
+            currentVersionId: null,
+            tags: [],
+          }
+        : null;
     },
 
-    executions: async (_p: unknown, args: Record<string, unknown>, ctx: Record<string, unknown>) => {
+    executions: async (
+      _p: unknown,
+      args: Record<string, unknown>,
+      ctx: Record<string, unknown>,
+    ) => {
       const u = user(ctx);
       const limit = clamp(args.first as number | null);
       const offset = args.after ? dec(args.after as string) : 0;
       const filter = args.filter as Record<string, unknown> | undefined;
       const where: any = { tenantId: u.tenantId };
       if (filter?.workflowId) where.workflowId = String(filter.workflowId);
-      if (filter?.status) where.status = (filter.status as string).toLowerCase();
+      if (filter?.status)
+        where.status = (filter.status as string).toLowerCase();
 
       const [rows, total] = await Promise.all([
-        (prisma.workflowExecution.findMany({
+        prisma.workflowExecution.findMany({
           where,
           orderBy: { startedAt: "desc" },
           take: limit,
           skip: offset,
-        })) as Promise<any[]>,
+        }) as Promise<any[]>,
         prisma.workflowExecution.count({ where }),
       ]);
 
       return {
-        edges: rows.map((r) => ({ node: { id: String(r.id), workflowVersionId: String(r.workflowId), status: toGqlStatus(r.status, "pending"), startedAt: toIso(r.startedAt), finishedAt: r.finishedAt ? toIso(r.finishedAt) : null, stepResults: [], checkpoints: [] }, cursor: enc(r.id) })),
+        edges: rows.map((r) => ({
+          node: {
+            id: String(r.id),
+            workflowVersionId: String(r.workflowId),
+            status: toGqlStatus(r.status, "pending"),
+            startedAt: toIso(r.startedAt),
+            finishedAt: r.finishedAt ? toIso(r.finishedAt) : null,
+            stepResults: [],
+            checkpoints: [],
+          },
+          cursor: enc(r.id),
+        })),
         pageInfo: pageInfo(rows.length === limit, offset, rows),
         totalCount: total ?? 0,
       };
     },
 
-    execution: async (_p: unknown, args: Record<string, unknown>, ctx: Record<string, unknown>) => {
+    execution: async (
+      _p: unknown,
+      args: Record<string, unknown>,
+      ctx: Record<string, unknown>,
+    ) => {
       const u = user(ctx);
       const r = (await prisma.workflowExecution.findFirst({
         where: { id: String(args.id), tenantId: u.tenantId },
       })) as any;
-      return r ? { id: String(r.id), workflowVersionId: String(r.workflowId), status: toGqlStatus(r.status, "pending"), startedAt: toIso(r.startedAt), finishedAt: r.finishedAt ? toIso(r.finishedAt) : null, stepResults: [], checkpoints: [] } : null;
+      return r
+        ? {
+            id: String(r.id),
+            workflowVersionId: String(r.workflowId),
+            status: toGqlStatus(r.status, "pending"),
+            startedAt: toIso(r.startedAt),
+            finishedAt: r.finishedAt ? toIso(r.finishedAt) : null,
+            stepResults: [],
+            checkpoints: [],
+          }
+        : null;
     },
 
-    dashboards: async (_p: unknown, _a: unknown, ctx: Record<string, unknown>) => {
+    dashboards: async (
+      _p: unknown,
+      _a: unknown,
+      ctx: Record<string, unknown>,
+    ) => {
       const u = user(ctx);
       const rows = (await prisma.dashboard.findMany({
         where: { tenantId: u.tenantId },
         orderBy: { updatedAt: "desc" },
       })) as any[];
-      return rows.map((r) => ({ id: String(r.id), tenantId: String(r.tenantId), title: (r as any).name ?? r.title, status: toGqlStatus(r.status), currentVersionId: null }));
+      return rows.map((r) => ({
+        id: String(r.id),
+        tenantId: String(r.tenantId),
+        title: (r as any).name ?? r.title,
+        status: toGqlStatus(r.status),
+        currentVersionId: null,
+      }));
     },
 
     connector: async (_p: unknown, args: Record<string, unknown>) => {
@@ -155,26 +228,51 @@ export const resolvers = {
         where: { connectorId: r.id },
         orderBy: { createdAt: "desc" },
       })) as any[];
-      return { id: String(r.id), slug: r.slug ?? r.name, name: r.displayName ?? r.name, trustLevel: ((r as any).certificationLevel ?? r.trustLevel ?? "community").toUpperCase(), versions: versions.map((v) => ({ id: String(v.id), version: v.semver, supported: (v as any).isSupported ?? !(v as any).isDeprecated })) };
+      return {
+        id: String(r.id),
+        slug: r.slug ?? r.name,
+        name: r.displayName ?? r.name,
+        trustLevel: (
+          (r as any).certificationLevel ??
+          r.trustLevel ??
+          "community"
+        ).toUpperCase(),
+        versions: versions.map((v) => ({
+          id: String(v.id),
+          version: v.semver,
+          supported: (v as any).isSupported ?? !(v as any).isDeprecated,
+        })),
+      };
     },
 
     templates: async (_p: unknown, args: Record<string, unknown>) => {
       const limit = clamp(args.first as number | null);
       const offset = args.after ? dec(args.after as string) : 0;
-      const where: any = args.category ? { category: args.category as string } : {};
+      const where: any = args.category
+        ? { category: args.category as string }
+        : {};
 
       const [rows, total] = await Promise.all([
-        (prisma.template.findMany({
+        prisma.template.findMany({
           where,
           orderBy: { installCount: "desc" } as any,
           take: limit,
           skip: offset,
-        })) as Promise<any[]>,
+        }) as Promise<any[]>,
         prisma.template.count({ where }),
       ]);
 
       return {
-        edges: rows.map((r) => ({ node: { id: String(r.id), category: r.category, visibility: "PUBLIC", installCount: (r as any).uses ?? r.installCount, versions: [] }, cursor: enc(r.id) })),
+        edges: rows.map((r) => ({
+          node: {
+            id: String(r.id),
+            category: r.category,
+            visibility: "PUBLIC",
+            installCount: (r as any).uses ?? r.installCount,
+            versions: [],
+          },
+          cursor: enc(r.id),
+        })),
         pageInfo: pageInfo(rows.length === limit, offset, rows),
         totalCount: total ?? 0,
       };
@@ -182,11 +280,17 @@ export const resolvers = {
   },
 
   Mutation: {
-    publishWorkflow: async (_p: unknown, args: Record<string, unknown>, ctx: Record<string, unknown>) => {
+    publishWorkflow: async (
+      _p: unknown,
+      args: Record<string, unknown>,
+      ctx: Record<string, unknown>,
+    ) => {
       const u = user(ctx);
       const input = args.input as Record<string, unknown>;
       const wid = String(input.workflowId);
-      const wf = (await prisma.workflow.findUnique({ where: { id: wid } })) as any;
+      const wf = (await prisma.workflow.findUnique({
+        where: { id: wid },
+      })) as any;
       if (!wf) throw new Error("Workflow not found");
 
       const existing = (await prisma.workflowVersion.findFirst({
@@ -207,18 +311,50 @@ export const resolvers = {
       })) as any;
 
       return {
-        workflowVersion: { id: String(version.id), versionNumber: ver, graph: { nodes: Array.isArray((version as any).nodes) ? (version as any).nodes : (Array.isArray(version.graphJson) ? version.graphJson : []), edges: [], variables: [], policies: [] }, checksum: `${wid}-v${ver}`, createdBy: String(u.id), publishedAt: toIso(version.createdAt) },
+        workflowVersion: {
+          id: String(version.id),
+          versionNumber: ver,
+          graph: {
+            nodes: Array.isArray((version as any).nodes)
+              ? (version as any).nodes
+              : Array.isArray(version.graphJson)
+                ? version.graphJson
+                : [],
+            edges: [],
+            variables: [],
+            policies: [],
+          },
+          checksum: `${wid}-v${ver}`,
+          createdBy: String(u.id),
+          publishedAt: toIso(version.createdAt),
+        },
         validationResult: { valid: true, errors: [], warnings: [] },
       };
     },
 
-    createDashboard: async (_p: unknown, args: Record<string, unknown>, ctx: Record<string, unknown>) => {
+    createDashboard: async (
+      _p: unknown,
+      args: Record<string, unknown>,
+      ctx: Record<string, unknown>,
+    ) => {
       const u = user(ctx);
       const input = args.input as Record<string, unknown>;
       const d = (await prisma.dashboard.create({
-        data: { tenantId: u.tenantId, title: input.title as string, status: "draft" } as any,
+        data: {
+          tenantId: u.tenantId,
+          title: input.title as string,
+          status: "draft",
+        } as any,
       })) as any;
-      return { dashboard: { id: String(d.id), tenantId: String(d.tenantId), title: (d as any).title ?? d.name, status: "DRAFT", currentVersionId: null } };
+      return {
+        dashboard: {
+          id: String(d.id),
+          tenantId: String(d.tenantId),
+          title: (d as any).title ?? d.name,
+          status: "DRAFT",
+          currentVersionId: null,
+        },
+      };
     },
 
     installConnector: async (_p: unknown, args: Record<string, unknown>) => {
@@ -227,10 +363,27 @@ export const resolvers = {
         where: { id: String(input.connectorId) },
       })) as any;
       if (!r) throw new Error("Connector not found");
-      return { connector: { id: String(r.id), slug: r.slug ?? r.name, name: r.displayName ?? r.name, trustLevel: ((r as any).certificationLevel ?? r.trustLevel ?? "community").toUpperCase(), versions: [] }, credentials: null };
+      return {
+        connector: {
+          id: String(r.id),
+          slug: r.slug ?? r.name,
+          name: r.displayName ?? r.name,
+          trustLevel: (
+            (r as any).certificationLevel ??
+            r.trustLevel ??
+            "community"
+          ).toUpperCase(),
+          versions: [],
+        },
+        credentials: null,
+      };
     },
 
-    promoteEnvironment: async (_p: unknown, args: Record<string, unknown>, ctx: Record<string, unknown>) => {
+    promoteEnvironment: async (
+      _p: unknown,
+      args: Record<string, unknown>,
+      ctx: Record<string, unknown>,
+    ) => {
       const u = user(ctx);
       const input = args.input as Record<string, unknown>;
       const p = (await prisma.workflowPromotion.create({
@@ -243,7 +396,18 @@ export const resolvers = {
           promotedBy: String(u.id),
         } as any,
       })) as any;
-      return { promotion: { id: String(p.id), workflowId: String(p.workflowId), sourceEnvironment: p.fromEnvironment, targetEnvironment: p.toEnvironment, versionId: String(input.versionId), promotedBy: String(u.id), promotedAt: toIso(p.createdAt), status: p.status } };
+      return {
+        promotion: {
+          id: String(p.id),
+          workflowId: String(p.workflowId),
+          sourceEnvironment: p.fromEnvironment,
+          targetEnvironment: p.toEnvironment,
+          versionId: String(input.versionId),
+          promotedBy: String(u.id),
+          promotedAt: toIso(p.createdAt),
+          status: p.status,
+        },
+      };
     },
   },
 
@@ -253,7 +417,15 @@ export const resolvers = {
         where: { userId: String(parent.id) },
         select: { tenantId: true, roleId: true, status: true } as any,
       })) as any[];
-      return rows.map((r) => ({ userId: String(parent.id), tenantId: String(r.tenantId), role: { id: "", name: "member", permissions: [] }, status: (r.status ?? "active").toUpperCase() as "ACTIVE" | "INVITED" | "DEACTIVATED" }));
+      return rows.map((r) => ({
+        userId: String(parent.id),
+        tenantId: String(r.tenantId),
+        role: { id: "", name: "member", permissions: [] },
+        status: (r.status ?? "active").toUpperCase() as
+          | "ACTIVE"
+          | "INVITED"
+          | "DEACTIVATED",
+      }));
     },
   },
 
@@ -262,7 +434,15 @@ export const resolvers = {
       const rows = (await prisma.membership.findMany({
         where: { tenantId: String(parent.id) },
       })) as any[];
-      return rows.map((r) => ({ userId: String(r.userId), tenantId: String(r.tenantId), role: { id: "", name: "member", permissions: [] }, status: (r.status ?? "active").toUpperCase() as "ACTIVE" | "INVITED" | "DEACTIVATED" }));
+      return rows.map((r) => ({
+        userId: String(r.userId),
+        tenantId: String(r.tenantId),
+        role: { id: "", name: "member", permissions: [] },
+        status: (r.status ?? "active").toUpperCase() as
+          | "ACTIVE"
+          | "INVITED"
+          | "DEACTIVATED",
+      }));
     },
   },
 
@@ -272,9 +452,30 @@ export const resolvers = {
         where: { workflowId: String(parent.id) },
         orderBy: { versionNumber: "desc" },
       })) as any;
-      return v ? { id: String(v.id), versionNumber: v.versionNumber, graph: { nodes: Array.isArray((v as any).nodes) ? (v as any).nodes : (Array.isArray(v.graphJson) ? v.graphJson : []), edges: [], variables: [], policies: [] }, checksum: `${String(parent.id)}-v${v.versionNumber}`, createdBy: String(v.workflowId), publishedAt: toIso(v.createdAt) } : null;
+      return v
+        ? {
+            id: String(v.id),
+            versionNumber: v.versionNumber,
+            graph: {
+              nodes: Array.isArray((v as any).nodes)
+                ? (v as any).nodes
+                : Array.isArray(v.graphJson)
+                  ? v.graphJson
+                  : [],
+              edges: [],
+              variables: [],
+              policies: [],
+            },
+            checksum: `${String(parent.id)}-v${v.versionNumber}`,
+            createdBy: String(v.workflowId),
+            publishedAt: toIso(v.createdAt),
+          }
+        : null;
     },
-    versions: async (parent: Record<string, unknown>, args: Record<string, unknown>) => {
+    versions: async (
+      parent: Record<string, unknown>,
+      args: Record<string, unknown>,
+    ) => {
       const limit = clamp(args.first as number | null);
       const rows = (await prisma.workflowVersion.findMany({
         where: { workflowId: String(parent.id) },
@@ -282,8 +483,32 @@ export const resolvers = {
         take: limit,
       })) as any[];
       return {
-        edges: rows.map((v) => ({ node: { id: String(v.id), versionNumber: v.versionNumber, graph: { nodes: Array.isArray((v as any).nodes) ? (v as any).nodes : (Array.isArray(v.graphJson) ? v.graphJson : []), edges: [], variables: [], policies: [] }, checksum: `${String(parent.id)}-v${v.versionNumber}`, createdBy: String(v.workflowId), publishedAt: toIso(v.createdAt) }, cursor: enc(v.id) })),
-        pageInfo: { hasNextPage: rows.length === limit, hasPreviousPage: false, startCursor: rows.length > 0 ? enc(rows[0].id) : null, endCursor: rows.length > 0 ? enc(rows[rows.length - 1].id) : null },
+        edges: rows.map((v) => ({
+          node: {
+            id: String(v.id),
+            versionNumber: v.versionNumber,
+            graph: {
+              nodes: Array.isArray((v as any).nodes)
+                ? (v as any).nodes
+                : Array.isArray(v.graphJson)
+                  ? v.graphJson
+                  : [],
+              edges: [],
+              variables: [],
+              policies: [],
+            },
+            checksum: `${String(parent.id)}-v${v.versionNumber}`,
+            createdBy: String(v.workflowId),
+            publishedAt: toIso(v.createdAt),
+          },
+          cursor: enc(v.id),
+        })),
+        pageInfo: {
+          hasNextPage: rows.length === limit,
+          hasPreviousPage: false,
+          startCursor: rows.length > 0 ? enc(rows[0].id) : null,
+          endCursor: rows.length > 0 ? enc(rows[rows.length - 1].id) : null,
+        },
       };
     },
   },
@@ -294,7 +519,15 @@ export const resolvers = {
         where: { dashboardId: String(parent.id) },
         orderBy: { versionNumber: "desc" },
       })) as any;
-      return v ? { id: String(v.id), versionNumber: v.versionNumber, layout: v.layoutJson, widgets: [], checksum: v.checksum ?? "" } : null;
+      return v
+        ? {
+            id: String(v.id),
+            versionNumber: v.versionNumber,
+            layout: v.layoutJson,
+            widgets: [],
+            checksum: v.checksum ?? "",
+          }
+        : null;
     },
   },
 
@@ -304,7 +537,12 @@ export const resolvers = {
         where: { templateId: String(parent.id) },
         orderBy: { createdAt: "desc" },
       })) as any[];
-      return rows.map((v) => ({ id: String(v.id), versionNumber: (v as any).version ?? v.versionNumber ?? 1, templateId: String(v.templateId), createdAt: toIso(v.createdAt) }));
+      return rows.map((v) => ({
+        id: String(v.id),
+        versionNumber: (v as any).version ?? v.versionNumber ?? 1,
+        templateId: String(v.templateId),
+        createdAt: toIso(v.createdAt),
+      }));
     },
   },
 };

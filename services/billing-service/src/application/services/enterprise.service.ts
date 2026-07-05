@@ -130,12 +130,7 @@ export class EnterpriseService {
     const commitment = await this.getCommitment(tenantId);
     if (!commitment) return [];
 
-    const resources = [
-      "executions",
-      "ai_tokens",
-      "rag_queries",
-      "storage_gb",
-    ];
+    const resources = ["executions", "ai_tokens", "rag_queries", "storage_gb"];
 
     const result: CommitmentOverage[] = [];
 

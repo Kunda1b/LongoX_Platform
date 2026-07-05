@@ -95,8 +95,9 @@ export class ScheduleWorker {
     // Enqueue the workflow execution via the shared job queue.
     // startWorkflowExecution creates the execution record and increments the
     // workflow execution count, so we must not duplicate those operations here.
-    const { startWorkflowExecution } =
-      await import("@longox/execution-service/workflow-runner");
+    const { startWorkflowExecution } = await import(
+      "@longox/execution-service/workflow-runner"
+    );
     const execution = await startWorkflowExecution(
       workflowId,
       workflow.name,

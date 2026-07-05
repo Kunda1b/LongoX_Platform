@@ -13,7 +13,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Star, LayoutTemplate, Upload, DollarSign, Share } from "lucide-react";
+import {
+  Search,
+  Star,
+  LayoutTemplate,
+  Upload,
+  DollarSign,
+  Share,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function TemplatesPage() {
@@ -22,17 +29,17 @@ export default function TemplatesPage() {
 
   const handlePublish = async (t: any) => {
     try {
-      await customFetch('/api/marketplace/listings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await customFetch("/api/marketplace/listings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: t.name,
           description: t.description,
-          listingType: 'template',
+          listingType: "template",
           category: t.category,
           tags: t.tags,
-          pricing: { free: true }
-        })
+          pricing: { free: true },
+        }),
       });
       alert(`Published ${t.name} to marketplace!`);
     } catch (e) {
@@ -41,22 +48,24 @@ export default function TemplatesPage() {
   };
 
   const handleSell = async (t: any) => {
-    const priceStr = window.prompt("Enter price (in cents, e.g. 1000 for $10.00):");
+    const priceStr = window.prompt(
+      "Enter price (in cents, e.g. 1000 for $10.00):",
+    );
     if (!priceStr) return;
     const price = parseInt(priceStr, 10);
     if (isNaN(price)) return alert("Invalid price");
     try {
-      await customFetch('/api/marketplace/listings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await customFetch("/api/marketplace/listings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: t.name,
           description: t.description,
-          listingType: 'template',
+          listingType: "template",
           category: t.category,
           tags: t.tags,
-          pricing: { free: false, price }
-        })
+          pricing: { free: false, price },
+        }),
       });
       alert(`Listed ${t.name} for sale at $${(price / 100).toFixed(2)}!`);
     } catch (e) {
@@ -138,13 +147,37 @@ export default function TemplatesPage() {
                 </span>
               </CardContent>
               <CardFooter className="flex gap-2 p-4 pt-0">
-                <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={(e) => { e.stopPropagation(); handlePublish(t); }}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePublish(t);
+                  }}
+                >
                   <Upload className="mr-1 h-3 w-3" /> Publish
                 </Button>
-                <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={(e) => { e.stopPropagation(); handleSell(t); }}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSell(t);
+                  }}
+                >
                   <DollarSign className="mr-1 h-3 w-3" /> Sell
                 </Button>
-                <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={(e) => { e.stopPropagation(); handleShare(t); }}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleShare(t);
+                  }}
+                >
                   <Share className="mr-1 h-3 w-3" /> Share
                 </Button>
               </CardFooter>

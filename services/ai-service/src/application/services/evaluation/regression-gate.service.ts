@@ -99,7 +99,10 @@ export class RegressionGateService {
     targetEnvironment: string,
   ): Promise<PromotionGateResult> {
     try {
-      const regression = await this.evaluateRegression(promptId, candidateVersion);
+      const regression = await this.evaluateRegression(
+        promptId,
+        candidateVersion,
+      );
 
       if (!regression.passed) {
         return {
@@ -131,7 +134,8 @@ export class RegressionGateService {
     } catch (error) {
       return {
         allowed: false,
-        reason: error instanceof Error ? error.message : "Regression check failed",
+        reason:
+          error instanceof Error ? error.message : "Regression check failed",
       };
     }
   }

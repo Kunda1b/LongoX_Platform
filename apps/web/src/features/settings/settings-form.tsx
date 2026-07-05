@@ -2,7 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +16,15 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, KeyRound, Bell, Loader2, Save, Camera, Trash2 } from "lucide-react";
+import {
+  User,
+  KeyRound,
+  Bell,
+  Loader2,
+  Save,
+  Camera,
+  Trash2,
+} from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
@@ -74,12 +88,20 @@ function AvatarUpload({
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      toast({ title: "Invalid file", description: "Please select an image file.", variant: "destructive" });
+      toast({
+        title: "Invalid file",
+        description: "Please select an image file.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      toast({ title: "File too large", description: "Please choose an image under 2 MB.", variant: "destructive" });
+      toast({
+        title: "File too large",
+        description: "Please choose an image under 2 MB.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -111,12 +133,16 @@ function AvatarUpload({
           const data = await res.json();
           if (!res.ok) throw new Error(data.error ?? "Upload failed");
           onUpdate(data.avatarUrl);
-          toast({ title: "Avatar updated", description: "Your profile photo has been saved." });
+          toast({
+            title: "Avatar updated",
+            description: "Your profile photo has been saved.",
+          });
         } catch (err) {
           setPreview(avatarUrl);
           toast({
             title: "Upload failed",
-            description: err instanceof Error ? err.message : "Something went wrong",
+            description:
+              err instanceof Error ? err.message : "Something went wrong",
             variant: "destructive",
           });
         } finally {
@@ -140,11 +166,15 @@ function AvatarUpload({
       if (!res.ok) throw new Error("Failed to remove avatar");
       setPreview(null);
       onUpdate(null);
-      toast({ title: "Avatar removed", description: "Your profile photo has been removed." });
+      toast({
+        title: "Avatar removed",
+        description: "Your profile photo has been removed.",
+      });
     } catch (err) {
       toast({
         title: "Remove failed",
-        description: err instanceof Error ? err.message : "Something went wrong",
+        description:
+          err instanceof Error ? err.message : "Something went wrong",
         variant: "destructive",
       });
     } finally {
@@ -157,7 +187,11 @@ function AvatarUpload({
       <div className="relative">
         <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-border bg-muted flex items-center justify-center text-xl font-semibold text-muted-foreground select-none">
           {preview ? (
-            <img src={preview} alt="Avatar" className="h-full w-full object-cover" />
+            <img
+              src={preview}
+              alt="Avatar"
+              className="h-full w-full object-cover"
+            />
           ) : (
             <span>{initials || <User className="h-8 w-8" />}</span>
           )}
@@ -171,7 +205,9 @@ function AvatarUpload({
 
       <div className="flex flex-col gap-2">
         <p className="text-sm font-medium">Profile photo</p>
-        <p className="text-xs text-muted-foreground">JPG, PNG, GIF up to 2 MB. Cropped to square.</p>
+        <p className="text-xs text-muted-foreground">
+          JPG, PNG, GIF up to 2 MB. Cropped to square.
+        </p>
         <div className="flex gap-2">
           <Button
             type="button"
@@ -234,11 +270,15 @@ function ProfileTab() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to update profile");
       updateUser({ name: data.user.name });
-      toast({ title: "Profile updated", description: "Your name has been saved." });
+      toast({
+        title: "Profile updated",
+        description: "Your name has been saved.",
+      });
     } catch (err) {
       toast({
         title: "Update failed",
-        description: err instanceof Error ? err.message : "Something went wrong",
+        description:
+          err instanceof Error ? err.message : "Something went wrong",
         variant: "destructive",
       });
     } finally {
@@ -254,7 +294,8 @@ function ProfileTab() {
           Profile Information
         </CardTitle>
         <CardDescription>
-          Update your display name and profile photo. Your email address and role cannot be changed here.
+          Update your display name and profile photo. Your email address and
+          role cannot be changed here.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -277,7 +318,12 @@ function ProfileTab() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="profile-email">Email address</Label>
-            <Input id="profile-email" type="email" value={user?.email ?? ""} disabled />
+            <Input
+              id="profile-email"
+              type="email"
+              value={user?.email ?? ""}
+              disabled
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="profile-role">Role</Label>
@@ -317,7 +363,8 @@ function PasswordTab() {
       setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
   const passwordMismatch =
-    form.confirmPassword.length > 0 && form.newPassword !== form.confirmPassword;
+    form.confirmPassword.length > 0 &&
+    form.newPassword !== form.confirmPassword;
 
   const canSave =
     form.currentPassword.trim().length > 0 &&
@@ -338,11 +385,15 @@ function PasswordTab() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to update password");
       setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-      toast({ title: "Password changed", description: "Your password has been updated." });
+      toast({
+        title: "Password changed",
+        description: "Your password has been updated.",
+      });
     } catch (err) {
       toast({
         title: "Update failed",
-        description: err instanceof Error ? err.message : "Something went wrong",
+        description:
+          err instanceof Error ? err.message : "Something went wrong",
         variant: "destructive",
       });
     } finally {
@@ -399,7 +450,9 @@ function PasswordTab() {
               autoComplete="new-password"
             />
             {passwordMismatch && (
-              <p className="text-xs text-destructive">Passwords don&apos;t match</p>
+              <p className="text-xs text-destructive">
+                Passwords don&apos;t match
+              </p>
             )}
           </div>
         </div>
@@ -426,7 +479,13 @@ type PrefRowProps = {
   onCheckedChange: (v: boolean) => void;
 };
 
-function PrefRow({ id, label, description, checked, onCheckedChange }: PrefRowProps) {
+function PrefRow({
+  id,
+  label,
+  description,
+  checked,
+  onCheckedChange,
+}: PrefRowProps) {
   return (
     <div className="flex items-center justify-between gap-4 py-3">
       <div className="space-y-0.5 min-w-0">
@@ -453,14 +512,15 @@ function NotificationsTab() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
-      .then((data: NotificationPrefs) => setPrefs({ ...DEFAULT_PREFS, ...data }))
+      .then((data: NotificationPrefs) =>
+        setPrefs({ ...DEFAULT_PREFS, ...data }),
+      )
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [token]);
 
-  const toggle =
-    (key: keyof NotificationPrefs) => (val: boolean) =>
-      setPrefs((prev) => ({ ...prev, [key]: val }));
+  const toggle = (key: keyof NotificationPrefs) => (val: boolean) =>
+    setPrefs((prev) => ({ ...prev, [key]: val }));
 
   const handleSave = async () => {
     setSaving(true);
@@ -471,7 +531,10 @@ function NotificationsTab() {
         body: JSON.stringify(prefs),
       });
       if (!res.ok) throw new Error("Failed to save preferences");
-      toast({ title: "Preferences saved", description: "Your notification settings have been updated." });
+      toast({
+        title: "Preferences saved",
+        description: "Your notification settings have been updated.",
+      });
     } catch {
       toast({
         title: "Save failed",
@@ -501,7 +564,8 @@ function NotificationsTab() {
           Notification Preferences
         </CardTitle>
         <CardDescription>
-          Choose how and when you want to be notified about activity in your workspace.
+          Choose how and when you want to be notified about activity in your
+          workspace.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

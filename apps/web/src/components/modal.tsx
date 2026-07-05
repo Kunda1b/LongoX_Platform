@@ -1,1 +1,10 @@
-export { Dialog as Modal, DialogTrigger as ModalTrigger, DialogContent as ModalContent, DialogHeader as ModalHeader, DialogTitle as ModalTitle, DialogDescription as ModalDescription, DialogFooter as ModalFooter, DialogClose as ModalClose } from "@/components/ui/dialog";
+export {
+  Dialog as Modal,
+  DialogTrigger as ModalTrigger,
+  DialogContent as ModalContent,
+  DialogHeader as ModalHeader,
+  DialogTitle as ModalTitle,
+  DialogDescription as ModalDescription,
+  DialogFooter as ModalFooter,
+  DialogClose as ModalClose,
+} from "@/components/ui/dialog";

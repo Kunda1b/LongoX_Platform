@@ -21,7 +21,13 @@
  * don't extend `ApiError` are wrapped as `INTERNAL_ERROR` (HTTP 500).
  */
 
-import type { Request, Response, NextFunction, ErrorRequestHandler, RequestHandler } from "express";
+import type {
+  Request,
+  Response,
+  NextFunction,
+  ErrorRequestHandler,
+  RequestHandler,
+} from "express";
 
 // ─── Envelope types ───────────────────────────────────────────────────────────
 
@@ -101,7 +107,10 @@ export class ApiError extends Error {
     return new ApiError({ status: 401, code: "UNAUTHORIZED", message });
   }
 
-  static forbidden(message = "Forbidden", details: ApiErrorDetail[] = []): ApiError {
+  static forbidden(
+    message = "Forbidden",
+    details: ApiErrorDetail[] = [],
+  ): ApiError {
     return new ApiError({ status: 403, code: "FORBIDDEN", message, details });
   }
 
@@ -122,7 +131,10 @@ export class ApiError extends Error {
     });
   }
 
-  static internal(message = "Internal Server Error", cause?: unknown): ApiError {
+  static internal(
+    message = "Internal Server Error",
+    cause?: unknown,
+  ): ApiError {
     return new ApiError({
       status: 500,
       code: "INTERNAL_ERROR",
@@ -244,7 +256,12 @@ export function sendForbidden(
   details: ApiErrorDetail[] = [],
   correlationId?: string | null,
 ): void {
-  sendApiError(res, 403, { code: "FORBIDDEN", message, details, correlationId });
+  sendApiError(res, 403, {
+    code: "FORBIDDEN",
+    message,
+    details,
+    correlationId,
+  });
 }
 
 /**
@@ -354,8 +371,15 @@ export const errorHandler: ErrorRequestHandler = (
   }
 
   // ── Express body-parser errors ────────────────────────────────────────────
-  const maybeBodyParser = err as { type?: string; status?: number; message?: string };
-  if (typeof maybeBodyParser.type === "string" && maybeBodyParser.type.startsWith("entity.")) {
+  const maybeBodyParser = err as {
+    type?: string;
+    status?: number;
+    message?: string;
+  };
+  if (
+    typeof maybeBodyParser.type === "string" &&
+    maybeBodyParser.type.startsWith("entity.")
+  ) {
     sendApiError(res, maybeBodyParser.status ?? 400, {
       code: "INVALID_BODY",
       message: maybeBodyParser.message ?? "Malformed request body",
@@ -369,7 +393,10 @@ export const errorHandler: ErrorRequestHandler = (
   console.error("[api-gateway] Unhandled error:", err);
   sendApiError(res, 500, {
     code: "INTERNAL_ERROR",
-    message: process.env["NODE_ENV"] === "production" ? "Internal Server Error" : message,
+    message:
+      process.env["NODE_ENV"] === "production"
+        ? "Internal Server Error"
+        : message,
     correlationId,
   });
 };

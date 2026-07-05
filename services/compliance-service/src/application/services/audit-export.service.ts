@@ -43,9 +43,14 @@ function getS3Config() {
   };
 }
 
-async function uploadToS3(key: string, body: string, contentType: string): Promise<string> {
+async function uploadToS3(
+  key: string,
+  body: string,
+  contentType: string,
+): Promise<string> {
   const cfg = getS3Config();
-  const endpoint = cfg.endpoint ?? `https://${cfg.bucket}.s3.${cfg.region}.amazonaws.com`;
+  const endpoint =
+    cfg.endpoint ?? `https://${cfg.bucket}.s3.${cfg.region}.amazonaws.com`;
   const url = `${endpoint}/${key}`;
 
   const res = await fetch(url, {
@@ -92,7 +97,8 @@ async function processJob(job: QueuedJob): Promise<void> {
     });
 
     if (job.format === "csv") {
-      const header = "id,actor_type,actor_id,action,resource_type,resource_id,metadata,created_at";
+      const header =
+        "id,actor_type,actor_id,action,resource_type,resource_id,metadata,created_at";
       const rows = entries.map(
         (e: any) =>
           `${e.id},"${e.actorType ?? ""}","${e.actorId ?? ""}","${e.action}","${e.resourceType ?? e.targetType ?? ""}","${e.resourceId ?? e.targetId ?? ""}","${JSON.stringify(e.metadata ?? {}).replace(/"/g, '""')}","${(e.createdAt ?? e.occurredAt) instanceof Date ? (e.createdAt ?? e.occurredAt).toISOString() : new Date(e.createdAt ?? e.occurredAt).toISOString()}"`,
@@ -114,9 +120,10 @@ async function processJob(job: QueuedJob): Promise<void> {
             resourceType: e.resourceType ?? e.targetType,
             resourceId: e.resourceId ?? e.targetId,
             metadata: e.metadata,
-            createdAt: (e.createdAt ?? e.occurredAt) instanceof Date
-              ? (e.createdAt ?? e.occurredAt).toISOString()
-              : new Date(e.createdAt ?? e.occurredAt).toISOString(),
+            createdAt:
+              (e.createdAt ?? e.occurredAt) instanceof Date
+                ? (e.createdAt ?? e.occurredAt).toISOString()
+                : new Date(e.createdAt ?? e.occurredAt).toISOString(),
           })),
         },
         null,
@@ -126,7 +133,11 @@ async function processJob(job: QueuedJob): Promise<void> {
 
     const key = `audit-exports/${job.tenantId}/${job.id}.${job.format}`;
     try {
-      await uploadToS3(key, job.result!, job.format === "csv" ? "text/csv" : "application/json");
+      await uploadToS3(
+        key,
+        job.result!,
+        job.format === "csv" ? "text/csv" : "application/json",
+      );
     } catch {
       // local storage fallback
     }
@@ -139,7 +150,10 @@ async function processJob(job: QueuedJob): Promise<void> {
         dateFrom: job.filters.dateFrom ?? new Date(),
         dateTo: job.filters.dateTo ?? new Date(),
         filterCriteria: job.filters as Record<string, unknown>,
-        rowCount: job.format === "csv" ? job.result!.split("\n").length - 1 : JSON.parse(job.result!).totalEntries,
+        rowCount:
+          job.format === "csv"
+            ? job.result!.split("\n").length - 1
+            : JSON.parse(job.result!).totalEntries,
         fileSizeBytes: BigInt(Buffer.byteLength(job.result!)),
         storagePath: `s3://${getS3Config().bucket}/${key}`,
         completedAt: new Date(),
@@ -176,9 +190,10 @@ export class AuditExportService {
     });
 
     return entries.map((e: any) => ({
-      timestamp: (e.createdAt ?? e.occurredAt) instanceof Date
-        ? (e.createdAt ?? e.occurredAt).toISOString()
-        : new Date(e.createdAt ?? e.occurredAt).toISOString(),
+      timestamp:
+        (e.createdAt ?? e.occurredAt) instanceof Date
+          ? (e.createdAt ?? e.occurredAt).toISOString()
+          : new Date(e.createdAt ?? e.occurredAt).toISOString(),
       actor: e.actorId,
       actorType: e.actorType,
       action: e.action,
@@ -191,7 +206,8 @@ export class AuditExportService {
 
   async exportToCsv(tenantId: string, from: Date, to: Date) {
     const entries = await this.exportAuditLog(tenantId, from, to);
-    const header = "timestamp,actor,actor_type,action,resource,resource_type,resource_id";
+    const header =
+      "timestamp,actor,actor_type,action,resource,resource_type,resource_id";
     const rows = entries.map(
       (e) =>
         `"${e.timestamp}","${e.actor ?? ""}","${e.actorType ?? ""}","${e.action}","${e.resource ?? ""}","${e.resourceType ?? ""}","${e.resourceId ?? ""}"`,
@@ -215,7 +231,10 @@ export class AuditExportService {
     );
   }
 
-  async exportAuditLogsAsCSV(tenantId: string, filters?: AuditExportFilters): Promise<string> {
+  async exportAuditLogsAsCSV(
+    tenantId: string,
+    filters?: AuditExportFilters,
+  ): Promise<string> {
     const job: QueuedJob = {
       id: generateId(),
       tenantId,
@@ -235,7 +254,10 @@ export class AuditExportService {
     return job.result ?? "";
   }
 
-  async exportAuditLogsAsJSON(tenantId: string, filters?: AuditExportFilters): Promise<string> {
+  async exportAuditLogsAsJSON(
+    tenantId: string,
+    filters?: AuditExportFilters,
+  ): Promise<string> {
     const job: QueuedJob = {
       id: generateId(),
       tenantId,

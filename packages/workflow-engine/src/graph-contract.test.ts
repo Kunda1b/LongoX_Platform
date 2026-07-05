@@ -12,25 +12,45 @@ function makeValidGraph(overrides?: Partial<WorkflowGraph>): WorkflowGraph {
   return {
     workflowId: "1",
     version: 1,
-    checksum: { algorithm: "sha-256", value: "abc", computedAt: new Date().toISOString() },
+    checksum: {
+      algorithm: "sha-256",
+      value: "abc",
+      computedAt: new Date().toISOString(),
+    },
     nodes: [
       {
-        id: "n1", type: "trigger", label: "Start", description: "", category: "trigger",
-        position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [],
+        id: "n1",
+        type: "trigger",
+        label: "Start",
+        description: "",
+        category: "trigger",
+        position: { x: 0, y: 0 },
+        config: {},
+        inputs: [],
+        outputs: [],
       },
       {
-        id: "n2", type: "action", label: "Process", description: "", category: "action",
-        position: { x: 100, y: 0 }, config: {}, inputs: [], outputs: [],
+        id: "n2",
+        type: "action",
+        label: "Process",
+        description: "",
+        category: "action",
+        position: { x: 100, y: 0 },
+        config: {},
+        inputs: [],
+        outputs: [],
       },
     ],
-    edges: [
-      { source: "n1", target: "n2" },
-    ],
+    edges: [{ source: "n1", target: "n2" }],
     metadata: {
       name: "Test Workflow",
       description: "A test",
       triggerType: "webhook",
-      versionChecksum: { algorithm: "sha-256", value: "abc", computedAt: new Date().toISOString() },
+      versionChecksum: {
+        algorithm: "sha-256",
+        value: "abc",
+        computedAt: new Date().toISOString(),
+      },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -55,116 +75,255 @@ describe("validateGraphContract", () => {
   });
 
   it("rejects missing checksum", () => {
-    const errors = validateGraphContract(makeValidGraph({ checksum: { algorithm: "sha-256", value: "", computedAt: "" } }));
+    const errors = validateGraphContract(
+      makeValidGraph({
+        checksum: { algorithm: "sha-256", value: "", computedAt: "" },
+      }),
+    );
     expect(errors).toContain("checksum is required");
   });
 
   it("rejects missing metadata.name", () => {
-    const errors = validateGraphContract(makeValidGraph({ metadata: { ...makeValidGraph().metadata, name: "" } }));
+    const errors = validateGraphContract(
+      makeValidGraph({ metadata: { ...makeValidGraph().metadata, name: "" } }),
+    );
     expect(errors).toContain("metadata.name is required");
   });
 
   it("rejects missing metadata.triggerType", () => {
-    const errors = validateGraphContract(makeValidGraph({ metadata: { ...makeValidGraph().metadata, triggerType: "" } }));
+    const errors = validateGraphContract(
+      makeValidGraph({
+        metadata: { ...makeValidGraph().metadata, triggerType: "" },
+      }),
+    );
     expect(errors).toContain("metadata.triggerType is required");
   });
 
   it("rejects non-array nodes", () => {
-    const errors = validateGraphContract(makeValidGraph({ nodes: undefined as unknown as WorkflowNodeContract[] }));
+    const errors = validateGraphContract(
+      makeValidGraph({ nodes: undefined as unknown as WorkflowNodeContract[] }),
+    );
     expect(errors).toContain("nodes must be an array");
   });
 
   it("rejects duplicate node ids", () => {
-    const errors = validateGraphContract(makeValidGraph({
-      nodes: [
-        { id: "n1", type: "trigger", label: "A", description: "", category: "trigger", position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [] },
-        { id: "n1", type: "action", label: "B", description: "", category: "action", position: { x: 100, y: 0 }, config: {}, inputs: [], outputs: [] },
-      ],
-    }));
+    const errors = validateGraphContract(
+      makeValidGraph({
+        nodes: [
+          {
+            id: "n1",
+            type: "trigger",
+            label: "A",
+            description: "",
+            category: "trigger",
+            position: { x: 0, y: 0 },
+            config: {},
+            inputs: [],
+            outputs: [],
+          },
+          {
+            id: "n1",
+            type: "action",
+            label: "B",
+            description: "",
+            category: "action",
+            position: { x: 100, y: 0 },
+            config: {},
+            inputs: [],
+            outputs: [],
+          },
+        ],
+      }),
+    );
     expect(errors).toContain('nodes[1].id "n1" is duplicate');
   });
 
   it("rejects node without type", () => {
-    const errors = validateGraphContract(makeValidGraph({
-      nodes: [
-        { id: "n1", label: "A", description: "", category: "trigger", position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [] },
-      ] as unknown as WorkflowNodeContract[],
-      edges: [],
-    }));
+    const errors = validateGraphContract(
+      makeValidGraph({
+        nodes: [
+          {
+            id: "n1",
+            label: "A",
+            description: "",
+            category: "trigger",
+            position: { x: 0, y: 0 },
+            config: {},
+            inputs: [],
+            outputs: [],
+          },
+        ] as unknown as WorkflowNodeContract[],
+        edges: [],
+      }),
+    );
     expect(errors).toContain("nodes[0].type is required");
   });
 
   it("rejects node without label", () => {
-    const errors = validateGraphContract(makeValidGraph({
-      nodes: [
-        { id: "n1", type: "trigger", label: "", description: "", category: "trigger", position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [] },
-      ],
-      edges: [],
-    }));
+    const errors = validateGraphContract(
+      makeValidGraph({
+        nodes: [
+          {
+            id: "n1",
+            type: "trigger",
+            label: "",
+            description: "",
+            category: "trigger",
+            position: { x: 0, y: 0 },
+            config: {},
+            inputs: [],
+            outputs: [],
+          },
+        ],
+        edges: [],
+      }),
+    );
     expect(errors).toContain("nodes[0].label is required");
   });
 
   it("rejects node without position", () => {
-    const errors = validateGraphContract(makeValidGraph({
-      nodes: [
-        { id: "n1", type: "trigger", label: "A", description: "", category: "trigger", position: undefined as unknown as { x: number; y: number }, config: {}, inputs: [], outputs: [] },
-      ],
-      edges: [],
-    }));
+    const errors = validateGraphContract(
+      makeValidGraph({
+        nodes: [
+          {
+            id: "n1",
+            type: "trigger",
+            label: "A",
+            description: "",
+            category: "trigger",
+            position: undefined as unknown as { x: number; y: number },
+            config: {},
+            inputs: [],
+            outputs: [],
+          },
+        ],
+        edges: [],
+      }),
+    );
     expect(errors).toContain("nodes[0].position must have x and y coordinates");
   });
 
   it("validates retryPolicy", () => {
-    const errors = validateGraphContract(makeValidGraph({
-      nodes: [
-        {
-          id: "n1", type: "action", label: "Retry", description: "", category: "action",
-          position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [],
-          retryPolicy: { maxAttempts: 0, initialDelayMs: -1, maxDelayMs: 100, backoffMultiplier: 0.5, retryableErrors: [], jitter: false },
-        },
-      ],
-      edges: [],
-    }));
+    const errors = validateGraphContract(
+      makeValidGraph({
+        nodes: [
+          {
+            id: "n1",
+            type: "action",
+            label: "Retry",
+            description: "",
+            category: "action",
+            position: { x: 0, y: 0 },
+            config: {},
+            inputs: [],
+            outputs: [],
+            retryPolicy: {
+              maxAttempts: 0,
+              initialDelayMs: -1,
+              maxDelayMs: 100,
+              backoffMultiplier: 0.5,
+              retryableErrors: [],
+              jitter: false,
+            },
+          },
+        ],
+        edges: [],
+      }),
+    );
     expect(errors).toContain("nodes[0].retryPolicy.maxAttempts must be >= 1");
-    expect(errors).toContain("nodes[0].retryPolicy.initialDelayMs must be >= 0");
-    expect(errors).toContain("nodes[0].retryPolicy.backoffMultiplier must be >= 1");
+    expect(errors).toContain(
+      "nodes[0].retryPolicy.initialDelayMs must be >= 0",
+    );
+    expect(errors).toContain(
+      "nodes[0].retryPolicy.backoffMultiplier must be >= 1",
+    );
   });
 
   it("rejects retryPolicy maxDelayMs < initialDelayMs", () => {
-    const errors = validateGraphContract(makeValidGraph({
-      nodes: [
-        {
-          id: "n1", type: "action", label: "Retry", description: "", category: "action",
-          position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [],
-          retryPolicy: { maxAttempts: 3, initialDelayMs: 5000, maxDelayMs: 1000, backoffMultiplier: 2, retryableErrors: [], jitter: true },
-        },
-      ],
-      edges: [],
-    }));
-    expect(errors).toContain("nodes[0].retryPolicy.maxDelayMs must be >= initialDelayMs");
+    const errors = validateGraphContract(
+      makeValidGraph({
+        nodes: [
+          {
+            id: "n1",
+            type: "action",
+            label: "Retry",
+            description: "",
+            category: "action",
+            position: { x: 0, y: 0 },
+            config: {},
+            inputs: [],
+            outputs: [],
+            retryPolicy: {
+              maxAttempts: 3,
+              initialDelayMs: 5000,
+              maxDelayMs: 1000,
+              backoffMultiplier: 2,
+              retryableErrors: [],
+              jitter: true,
+            },
+          },
+        ],
+        edges: [],
+      }),
+    );
+    expect(errors).toContain(
+      "nodes[0].retryPolicy.maxDelayMs must be >= initialDelayMs",
+    );
   });
 
   it("validates approvalGate", () => {
-    const errors = validateGraphContract(makeValidGraph({
-      nodes: [
-        {
-          id: "n1", type: "approval", label: "Approve", description: "", category: "approval",
-          position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [],
-          approvalGate: { requiredApprovers: 0, approverRoles: [], timeoutMs: -1, message: "" },
-        },
-      ],
-      edges: [],
-    }));
-    expect(errors).toContain("nodes[0].approvalGate.requiredApprovers must be >= 1");
+    const errors = validateGraphContract(
+      makeValidGraph({
+        nodes: [
+          {
+            id: "n1",
+            type: "approval",
+            label: "Approve",
+            description: "",
+            category: "approval",
+            position: { x: 0, y: 0 },
+            config: {},
+            inputs: [],
+            outputs: [],
+            approvalGate: {
+              requiredApprovers: 0,
+              approverRoles: [],
+              timeoutMs: -1,
+              message: "",
+            },
+          },
+        ],
+        edges: [],
+      }),
+    );
+    expect(errors).toContain(
+      "nodes[0].approvalGate.requiredApprovers must be >= 1",
+    );
     expect(errors).toContain("nodes[0].approvalGate.timeoutMs must be >= 0");
   });
 
   it("rejects edges referencing missing nodes", () => {
-    const errors = validateGraphContract(makeValidGraph({
-      nodes: [{ id: "n1", type: "trigger", label: "A", description: "", category: "trigger", position: { x: 0, y: 0 }, config: {}, inputs: [], outputs: [] }],
-      edges: [{ source: "n1", target: "nonexistent" }],
-    }));
-    expect(errors).toContain('edges[0].target "nonexistent" not found in nodes');
+    const errors = validateGraphContract(
+      makeValidGraph({
+        nodes: [
+          {
+            id: "n1",
+            type: "trigger",
+            label: "A",
+            description: "",
+            category: "trigger",
+            position: { x: 0, y: 0 },
+            config: {},
+            inputs: [],
+            outputs: [],
+          },
+        ],
+        edges: [{ source: "n1", target: "nonexistent" }],
+      }),
+    );
+    expect(errors).toContain(
+      'edges[0].target "nonexistent" not found in nodes',
+    );
   });
 });
 
@@ -192,10 +351,20 @@ describe("computeDiff", () => {
   it("detects added nodes", () => {
     const from = makeValidGraph();
     const to = makeValidGraph({
-      nodes: [...makeValidGraph().nodes, {
-        id: "n3", type: "action", label: "New", description: "", category: "action",
-        position: { x: 200, y: 0 }, config: {}, inputs: [], outputs: [],
-      }],
+      nodes: [
+        ...makeValidGraph().nodes,
+        {
+          id: "n3",
+          type: "action",
+          label: "New",
+          description: "",
+          category: "action",
+          position: { x: 200, y: 0 },
+          config: {},
+          inputs: [],
+          outputs: [],
+        },
+      ],
     });
     const diff = computeDiff(from, to);
     expect(diff.nodeChanges.added).toEqual(["n3"]);
@@ -211,10 +380,7 @@ describe("computeDiff", () => {
   it("detects modified nodes", () => {
     const from = makeValidGraph();
     const to = makeValidGraph({
-      nodes: [
-        { ...from.nodes[0] },
-        { ...from.nodes[1], label: "Modified" },
-      ],
+      nodes: [{ ...from.nodes[0] }, { ...from.nodes[1], label: "Modified" }],
     });
     const diff = computeDiff(from, to);
     expect(diff.nodeChanges.modified).toEqual(["n2"]);
@@ -222,7 +388,9 @@ describe("computeDiff", () => {
 
   it("detects edge changes", () => {
     const from = makeValidGraph();
-    const to = makeValidGraph({ edges: [{ source: "n1", target: "n2", condition: "x > 1" }] });
+    const to = makeValidGraph({
+      edges: [{ source: "n1", target: "n2", condition: "x > 1" }],
+    });
     const diff = computeDiff(from, to);
     expect(diff.nodeChanges.edgesChanged).toBe(true);
   });
@@ -284,7 +452,9 @@ describe("applyDiff", () => {
 
   it("updates metadata timestamps", () => {
     const from = makeValidGraph();
-    const to = makeValidGraph({ metadata: { ...from.metadata, name: "Changed" } });
+    const to = makeValidGraph({
+      metadata: { ...from.metadata, name: "Changed" },
+    });
     const diff = computeDiff(from, to);
     const result = applyDiff(from, diff);
     expect(result.metadata.updatedAt).not.toBe(from.metadata.updatedAt);

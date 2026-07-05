@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useListWorkflows, useListEnvironments } from "@longox/api-client-react";
+import {
+  useListWorkflows,
+  useListEnvironments,
+} from "@longox/api-client-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,7 +36,10 @@ export function PromoteDialog() {
 
   const handlePromote = async () => {
     if (!workflowId || !fromEnv || !toEnv) {
-      toast({ title: "Please fill in all required fields", variant: "destructive" });
+      toast({
+        title: "Please fill in all required fields",
+        variant: "destructive",
+      });
       return;
     }
     setLoading(true);
@@ -59,7 +65,10 @@ export function PromoteDialog() {
       setToEnv("");
       setNotes("");
     } catch (err) {
-      toast({ title: err instanceof Error ? err.message : "Promotion failed", variant: "destructive" });
+      toast({
+        title: err instanceof Error ? err.message : "Promotion failed",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }

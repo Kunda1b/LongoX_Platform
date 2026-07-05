@@ -1,6 +1,10 @@
 "use client";
 
-import { useListCredentials, useDeleteCredential, getListCredentialsQueryKey } from "@longox/api-client-react";
+import {
+  useListCredentials,
+  useDeleteCredential,
+  getListCredentialsQueryKey,
+} from "@longox/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +22,9 @@ export default function CredentialsPage() {
   const deleteMutation = useDeleteCredential({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListCredentialsQueryKey() });
+        queryClient.invalidateQueries({
+          queryKey: getListCredentialsQueryKey(),
+        });
         toast({ title: "Credential deleted" });
       },
     },
@@ -46,7 +52,10 @@ export default function CredentialsPage() {
         </div>
         {isLoading ? (
           Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="grid grid-cols-12 gap-4 border-b px-4 py-3 last:border-0">
+            <div
+              key={i}
+              className="grid grid-cols-12 gap-4 border-b px-4 py-3 last:border-0"
+            >
               <div className="col-span-12">
                 <Skeleton className="h-5 w-full" />
               </div>

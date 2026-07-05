@@ -107,7 +107,16 @@ export class TokenAccountingService {
       where: { id: Number(runId) } as any,
     });
 
-    const byModel: Record<string, { inputTokens: number; outputTokens: number; cost: number; cachedTokens: number; toolCallTokens: number }> = {};
+    const byModel: Record<
+      string,
+      {
+        inputTokens: number;
+        outputTokens: number;
+        cost: number;
+        cachedTokens: number;
+        toolCallTokens: number;
+      }
+    > = {};
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let totalCost = 0;
@@ -127,7 +136,13 @@ export class TokenAccountingService {
 
       const model = row.modelName ?? "unknown";
       if (!byModel[model]) {
-        byModel[model] = { inputTokens: 0, outputTokens: 0, cost: 0, cachedTokens: 0, toolCallTokens: 0 };
+        byModel[model] = {
+          inputTokens: 0,
+          outputTokens: 0,
+          cost: 0,
+          cachedTokens: 0,
+          toolCallTokens: 0,
+        };
       }
       byModel[model].inputTokens += row.inputTokens;
       byModel[model].outputTokens += row.outputTokens;
@@ -160,7 +175,16 @@ export class TokenAccountingService {
       where: where as any,
     });
 
-    const byModel: Record<string, { inputTokens: number; outputTokens: number; cost: number; cachedTokens: number; toolCallTokens: number }> = {};
+    const byModel: Record<
+      string,
+      {
+        inputTokens: number;
+        outputTokens: number;
+        cost: number;
+        cachedTokens: number;
+        toolCallTokens: number;
+      }
+    > = {};
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let totalCost = 0;
@@ -179,7 +203,13 @@ export class TokenAccountingService {
 
       const model = row.modelName ?? "unknown";
       if (!byModel[model]) {
-        byModel[model] = { inputTokens: 0, outputTokens: 0, cost: 0, cachedTokens: 0, toolCallTokens: 0 };
+        byModel[model] = {
+          inputTokens: 0,
+          outputTokens: 0,
+          cost: 0,
+          cachedTokens: 0,
+          toolCallTokens: 0,
+        };
       }
       byModel[model].inputTokens += row.inputTokens;
       byModel[model].outputTokens += row.outputTokens;
@@ -207,17 +237,26 @@ export class TokenAccountingService {
     cost: number,
   ): Promise<void> {
     const now = new Date();
-    const periodStart = period === "monthly"
-      ? new Date(now.getFullYear(), now.getMonth(), 1)
-      : period === "daily"
-        ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
-        : now;
+    const periodStart =
+      period === "monthly"
+        ? new Date(now.getFullYear(), now.getMonth(), 1)
+        : period === "daily"
+          ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
+          : now;
 
-    const periodEnd = period === "monthly"
-      ? new Date(now.getFullYear(), now.getMonth() + 1, 0)
-      : period === "daily"
-        ? new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
-        : now;
+    const periodEnd =
+      period === "monthly"
+        ? new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        : period === "daily"
+          ? new Date(
+              now.getFullYear(),
+              now.getMonth(),
+              now.getDate(),
+              23,
+              59,
+              59,
+            )
+          : now;
 
     const existing = await prisma.usageRollup.findMany({
       where: {

@@ -49,16 +49,38 @@ export class CostBudgetService {
 
       if (budget.period === "monthly") {
         periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        periodEnd = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+        );
       } else if (budget.period === "daily") {
-        periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        periodEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        periodStart = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+        );
+        periodEnd = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          23,
+          59,
+          59,
+        );
       } else {
         periodStart = new Date(0);
         periodEnd = new Date(8640000000000000);
       }
 
-      const currentTotal = await this.getCurrentPeriodCost(tenantId, periodStart, periodEnd);
+      const currentTotal = await this.getCurrentPeriodCost(
+        tenantId,
+        periodStart,
+        periodEnd,
+      );
       const projectedCost = currentTotal + estimatedCost;
       const maxCost = Number(budget.maxCost);
 
@@ -104,12 +126,20 @@ export class CostBudgetService {
       if (budget.period === "monthly") {
         periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
       } else if (budget.period === "daily") {
-        periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        periodStart = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+        );
       } else {
         periodStart = new Date(0);
       }
 
-      const currentCost = await this.getCurrentPeriodCost(tenantId, periodStart, now);
+      const currentCost = await this.getCurrentPeriodCost(
+        tenantId,
+        periodStart,
+        now,
+      );
       const maxCost = Number(budget.maxCost);
 
       results.push({

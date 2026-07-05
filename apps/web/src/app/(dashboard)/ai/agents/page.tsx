@@ -74,9 +74,22 @@ interface AgentMemory {
   createdAt: string;
 }
 
-const AGENT_ROLES = ["orchestrator", "executor", "observer", "planner", "reviewer"];
+const AGENT_ROLES = [
+  "orchestrator",
+  "executor",
+  "observer",
+  "planner",
+  "reviewer",
+];
 
-const PROVIDERS = ["openai", "anthropic", "google", "mistral", "groq", "deepseek"];
+const PROVIDERS = [
+  "openai",
+  "anthropic",
+  "google",
+  "mistral",
+  "groq",
+  "deepseek",
+];
 
 const BUILT_IN_TOOLS = [
   { name: "web_search", description: "Search the web for information" },
@@ -161,10 +174,17 @@ export default function AgentsPage() {
     },
     onSuccess: (result) => {
       setRuns((prev) => [result, ...prev]);
-      toast({ title: "Agent run started", description: `Agent ${result.name} is running` });
+      toast({
+        title: "Agent run started",
+        description: `Agent ${result.name} is running`,
+      });
     },
     onError: (err) => {
-      toast({ title: "Agent run failed", description: err.message, variant: "destructive" });
+      toast({
+        title: "Agent run failed",
+        description: err.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -206,19 +226,26 @@ export default function AgentsPage() {
                   <Label>Name</Label>
                   <Input
                     value={form.name}
-                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, name: e.target.value }))
+                    }
                     placeholder="e.g., Data Analyst"
                   />
                 </div>
                 <div>
                   <Label>Role</Label>
-                  <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v }))}>
+                  <Select
+                    value={form.role}
+                    onValueChange={(v) => setForm((f) => ({ ...f, role: v }))}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {AGENT_ROLES.map((r) => (
-                        <SelectItem key={r} value={r}>{r}</SelectItem>
+                        <SelectItem key={r} value={r}>
+                          {r}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -228,7 +255,9 @@ export default function AgentsPage() {
                 <Label>System Prompt</Label>
                 <Textarea
                   value={form.systemPrompt}
-                  onChange={(e) => setForm((f) => ({ ...f, systemPrompt: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, systemPrompt: e.target.value }))
+                  }
                   placeholder="You are a helpful AI agent that..."
                   className="h-24"
                 />
@@ -236,30 +265,50 @@ export default function AgentsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Model</Label>
-                  <Select value={form.model} onValueChange={(v) => setForm((f) => ({ ...f, model: v }))}>
+                  <Select
+                    value={form.model}
+                    onValueChange={(v) => setForm((f) => ({ ...f, model: v }))}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="gpt-4o">GPT-4o</SelectItem>
                       <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
-                      <SelectItem value="claude-sonnet-4-20250514">Claude Sonnet 4</SelectItem>
-                      <SelectItem value="claude-3-haiku-20240307">Claude 3 Haiku</SelectItem>
-                      <SelectItem value="gemini-2.0-flash">Gemini 2.0 Flash</SelectItem>
-                      <SelectItem value="mistral-large-latest">Mistral Large</SelectItem>
-                      <SelectItem value="llama-3.3-70b-versatile">Llama 3.3 70B</SelectItem>
+                      <SelectItem value="claude-sonnet-4-20250514">
+                        Claude Sonnet 4
+                      </SelectItem>
+                      <SelectItem value="claude-3-haiku-20240307">
+                        Claude 3 Haiku
+                      </SelectItem>
+                      <SelectItem value="gemini-2.0-flash">
+                        Gemini 2.0 Flash
+                      </SelectItem>
+                      <SelectItem value="mistral-large-latest">
+                        Mistral Large
+                      </SelectItem>
+                      <SelectItem value="llama-3.3-70b-versatile">
+                        Llama 3.3 70B
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>Provider</Label>
-                  <Select value={form.provider} onValueChange={(v) => setForm((f) => ({ ...f, provider: v }))}>
+                  <Select
+                    value={form.provider}
+                    onValueChange={(v) =>
+                      setForm((f) => ({ ...f, provider: v }))
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {PROVIDERS.map((p) => (
-                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                        <SelectItem key={p} value={p}>
+                          {p}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -271,7 +320,12 @@ export default function AgentsPage() {
                   <Input
                     type="number"
                     value={form.maxIterations}
-                    onChange={(e) => setForm((f) => ({ ...f, maxIterations: parseInt(e.target.value) }))}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        maxIterations: parseInt(e.target.value),
+                      }))
+                    }
                     min="1"
                     max="50"
                   />
@@ -281,7 +335,12 @@ export default function AgentsPage() {
                   <Input
                     type="number"
                     value={form.temperature}
-                    onChange={(e) => setForm((f) => ({ ...f, temperature: parseFloat(e.target.value) }))}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        temperature: parseFloat(e.target.value),
+                      }))
+                    }
                     min="0"
                     max="2"
                     step="0.1"
@@ -292,14 +351,18 @@ export default function AgentsPage() {
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={form.memoryEnabled}
-                    onCheckedChange={(v) => setForm((f) => ({ ...f, memoryEnabled: v }))}
+                    onCheckedChange={(v) =>
+                      setForm((f) => ({ ...f, memoryEnabled: v }))
+                    }
                   />
                   <Label className="text-sm">Memory</Label>
                 </div>
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={form.planningEnabled}
-                    onCheckedChange={(v) => setForm((f) => ({ ...f, planningEnabled: v }))}
+                    onCheckedChange={(v) =>
+                      setForm((f) => ({ ...f, planningEnabled: v }))
+                    }
                   />
                   <Label className="text-sm">Planning</Label>
                 </div>
@@ -309,7 +372,9 @@ export default function AgentsPage() {
                   <Label>Memory Type</Label>
                   <Select
                     value={form.memoryType}
-                    onValueChange={(v) => setForm((f) => ({ ...f, memoryType: v }))}
+                    onValueChange={(v) =>
+                      setForm((f) => ({ ...f, memoryType: v }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -326,15 +391,24 @@ export default function AgentsPage() {
                 <Label>Tools</Label>
                 <div className="mt-1 grid grid-cols-2 gap-2">
                   {BUILT_IN_TOOLS.map((t) => (
-                    <label key={t.name} className="flex items-center gap-2 text-sm">
+                    <label
+                      key={t.name}
+                      className="flex items-center gap-2 text-sm"
+                    >
                       <input
                         type="checkbox"
                         checked={form.tools.includes(t.name)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setForm((f) => ({ ...f, tools: [...f.tools, t.name] }));
+                            setForm((f) => ({
+                              ...f,
+                              tools: [...f.tools, t.name],
+                            }));
                           } else {
-                            setForm((f) => ({ ...f, tools: f.tools.filter((x) => x !== t.name) }));
+                            setForm((f) => ({
+                              ...f,
+                              tools: f.tools.filter((x) => x !== t.name),
+                            }));
                           }
                         }}
                       />
@@ -347,7 +421,9 @@ export default function AgentsPage() {
                 <Label>Goal</Label>
                 <Input
                   value={form.goal}
-                  onChange={(e) => setForm((f) => ({ ...f, goal: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, goal: e.target.value }))
+                  }
                   placeholder="What should the agent accomplish?"
                 />
               </div>
@@ -355,7 +431,9 @@ export default function AgentsPage() {
                 <Label>Variables (JSON)</Label>
                 <Textarea
                   value={form.variables}
-                  onChange={(e) => setForm((f) => ({ ...f, variables: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, variables: e.target.value }))
+                  }
                   placeholder='{"input": "data to process"}'
                   className="h-20 font-mono text-sm"
                 />
@@ -383,7 +461,9 @@ export default function AgentsPage() {
             <Card>
               <CardContent className="p-8 text-center text-muted-foreground">
                 <Bot className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No agent runs yet. Create and run an agent to get started.</p>
+                <p>
+                  No agent runs yet. Create and run an agent to get started.
+                </p>
               </CardContent>
             </Card>
           ) : (
@@ -395,7 +475,11 @@ export default function AgentsPage() {
                       <Bot className="h-4 w-4" />
                       {run.name}
                     </CardTitle>
-                    <Badge variant={run.status === "running" ? "success" : "secondary"}>
+                    <Badge
+                      variant={
+                        run.status === "running" ? "success" : "secondary"
+                      }
+                    >
                       {run.status}
                     </Badge>
                   </div>
@@ -407,18 +491,28 @@ export default function AgentsPage() {
                   <div className="flex flex-wrap gap-2 text-xs">
                     <Badge variant="outline">{run.role}</Badge>
                     {run.config.planningEnabled && (
-                      <Badge variant="outline" className="flex items-center gap-1">
+                      <Badge
+                        variant="outline"
+                        className="flex items-center gap-1"
+                      >
                         <Route className="h-3 w-3" /> planning
                       </Badge>
                     )}
                     {run.config.memoryEnabled && (
-                      <Badge variant="outline" className="flex items-center gap-1">
+                      <Badge
+                        variant="outline"
+                        className="flex items-center gap-1"
+                      >
                         <Database className="h-3 w-3" /> memory
                       </Badge>
                     )}
                     {run.config.tools.length > 0 && (
-                      <Badge variant="outline" className="flex items-center gap-1">
-                        <Wrench className="h-3 w-3" /> {run.config.tools.length} tools
+                      <Badge
+                        variant="outline"
+                        className="flex items-center gap-1"
+                      >
+                        <Wrench className="h-3 w-3" /> {run.config.tools.length}{" "}
+                        tools
                       </Badge>
                     )}
                   </div>
@@ -441,10 +535,14 @@ export default function AgentsPage() {
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">{m.memoryType}</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {m.memoryType}
+                          </Badge>
                           <span className="text-xs font-medium">{m.key}</span>
                         </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2">{m.content}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {m.content}
+                        </p>
                       </div>
                       <Button
                         variant="ghost"

@@ -3,9 +3,19 @@ export const googleSheetsSchemas = {
     input: {
       type: "object",
       properties: {
-        spreadsheetId: { type: "string", description: "Google Sheets spreadsheet ID" },
-        range: { type: "string", description: "A1 notation range (e.g., Sheet1!A1:D10)" },
-        majorDimension: { type: "string", description: "ROWS or COLUMNS", enum: ["ROWS", "COLUMNS"] },
+        spreadsheetId: {
+          type: "string",
+          description: "Google Sheets spreadsheet ID",
+        },
+        range: {
+          type: "string",
+          description: "A1 notation range (e.g., Sheet1!A1:D10)",
+        },
+        majorDimension: {
+          type: "string",
+          description: "ROWS or COLUMNS",
+          enum: ["ROWS", "COLUMNS"],
+        },
       },
       required: ["spreadsheetId", "range"],
     },
@@ -21,7 +31,10 @@ export const googleSheetsSchemas = {
     input: {
       type: "object",
       properties: {
-        spreadsheetId: { type: "string", description: "Google Sheets spreadsheet ID" },
+        spreadsheetId: {
+          type: "string",
+          description: "Google Sheets spreadsheet ID",
+        },
         range: { type: "string", description: "A1 notation range" },
         values: { type: "array", description: "2D array of values" },
         valueInputOption: { type: "string", enum: ["RAW", "USER_ENTERED"] },
@@ -40,7 +53,10 @@ export const googleSheetsSchemas = {
     input: {
       type: "object",
       properties: {
-        spreadsheetId: { type: "string", description: "Google Sheets spreadsheet ID" },
+        spreadsheetId: {
+          type: "string",
+          description: "Google Sheets spreadsheet ID",
+        },
         range: { type: "string", description: "A1 notation range" },
         values: { type: "array", description: "Array of values for one row" },
         valueInputOption: { type: "string", enum: ["RAW", "USER_ENTERED"] },

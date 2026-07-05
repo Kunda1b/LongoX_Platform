@@ -4,9 +4,11 @@ description: Using schemas+mode:split in the orval zod output config causes TS23
 ---
 
 ## Rule
+
 Never use `schemas: { path: "generated/types", type: "typescript" }` in the orval zod output config.
 
 **Why:** With `mode: "split"` + `schemas`, orval generates:
+
 1. `generated/api.ts` — Zod schemas (e.g. `ExecuteDataSourceQueryBody`)
 2. `generated/types/` — TS type files with the same names
 3. `src/index.ts` — auto-regenerated on every codegen run to re-export BOTH paths
@@ -14,6 +16,7 @@ Never use `schemas: { path: "generated/types", type: "typescript" }` in the orva
 This causes `TS2308: Module "./generated/api" has already exported member 'X'` because the same name appears in both `api.ts` and `types/`. Since orval regenerates `index.ts` on every run, manual fixes to the index are overwritten.
 
 **How to apply:** For the orval `zod` config, use:
+
 ```ts
 output: {
   client: "zod",

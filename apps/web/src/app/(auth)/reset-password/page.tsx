@@ -30,7 +30,9 @@ function ResetPasswordForm() {
   useEffect(() => {
     if (!token) {
       setStatus("error");
-      setError("Invalid or missing reset token. Please request a new reset link.");
+      setError(
+        "Invalid or missing reset token. Please request a new reset link.",
+      );
     }
   }, [token]);
 
@@ -168,10 +170,18 @@ export default function ResetPasswordPage() {
             LX
           </div>
           <CardTitle>Set new password</CardTitle>
-          <CardDescription>Choose a strong password for your account.</CardDescription>
+          <CardDescription>
+            Choose a strong password for your account.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Suspense fallback={<div className="py-4 text-center text-sm text-muted-foreground">Loading…</div>}>
+          <Suspense
+            fallback={
+              <div className="py-4 text-center text-sm text-muted-foreground">
+                Loading…
+              </div>
+            }
+          >
             <ResetPasswordForm />
           </Suspense>
         </CardContent>

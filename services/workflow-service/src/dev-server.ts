@@ -4,7 +4,8 @@ initTelemetry({
   serviceName: "workflow-service",
   serviceVersion: process.env.npm_package_version ?? "0.0.0",
   environment: process.env.NODE_ENV ?? "development",
-  otlpEndpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://localhost:4318",
+  otlpEndpoint:
+    process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://localhost:4318",
 });
 
 import express from "express";

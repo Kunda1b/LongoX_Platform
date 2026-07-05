@@ -91,7 +91,11 @@ async function writeAuditLog(
       action,
       targetType: resourceType,
       targetId: resourceId,
-      diffJson: { ...metadata, tenantId: tenantId ?? "", actorType: "user" } as any,
+      diffJson: {
+        ...metadata,
+        tenantId: tenantId ?? "",
+        actorType: "user",
+      } as any,
     } as any,
   });
 }

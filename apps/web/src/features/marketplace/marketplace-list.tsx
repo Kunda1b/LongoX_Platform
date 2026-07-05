@@ -17,36 +17,42 @@ import { useState, useMemo } from "react";
 
 export function MarketplaceList() {
   const [search, setSearch] = useState("");
-  const { data: connectors, isLoading: loadingConnectors } = useListConnectors();
+  const { data: connectors, isLoading: loadingConnectors } =
+    useListConnectors();
   const { data: templates, isLoading: loadingTemplates } = useListTemplates();
 
   const items = useMemo(() => {
     const arr = [];
     if (connectors) {
-      arr.push(...connectors.map(c => ({
-        id: `connector-${c.id}`,
-        name: c.displayName || c.name,
-        desc: c.description || "No description provided",
-        type: "connector",
-        price: "Free",
-        downloads: c.actionCount + c.triggerCount * 10,
-        installed: c.isInstalled,
-      })));
+      arr.push(
+        ...connectors.map((c) => ({
+          id: `connector-${c.id}`,
+          name: c.displayName || c.name,
+          desc: c.description || "No description provided",
+          type: "connector",
+          price: "Free",
+          downloads: c.actionCount + c.triggerCount * 10,
+          installed: c.isInstalled,
+        })),
+      );
     }
     if (templates) {
-      arr.push(...templates.map(t => ({
-        id: `template-${t.id}`,
-        name: t.name,
-        desc: t.description || "No description provided",
-        type: "template",
-        price: "Free",
-        downloads: (t as any).useCount || 0,
-        installed: false,
-      })));
+      arr.push(
+        ...templates.map((t) => ({
+          id: `template-${t.id}`,
+          name: t.name,
+          desc: t.description || "No description provided",
+          type: "template",
+          price: "Free",
+          downloads: (t as any).useCount || 0,
+          installed: false,
+        })),
+      );
     }
-    return arr.filter(i => 
-      i.name.toLowerCase().includes(search.toLowerCase()) || 
-      i.desc.toLowerCase().includes(search.toLowerCase())
+    return arr.filter(
+      (i) =>
+        i.name.toLowerCase().includes(search.toLowerCase()) ||
+        i.desc.toLowerCase().includes(search.toLowerCase()),
     );
   }, [connectors, templates, search]);
 
@@ -63,9 +69,9 @@ export function MarketplaceList() {
 
       <div className="relative w-full max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input 
-          placeholder="Search marketplace..." 
-          className="pl-9" 
+        <Input
+          placeholder="Search marketplace..."
+          className="pl-9"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -102,11 +108,16 @@ export function MarketplaceList() {
                     {item.downloads} downloads
                   </span>
                 </div>
-                <Button size="sm" variant={item.installed ? "secondary" : "default"}>
+                <Button
+                  size="sm"
+                  variant={item.installed ? "secondary" : "default"}
+                >
                   {item.installed ? (
                     "Installed"
                   ) : (
-                    <><Download className="mr-1 h-4 w-4" /> Install</>
+                    <>
+                      <Download className="mr-1 h-4 w-4" /> Install
+                    </>
                   )}
                 </Button>
               </CardContent>

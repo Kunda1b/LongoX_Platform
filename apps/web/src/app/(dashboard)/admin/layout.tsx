@@ -5,7 +5,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, Building2, Flag, Shield, ScrollText, FileCheck, CreditCard,
+  LayoutDashboard,
+  Building2,
+  Flag,
+  Shield,
+  ScrollText,
+  FileCheck,
+  CreditCard,
 } from "lucide-react";
 
 const ADMIN_NAV = [
@@ -18,12 +24,19 @@ const ADMIN_NAV = [
   { href: "/admin/billing", label: "Billing", icon: CreditCard },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { user, isLoading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
-  if (isLoading) return <div className="flex items-center justify-center h-48">Loading...</div>;
+  if (isLoading)
+    return (
+      <div className="flex items-center justify-center h-48">Loading...</div>
+    );
 
   if (!user || (user.role !== "Admin" && user.role !== "Owner")) {
     router.push("/dashboard");
@@ -38,7 +51,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
         {ADMIN_NAV.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href));
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/admin" && pathname.startsWith(item.href));
           return (
             <Link
               key={item.href}

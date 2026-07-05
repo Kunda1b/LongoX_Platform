@@ -70,12 +70,15 @@ export class RetentionPolicyService {
       coldRetentionYears: coldYears,
       hotRetentionDays: monthsToDays(hotMonths),
       coldRetentionDays: yearsToDays(coldYears),
-      archiveEnabled: (archiveConfig as any)?.archiveEnabled ?? DEFAULTS.archiveEnabled,
-      archiveBucket: (archiveConfig as any)?.archiveBucket ?? DEFAULTS.archiveBucket,
+      archiveEnabled:
+        (archiveConfig as any)?.archiveEnabled ?? DEFAULTS.archiveEnabled,
+      archiveBucket:
+        (archiveConfig as any)?.archiveBucket ?? DEFAULTS.archiveBucket,
       coldQueryEnabled:
         (archiveConfig as any)?.coldQueryEnabled ?? DEFAULTS.coldQueryEnabled,
       partitionInterval:
-        ((archiveConfig as any)?.partitionInterval as RetentionPolicyConfig["partitionInterval"]) ??
+        ((archiveConfig as any)
+          ?.partitionInterval as RetentionPolicyConfig["partitionInterval"]) ??
         DEFAULTS.partitionInterval,
     };
   }
@@ -137,7 +140,8 @@ export class RetentionPolicyService {
           archiveEnabled: config.archiveEnabled ?? merged.archiveEnabled,
           archiveBucket: config.archiveBucket ?? merged.archiveBucket,
           coldQueryEnabled: config.coldQueryEnabled ?? merged.coldQueryEnabled,
-          partitionInterval: config.partitionInterval ?? merged.partitionInterval,
+          partitionInterval:
+            config.partitionInterval ?? merged.partitionInterval,
         } as any,
         update: {
           hotRetentionDays: merged.hotRetentionDays,
@@ -145,7 +149,8 @@ export class RetentionPolicyService {
           archiveEnabled: config.archiveEnabled ?? merged.archiveEnabled,
           archiveBucket: config.archiveBucket ?? merged.archiveBucket,
           coldQueryEnabled: config.coldQueryEnabled ?? merged.coldQueryEnabled,
-          partitionInterval: config.partitionInterval ?? merged.partitionInterval,
+          partitionInterval:
+            config.partitionInterval ?? merged.partitionInterval,
         } as any,
       });
     }

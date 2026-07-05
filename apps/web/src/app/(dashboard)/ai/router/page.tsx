@@ -64,14 +64,29 @@ type ProviderHealth = {
   lastError?: string;
 };
 
-const STRATEGY_INFO: Record<string, { label: string; icon: any; color: string }> = {
+const STRATEGY_INFO: Record<
+  string,
+  { label: string; icon: any; color: string }
+> = {
   cheapest: { label: "Cheapest", icon: DollarSign, color: "text-emerald-500" },
   fastest: { label: "Fastest", icon: Zap, color: "text-blue-500" },
-  highest_quality: { label: "Highest Quality", icon: Award, color: "text-purple-500" },
+  highest_quality: {
+    label: "Highest Quality",
+    icon: Award,
+    color: "text-purple-500",
+  },
   custom: { label: "Custom", icon: Settings, color: "text-orange-500" },
 };
 
-const PROVIDERS = ["openai", "anthropic", "google", "mistral", "groq", "deepseek", "openrouter"];
+const PROVIDERS = [
+  "openai",
+  "anthropic",
+  "google",
+  "mistral",
+  "groq",
+  "deepseek",
+  "openrouter",
+];
 
 export default function AIRouterPage() {
   const { token } = useAuth();
@@ -128,7 +143,14 @@ export default function AIRouterPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ai-routing-policies"] });
       setCreateOpen(false);
-      setForm({ name: "", description: "", strategy: "cheapest", providerPreferences: [], fallbackEnabled: true, maxRetries: 2 });
+      setForm({
+        name: "",
+        description: "",
+        strategy: "cheapest",
+        providerPreferences: [],
+        fallbackEnabled: true,
+        maxRetries: 2,
+      });
       toast({ title: "Policy created" });
     },
   });
@@ -148,7 +170,13 @@ export default function AIRouterPage() {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: async ({ id, isEnabled }: { id: string; isEnabled: boolean }) => {
+    mutationFn: async ({
+      id,
+      isEnabled,
+    }: {
+      id: string;
+      isEnabled: boolean;
+    }) => {
       const res = await fetch(`/api/ai-routing-policies/${id}`, {
         method: "PATCH",
         headers: {
@@ -189,7 +217,9 @@ export default function AIRouterPage() {
                 <Label>Name</Label>
                 <Input
                   value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, name: e.target.value }))
+                  }
                   placeholder="e.g., Cost-optimized routing"
                 />
               </div>
@@ -197,7 +227,9 @@ export default function AIRouterPage() {
                 <Label>Description</Label>
                 <Textarea
                   value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, description: e.target.value }))
+                  }
                   placeholder="Describe the routing policy"
                 />
               </div>
@@ -213,7 +245,9 @@ export default function AIRouterPage() {
                   <SelectContent>
                     <SelectItem value="cheapest">Cheapest</SelectItem>
                     <SelectItem value="fastest">Fastest</SelectItem>
-                    <SelectItem value="highest_quality">Highest Quality</SelectItem>
+                    <SelectItem value="highest_quality">
+                      Highest Quality
+                    </SelectItem>
                     <SelectItem value="custom">Custom</SelectItem>
                   </SelectContent>
                 </Select>
@@ -223,7 +257,10 @@ export default function AIRouterPage() {
                   <Label>Provider Preferences (order matters)</Label>
                   <div className="mt-1 space-y-1">
                     {PROVIDERS.map((p) => (
-                      <label key={p} className="flex items-center gap-2 text-sm">
+                      <label
+                        key={p}
+                        className="flex items-center gap-2 text-sm"
+                      >
                         <input
                           type="checkbox"
                           checked={form.providerPreferences.includes(p)}
@@ -231,12 +268,16 @@ export default function AIRouterPage() {
                             if (e.target.checked) {
                               setForm((f) => ({
                                 ...f,
-                                providerPreferences: [...f.providerPreferences, p],
+                                providerPreferences: [
+                                  ...f.providerPreferences,
+                                  p,
+                                ],
                               }));
                             } else {
                               setForm((f) => ({
                                 ...f,
-                                providerPreferences: f.providerPreferences.filter((x) => x !== p),
+                                providerPreferences:
+                                  f.providerPreferences.filter((x) => x !== p),
                               }));
                             }
                           }}
@@ -251,7 +292,9 @@ export default function AIRouterPage() {
                 <Label>Fallback Enabled</Label>
                 <Switch
                   checked={form.fallbackEnabled}
-                  onCheckedChange={(v) => setForm((f) => ({ ...f, fallbackEnabled: v }))}
+                  onCheckedChange={(v) =>
+                    setForm((f) => ({ ...f, fallbackEnabled: v }))
+                  }
                 />
               </div>
               <div>
@@ -259,12 +302,20 @@ export default function AIRouterPage() {
                 <Input
                   type="number"
                   value={form.maxRetries}
-                  onChange={(e) => setForm((f) => ({ ...f, maxRetries: parseInt(e.target.value) }))}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      maxRetries: parseInt(e.target.value),
+                    }))
+                  }
                   min="0"
                   max="5"
                 />
               </div>
-              <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !form.name}>
+              <Button
+                onClick={() => createMutation.mutate()}
+                disabled={createMutation.isPending || !form.name}
+              >
                 Create Policy
               </Button>
             </div>

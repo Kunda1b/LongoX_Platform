@@ -130,8 +130,7 @@ export function createDefaultMeshConfig(): ServiceMeshConfig {
     {
       name: "execution-service",
       url: process.env.EXECUTION_SERVICE_URL ?? "http://localhost:3002",
-      healthUrl:
-        process.env.EXECUTION_SERVICE_URL ?? "http://localhost:3002",
+      healthUrl: process.env.EXECUTION_SERVICE_URL ?? "http://localhost:3002",
       timeout: 30000,
       retries: 2,
       circuitBreaker: { threshold: 5, resetTimeout: 30000 },
@@ -147,8 +146,7 @@ export function createDefaultMeshConfig(): ServiceMeshConfig {
     {
       name: "billing-service",
       url: process.env.BILLING_SERVICE_URL ?? "http://localhost:3004",
-      healthUrl:
-        process.env.BILLING_SERVICE_URL ?? "http://localhost:3004",
+      healthUrl: process.env.BILLING_SERVICE_URL ?? "http://localhost:3004",
       timeout: 15000,
       retries: 2,
       circuitBreaker: { threshold: 5, resetTimeout: 30000 },
@@ -156,8 +154,7 @@ export function createDefaultMeshConfig(): ServiceMeshConfig {
     {
       name: "search-service",
       url: process.env.SEARCH_SERVICE_URL ?? "http://localhost:3005",
-      healthUrl:
-        process.env.SEARCH_SERVICE_URL ?? "http://localhost:3005",
+      healthUrl: process.env.SEARCH_SERVICE_URL ?? "http://localhost:3005",
       timeout: 10000,
       retries: 1,
       circuitBreaker: { threshold: 5, resetTimeout: 30000 },

@@ -36,7 +36,9 @@ export async function processBillingRollupJob(
   data: BillingRollupJobData,
 ): Promise<RollupJobResult> {
   const tenantId = data?.tenantId;
-  const periodStart = data?.periodStart ? new Date(data.periodStart) : undefined;
+  const periodStart = data?.periodStart
+    ? new Date(data.periodStart)
+    : undefined;
 
   if (!tenantId) {
     logger.warn(

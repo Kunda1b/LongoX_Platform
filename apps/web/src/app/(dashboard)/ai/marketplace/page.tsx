@@ -59,12 +59,19 @@ export default function AIMarketplacePage() {
     communityTemplate: false,
   });
 
-  const { data: listings, isLoading, refetch } = useQuery({
+  const {
+    data: listings,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["ai-marketplace-listings"],
     queryFn: async () => {
-      const res = await fetch("/api/marketplace/listings?type=agent&isPublic=true", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        "/api/marketplace/listings?type=agent&isPublic=true",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       if (!res.ok) throw new Error("Failed to fetch AI agent listings");
       return res.json();
     },
@@ -73,14 +80,17 @@ export default function AIMarketplacePage() {
 
   const installMutation = useMutation({
     mutationFn: async (listingId: string) => {
-      const res = await fetch(`/api/marketplace/listings/${listingId}/install`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await fetch(
+        `/api/marketplace/listings/${listingId}/install`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({}),
         },
-        body: JSON.stringify({}),
-      });
+      );
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Install failed");
@@ -92,12 +102,22 @@ export default function AIMarketplacePage() {
       refetch();
     },
     onError: (err) => {
-      toast({ title: "Install failed", description: (err as Error).message, variant: "destructive" });
+      toast({
+        title: "Install failed",
+        description: (err as Error).message,
+        variant: "destructive",
+      });
     },
   });
 
   const deployMutation = useMutation({
-    mutationFn: async ({ listingId, config }: { listingId: string; config?: Record<string, unknown> }) => {
+    mutationFn: async ({
+      listingId,
+      config,
+    }: {
+      listingId: string;
+      config?: Record<string, unknown>;
+    }) => {
       const res = await fetch(`/api/marketplace/listings/${listingId}/deploy`, {
         method: "POST",
         headers: {
@@ -113,10 +133,17 @@ export default function AIMarketplacePage() {
       return res.json();
     },
     onSuccess: (result) => {
-      toast({ title: "Agent deployed", description: `Deployment ID: ${result.deploymentId}` });
+      toast({
+        title: "Agent deployed",
+        description: `Deployment ID: ${result.deploymentId}`,
+      });
     },
     onError: (err) => {
-      toast({ title: "Deploy failed", description: (err as Error).message, variant: "destructive" });
+      toast({
+        title: "Deploy failed",
+        description: (err as Error).message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -132,7 +159,9 @@ export default function AIMarketplacePage() {
         platformSharePercent: publishForm.platformSharePercent,
         pricing: {
           free: publishForm.pricing === "free",
-          ...(publishForm.pricing === "paid" ? { price: parseInt(publishForm.price) * 100 } : {}),
+          ...(publishForm.pricing === "paid"
+            ? { price: parseInt(publishForm.price) * 100 }
+            : {}),
         },
         metadata: {
           source: "ai-marketplace",
@@ -160,7 +189,11 @@ export default function AIMarketplacePage() {
       refetch();
     },
     onError: (err) => {
-      toast({ title: "Publish failed", description: (err as Error).message, variant: "destructive" });
+      toast({
+        title: "Publish failed",
+        description: (err as Error).message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -176,7 +209,9 @@ export default function AIMarketplacePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">AI Agent Marketplace</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            AI Agent Marketplace
+          </h1>
           <p className="text-sm text-muted-foreground">
             Discover, install, and deploy AI agents built by the community
           </p>
@@ -196,7 +231,9 @@ export default function AIMarketplacePage() {
                 <label className="text-sm font-medium">Title</label>
                 <Input
                   value={publishForm.title}
-                  onChange={(e) => setPublishForm((f) => ({ ...f, title: e.target.value }))}
+                  onChange={(e) =>
+                    setPublishForm((f) => ({ ...f, title: e.target.value }))
+                  }
                   placeholder="My AI Agent"
                 />
               </div>
@@ -204,14 +241,24 @@ export default function AIMarketplacePage() {
                 <label className="text-sm font-medium">Description</label>
                 <Input
                   value={publishForm.description}
-                  onChange={(e) => setPublishForm((f) => ({ ...f, description: e.target.value }))}
+                  onChange={(e) =>
+                    setPublishForm((f) => ({
+                      ...f,
+                      description: e.target.value,
+                    }))
+                  }
                   placeholder="What does this agent do?"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm font-medium">Category</label>
-                  <Select value={publishForm.category} onValueChange={(v) => setPublishForm((f) => ({ ...f, category: v }))}>
+                  <Select
+                    value={publishForm.category}
+                    onValueChange={(v) =>
+                      setPublishForm((f) => ({ ...f, category: v }))
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -227,7 +274,12 @@ export default function AIMarketplacePage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium">Pricing</label>
-                  <Select value={publishForm.pricing} onValueChange={(v) => setPublishForm((f) => ({ ...f, pricing: v }))}>
+                  <Select
+                    value={publishForm.pricing}
+                    onValueChange={(v) =>
+                      setPublishForm((f) => ({ ...f, pricing: v }))
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -244,17 +296,26 @@ export default function AIMarketplacePage() {
                   <Input
                     type="number"
                     value={publishForm.price}
-                    onChange={(e) => setPublishForm((f) => ({ ...f, price: e.target.value }))}
+                    onChange={(e) =>
+                      setPublishForm((f) => ({ ...f, price: e.target.value }))
+                    }
                     placeholder="9.99"
                   />
                 </div>
               )}
               <div>
-                <label className="text-sm font-medium">Platform Share (%)</label>
+                <label className="text-sm font-medium">
+                  Platform Share (%)
+                </label>
                 <Input
                   type="number"
                   value={publishForm.platformSharePercent}
-                  onChange={(e) => setPublishForm((f) => ({ ...f, platformSharePercent: parseInt(e.target.value) }))}
+                  onChange={(e) =>
+                    setPublishForm((f) => ({
+                      ...f,
+                      platformSharePercent: parseInt(e.target.value),
+                    }))
+                  }
                   min={0}
                   max={100}
                 />
@@ -264,7 +325,12 @@ export default function AIMarketplacePage() {
                   <input
                     type="checkbox"
                     checked={publishForm.isPublic}
-                    onChange={(e) => setPublishForm((f) => ({ ...f, isPublic: e.target.checked }))}
+                    onChange={(e) =>
+                      setPublishForm((f) => ({
+                        ...f,
+                        isPublic: e.target.checked,
+                      }))
+                    }
                   />
                   Public listing
                 </label>
@@ -272,7 +338,12 @@ export default function AIMarketplacePage() {
                   <input
                     type="checkbox"
                     checked={publishForm.communityTemplate}
-                    onChange={(e) => setPublishForm((f) => ({ ...f, communityTemplate: e.target.checked }))}
+                    onChange={(e) =>
+                      setPublishForm((f) => ({
+                        ...f,
+                        communityTemplate: e.target.checked,
+                      }))
+                    }
                   />
                   Community template
                 </label>
@@ -282,7 +353,9 @@ export default function AIMarketplacePage() {
                 onClick={() => publishMutation.mutate()}
                 disabled={publishMutation.isPending || !publishForm.title}
               >
-                {publishMutation.isPending ? "Publishing..." : "Publish to Marketplace"}
+                {publishMutation.isPending
+                  ? "Publishing..."
+                  : "Publish to Marketplace"}
               </Button>
             </div>
           </DialogContent>
@@ -318,7 +391,9 @@ export default function AIMarketplacePage() {
                 <Brain className="size-8 text-muted-foreground" />
                 <p className="text-lg font-medium">No AI agents found</p>
                 <p className="text-sm text-muted-foreground">
-                  {search ? "Try a different search term" : "Be the first to publish an AI agent"}
+                  {search
+                    ? "Try a different search term"
+                    : "Be the first to publish an AI agent"}
                 </p>
               </div>
             ) : (
@@ -329,28 +404,43 @@ export default function AIMarketplacePage() {
                       <Bot className="h-5 w-5 text-primary" />
                       <div className="flex items-center gap-1">
                         <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                        <span className="text-xs">{listing.rating?.toFixed(1) ?? "0.0"}</span>
+                        <span className="text-xs">
+                          {listing.rating?.toFixed(1) ?? "0.0"}
+                        </span>
                       </div>
                     </div>
-                    <CardTitle className="mt-2 text-sm">{listing.title}</CardTitle>
+                    <CardTitle className="mt-2 text-sm">
+                      {listing.title}
+                    </CardTitle>
                     <CardDescription className="text-xs line-clamp-2 min-h-8">
                       {listing.description}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="flex-1">
                     <div className="flex flex-wrap gap-1 mb-2">
-                      <Badge variant="secondary" className="text-xs">{listing.category}</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        {listing.category}
+                      </Badge>
                       {listing.communityTemplate && (
-                        <Badge variant="outline" className="text-xs flex items-center gap-1">
+                        <Badge
+                          variant="outline"
+                          className="text-xs flex items-center gap-1"
+                        >
                           <Globe className="h-3 w-3" /> Community
                         </Badge>
                       )}
-                      <Badge variant={listing.pricing?.free ? "success" : "default"} className="text-xs">
-                        {listing.pricing?.free ? "Free" : `$${((listing.pricing?.price ?? 0) / 100).toFixed(2)}`}
+                      <Badge
+                        variant={listing.pricing?.free ? "success" : "default"}
+                        className="text-xs"
+                      >
+                        {listing.pricing?.free
+                          ? "Free"
+                          : `$${((listing.pricing?.price ?? 0) / 100).toFixed(2)}`}
                       </Badge>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {listing.installCount ?? 0} installs | v{listing.version ?? "1.0"}
+                      {listing.installCount ?? 0} installs | v
+                      {listing.version ?? "1.0"}
                     </div>
                   </CardContent>
                   <CardFooter className="gap-2 pt-0">
@@ -367,7 +457,9 @@ export default function AIMarketplacePage() {
                       size="sm"
                       variant="outline"
                       className="flex-1 text-xs"
-                      onClick={() => deployMutation.mutate({ listingId: listing.id })}
+                      onClick={() =>
+                        deployMutation.mutate({ listingId: listing.id })
+                      }
                       disabled={deployMutation.isPending}
                     >
                       <Bot className="mr-1 h-3 w-3" /> Deploy
@@ -387,13 +479,21 @@ export default function AIMarketplacePage() {
                 <Card key={listing.id}>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm">{listing.title}</CardTitle>
-                    <CardDescription className="text-xs line-clamp-2">{listing.description}</CardDescription>
+                    <CardDescription className="text-xs line-clamp-2">
+                      {listing.description}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Badge variant="success" className="text-xs">Free</Badge>
+                    <Badge variant="success" className="text-xs">
+                      Free
+                    </Badge>
                   </CardContent>
                   <CardFooter>
-                    <Button size="sm" className="w-full text-xs" onClick={() => installMutation.mutate(listing.id)}>
+                    <Button
+                      size="sm"
+                      className="w-full text-xs"
+                      onClick={() => installMutation.mutate(listing.id)}
+                    >
                       <Download className="mr-1 h-3 w-3" /> Install
                     </Button>
                   </CardFooter>
@@ -410,16 +510,24 @@ export default function AIMarketplacePage() {
                 <Card key={listing.id}>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm">{listing.title}</CardTitle>
-                    <CardDescription className="text-xs line-clamp-2">{listing.description}</CardDescription>
+                    <CardDescription className="text-xs line-clamp-2">
+                      {listing.description}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center gap-2">
                       <DollarSign className="h-4 w-4 text-green-500" />
-                      <span className="text-lg font-bold">${((listing.pricing?.price ?? 0) / 100).toFixed(2)}</span>
+                      <span className="text-lg font-bold">
+                        ${((listing.pricing?.price ?? 0) / 100).toFixed(2)}
+                      </span>
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button size="sm" className="w-full text-xs" onClick={() => installMutation.mutate(listing.id)}>
+                    <Button
+                      size="sm"
+                      className="w-full text-xs"
+                      onClick={() => installMutation.mutate(listing.id)}
+                    >
                       <Download className="mr-1 h-3 w-3" /> Purchase & Install
                     </Button>
                   </CardFooter>
@@ -437,16 +545,27 @@ export default function AIMarketplacePage() {
                   <CardHeader className="pb-2">
                     <div className="flex items-center gap-1 mb-1">
                       <Globe className="h-4 w-4 text-blue-500" />
-                      <span className="text-xs font-medium text-blue-500">Community</span>
+                      <span className="text-xs font-medium text-blue-500">
+                        Community
+                      </span>
                     </div>
                     <CardTitle className="text-sm">{listing.title}</CardTitle>
-                    <CardDescription className="text-xs line-clamp-2">{listing.description}</CardDescription>
+                    <CardDescription className="text-xs line-clamp-2">
+                      {listing.description}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <span className="text-xs text-muted-foreground">By {listing.author}</span>
+                    <span className="text-xs text-muted-foreground">
+                      By {listing.author}
+                    </span>
                   </CardContent>
                   <CardFooter>
-                    <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => installMutation.mutate(listing.id)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full text-xs"
+                      onClick={() => installMutation.mutate(listing.id)}
+                    >
                       <Plus className="mr-1 h-3 w-3" /> Add to workspace
                     </Button>
                   </CardFooter>

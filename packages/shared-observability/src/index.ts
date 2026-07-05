@@ -68,7 +68,8 @@ export function initTelemetry(config: TelemetryConfig): void {
     serviceName: name,
     serviceVersion = "0.0.0",
     environment = process.env.NODE_ENV ?? "development",
-    otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://localhost:4318",
+    otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT ??
+      "http://localhost:4318",
     enabled = process.env.OTEL_ENABLED !== "false",
     metricsInterval = 15000,
     tracesBatchSize = 512,
@@ -108,7 +109,8 @@ export function initTelemetry(config: TelemetryConfig): void {
     }
 
     // OTLP push to collector
-    const useOtlpMetrics = process.env.OTEL_METRICS_EXPORTER !== "prometheus-only";
+    const useOtlpMetrics =
+      process.env.OTEL_METRICS_EXPORTER !== "prometheus-only";
     if (useOtlpMetrics) {
       const metricExporter = new OTLPMetricExporter({
         url: `${otlpEndpoint}/v1/metrics`,
@@ -117,7 +119,7 @@ export function initTelemetry(config: TelemetryConfig): void {
         new PeriodicExportingMetricReader({
           exporter: metricExporter,
           exportIntervalMillis: metricsInterval,
-        })
+        }),
       );
     }
 
@@ -133,7 +135,10 @@ export function initTelemetry(config: TelemetryConfig): void {
     sdk = new NodeSDK({
       resourceAttributes,
       traceExporter,
-      metricReader: metricReaders.length === 1 ? metricReaders[0] : (metricReaders[0] as MetricReader),
+      metricReader:
+        metricReaders.length === 1
+          ? metricReaders[0]
+          : (metricReaders[0] as MetricReader),
       logRecordProcessor: new BatchLogRecordProcessor(logExporter, {
         maxQueueSize: tracesBatchSize,
         maxExportBatchSize: tracesBatchSize / 2,
@@ -152,13 +157,15 @@ export function initTelemetry(config: TelemetryConfig): void {
     isInitialized = true;
 
     console.log(
-      `[Telemetry] Initialized for ${name} (env=${environment}, endpoint=${otlpEndpoint})`
+      `[Telemetry] Initialized for ${name} (env=${environment}, endpoint=${otlpEndpoint})`,
     );
 
     // Graceful shutdown
     const shutdown = async () => {
       if (metricsServer) {
-        await new Promise<void>((resolve) => metricsServer!.close(() => resolve()));
+        await new Promise<void>((resolve) =>
+          metricsServer!.close(() => resolve()),
+        );
         metricsServer = null;
       }
       if (sdk) {
@@ -204,7 +211,7 @@ export function getCurrentSpan(): Span | undefined {
 export function withSpan<T>(
   name: string,
   fn: (span: Span) => T | Promise<T>,
-  options?: SpanOptions
+  options?: SpanOptions,
 ): Promise<T> {
   return getTracer().startActiveSpan(name, options ?? {}, async (span) => {
     try {
@@ -231,10 +238,7 @@ export function addSpanAttributes(attributes: Attributes): void {
   }
 }
 
-export function addSpanEvent(
-  name: string,
-  attributes?: Attributes
-): void {
+export function addSpanEvent(name: string, attributes?: Attributes): void {
   const span = getCurrentSpan();
   if (span) {
     span.addEvent(name, attributes);
@@ -246,7 +250,7 @@ export function addSpanEvent(
 export function recordCounter(
   name: string,
   value: number = 1,
-  attributes?: Attributes
+  attributes?: Attributes,
 ): void {
   const meter = getMeter();
   const counter = meter.createCounter(name);
@@ -256,7 +260,7 @@ export function recordCounter(
 export function recordHistogram(
   name: string,
   value: number,
-  attributes?: Attributes
+  attributes?: Attributes,
 ): void {
   const meter = getMeter();
   const histogram = meter.createHistogram(name);
@@ -266,7 +270,7 @@ export function recordHistogram(
 export function recordGauge(
   name: string,
   value: number,
-  attributes?: Attributes
+  attributes?: Attributes,
 ): void {
   const meter = getMeter();
   const gauge = meter.createGauge(name);
@@ -288,7 +292,7 @@ export function getTraceContext(): TraceContext | undefined {
 }
 
 export function injectTraceContext(
-  headers: Record<string, string> = {}
+  headers: Record<string, string> = {},
 ): Record<string, string> {
   const { propagation } = context.active() as any;
   const carrier = { ...headers };
@@ -302,7 +306,7 @@ export function injectTraceContext(
 
 export function initObservability(
   name: string,
-  opts?: { tracing?: boolean; metrics?: boolean }
+  opts?: { tracing?: boolean; metrics?: boolean },
 ): void {
   initTelemetry({
     serviceName: name,
@@ -317,7 +321,7 @@ export function tracingMiddleware(_serviceName: string) {
 export function recordMetric(
   name: string,
   value: number,
-  tags?: Record<string, string>
+  tags?: Record<string, string>,
 ): void {
   const attributes: Attributes = {};
   if (tags) {
@@ -330,7 +334,7 @@ export function recordMetric(
 
 export function recordEvent(
   eventType: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
 ): void {
   addSpanEvent(eventType, data as Attributes);
 }

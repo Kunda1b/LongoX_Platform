@@ -5182,7 +5182,20 @@ components:
 
     CreateTenantTierInput:
       type: object
-      required: [name, infrastructureLevel, maxWorkflows, maxConnectors, maxEnvironments, maxMembers, maxStorageGb, maxAiTokensMonthly, maxRagQueriesMonthly, hotRetentionDays, coldRetentionDays]
+      required:
+        [
+          name,
+          infrastructureLevel,
+          maxWorkflows,
+          maxConnectors,
+          maxEnvironments,
+          maxMembers,
+          maxStorageGb,
+          maxAiTokensMonthly,
+          maxRagQueriesMonthly,
+          hotRetentionDays,
+          coldRetentionDays,
+        ]
       properties:
         name:
           type: string

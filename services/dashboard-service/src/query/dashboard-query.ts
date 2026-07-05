@@ -46,7 +46,9 @@ async function executionsOverTime(): Promise<QueryDataPoint[]> {
 }
 
 async function executionsByStatus(): Promise<QueryDataPoint[]> {
-  const rows = await prisma.$queryRawUnsafe<{ label: string; value: number }[]>(`
+  const rows = await prisma.$queryRawUnsafe<
+    { label: string; value: number }[]
+  >(`
     SELECT status AS label, count(*)::int AS value
     FROM workflow_executions
     GROUP BY status
@@ -55,7 +57,9 @@ async function executionsByStatus(): Promise<QueryDataPoint[]> {
 }
 
 async function workflowStatusBreakdown(): Promise<QueryDataPoint[]> {
-  const rows = await prisma.$queryRawUnsafe<{ label: string; value: number }[]>(`
+  const rows = await prisma.$queryRawUnsafe<
+    { label: string; value: number }[]
+  >(`
     SELECT status AS label, count(*)::int AS value
     FROM workflows
     GROUP BY status
@@ -64,7 +68,9 @@ async function workflowStatusBreakdown(): Promise<QueryDataPoint[]> {
 }
 
 async function topWorkflows(): Promise<QueryDataPoint[]> {
-  const rows = await prisma.$queryRawUnsafe<{ label: string; value: number }[]>(`
+  const rows = await prisma.$queryRawUnsafe<
+    { label: string; value: number }[]
+  >(`
     SELECT workflow_name AS label, count(*)::int AS value
     FROM workflow_executions
     WHERE workflow_name IS NOT NULL

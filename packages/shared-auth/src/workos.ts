@@ -23,10 +23,7 @@ interface WorkOSCompat {
       organizationId?: string;
       connectionId?: string;
     }): string;
-    authenticateWithCode(opts: {
-      code: string;
-      clientId: string;
-    }): Promise<{
+    authenticateWithCode(opts: { code: string; clientId: string }): Promise<{
       user: WorkOSUser;
       accessToken: string;
       refreshToken: string;
@@ -196,7 +193,9 @@ export function mapWorkOSUser(
   return {
     id: opts.dbUserId,
     email: wosUser.email,
-    name: [wosUser.firstName, wosUser.lastName].filter(Boolean).join(" ") || wosUser.email,
+    name:
+      [wosUser.firstName, wosUser.lastName].filter(Boolean).join(" ") ||
+      wosUser.email,
     tenantId: opts.tenantId,
     role: opts.role,
   };

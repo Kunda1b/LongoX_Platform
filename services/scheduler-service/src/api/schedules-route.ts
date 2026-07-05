@@ -24,17 +24,36 @@ function serializeSchedule(row: any) {
     cronExpression: row.cronExpression ?? null,
     timezone: row.timezone,
     status: row.status,
-    startAt: row.startAt instanceof Date ? row.startAt.toISOString() : row.startAt,
-    endAt: row.endAt ? (row.endAt instanceof Date ? row.endAt.toISOString() : row.endAt) : null,
-    lastRunAt: row.lastRunAt ? (row.lastRunAt instanceof Date ? row.lastRunAt.toISOString() : row.lastRunAt) : null,
-    nextRunAt: row.nextRunAt ? (row.nextRunAt instanceof Date ? row.nextRunAt.toISOString() : row.nextRunAt) : null,
+    startAt:
+      row.startAt instanceof Date ? row.startAt.toISOString() : row.startAt,
+    endAt: row.endAt
+      ? row.endAt instanceof Date
+        ? row.endAt.toISOString()
+        : row.endAt
+      : null,
+    lastRunAt: row.lastRunAt
+      ? row.lastRunAt instanceof Date
+        ? row.lastRunAt.toISOString()
+        : row.lastRunAt
+      : null,
+    nextRunAt: row.nextRunAt
+      ? row.nextRunAt instanceof Date
+        ? row.nextRunAt.toISOString()
+        : row.nextRunAt
+      : null,
     maxRuns: row.maxRuns ?? null,
     runCount: row.runCount,
     retryOnFailure: row.retryOnFailure,
     maxRetries: row.maxRetries,
     metadata: row.metadata ?? {},
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt:
+      row.createdAt instanceof Date
+        ? row.createdAt.toISOString()
+        : row.createdAt,
+    updatedAt:
+      row.updatedAt instanceof Date
+        ? row.updatedAt.toISOString()
+        : row.updatedAt,
   };
 }
 
@@ -168,10 +187,12 @@ router.post("/schedules/:id/pause", async (req, res): Promise<void> => {
     return;
   }
 
-  const row = await prisma.schedule.update({
-    where: { id },
-    data: { status: "paused", updatedAt: new Date() } as any,
-  }).catch(() => null);
+  const row = await prisma.schedule
+    .update({
+      where: { id },
+      data: { status: "paused", updatedAt: new Date() } as any,
+    })
+    .catch(() => null);
 
   if (!row) {
     res.status(404).json({ error: "Schedule not found" });
@@ -187,10 +208,12 @@ router.post("/schedules/:id/activate", async (req, res): Promise<void> => {
     return;
   }
 
-  const row = await prisma.schedule.update({
-    where: { id },
-    data: { status: "active", updatedAt: new Date() } as any,
-  }).catch(() => null);
+  const row = await prisma.schedule
+    .update({
+      where: { id },
+      data: { status: "active", updatedAt: new Date() } as any,
+    })
+    .catch(() => null);
 
   if (!row) {
     res.status(404).json({ error: "Schedule not found" });

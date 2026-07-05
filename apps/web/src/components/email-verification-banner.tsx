@@ -32,7 +32,9 @@ export function EmailVerificationBanner() {
       <span className="flex-1">
         Please verify your email address to unlock all features.{" "}
         {sent ? (
-          <span className="font-medium text-green-700">Verification email sent!</span>
+          <span className="font-medium text-green-700">
+            Verification email sent!
+          </span>
         ) : (
           <button
             type="button"

@@ -1,12 +1,14 @@
 # Kubernetes Cluster Failure Runbook
 
 ## Failure Scenarios
+
 - **Node group failure**: Worker nodes become unhealthy or inaccessible
 - **Control plane failure**: API server, scheduler, or controller manager unavailable
 - **etcd failure**: Cluster state corruption or loss of quorum
 - **Full cluster loss**: Complete region or cloud provider failure
 
 ## Prerequisites
+
 - kubectl configured with backup cluster context
 - Access to EKS console or AWS CLI
 - Backup cluster pre-provisioned and ready
@@ -16,6 +18,7 @@
 ## Initial Assessment
 
 ### 1. Determine Failure Scope
+
 ```bash
 # Check node status
 kubectl get nodes -o wide
@@ -31,6 +34,7 @@ kubectl get pods --all-namespaces -o wide | grep -v Running
 ```
 
 ### 2. Attempt Recovery
+
 ```bash
 # If control plane is degraded, check etcd cluster health
 kubectl exec -n kube-system etcd-0 -- etcdctl endpoint health
@@ -46,6 +50,7 @@ kubectl delete pod <pod> -n <namespace> --force --grace-period=0
 ## Recovery Steps
 
 ### Step 1: Declare Cluster Failure
+
 ```bash
 # If recovery attempts fail within 5 minutes, declare failure
 echo "CLUSTER FAILURE DECLARED: $(date)" | \
@@ -56,6 +61,7 @@ pagerduty trigger --service "LongoX Kubernetes" --severity critical
 ```
 
 ### Step 2: Switch kubectl Context to Backup Cluster
+
 ```bash
 kubectl config use-context longox-backup-cluster
 
@@ -65,6 +71,7 @@ kubectl get nodes
 ```
 
 ### Step 3: Restore Cluster State from Backup
+
 ```bash
 # List available backups
 velero get backups
@@ -78,6 +85,7 @@ velero restore describe <restore-name>
 ```
 
 ### Step 4: Restore Persistent Volumes
+
 ```bash
 # Check PV/PVC status
 kubectl get pv,pvc --all-namespaces
@@ -94,6 +102,7 @@ kubectl get pvc --all-namespaces -o json | \
 ```
 
 ### Step 5: Restore Database from Backup
+
 ```bash
 # Cross-region promotion if needed (see database-failover.md)
 # Or restore from S3 backup
@@ -103,6 +112,7 @@ psql $DATABASE_URL < /tmp/db-restore.sql
 ```
 
 ### Step 6: Restore Application Workloads
+
 ```bash
 # Deploy core infrastructure first
 kubectl apply -f infrastructure/helm/longox/crds/
@@ -119,6 +129,7 @@ kubectl wait --for=condition=available --timeout=300s \
 ```
 
 ### Step 7: Restore Ingress Configuration
+
 ```bash
 # Recreate ingress rules
 kubectl apply -f infrastructure/kubernetes/ingress/
@@ -128,6 +139,7 @@ curl -s https://api.longox.ai/healthz
 ```
 
 ### Step 8: Verify Full Platform Health
+
 ```bash
 # Run full health check suite
 ./scripts/health-check.sh --all-services
@@ -142,12 +154,14 @@ curl -s https://api.longox.ai/healthz
 ## PV/PVC Migration Considerations
 
 ### If original PVs are inaccessible:
+
 1. Delete stuck PVCs: `kubectl delete pvc <name> --force`
 2. Update deployments to use ephemeral storage: `kubectl patch deployment <name> -p '{"spec":{"template":{"spec":{"volumes":[{"emptyDir":{}}]}}}}'`
 3. Restore data from S3/backup into new volumes
 4. Recreate PVCs with same names but new backing storage
 
 ### EBS Volume Recovery:
+
 ```bash
 # List orphaned EBS volumes
 aws ec2 describe-volumes --filters "Name=status,Values=available"
@@ -172,6 +186,7 @@ EOF
 ## Estimated RTO: 30 minutes
 
 ## Post-Recovery Checklist
+
 - [ ] All pods in Running state
 - [ ] Database connectivity verified
 - [ ] Ingress routing confirmed
@@ -180,6 +195,7 @@ EOF
 - [ ] Failed cluster resources cleaned up to avoid cost leakage
 
 ## Related Runbooks
+
 - database-failover.md — Detailed DB failover procedures
 - region-failover.md — Cross-region failover
 - full-platform-recovery.md — Complete platform recovery

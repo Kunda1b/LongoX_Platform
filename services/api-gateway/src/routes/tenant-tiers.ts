@@ -35,8 +35,14 @@ router.get(
         supportLevel: t.supportLevel,
         monthlyPriceCents: t.monthlyPriceCents,
         sortOrder: t.sortOrder,
-        createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : new Date(t.createdAt).toISOString(),
-        updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : new Date(t.updatedAt).toISOString(),
+        createdAt:
+          t.createdAt instanceof Date
+            ? t.createdAt.toISOString()
+            : new Date(t.createdAt).toISOString(),
+        updatedAt:
+          t.updatedAt instanceof Date
+            ? t.updatedAt.toISOString()
+            : new Date(t.updatedAt).toISOString(),
       })),
     );
   },
@@ -72,8 +78,14 @@ router.get(
       supportLevel: tier.supportLevel,
       monthlyPriceCents: tier.monthlyPriceCents,
       sortOrder: tier.sortOrder,
-      createdAt: tier.createdAt instanceof Date ? tier.createdAt.toISOString() : new Date(tier.createdAt).toISOString(),
-      updatedAt: tier.updatedAt instanceof Date ? tier.updatedAt.toISOString() : new Date(tier.updatedAt).toISOString(),
+      createdAt:
+        tier.createdAt instanceof Date
+          ? tier.createdAt.toISOString()
+          : new Date(tier.createdAt).toISOString(),
+      updatedAt:
+        tier.updatedAt instanceof Date
+          ? tier.updatedAt.toISOString()
+          : new Date(tier.updatedAt).toISOString(),
     });
   },
 );
@@ -107,8 +119,14 @@ router.post(
       supportLevel: tier.supportLevel,
       monthlyPriceCents: tier.monthlyPriceCents,
       sortOrder: tier.sortOrder,
-      createdAt: tier.createdAt instanceof Date ? tier.createdAt.toISOString() : new Date(tier.createdAt).toISOString(),
-      updatedAt: tier.updatedAt instanceof Date ? tier.updatedAt.toISOString() : new Date(tier.updatedAt).toISOString(),
+      createdAt:
+        tier.createdAt instanceof Date
+          ? tier.createdAt.toISOString()
+          : new Date(tier.createdAt).toISOString(),
+      updatedAt:
+        tier.updatedAt instanceof Date
+          ? tier.updatedAt.toISOString()
+          : new Date(tier.updatedAt).toISOString(),
     });
   },
 );
@@ -147,8 +165,14 @@ router.put(
       supportLevel: tier.supportLevel,
       monthlyPriceCents: tier.monthlyPriceCents,
       sortOrder: tier.sortOrder,
-      createdAt: tier.createdAt instanceof Date ? tier.createdAt.toISOString() : new Date(tier.createdAt).toISOString(),
-      updatedAt: tier.updatedAt instanceof Date ? tier.updatedAt.toISOString() : new Date(tier.updatedAt).toISOString(),
+      createdAt:
+        tier.createdAt instanceof Date
+          ? tier.createdAt.toISOString()
+          : new Date(tier.createdAt).toISOString(),
+      updatedAt:
+        tier.updatedAt instanceof Date
+          ? tier.updatedAt.toISOString()
+          : new Date(tier.updatedAt).toISOString(),
     });
   },
 );
@@ -198,17 +222,28 @@ router.get(
             supportLevel: tier.supportLevel,
             monthlyPriceCents: tier.monthlyPriceCents,
             sortOrder: tier.sortOrder,
-            createdAt: tier.createdAt instanceof Date ? tier.createdAt.toISOString() : new Date(tier.createdAt).toISOString(),
-            updatedAt: tier.updatedAt instanceof Date ? tier.updatedAt.toISOString() : new Date(tier.updatedAt).toISOString(),
+            createdAt:
+              tier.createdAt instanceof Date
+                ? tier.createdAt.toISOString()
+                : new Date(tier.createdAt).toISOString(),
+            updatedAt:
+              tier.updatedAt instanceof Date
+                ? tier.updatedAt.toISOString()
+                : new Date(tier.updatedAt).toISOString(),
           }
         : null,
       assignment: {
         id: assignment.id,
         tenantId: assignment.tenantId,
         tierId: assignment.tierId,
-        assignedAt: assignment.assignedAt instanceof Date ? assignment.assignedAt.toISOString() : new Date(assignment.assignedAt).toISOString(),
+        assignedAt:
+          assignment.assignedAt instanceof Date
+            ? assignment.assignedAt.toISOString()
+            : new Date(assignment.assignedAt).toISOString(),
         expiresAt: assignment.expiresAt
-          ? (assignment.expiresAt instanceof Date ? assignment.expiresAt.toISOString() : new Date(assignment.expiresAt).toISOString())
+          ? assignment.expiresAt instanceof Date
+            ? assignment.expiresAt.toISOString()
+            : new Date(assignment.expiresAt).toISOString()
           : null,
         assignedBy: assignment.assignedBy,
         changeReason: assignment.changeReason,

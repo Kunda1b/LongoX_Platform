@@ -49,21 +49,21 @@ pnpm --filter @longox/api-gateway run dev # API gateway (localhost:3000)
 
 ## Stack
 
-| Layer              | Technology                              |
-|--------------------|-----------------------------------------|
-| Frontend           | Next.js 15, React 19, Tailwind CSS 4    |
-| UI                 | shadcn/ui (Radix), Framer Motion        |
-| State              | TanStack React Query, Zustand           |
-| API                | Express 5 (Node.js), TypeScript         |
-| Database           | PostgreSQL + Drizzle ORM                |
-| Queues             | Redis + BullMQ                          |
-| Validation         | Zod                                     |
-| AI                 | OpenAI, Groq, Mistral                   |
-| Auth               | JWT, bcrypt, SSO (Google, Microsoft, Okta/OIDC) |
-| Search             | Typesense                               |
-| Observability      | OpenTelemetry, Pino                     |
-| Infrastructure     | Kubernetes, Docker, Terraform           |
-| Connectors         | 11 integrations incl. Stripe, Slack, Notion, Salesforce |
+| Layer          | Technology                                              |
+| -------------- | ------------------------------------------------------- |
+| Frontend       | Next.js 15, React 19, Tailwind CSS 4                    |
+| UI             | shadcn/ui (Radix), Framer Motion                        |
+| State          | TanStack React Query, Zustand                           |
+| API            | Express 5 (Node.js), TypeScript                         |
+| Database       | PostgreSQL + Drizzle ORM                                |
+| Queues         | Redis + BullMQ                                          |
+| Validation     | Zod                                                     |
+| AI             | OpenAI, Groq, Mistral                                   |
+| Auth           | JWT, bcrypt, SSO (Google, Microsoft, Okta/OIDC)         |
+| Search         | Typesense                                               |
+| Observability  | OpenTelemetry, Pino                                     |
+| Infrastructure | Kubernetes, Docker, Terraform                           |
+| Connectors     | 11 integrations incl. Stripe, Slack, Notion, Salesforce |
 
 ## Services
 
@@ -71,11 +71,11 @@ Each service in `services/` is independently deployable as a Docker container. T
 
 ## Billing Plans
 
-| Plan    | Price    | Executions | Workflows | AI Tokens  |
-|---------|----------|------------|-----------|------------|
-| Starter | Free     | 500/mo     | 10        | 50K        |
-| Growth  | $79/mo   | 15K/mo     | 100       | 500K       |
-| Business| $299/mo  | 100K/mo    | Unlimited | 5M         |
+| Plan     | Price   | Executions | Workflows | AI Tokens |
+| -------- | ------- | ---------- | --------- | --------- |
+| Starter  | Free    | 500/mo     | 10        | 50K       |
+| Growth   | $79/mo  | 15K/mo     | 100       | 500K      |
+| Business | $299/mo | 100K/mo    | Unlimited | 5M        |
 
 ## License
 

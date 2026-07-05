@@ -96,10 +96,7 @@ export class MeteringService {
     return rows as UsageAggregation[];
   }
 
-  async getDailyUsage(
-    tenantId: string,
-    date: Date,
-  ): Promise<DailyUsage[]> {
+  async getDailyUsage(tenantId: string, date: Date): Promise<DailyUsage[]> {
     const dayStart = new Date(date);
     dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(date);

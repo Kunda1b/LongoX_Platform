@@ -7,36 +7,51 @@ export const scheduledJobsCounter = meter.createCounter("scheduler.jobs", {
   description: "Total scheduled jobs",
 });
 
-export const scheduledJobsTriggeredCounter = meter.createCounter("scheduler.jobs.triggered", {
-  description: "Total scheduled jobs triggered",
-});
+export const scheduledJobsTriggeredCounter = meter.createCounter(
+  "scheduler.jobs.triggered",
+  {
+    description: "Total scheduled jobs triggered",
+  },
+);
 
-export const scheduledJobsFailedCounter = meter.createCounter("scheduler.jobs.failed", {
-  description: "Total scheduled jobs failed",
-});
+export const scheduledJobsFailedCounter = meter.createCounter(
+  "scheduler.jobs.failed",
+  {
+    description: "Total scheduled jobs failed",
+  },
+);
 
 // Histograms
-export const jobExecutionDurationHistogram = meter.createHistogram("scheduler.job.duration", {
-  description: "Scheduled job execution duration in milliseconds",
-  unit: "ms",
-});
+export const jobExecutionDurationHistogram = meter.createHistogram(
+  "scheduler.job.duration",
+  {
+    description: "Scheduled job execution duration in milliseconds",
+    unit: "ms",
+  },
+);
 
 // Gauges
-export const pendingScheduledJobsGauge = meter.createGauge("scheduler.jobs.pending", {
-  description: "Number of pending scheduled jobs",
-});
+export const pendingScheduledJobsGauge = meter.createGauge(
+  "scheduler.jobs.pending",
+  {
+    description: "Number of pending scheduled jobs",
+  },
+);
 
 // Helper functions
 export function recordScheduledJob(
   workflowId: string,
-  cronExpression: string
+  cronExpression: string,
 ): void {
-  scheduledJobsCounter.add(1, { workflow_id: workflowId, cron: cronExpression });
+  scheduledJobsCounter.add(1, {
+    workflow_id: workflowId,
+    cron: cronExpression,
+  });
 }
 
 export function recordScheduledJobTriggered(
   workflowId: string,
-  durationMs: number
+  durationMs: number,
 ): void {
   const attrs = { workflow_id: workflowId };
   scheduledJobsTriggeredCounter.add(1, attrs);
@@ -45,9 +60,12 @@ export function recordScheduledJobTriggered(
 
 export function recordScheduledJobFailed(
   workflowId: string,
-  errorType: string
+  errorType: string,
 ): void {
-  scheduledJobsFailedCounter.add(1, { workflow_id: workflowId, error_type: errorType });
+  scheduledJobsFailedCounter.add(1, {
+    workflow_id: workflowId,
+    error_type: errorType,
+  });
 }
 
 export function updatePendingScheduledJobs(count: number): void {

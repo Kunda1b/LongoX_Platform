@@ -36,11 +36,24 @@ interface SearchResponse {
 
 const resourceQueries: Record<
   string,
-  () => Promise<{ resourceType: string; id: string; title: string; content: string; tenantId: string | null }[]>
+  () => Promise<
+    {
+      resourceType: string;
+      id: string;
+      title: string;
+      content: string;
+      tenantId: string | null;
+    }[]
+  >
 > = {
   workflow: async () => {
     const rows = (await prisma.workflow.findMany({
-      select: { id: true, name: true, description: true, tenantId: true } as any,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        tenantId: true,
+      } as any,
     })) as any[];
     return rows.map((r) => ({
       resourceType: "workflow",
@@ -196,7 +209,10 @@ export class FtsSearchService {
     `;
     params.push(limit, offset);
 
-    const rows = (await prisma.$queryRawUnsafe<any[]>(mainSql, ...params)) as any[];
+    const rows = (await prisma.$queryRawUnsafe<any[]>(
+      mainSql,
+      ...params,
+    )) as any[];
 
     const results: SearchResult[] = rows.map((r) => ({
       id: String(r.id),

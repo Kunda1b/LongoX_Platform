@@ -56,11 +56,7 @@ const ROLE_META: Record<RoleName, RoleMeta> = {
       "Manage users & roles",
       "Manage dashboards",
     ],
-    cannot: [
-      "Delete workspace",
-      "Transfer ownership",
-      "Manage subscriptions",
-    ],
+    cannot: ["Delete workspace", "Transfer ownership", "Manage subscriptions"],
   },
   Builder: {
     icon: Hammer,
@@ -101,10 +97,7 @@ function RoleCard({ role }: { role: Role }) {
             </div>
             <CardTitle className="text-base">{role.name}</CardTitle>
           </div>
-          <Badge
-            variant="outline"
-            className={`shrink-0 text-xs ${meta.badge}`}
-          >
+          <Badge variant="outline" className={`shrink-0 text-xs ${meta.badge}`}>
             {role.permissionCount ?? 0} permissions
           </Badge>
         </div>

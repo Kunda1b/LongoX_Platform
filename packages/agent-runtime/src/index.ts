@@ -213,7 +213,8 @@ export class AgentRuntime {
   }
 
   private async createPlan(context: AgentContext): Promise<AgentPlan> {
-    const goal = (context.variables.goal as string) ?? "Complete the given task";
+    const goal =
+      (context.variables.goal as string) ?? "Complete the given task";
     return {
       goal,
       steps: [
@@ -304,7 +305,10 @@ export class AgentRuntime {
       id: randomUUID(),
       key,
       content,
-      memoryType: this.config.memoryType === "both" ? "short_term" : this.config.memoryType,
+      memoryType:
+        this.config.memoryType === "both"
+          ? "short_term"
+          : this.config.memoryType,
       metadata: {
         workflowId: context.workflowId,
         executionId: context.executionId,

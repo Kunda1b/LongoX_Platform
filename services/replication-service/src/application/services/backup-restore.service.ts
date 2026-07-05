@@ -19,9 +19,20 @@ const BACKUP_DIR = process.env.BACKUP_STORAGE_PATH ?? "backups";
 const CHUNK_SIZE = 65536;
 
 type BackupScope = "full" | "workflows" | "executions" | "audit" | "billing";
-type BackupStatus = "pending" | "running" | "completed" | "failed" | "validating" | "restoring";
+type BackupStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "validating"
+  | "restoring";
 type RestoreType = "full" | "dry_run" | "partial";
-type RestoreStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
+type RestoreStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
 
 interface BackupFilters {
   dateFrom?: string;
@@ -74,7 +85,9 @@ export class BackupRestoreService {
           `SELECT COUNT(*) as count FROM workflow_versions WHERE tenant_id = $1`,
           tenantId,
         );
-        rowCounts.workflow_versions = Number((workflowVersions[0] as any)?.count ?? 0);
+        rowCounts.workflow_versions = Number(
+          (workflowVersions[0] as any)?.count ?? 0,
+        );
 
         const workflowData: any[] = await prisma.$queryRawUnsafe(
           `SELECT * FROM workflows WHERE tenant_id = $1`,
@@ -176,10 +189,17 @@ export class BackupRestoreService {
   async restoreBackup(
     backupId: string,
     tenantId: string,
-    options: { restoreType?: RestoreType; targetEnvironment?: string; tables?: string[]; restoredBy?: string; notes?: string } = {},
+    options: {
+      restoreType?: RestoreType;
+      targetEnvironment?: string;
+      tables?: string[];
+      restoredBy?: string;
+      notes?: string;
+    } = {},
   ): Promise<any> {
     const restoreType = options.restoreType ?? "full";
-    const targetEnvironment = options.targetEnvironment ?? process.env.NODE_ENV ?? "development";
+    const targetEnvironment =
+      options.targetEnvironment ?? process.env.NODE_ENV ?? "development";
 
     const backup = await prisma.backupRecord.findFirst({
       where: { id: backupId, tenantId } as any,
@@ -190,7 +210,9 @@ export class BackupRestoreService {
     }
 
     if (backup.status !== "completed") {
-      throw new Error(`Backup ${backupId} is not in completed status (current: ${backup.status})`);
+      throw new Error(
+        `Backup ${backupId} is not in completed status (current: ${backup.status})`,
+      );
     }
 
     await this.validateBackup(backupId);
@@ -247,7 +269,9 @@ export class BackupRestoreService {
         for (const s of scopesToRestore) {
           const filePath = `${backup.storagePath}_${s}.json`;
           if (!fs.existsSync(filePath)) {
-            warnings.push(`Backup file for scope "${s}" not found at ${filePath}`);
+            warnings.push(
+              `Backup file for scope "${s}" not found at ${filePath}`,
+            );
             continue;
           }
 
@@ -276,7 +300,8 @@ export class BackupRestoreService {
                 const values = keys.map((k) => {
                   const v = row[k];
                   if (v instanceof Date) return v;
-                  if (typeof v === "object" && v !== null) return JSON.stringify(v);
+                  if (typeof v === "object" && v !== null)
+                    return JSON.stringify(v);
                   return v;
                 });
                 await prisma.$executeRawUnsafe(
@@ -285,7 +310,9 @@ export class BackupRestoreService {
                 );
               }
             } catch (err: unknown) {
-              warnings.push(`Failed to restore row in "${s}": ${(err as Error)?.message ?? "unknown error"}`);
+              warnings.push(
+                `Failed to restore row in "${s}": ${(err as Error)?.message ?? "unknown error"}`,
+              );
             }
           }
 
@@ -336,7 +363,9 @@ export class BackupRestoreService {
     if (filters.dateFrom) where.startedAt = { gte: new Date(filters.dateFrom) };
     if (filters.dateTo) {
       if (where.startedAt && typeof where.startedAt === "object") {
-        (where.startedAt as Record<string, unknown>).lte = new Date(filters.dateTo);
+        (where.startedAt as Record<string, unknown>).lte = new Date(
+          filters.dateTo,
+        );
       } else {
         where.startedAt = { lte: new Date(filters.dateTo) };
       }
@@ -363,7 +392,9 @@ export class BackupRestoreService {
     if (record.storagePath) {
       const dir = path.dirname(record.storagePath);
       if (fs.existsSync(dir)) {
-        const files = fs.readdirSync(dir).filter((f) => f.startsWith(path.basename(record.storagePath!)));
+        const files = fs
+          .readdirSync(dir)
+          .filter((f) => f.startsWith(path.basename(record.storagePath!)));
         for (const file of files) {
           fs.rmSync(path.join(dir, file), { recursive: true, force: true });
         }
@@ -373,7 +404,10 @@ export class BackupRestoreService {
     await prisma.backupRecord.delete({ where: { id } });
   }
 
-  async scheduleBackup(tenantId: string, config: ScheduleConfig): Promise<{ scheduled: true; config: ScheduleConfig }> {
+  async scheduleBackup(
+    tenantId: string,
+    config: ScheduleConfig,
+  ): Promise<{ scheduled: true; config: ScheduleConfig }> {
     const scheduleRecord = {
       tenantId,
       cronExpression: config.cronExpression,
@@ -395,7 +429,12 @@ export class BackupRestoreService {
     return { scheduled: true, config };
   }
 
-  async validateBackup(id: string): Promise<{ valid: boolean; checksumMatch: boolean; fileCount: number; errors: string[] }> {
+  async validateBackup(id: string): Promise<{
+    valid: boolean;
+    checksumMatch: boolean;
+    fileCount: number;
+    errors: string[];
+  }> {
     const record = await prisma.backupRecord.findUnique({ where: { id } });
 
     if (!record) {
@@ -405,7 +444,16 @@ export class BackupRestoreService {
     const errors: string[] = [];
     let fileCount = 0;
 
-    if (!record.storagePath || !fs.existsSync(record.storagePath.replace(/_workflows\.json$/, "").replace(/_executions\.json$/, "").replace(/_audit\.json$/, "").replace(/_billing\.json$/, ""))) {
+    if (
+      !record.storagePath ||
+      !fs.existsSync(
+        record.storagePath
+          .replace(/_workflows\.json$/, "")
+          .replace(/_executions\.json$/, "")
+          .replace(/_audit\.json$/, "")
+          .replace(/_billing\.json$/, ""),
+      )
+    ) {
       const scope = record.scope as BackupScope;
       const scopes = this.getScopesForRestore(scope);
 
@@ -420,7 +468,10 @@ export class BackupRestoreService {
     }
 
     if (record.checksum) {
-      const computedChecksum = this.computeChecksum(record.storagePath!, record.scope as BackupScope);
+      const computedChecksum = this.computeChecksum(
+        record.storagePath!,
+        record.scope as BackupScope,
+      );
       const checksumMatch = computedChecksum === record.checksum;
       if (!checksumMatch) {
         errors.push("Checksum mismatch — backup data may be corrupted");
@@ -428,13 +479,27 @@ export class BackupRestoreService {
       return { valid: errors.length === 0, checksumMatch, fileCount, errors };
     }
 
-    return { valid: errors.length === 0, checksumMatch: true, fileCount, errors };
+    return {
+      valid: errors.length === 0,
+      checksumMatch: true,
+      fileCount,
+      errors,
+    };
   }
 
-  async estimateBackupSize(tenantId: string): Promise<{ estimatedBytes: number; estimatedRows: Record<string, number> }> {
+  async estimateBackupSize(tenantId: string): Promise<{
+    estimatedBytes: number;
+    estimatedRows: Record<string, number>;
+  }> {
     const estimatedRows: Record<string, number> = {};
 
-    const tables = ["workflows", "workflow_versions", "executions", "audit_log", "billing"] as const;
+    const tables = [
+      "workflows",
+      "workflow_versions",
+      "executions",
+      "audit_log",
+      "billing",
+    ] as const;
     for (const table of tables) {
       const result: any[] = await prisma.$queryRawUnsafe(
         `SELECT COUNT(*) as count FROM "${table}" WHERE tenant_id = $1`,
@@ -444,7 +509,10 @@ export class BackupRestoreService {
       estimatedRows[table] = Number(row?.count ?? 0);
     }
 
-    const estimatedBytes = Object.values(estimatedRows).reduce((a, b) => a + b * 512, 0);
+    const estimatedBytes = Object.values(estimatedRows).reduce(
+      (a, b) => a + b * 512,
+      0,
+    );
     return { estimatedBytes, estimatedRows };
   }
 
@@ -502,7 +570,9 @@ export class BackupRestoreService {
           tenantId,
         );
       } catch {
-        console.warn(`Integrity check skipped for table ${table} — may not exist`);
+        console.warn(
+          `Integrity check skipped for table ${table} — may not exist`,
+        );
       }
     }
   }

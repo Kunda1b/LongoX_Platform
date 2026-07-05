@@ -29,7 +29,9 @@ router.get(
     })) as any[];
 
     // Fetch invitedBy user names in a second query (no direct relation on invitation)
-    const inviterIds = Array.from(new Set(rows.map((r) => r.invitedBy).filter(Boolean))) as string[];
+    const inviterIds = Array.from(
+      new Set(rows.map((r) => r.invitedBy).filter(Boolean)),
+    ) as string[];
     const inviters = inviterIds.length
       ? ((await prisma.user.findMany({
           where: { id: { in: inviterIds } },
@@ -45,8 +47,14 @@ router.get(
         role: { id: r.roleId, name: r.role?.name ?? "" },
         status: r.status,
         invitedBy: inviterMap.get(r.invitedBy) ?? null,
-        expiresAt: r.expiresAt instanceof Date ? r.expiresAt.toISOString() : new Date(r.expiresAt).toISOString(),
-        createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : new Date(r.createdAt).toISOString(),
+        expiresAt:
+          r.expiresAt instanceof Date
+            ? r.expiresAt.toISOString()
+            : new Date(r.expiresAt).toISOString(),
+        createdAt:
+          r.createdAt instanceof Date
+            ? r.createdAt.toISOString()
+            : new Date(r.createdAt).toISOString(),
       })),
     );
   },
@@ -98,7 +106,9 @@ router.post(
 
     // Owner cannot be assigned via invite — only through workspace creation
     if (role.name.toLowerCase() === "owner") {
-      res.status(403).json({ error: "Cannot invite users as Owner. Transfer ownership instead." });
+      res.status(403).json({
+        error: "Cannot invite users as Owner. Transfer ownership instead.",
+      });
       return;
     }
 
@@ -109,7 +119,9 @@ router.post(
     })) as any;
 
     if (existingMember) {
-      res.status(409).json({ error: "This user is already a member of the workspace" });
+      res
+        .status(409)
+        .json({ error: "This user is already a member of the workspace" });
       return;
     }
 
@@ -150,7 +162,13 @@ router.post(
         action: "invitation.sent",
         targetType: "invitation",
         targetId: String(invitation.id),
-        diffJson: { email: trimmedEmail, roleId: role.id, roleName: role.name, tenantId, actorType: "user" } as any,
+        diffJson: {
+          email: trimmedEmail,
+          roleId: role.id,
+          roleName: role.name,
+          tenantId,
+          actorType: "user",
+        } as any,
       } as any,
     });
 
@@ -169,8 +187,14 @@ router.post(
       email: invitation.email,
       role: { id: role.id, name: role.name },
       status: invitation.status,
-      expiresAt: invitation.expiresAt instanceof Date ? invitation.expiresAt.toISOString() : new Date(invitation.expiresAt).toISOString(),
-      createdAt: invitation.createdAt instanceof Date ? invitation.createdAt.toISOString() : new Date(invitation.createdAt).toISOString(),
+      expiresAt:
+        invitation.expiresAt instanceof Date
+          ? invitation.expiresAt.toISOString()
+          : new Date(invitation.expiresAt).toISOString(),
+      createdAt:
+        invitation.createdAt instanceof Date
+          ? invitation.createdAt.toISOString()
+          : new Date(invitation.createdAt).toISOString(),
     });
   },
 );
@@ -226,7 +250,9 @@ router.get(
     }
 
     if (inv.status !== "pending") {
-      res.status(400).json({ error: `Invitation has already been ${inv.status}` });
+      res
+        .status(400)
+        .json({ error: `Invitation has already been ${inv.status}` });
       return;
     }
 
@@ -257,7 +283,9 @@ router.get(
     if (existingUser) {
       // User exists — add them to the workspace
       if (existingUser.tenantId === inv.tenantId) {
-        res.status(409).json({ error: "You are already a member of this workspace" });
+        res
+          .status(409)
+          .json({ error: "You are already a member of this workspace" });
         return;
       }
 
@@ -266,33 +294,41 @@ router.get(
         if (!existingUser.tenantId) {
           await tx.user.update({
             where: { id: existingUser.id },
-            data: { tenantId: inv.tenantId, role: role?.name ?? "viewer", updatedAt: new Date() } as any,
+            data: {
+              tenantId: inv.tenantId,
+              role: role?.name ?? "viewer",
+              updatedAt: new Date(),
+            } as any,
           });
         }
 
         // Assign role (userRolesTable → membership)
-        await tx.membership.create({
-          data: {
-            userId: String(existingUser.id),
-            roleId: inv.roleId,
-            tenantId: inv.tenantId,
-          } as any,
-        }).catch(() => {
-          // Ignore unique-constraint conflicts (onConflictDoNothing)
-        });
+        await tx.membership
+          .create({
+            data: {
+              userId: String(existingUser.id),
+              roleId: inv.roleId,
+              tenantId: inv.tenantId,
+            } as any,
+          })
+          .catch(() => {
+            // Ignore unique-constraint conflicts (onConflictDoNothing)
+          });
 
         // Add to memberships
-        await tx.membership.create({
-          data: {
-            tenantId: inv.tenantId,
-            userId: existingUser.id,
-            roleId: inv.roleId,
-            invitedBy: inv.invitedBy,
-            status: "active",
-          } as any,
-        }).catch(() => {
-          // Ignore unique-constraint conflicts (onConflictDoNothing)
-        });
+        await tx.membership
+          .create({
+            data: {
+              tenantId: inv.tenantId,
+              userId: existingUser.id,
+              roleId: inv.roleId,
+              invitedBy: inv.invitedBy,
+              status: "active",
+            } as any,
+          })
+          .catch(() => {
+            // Ignore unique-constraint conflicts (onConflictDoNothing)
+          });
 
         // Mark invitation as accepted
         await tx.workspaceInvitation.update({
@@ -306,7 +342,12 @@ router.get(
             action: "invitation.accepted",
             targetType: "invitation",
             targetId: String(inv.id),
-            diffJson: { email: inv.email, roleId: inv.roleId, tenantId: inv.tenantId, actorType: "user" } as any,
+            diffJson: {
+              email: inv.email,
+              roleId: inv.roleId,
+              tenantId: inv.tenantId,
+              actorType: "user",
+            } as any,
           } as any,
         });
       });
@@ -330,7 +371,9 @@ router.get(
           tenantId: inv.tenantId,
           role: role?.name ?? existingUser.role,
           emailVerifiedAt: existingUser.emailVerifiedAt
-            ? (existingUser.emailVerifiedAt instanceof Date ? existingUser.emailVerifiedAt.toISOString() : new Date(existingUser.emailVerifiedAt).toISOString())
+            ? existingUser.emailVerifiedAt instanceof Date
+              ? existingUser.emailVerifiedAt.toISOString()
+              : new Date(existingUser.emailVerifiedAt).toISOString()
             : null,
           avatarUrl: existingUser.avatarUrl ?? null,
         },
@@ -372,7 +415,9 @@ router.post(
     }
 
     if (inv.email !== req.user!.email) {
-      res.status(403).json({ error: "This invitation was sent to a different email address" });
+      res.status(403).json({
+        error: "This invitation was sent to a different email address",
+      });
       return;
     }
 
@@ -382,23 +427,31 @@ router.post(
         data: { tenantId: inv.tenantId, updatedAt: new Date() } as any,
       });
 
-      await tx.membership.create({
-        data: { userId: String(req.user!.id), roleId: inv.roleId, tenantId: inv.tenantId } as any,
-      }).catch(() => {
-        // Ignore unique-constraint conflicts (onConflictDoNothing)
-      });
+      await tx.membership
+        .create({
+          data: {
+            userId: String(req.user!.id),
+            roleId: inv.roleId,
+            tenantId: inv.tenantId,
+          } as any,
+        })
+        .catch(() => {
+          // Ignore unique-constraint conflicts (onConflictDoNothing)
+        });
 
-      await tx.membership.create({
-        data: {
-          tenantId: inv.tenantId,
-          userId: req.user!.id,
-          roleId: inv.roleId,
-          invitedBy: inv.invitedBy,
-          status: "active",
-        } as any,
-      }).catch(() => {
-        // Ignore unique-constraint conflicts (onConflictDoNothing)
-      });
+      await tx.membership
+        .create({
+          data: {
+            tenantId: inv.tenantId,
+            userId: req.user!.id,
+            roleId: inv.roleId,
+            invitedBy: inv.invitedBy,
+            status: "active",
+          } as any,
+        })
+        .catch(() => {
+          // Ignore unique-constraint conflicts (onConflictDoNothing)
+        });
 
       await tx.workspaceInvitation.update({
         where: { id: inv.id },
@@ -420,7 +473,10 @@ router.post(
     };
     const jwtToken = signToken(authUser);
 
-    res.json({ token: jwtToken, user: { ...authUser, emailVerifiedAt: null, avatarUrl: null } });
+    res.json({
+      token: jwtToken,
+      user: { ...authUser, emailVerifiedAt: null, avatarUrl: null },
+    });
   },
 );
 

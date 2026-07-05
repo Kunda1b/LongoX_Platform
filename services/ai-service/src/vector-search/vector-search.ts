@@ -63,7 +63,7 @@ export class VectorSearch {
 
     const vectorLit = `[${queryVector.join(",")}]`;
 
-    const result = await prisma.$queryRawUnsafe(
+    const result = (await prisma.$queryRawUnsafe(
       `
       SELECT
         rc.id,
@@ -76,7 +76,7 @@ export class VectorSearch {
       LIMIT $1
       `,
       topK,
-    ) as any[];
+    )) as any[];
 
     const rows = result ?? [];
 

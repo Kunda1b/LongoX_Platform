@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { customFetch, getListEnvironmentsQueryKey } from "@longox/api-client-react";
+import {
+  customFetch,
+  getListEnvironmentsQueryKey,
+} from "@longox/api-client-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -62,7 +65,9 @@ export function AddEnvironmentDialog() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, type, description, isDefault }),
       });
-      queryClient.invalidateQueries({ queryKey: getListEnvironmentsQueryKey() });
+      queryClient.invalidateQueries({
+        queryKey: getListEnvironmentsQueryKey(),
+      });
       toast({ title: `Environment "${name}" created` });
       setOpen(false);
       reset();
@@ -90,7 +95,11 @@ export function AddEnvironmentDialog() {
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>Name</Label>
-            <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Production" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Production"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Type</Label>
@@ -99,23 +108,41 @@ export function AddEnvironmentDialog() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {ENV_TYPES.map(et => (
-                  <SelectItem key={et.value} value={et.value}>{et.label}</SelectItem>
+                {ENV_TYPES.map((et) => (
+                  <SelectItem key={et.value} value={et.value}>
+                    {et.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label>Description</Label>
-            <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Optional description" />
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Optional description"
+            />
           </div>
           <div className="flex items-center gap-2">
-            <Switch checked={isDefault} onCheckedChange={setIsDefault} id="default-env" />
+            <Switch
+              checked={isDefault}
+              onCheckedChange={setIsDefault}
+              id="default-env"
+            />
             <Label htmlFor="default-env">Set as default environment</Label>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => { setOpen(false); reset(); }}>Cancel</Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setOpen(false);
+              reset();
+            }}
+          >
+            Cancel
+          </Button>
           <Button onClick={handleSubmit} disabled={loading}>
             {loading ? "Creating..." : "Create Environment"}
           </Button>

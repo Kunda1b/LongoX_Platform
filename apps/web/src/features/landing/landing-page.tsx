@@ -186,8 +186,8 @@ function HeroSection() {
 
           <p className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground sm:mt-6 sm:text-lg lg:text-xl">
             LongoX combines visual workflow building, multi-provider AI routing,
-            a connector marketplace, and enterprise controls — in one multi-tenant
-            platform built for production.
+            a connector marketplace, and enterprise controls — in one
+            multi-tenant platform built for production.
           </p>
 
           <div className="mt-8 flex w-full flex-col items-stretch gap-3 sm:mt-10 sm:flex-row sm:items-center sm:justify-center">
@@ -230,16 +230,33 @@ function HeroSection() {
 
               <div className="grid gap-3 sm:grid-cols-3">
                 {[
-                  { label: "Webhook trigger", icon: Zap, tone: "bg-sky-500/10 text-sky-700 dark:text-sky-400" },
-                  { label: "AI classify intent", icon: Bot, tone: "bg-violet-500/10 text-violet-700 dark:text-violet-400" },
-                  { label: "Slack notify", icon: Cable, tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" },
+                  {
+                    label: "Webhook trigger",
+                    icon: Zap,
+                    tone: "bg-sky-500/10 text-sky-700 dark:text-sky-400",
+                  },
+                  {
+                    label: "AI classify intent",
+                    icon: Bot,
+                    tone: "bg-violet-500/10 text-violet-700 dark:text-violet-400",
+                  },
+                  {
+                    label: "Slack notify",
+                    icon: Cable,
+                    tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+                  },
                 ].map((node, i) => (
                   <div key={node.label} className="relative">
                     {i > 0 && (
                       <div className="absolute -left-3 top-1/2 hidden h-px w-3 -translate-y-1/2 bg-border sm:block" />
                     )}
                     <div className="flex items-center gap-3 rounded-lg border bg-background p-4 shadow-sm">
-                      <div className={cn("flex size-9 shrink-0 items-center justify-center rounded-md", node.tone)}>
+                      <div
+                        className={cn(
+                          "flex size-9 shrink-0 items-center justify-center rounded-md",
+                          node.tone,
+                        )}
+                      >
                         <node.icon className="size-4" />
                       </div>
                       <div>
@@ -354,7 +371,10 @@ function FeaturesSection() {
 
 function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="border-y bg-muted/20 py-14 sm:py-20 lg:py-28">
+    <section
+      id="how-it-works"
+      className="border-y bg-muted/20 py-14 sm:py-20 lg:py-28"
+    >
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <Badge variant="outline" className="mb-4">
@@ -530,10 +550,16 @@ function LandingFooter() {
                 {link.label}
               </a>
             ))}
-            <Link href="/login" className="transition-colors hover:text-foreground">
+            <Link
+              href="/login"
+              className="transition-colors hover:text-foreground"
+            >
               Sign in
             </Link>
-            <Link href="/register" className="transition-colors hover:text-foreground">
+            <Link
+              href="/register"
+              className="transition-colors hover:text-foreground"
+            >
               Register
             </Link>
           </nav>

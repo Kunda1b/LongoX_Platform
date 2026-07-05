@@ -88,7 +88,12 @@ export interface WorkflowNodeContract {
   description: string;
   position: { x: number; y: number };
   config: Record<string, unknown>;
-  inputs: Array<{ key: string; type: string; required: boolean; defaultValue?: unknown }>;
+  inputs: Array<{
+    key: string;
+    type: string;
+    required: boolean;
+    defaultValue?: unknown;
+  }>;
   outputs: Array<{ key: string; type: string; description?: string }>;
   retryPolicy?: NodeRetryPolicy;
   timeoutMs?: number;
@@ -104,7 +109,13 @@ export interface WorkflowGraph {
   version: number;
   checksum: GraphChecksum;
   nodes: WorkflowNodeContract[];
-  edges: Array<{ source: string; target: string; sourceHandle?: string; targetHandle?: string; condition?: string }>;
+  edges: Array<{
+    source: string;
+    target: string;
+    sourceHandle?: string;
+    targetHandle?: string;
+    condition?: string;
+  }>;
   metadata: {
     name: string;
     description?: string;
@@ -118,31 +129,47 @@ export interface WorkflowGraph {
 
 function canonicalJson(obj: unknown): string {
   const seen = new WeakSet<object>();
-  return JSON.stringify(obj, (_key: string, value: unknown) => {
-    if (typeof value === "object" && value !== null) {
-      if (seen.has(value as object)) return;
-      seen.add(value as object);
-    }
-    if (Array.isArray(value)) {
-      return [...value].sort((a, b) => {
-        const aId = (a as Record<string, unknown>).id ?? (a as Record<string, unknown>).key ?? "";
-        const bId = (b as Record<string, unknown>).id ?? (b as Record<string, unknown>).key ?? "";
-        return String(aId).localeCompare(String(bId));
-      });
-    }
-    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-      const keys = Object.keys(value as Record<string, unknown>).sort();
-      const sorted: Record<string, unknown> = {};
-      for (const k of keys) {
-        sorted[k] = (value as Record<string, unknown>)[k];
+  return JSON.stringify(
+    obj,
+    (_key: string, value: unknown) => {
+      if (typeof value === "object" && value !== null) {
+        if (seen.has(value as object)) return;
+        seen.add(value as object);
       }
-      return sorted;
-    }
-    return value;
-  }, 2);
+      if (Array.isArray(value)) {
+        return [...value].sort((a, b) => {
+          const aId =
+            (a as Record<string, unknown>).id ??
+            (a as Record<string, unknown>).key ??
+            "";
+          const bId =
+            (b as Record<string, unknown>).id ??
+            (b as Record<string, unknown>).key ??
+            "";
+          return String(aId).localeCompare(String(bId));
+        });
+      }
+      if (
+        typeof value === "object" &&
+        value !== null &&
+        !Array.isArray(value)
+      ) {
+        const keys = Object.keys(value as Record<string, unknown>).sort();
+        const sorted: Record<string, unknown> = {};
+        for (const k of keys) {
+          sorted[k] = (value as Record<string, unknown>)[k];
+        }
+        return sorted;
+      }
+      return value;
+    },
+    2,
+  );
 }
 
-export function computeGraphChecksum(graph: Partial<WorkflowGraph>): GraphChecksum {
+export function computeGraphChecksum(
+  graph: Partial<WorkflowGraph>,
+): GraphChecksum {
   const canonical = canonicalJson(graph);
   const hash = createHash("sha-256");
   hash.update(canonical, "utf-8");
@@ -156,10 +183,13 @@ export function computeGraphChecksum(graph: Partial<WorkflowGraph>): GraphChecks
 export function validateGraphContract(graph: WorkflowGraph): string[] {
   const errors: string[] = [];
   if (!graph.workflowId) errors.push("workflowId is required");
-  if (!graph.version || graph.version <= 0) errors.push("version must be a positive integer");
-  if (!graph.checksum || !graph.checksum.value) errors.push("checksum is required");
+  if (!graph.version || graph.version <= 0)
+    errors.push("version must be a positive integer");
+  if (!graph.checksum || !graph.checksum.value)
+    errors.push("checksum is required");
   if (!graph.metadata?.name) errors.push("metadata.name is required");
-  if (!graph.metadata?.triggerType) errors.push("metadata.triggerType is required");
+  if (!graph.metadata?.triggerType)
+    errors.push("metadata.triggerType is required");
   if (!Array.isArray(graph.nodes)) {
     errors.push("nodes must be an array");
     return errors;
@@ -173,27 +203,42 @@ export function validateGraphContract(graph: WorkflowGraph): string[] {
   for (let i = 0; i < graph.nodes.length; i++) {
     const node = graph.nodes[i];
     if (!node.id) errors.push(`nodes[${i}].id is required`);
-    else if (nodeIds.has(node.id)) errors.push(`nodes[${i}].id "${node.id}" is duplicate`);
+    else if (nodeIds.has(node.id))
+      errors.push(`nodes[${i}].id "${node.id}" is duplicate`);
     else nodeIds.add(node.id);
     if (!node.type) errors.push(`nodes[${i}].type is required`);
     if (!node.label) errors.push(`nodes[${i}].label is required`);
     if (!node.category) errors.push(`nodes[${i}].category is required`);
-    if (!node.position || typeof node.position.x !== "number" || typeof node.position.y !== "number") {
+    if (
+      !node.position ||
+      typeof node.position.x !== "number" ||
+      typeof node.position.y !== "number"
+    ) {
       errors.push(`nodes[${i}].position must have x and y coordinates`);
     }
-    if (!Array.isArray(node.inputs)) errors.push(`nodes[${i}].inputs must be an array`);
-    if (!Array.isArray(node.outputs)) errors.push(`nodes[${i}].outputs must be an array`);
+    if (!Array.isArray(node.inputs))
+      errors.push(`nodes[${i}].inputs must be an array`);
+    if (!Array.isArray(node.outputs))
+      errors.push(`nodes[${i}].outputs must be an array`);
     if (node.retryPolicy) {
       const rp = node.retryPolicy;
-      if (rp.maxAttempts < 1) errors.push(`nodes[${i}].retryPolicy.maxAttempts must be >= 1`);
-      if (rp.initialDelayMs < 0) errors.push(`nodes[${i}].retryPolicy.initialDelayMs must be >= 0`);
-      if (rp.maxDelayMs < rp.initialDelayMs) errors.push(`nodes[${i}].retryPolicy.maxDelayMs must be >= initialDelayMs`);
-      if (rp.backoffMultiplier < 1) errors.push(`nodes[${i}].retryPolicy.backoffMultiplier must be >= 1`);
+      if (rp.maxAttempts < 1)
+        errors.push(`nodes[${i}].retryPolicy.maxAttempts must be >= 1`);
+      if (rp.initialDelayMs < 0)
+        errors.push(`nodes[${i}].retryPolicy.initialDelayMs must be >= 0`);
+      if (rp.maxDelayMs < rp.initialDelayMs)
+        errors.push(
+          `nodes[${i}].retryPolicy.maxDelayMs must be >= initialDelayMs`,
+        );
+      if (rp.backoffMultiplier < 1)
+        errors.push(`nodes[${i}].retryPolicy.backoffMultiplier must be >= 1`);
     }
     if (node.approvalGate) {
       const ag = node.approvalGate;
-      if (ag.requiredApprovers < 1) errors.push(`nodes[${i}].approvalGate.requiredApprovers must be >= 1`);
-      if (ag.timeoutMs < 0) errors.push(`nodes[${i}].approvalGate.timeoutMs must be >= 0`);
+      if (ag.requiredApprovers < 1)
+        errors.push(`nodes[${i}].approvalGate.requiredApprovers must be >= 1`);
+      if (ag.timeoutMs < 0)
+        errors.push(`nodes[${i}].approvalGate.timeoutMs must be >= 0`);
     }
   }
 
@@ -201,8 +246,10 @@ export function validateGraphContract(graph: WorkflowGraph): string[] {
     const edge = graph.edges[i];
     if (!edge.source) errors.push(`edges[${i}].source is required`);
     if (!edge.target) errors.push(`edges[${i}].target is required`);
-    if (!nodeIds.has(edge.source)) errors.push(`edges[${i}].source "${edge.source}" not found in nodes`);
-    if (!nodeIds.has(edge.target)) errors.push(`edges[${i}].target "${edge.target}" not found in nodes`);
+    if (!nodeIds.has(edge.source))
+      errors.push(`edges[${i}].source "${edge.source}" not found in nodes`);
+    if (!nodeIds.has(edge.target))
+      errors.push(`edges[${i}].target "${edge.target}" not found in nodes`);
   }
 
   return errors;
@@ -220,7 +267,12 @@ function deepEqual(a: unknown, b: unknown): boolean {
     const aKeys = Object.keys(a as Record<string, unknown>).sort();
     const bKeys = Object.keys(b as Record<string, unknown>).sort();
     if (aKeys.length !== bKeys.length) return false;
-    return aKeys.every((k) => deepEqual((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]));
+    return aKeys.every((k) =>
+      deepEqual(
+        (a as Record<string, unknown>)[k],
+        (b as Record<string, unknown>)[k],
+      ),
+    );
   }
   return a === b;
 }
@@ -281,7 +333,11 @@ function removeJsonPointer(root: unknown, pointer: string): void {
   }
 }
 
-function findPatchOperations(from: unknown, to: unknown, basePath: string): JsonPatchOperation[] {
+function findPatchOperations(
+  from: unknown,
+  to: unknown,
+  basePath: string,
+): JsonPatchOperation[] {
   const patches: JsonPatchOperation[] = [];
   if (deepEqual(from, to)) return patches;
 
@@ -294,7 +350,13 @@ function findPatchOperations(from: unknown, to: unknown, basePath: string): Json
     return patches;
   }
 
-  if (typeof from !== typeof to || from === null || to === null || typeof from !== "object" || typeof to !== "object") {
+  if (
+    typeof from !== typeof to ||
+    from === null ||
+    to === null ||
+    typeof from !== "object" ||
+    typeof to !== "object"
+  ) {
     patches.push({ op: "replace", path: basePath, value: to });
     return patches;
   }
@@ -323,7 +385,10 @@ function findPatchOperations(from: unknown, to: unknown, basePath: string): Json
   return patches;
 }
 
-export function computeDiff(from: WorkflowGraph, to: WorkflowGraph): WorkflowDiff {
+export function computeDiff(
+  from: WorkflowGraph,
+  to: WorkflowGraph,
+): WorkflowDiff {
   const fromIds = new Set(from.nodes.map((n) => n.id));
   const toIds = new Set(to.nodes.map((n) => n.id));
 
@@ -338,8 +403,12 @@ export function computeDiff(from: WorkflowGraph, to: WorkflowGraph): WorkflowDif
     .map((n) => n.id);
 
   const edgesChanged = !deepEqual(
-    [...from.edges].sort((a, b) => `${a.source}->${a.target}`.localeCompare(`${b.source}->${b.target}`)),
-    [...to.edges].sort((a, b) => `${a.source}->${a.target}`.localeCompare(`${b.source}->${b.target}`)),
+    [...from.edges].sort((a, b) =>
+      `${a.source}->${a.target}`.localeCompare(`${b.source}->${b.target}`),
+    ),
+    [...to.edges].sort((a, b) =>
+      `${a.source}->${a.target}`.localeCompare(`${b.source}->${b.target}`),
+    ),
   );
 
   const fromNodes = [...from.nodes].sort((a, b) => a.id.localeCompare(b.id));
@@ -366,7 +435,10 @@ export function computeDiff(from: WorkflowGraph, to: WorkflowGraph): WorkflowDif
   };
 }
 
-export function applyDiff(graph: WorkflowGraph, diff: WorkflowDiff): WorkflowGraph {
+export function applyDiff(
+  graph: WorkflowGraph,
+  diff: WorkflowDiff,
+): WorkflowGraph {
   const result: WorkflowGraph = JSON.parse(JSON.stringify(graph));
 
   for (const patch of diff.patches) {
@@ -390,7 +462,11 @@ export function applyDiff(graph: WorkflowGraph, diff: WorkflowDiff): WorkflowGra
       } else {
         (current as Record<string, unknown>)[lastKey] = patch.value;
       }
-    } else if (patch.op === "remove" && current && typeof current === "object") {
+    } else if (
+      patch.op === "remove" &&
+      current &&
+      typeof current === "object"
+    ) {
       if (Array.isArray(current)) {
         (current as unknown[]).splice(Number(lastKey), 1);
       } else {
@@ -405,12 +481,18 @@ export function applyDiff(graph: WorkflowGraph, diff: WorkflowDiff): WorkflowGra
     } else if (patch.op === "copy" && patch.from) {
       const resolved = resolveJsonPointer(result, patch.from);
       if (resolved !== undefined) {
-        setJsonPointer(result, patch.path, JSON.parse(JSON.stringify(resolved)));
+        setJsonPointer(
+          result,
+          patch.path,
+          JSON.parse(JSON.stringify(resolved)),
+        );
       }
     } else if (patch.op === "test" && current && typeof current === "object") {
       const actual = (current as Record<string, unknown>)[lastKey];
       if (!deepEqual(actual, patch.value)) {
-        throw new Error(`Test failed at ${patch.path}: expected ${JSON.stringify(patch.value)}, got ${JSON.stringify(actual)}`);
+        throw new Error(
+          `Test failed at ${patch.path}: expected ${JSON.stringify(patch.value)}, got ${JSON.stringify(actual)}`,
+        );
       }
     }
   }

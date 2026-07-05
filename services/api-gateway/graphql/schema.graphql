@@ -351,9 +351,17 @@ type Promotion {
 type Query {
   me: CurrentUser!
   tenants: [Tenant!]!
-  workflows(filter: WorkflowFilter, first: Int, after: String): WorkflowConnection!
+  workflows(
+    filter: WorkflowFilter
+    first: Int
+    after: String
+  ): WorkflowConnection!
   workflow(id: ID!): Workflow
-  executions(filter: ExecutionFilter, first: Int, after: String): ExecutionConnection!
+  executions(
+    filter: ExecutionFilter
+    first: Int
+    after: String
+  ): ExecutionConnection!
   execution(id: ID!): Execution
   dashboards: [Dashboard!]!
   connector(id: ID!): Connector
@@ -364,5 +372,7 @@ type Mutation {
   publishWorkflow(input: PublishWorkflowInput!): PublishWorkflowPayload!
   createDashboard(input: CreateDashboardInput!): CreateDashboardPayload!
   installConnector(input: InstallConnectorInput!): InstallConnectorPayload!
-  promoteEnvironment(input: PromoteEnvironmentInput!): PromoteEnvironmentPayload!
+  promoteEnvironment(
+    input: PromoteEnvironmentInput!
+  ): PromoteEnvironmentPayload!
 }

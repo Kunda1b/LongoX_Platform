@@ -74,145 +74,179 @@ function fmtPrompt(row: any) {
   };
 }
 
-router.get("/prompts", authorize("ai:read"), async (_req, res): Promise<void> => {
-  await ensurePrompts();
-  const rows = await prisma.aiPrompt.findMany({
-    orderBy: { id: "asc" } as any,
-  });
-  res.json(rows.map(fmtPrompt));
-});
-
-router.get("/prompts/:id", authorize("ai:read"), async (req, res): Promise<void> => {
-  const row = await prisma.aiPrompt.findUnique({
-    where: { id: String(req.params.id) } as any,
-  });
-  if (!row) {
-    res.status(404).json({ error: "Not found" });
-    return;
-  }
-  res.json(fmtPrompt(row));
-});
-
-router.post("/prompts", authorize("ai:write"), async (req, res): Promise<void> => {
-  const { name, description, content, tags } = req.body as {
-    name: string;
-    description?: string;
-    content: string;
-    tags?: string[];
-  };
-  if (!name?.trim() || !content?.trim()) {
-    res.status(400).json({ error: "name and content required" });
-    return;
-  }
-  const row = await prisma.aiPrompt.create({
-    data: {
-      name: name.trim(),
-      description,
-      content: content.trim(),
-      tags,
-      version: 1,
-      status: "draft",
-    } as any,
-  });
-  await prisma.aiPromptVersion.create({
-    data: {
-      promptId: (row as any).id,
-      content: content.trim(),
-      version: 1,
-      status: "draft",
-    } as any,
-  });
-  res.status(201).json(fmtPrompt(row));
-});
-
-router.patch("/prompts/:id", authorize("ai:write"), async (req, res): Promise<void> => {
-  const id = String(req.params.id);
-  const updates: Record<string, unknown> = {};
-  const b = req.body as Partial<{
-    name: string;
-    description: string;
-    content: string;
-    tags: string[];
-  }>;
-  if (b.name !== undefined) updates.name = b.name.trim();
-  if (b.description !== undefined) updates.description = b.description;
-  if (b.content !== undefined) updates.content = b.content.trim();
-  if (b.tags !== undefined) updates.tags = b.tags;
-
-  if (b.content) {
-    const current = await prisma.aiPrompt.findUnique({
-      where: { id } as any,
+router.get(
+  "/prompts",
+  authorize("ai:read"),
+  async (_req, res): Promise<void> => {
+    await ensurePrompts();
+    const rows = await prisma.aiPrompt.findMany({
+      orderBy: { id: "asc" } as any,
     });
-    if (current) {
-      const newVersion = ((current as any).version ?? 1) + 1;
-      updates.version = newVersion;
-      await prisma.aiPromptVersion.create({
-        data: {
-          promptId: id,
-          content: b.content.trim(),
-          version: newVersion,
-          status: "draft",
-        } as any,
-      });
+    res.json(rows.map(fmtPrompt));
+  },
+);
+
+router.get(
+  "/prompts/:id",
+  authorize("ai:read"),
+  async (req, res): Promise<void> => {
+    const row = await prisma.aiPrompt.findUnique({
+      where: { id: String(req.params.id) } as any,
+    });
+    if (!row) {
+      res.status(404).json({ error: "Not found" });
+      return;
     }
-  }
+    res.json(fmtPrompt(row));
+  },
+);
 
-  const row = await prisma.aiPrompt.update({
-    where: { id } as any,
-    data: updates as any,
-  }).catch(() => null);
-  if (!row) {
-    res.status(404).json({ error: "Not found" });
-    return;
-  }
-  res.json(fmtPrompt(row));
-});
+router.post(
+  "/prompts",
+  authorize("ai:write"),
+  async (req, res): Promise<void> => {
+    const { name, description, content, tags } = req.body as {
+      name: string;
+      description?: string;
+      content: string;
+      tags?: string[];
+    };
+    if (!name?.trim() || !content?.trim()) {
+      res.status(400).json({ error: "name and content required" });
+      return;
+    }
+    const row = await prisma.aiPrompt.create({
+      data: {
+        name: name.trim(),
+        description,
+        content: content.trim(),
+        tags,
+        version: 1,
+        status: "draft",
+      } as any,
+    });
+    await prisma.aiPromptVersion.create({
+      data: {
+        promptId: (row as any).id,
+        content: content.trim(),
+        version: 1,
+        status: "draft",
+      } as any,
+    });
+    res.status(201).json(fmtPrompt(row));
+  },
+);
 
-router.delete("/prompts/:id", authorize("ai:delete"), async (req, res): Promise<void> => {
-  const id = String(req.params.id);
-  await prisma.aiPromptVersion.deleteMany({
-    where: { promptId: id } as any,
-  });
-  await prisma.aiPrompt.delete({
-    where: { id } as any,
-  }).catch(() => undefined);
-  res.status(204).end();
-});
+router.patch(
+  "/prompts/:id",
+  authorize("ai:write"),
+  async (req, res): Promise<void> => {
+    const id = String(req.params.id);
+    const updates: Record<string, unknown> = {};
+    const b = req.body as Partial<{
+      name: string;
+      description: string;
+      content: string;
+      tags: string[];
+    }>;
+    if (b.name !== undefined) updates.name = b.name.trim();
+    if (b.description !== undefined) updates.description = b.description;
+    if (b.content !== undefined) updates.content = b.content.trim();
+    if (b.tags !== undefined) updates.tags = b.tags;
 
-router.get("/prompts/:id/versions", authorize("ai:read"), async (req, res): Promise<void> => {
-  const id = String(req.params.id);
-  const rows = await prisma.aiPromptVersion.findMany({
-    where: { promptId: id } as any,
-    orderBy: { version: "asc" } as any,
-  });
-  res.json(
-    rows.map((r: any) => ({
-      id: r.id,
-      promptId: r.promptId,
-      content: r.content,
-      version: r.version,
-      status: r.status,
-      notes: r.notes ?? null,
-      createdAt: r.createdAt.toISOString(),
-    })),
-  );
-});
+    if (b.content) {
+      const current = await prisma.aiPrompt.findUnique({
+        where: { id } as any,
+      });
+      if (current) {
+        const newVersion = ((current as any).version ?? 1) + 1;
+        updates.version = newVersion;
+        await prisma.aiPromptVersion.create({
+          data: {
+            promptId: id,
+            content: b.content.trim(),
+            version: newVersion,
+            status: "draft",
+          } as any,
+        });
+      }
+    }
 
-router.post("/prompts/:id/publish", authorize("ai:write"), async (req, res): Promise<void> => {
-  const id = String(req.params.id);
-  await prisma.aiPromptVersion.updateMany({
-    where: { promptId: id } as any,
-    data: { status: "approved" } as any,
-  });
-  const row = await prisma.aiPrompt.update({
-    where: { id } as any,
-    data: { status: "approved" } as any,
-  }).catch(() => null);
-  if (!row) {
-    res.status(404).json({ error: "Not found" });
-    return;
-  }
-  res.json(fmtPrompt(row));
-});
+    const row = await prisma.aiPrompt
+      .update({
+        where: { id } as any,
+        data: updates as any,
+      })
+      .catch(() => null);
+    if (!row) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.json(fmtPrompt(row));
+  },
+);
+
+router.delete(
+  "/prompts/:id",
+  authorize("ai:delete"),
+  async (req, res): Promise<void> => {
+    const id = String(req.params.id);
+    await prisma.aiPromptVersion.deleteMany({
+      where: { promptId: id } as any,
+    });
+    await prisma.aiPrompt
+      .delete({
+        where: { id } as any,
+      })
+      .catch(() => undefined);
+    res.status(204).end();
+  },
+);
+
+router.get(
+  "/prompts/:id/versions",
+  authorize("ai:read"),
+  async (req, res): Promise<void> => {
+    const id = String(req.params.id);
+    const rows = await prisma.aiPromptVersion.findMany({
+      where: { promptId: id } as any,
+      orderBy: { version: "asc" } as any,
+    });
+    res.json(
+      rows.map((r: any) => ({
+        id: r.id,
+        promptId: r.promptId,
+        content: r.content,
+        version: r.version,
+        status: r.status,
+        notes: r.notes ?? null,
+        createdAt: r.createdAt.toISOString(),
+      })),
+    );
+  },
+);
+
+router.post(
+  "/prompts/:id/publish",
+  authorize("ai:write"),
+  async (req, res): Promise<void> => {
+    const id = String(req.params.id);
+    await prisma.aiPromptVersion.updateMany({
+      where: { promptId: id } as any,
+      data: { status: "approved" } as any,
+    });
+    const row = await prisma.aiPrompt
+      .update({
+        where: { id } as any,
+        data: { status: "approved" } as any,
+      })
+      .catch(() => null);
+    if (!row) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.json(fmtPrompt(row));
+  },
+);
 
 export default router;

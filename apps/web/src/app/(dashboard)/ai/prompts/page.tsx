@@ -92,7 +92,12 @@ export default function PromptsGovernancePage() {
   const [testOpen, setTestOpen] = useState(false);
   const [testVars, setTestVars] = useState("");
   const [rollbackVersion, setRollbackVersion] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", content: "", tags: "" });
+  const [form, setForm] = useState({
+    name: "",
+    description: "",
+    content: "",
+    tags: "",
+  });
 
   const { data: prompts, isLoading } = useQuery<Prompt[]>({
     queryKey: ["ai-prompts"],
@@ -121,9 +126,12 @@ export default function PromptsGovernancePage() {
   const { data: approvals } = useQuery<ApprovalRecord[]>({
     queryKey: ["prompt-approvals", selectedPrompt?.id],
     queryFn: async () => {
-      const res = await fetch(`/api/prompts/${selectedPrompt!.id}/approval-history`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `/api/prompts/${selectedPrompt!.id}/approval-history`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       if (!res.ok) throw new Error("Failed to fetch approvals");
       return res.json();
     },
@@ -212,7 +220,13 @@ export default function PromptsGovernancePage() {
   });
 
   const rollbackMutation = useMutation({
-    mutationFn: async ({ id, targetVersion }: { id: string; targetVersion: number }) => {
+    mutationFn: async ({
+      id,
+      targetVersion,
+    }: {
+      id: string;
+      targetVersion: number;
+    }) => {
       const res = await fetch(`/api/prompts/${id}/rollback`, {
         method: "POST",
         headers: {
@@ -233,7 +247,13 @@ export default function PromptsGovernancePage() {
   });
 
   const testMutation = useMutation({
-    mutationFn: async ({ id, variables }: { id: string; variables?: Record<string, string> }) => {
+    mutationFn: async ({
+      id,
+      variables,
+    }: {
+      id: string;
+      variables?: Record<string, string>;
+    }) => {
       const res = await fetch(`/api/prompts/${id}/test`, {
         method: "POST",
         headers: {
@@ -268,10 +288,14 @@ export default function PromptsGovernancePage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "approved": return "success";
-      case "review": return "warning";
-      case "rejected": return "destructive";
-      default: return "secondary";
+      case "approved":
+        return "success";
+      case "review":
+        return "warning";
+      case "rejected":
+        return "destructive";
+      default:
+        return "secondary";
     }
   };
 
@@ -279,7 +303,9 @@ export default function PromptsGovernancePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Prompt Governance</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Prompt Governance
+          </h1>
           <p className="text-sm text-muted-foreground">
             Version control, approval workflows, and testing for prompts
           </p>
@@ -299,7 +325,9 @@ export default function PromptsGovernancePage() {
                 <Label>Name</Label>
                 <Input
                   value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, name: e.target.value }))
+                  }
                   placeholder="e.g., Data Extraction"
                 />
               </div>
@@ -307,7 +335,9 @@ export default function PromptsGovernancePage() {
                 <Label>Description</Label>
                 <Input
                   value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, description: e.target.value }))
+                  }
                   placeholder="Describe the prompt"
                 />
               </div>
@@ -315,7 +345,9 @@ export default function PromptsGovernancePage() {
                 <Label>Content</Label>
                 <Textarea
                   value={form.content}
-                  onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, content: e.target.value }))
+                  }
                   placeholder="Use {{variable}} for template variables"
                   className="h-32 font-mono text-sm"
                 />
@@ -324,11 +356,16 @@ export default function PromptsGovernancePage() {
                 <Label>Tags (comma-separated)</Label>
                 <Input
                   value={form.tags}
-                  onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, tags: e.target.value }))
+                  }
                   placeholder="extraction, json"
                 />
               </div>
-              <Button onClick={() => createMutation.mutate()} disabled={!form.name || !form.content}>
+              <Button
+                onClick={() => createMutation.mutate()}
+                disabled={!form.name || !form.content}
+              >
                 Create
               </Button>
             </div>
@@ -357,10 +394,14 @@ export default function PromptsGovernancePage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <Badge variant={getStatusColor(p.status) as any}>{p.status}</Badge>
+                  <Badge variant={getStatusColor(p.status) as any}>
+                    {p.status}
+                  </Badge>
                   <Badge variant="outline">v{p.version}</Badge>
                   {p.tags?.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
                   ))}
                 </div>
                 <div className="flex items-center gap-1 flex-wrap">
@@ -431,14 +472,25 @@ export default function PromptsGovernancePage() {
               </TabsList>
               <TabsContent value="versions" className="space-y-2">
                 {versions?.map((v) => (
-                  <div key={v.id} className="flex items-center justify-between rounded-lg border p-3">
+                  <div
+                    key={v.id}
+                    className="flex items-center justify-between rounded-lg border p-3"
+                  >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline">v{v.version}</Badge>
-                        <Badge variant={getStatusColor(v.status) as any}>{v.status}</Badge>
+                        <Badge variant={getStatusColor(v.status) as any}>
+                          {v.status}
+                        </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground line-clamp-1">{v.content}</p>
-                      {v.notes && <p className="text-xs italic text-muted-foreground">{v.notes}</p>}
+                      <p className="text-xs text-muted-foreground line-clamp-1">
+                        {v.content}
+                      </p>
+                      {v.notes && (
+                        <p className="text-xs italic text-muted-foreground">
+                          {v.notes}
+                        </p>
+                      )}
                     </div>
                     {v.version !== selectedPrompt?.version && (
                       <Button
@@ -462,13 +514,17 @@ export default function PromptsGovernancePage() {
                   <div key={a.id} className="rounded-lg border p-3">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">v{a.version}</Badge>
-                      <Badge variant={getStatusColor(a.status) as any}>{a.status}</Badge>
+                      <Badge variant={getStatusColor(a.status) as any}>
+                        {a.status}
+                      </Badge>
                       <span className="text-xs text-muted-foreground">
                         {new Date(a.createdAt).toLocaleDateString()}
                       </span>
                     </div>
                     {a.comment && (
-                      <p className="text-xs mt-1 text-muted-foreground">{a.comment}</p>
+                      <p className="text-xs mt-1 text-muted-foreground">
+                        {a.comment}
+                      </p>
                     )}
                   </div>
                 ))}

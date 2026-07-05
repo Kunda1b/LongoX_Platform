@@ -30,7 +30,9 @@ describe("topologicalSort", () => {
   });
 
   it("handles a single node", () => {
-    const sorted = topologicalSort(makeGraph({ nodes: [{ id: "n1", name: "Solo" }], edges: [] }));
+    const sorted = topologicalSort(
+      makeGraph({ nodes: [{ id: "n1", name: "Solo" }], edges: [] }),
+    );
     expect(sorted).toHaveLength(1);
     expect(sorted[0].id).toBe("n1");
   });
@@ -128,7 +130,10 @@ describe("getEntryNodes", () => {
 
   it("returns empty for cyclic graph with no entry", () => {
     const graph: WorkflowGraph = {
-      nodes: [{ id: "a", name: "A" }, { id: "b", name: "B" }],
+      nodes: [
+        { id: "a", name: "A" },
+        { id: "b", name: "B" },
+      ],
       edges: [
         { id: "e1", source: "a", target: "b" },
         { id: "e2", source: "b", target: "a" },

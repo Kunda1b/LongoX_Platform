@@ -2,11 +2,28 @@
 
 import { useState } from "react";
 import { useListConnectors, customFetch } from "@longox/api-client-react";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plug, Plus, Settings, ArrowUpCircle, Trash2, Download, Search, ShieldCheck, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Plug,
+  Plus,
+  Settings,
+  ArrowUpCircle,
+  Trash2,
+  Download,
+  Search,
+  ShieldCheck,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Installation {
@@ -24,11 +41,16 @@ export default function ConnectorsPage() {
   const [search, setSearch] = useState("");
   const [installations, setInstallations] = useState<Installation[]>([]);
   const [showInstalled, setShowInstalled] = useState(false);
-  const { data: connectors, isLoading } = useListConnectors({ search: search || undefined }) as any;
+  const { data: connectors, isLoading } = useListConnectors({
+    search: search || undefined,
+  }) as any;
 
   const fetchInstallations = async () => {
     try {
-      const data = await customFetch<Installation[]>("/api/connectors/installations", { method: "GET" });
+      const data = await customFetch<Installation[]>(
+        "/api/connectors/installations",
+        { method: "GET" },
+      );
       setInstallations(data ?? []);
     } catch {
       // Not critical
@@ -55,11 +77,14 @@ export default function ConnectorsPage() {
     if (!configStr) return;
     try {
       const config = JSON.parse(configStr);
-      await customFetch(`/api/connectors/installations/${installationId}/configure`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ config }),
-      });
+      await customFetch(
+        `/api/connectors/installations/${installationId}/configure`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ config }),
+        },
+      );
       alert("Configuration updated");
     } catch (e) {
       alert("Invalid JSON or request failed");
@@ -67,14 +92,19 @@ export default function ConnectorsPage() {
   };
 
   const handleUpgrade = async (installationId: number) => {
-    const versionId = window.prompt("Enter connector version ID to upgrade to:");
+    const versionId = window.prompt(
+      "Enter connector version ID to upgrade to:",
+    );
     if (!versionId) return;
     try {
-      await customFetch(`/api/connectors/installations/${installationId}/upgrade`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ connectorVersionId: parseInt(versionId, 10) }),
-      });
+      await customFetch(
+        `/api/connectors/installations/${installationId}/upgrade`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ connectorVersionId: parseInt(versionId, 10) }),
+        },
+      );
       alert("Upgrade initiated");
       window.location.reload();
     } catch (e) {
@@ -83,9 +113,12 @@ export default function ConnectorsPage() {
   };
 
   const handleRemove = async (installationId: number) => {
-    if (!window.confirm("Are you sure you want to remove this connector?")) return;
+    if (!window.confirm("Are you sure you want to remove this connector?"))
+      return;
     try {
-      await customFetch(`/api/connectors/installations/${installationId}`, { method: "DELETE" });
+      await customFetch(`/api/connectors/installations/${installationId}`, {
+        method: "DELETE",
+      });
       await fetchInstallations();
       window.location.reload();
     } catch (e) {
@@ -93,7 +126,9 @@ export default function ConnectorsPage() {
     }
   };
 
-  const getInstallationForConnector = (connectorId: string): Installation | undefined => {
+  const getInstallationForConnector = (
+    connectorId: string,
+  ): Installation | undefined => {
     return installations.find((i) => i.connectorId === connectorId);
   };
 
@@ -113,7 +148,14 @@ export default function ConnectorsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant={showInstalled ? "default" : "outline"} size="sm" onClick={() => { setShowInstalled(!showInstalled); fetchInstallations(); }}>
+          <Button
+            variant={showInstalled ? "default" : "outline"}
+            size="sm"
+            onClick={() => {
+              setShowInstalled(!showInstalled);
+              fetchInstallations();
+            }}
+          >
             {showInstalled ? "All" : "Installed"}
           </Button>
           <Button size="sm" onClick={() => fetchInstallations()}>
@@ -147,7 +189,9 @@ export default function ConnectorsPage() {
                 No connectors found
               </div>
               <p className="text-sm text-muted-foreground">
-                {showInstalled ? "No connectors installed yet" : "No connectors match your search"}
+                {showInstalled
+                  ? "No connectors installed yet"
+                  : "No connectors match your search"}
               </p>
             </div>
           </div>
@@ -185,7 +229,12 @@ export default function ConnectorsPage() {
                 <CardContent className="space-y-2">
                   <div className="flex items-center gap-2">
                     {installed ? (
-                      <Badge variant="success" className="bg-emerald-500/10 text-emerald-600 border-emerald-200">Installed</Badge>
+                      <Badge
+                        variant="success"
+                        className="bg-emerald-500/10 text-emerald-600 border-emerald-200"
+                      >
+                        Installed
+                      </Badge>
                     ) : (
                       <Badge variant="secondary">Available</Badge>
                     )}
@@ -194,9 +243,7 @@ export default function ConnectorsPage() {
                         <ShieldCheck className="mr-1 h-3 w-3" /> Official
                       </Badge>
                     )}
-                    {c.isFeatured && (
-                      <Badge variant="outline">Featured</Badge>
-                    )}
+                    {c.isFeatured && <Badge variant="outline">Featured</Badge>}
                   </div>
                   {c.description && (
                     <p className="text-xs text-muted-foreground line-clamp-2">
@@ -205,25 +252,47 @@ export default function ConnectorsPage() {
                   )}
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     {c.actionCount > 0 && <span>{c.actionCount} actions</span>}
-                    {c.triggerCount > 0 && <span>{c.triggerCount} triggers</span>}
-                    {c.installCount > 0 && <span>{c.installCount} installs</span>}
+                    {c.triggerCount > 0 && (
+                      <span>{c.triggerCount} triggers</span>
+                    )}
+                    {c.installCount > 0 && (
+                      <span>{c.installCount} installs</span>
+                    )}
                   </div>
                 </CardContent>
                 <CardFooter className="flex gap-2 pt-2 pb-4 px-6 border-t mt-4 bg-muted/50 rounded-b-xl">
                   {!installed && (
-                    <Button size="sm" className="w-full" onClick={() => handleInstall(c.id)}>
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleInstall(c.id)}
+                    >
                       <Download className="mr-2 h-4 w-4" /> Install
                     </Button>
                   )}
                   {installed && installation && (
                     <>
-                      <Button size="sm" variant="outline" className="flex-1" onClick={() => handleConfigure(installation.id as any)}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => handleConfigure(installation.id as any)}
+                      >
                         <Settings className="mr-2 h-4 w-4" /> Configure
                       </Button>
-                      <Button size="sm" variant="outline" className="flex-1" onClick={() => handleUpgrade(installation.id as any)}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => handleUpgrade(installation.id as any)}
+                      >
                         <ArrowUpCircle className="mr-2 h-4 w-4" /> Upgrade
                       </Button>
-                      <Button size="sm" variant="destructive" onClick={() => handleRemove(installation.id as any)}>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleRemove(installation.id as any)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </>

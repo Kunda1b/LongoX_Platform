@@ -7,5 +7,10 @@ interface SpinnerProps {
 }
 
 export default function Spinner({ className, size = 16 }: SpinnerProps) {
-  return <Loader2 className={cn("animate-spin text-muted-foreground", className)} style={{ width: size, height: size }} />;
+  return (
+    <Loader2
+      className={cn("animate-spin text-muted-foreground", className)}
+      style={{ width: size, height: size }}
+    />
+  );
 }

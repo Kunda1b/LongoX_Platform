@@ -73,11 +73,14 @@ function PlanCard({
             </span>
           )}
         </div>
-        {billingCycle === "annual" && plan.annualPrice && plan.monthlyPrice > 0 && (
-          <p className="text-sm text-green-600">
-            Save ${((plan.monthlyPrice - plan.annualPrice) * 12).toFixed(0)}/year
-          </p>
-        )}
+        {billingCycle === "annual" &&
+          plan.annualPrice &&
+          plan.monthlyPrice > 0 && (
+            <p className="text-sm text-green-600">
+              Save ${((plan.monthlyPrice - plan.annualPrice) * 12).toFixed(0)}
+              /year
+            </p>
+          )}
       </CardHeader>
       <CardContent className="space-y-4">
         <ul className="space-y-2 text-sm">
@@ -138,8 +141,7 @@ export default function BillingPage() {
     checkoutMutation.mutate({ planId, billingCycle });
   };
 
-  const currentPlanName =
-    subscription?.plan?.name ?? "free";
+  const currentPlanName = subscription?.plan?.name ?? "free";
 
   return (
     <div className="space-y-6">
@@ -248,8 +250,7 @@ export default function BillingPage() {
                   {usage?.totalExecutions?.toLocaleString() || "0"}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  of{" "}
-                  {usage?.includedExecutions?.toLocaleString() || "0"}{" "}
+                  of {usage?.includedExecutions?.toLocaleString() || "0"}{" "}
                   executions used
                 </p>
                 <div className="mt-2 h-2 w-full rounded-full bg-muted">

@@ -35,7 +35,9 @@ function VerifyEmailConfirmContent() {
           setStatus("success");
         } else {
           setStatus("error");
-          setMessage(data.error ?? "Verification failed. The link may have expired.");
+          setMessage(
+            data.error ?? "Verification failed. The link may have expired.",
+          );
         }
       })
       .catch(() => {
@@ -70,7 +72,8 @@ function VerifyEmailConfirmContent() {
           </CardTitle>
           <CardDescription>
             {status === "verifying" && "Checking your verification link."}
-            {status === "success" && "Your email has been confirmed. You're all set."}
+            {status === "success" &&
+              "Your email has been confirmed. You're all set."}
             {status === "error" && (message || "Something went wrong.")}
           </CardDescription>
         </CardHeader>
@@ -94,11 +97,13 @@ function VerifyEmailConfirmContent() {
 
 export default function VerifyEmailConfirmPage() {
   return (
-    <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
       <VerifyEmailConfirmContent />
     </Suspense>
   );

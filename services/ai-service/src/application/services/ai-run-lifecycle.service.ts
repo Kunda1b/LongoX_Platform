@@ -220,15 +220,20 @@ export class AiRunLifecycleService {
             },
             {
               strategy: (policy as any).strategy as any,
-              providerPreferences: ((policy as any).providerPreferences ?? []) as any,
+              providerPreferences: ((policy as any).providerPreferences ??
+                []) as any,
               // Prisma types jsonb columns as `JsonValue` (defaults to `{}`);
               // cast to `string[] | undefined` to match the route options shape.
               modelAllowlist:
-                ((policy as any).modelAllowlist as string[] | null | undefined) ??
-                undefined,
+                ((policy as any).modelAllowlist as
+                  | string[]
+                  | null
+                  | undefined) ?? undefined,
               modelDenylist:
-                ((policy as any).modelDenylist as string[] | null | undefined) ??
-                undefined,
+                ((policy as any).modelDenylist as
+                  | string[]
+                  | null
+                  | undefined) ?? undefined,
               fallbackEnabled: (policy as any).fallbackEnabled,
               maxRetries: (policy as any).maxRetries,
             },
@@ -267,10 +272,13 @@ export class AiRunLifecycleService {
       if (input.guardrailIds && input.guardrailIds.length > 0) {
         const toolCalls = (routeResult.result as any).toolCalls;
         if (Array.isArray(toolCalls) && toolCalls.length > 0) {
-          const allowedTools = (input as any).allowedTools as string[] | undefined;
+          const allowedTools = (input as any).allowedTools as
+            | string[]
+            | undefined;
           if (allowedTools && allowedTools.length > 0) {
             const blockedTools = toolCalls.filter(
-              (tc: any) => !allowedTools.includes(tc.name ?? tc.function?.name ?? ""),
+              (tc: any) =>
+                !allowedTools.includes(tc.name ?? tc.function?.name ?? ""),
             );
             if (blockedTools.length > 0) {
               guardrailResult.outputPassed = false;

@@ -1,5 +1,1 @@
-export {
-  Avatar,
-  AvatarImage,
-  AvatarFallback,
-} from "@longox/design-system";
+export { Avatar, AvatarImage, AvatarFallback } from "@longox/design-system";

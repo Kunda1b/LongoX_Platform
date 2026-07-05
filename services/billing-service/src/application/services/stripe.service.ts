@@ -11,7 +11,11 @@
  */
 
 import type Stripe from "stripe";
-import { getStripe, getFrontendUrl, getWebhookSecret } from "../../infrastructure/stripe/client";
+import {
+  getStripe,
+  getFrontendUrl,
+  getWebhookSecret,
+} from "../../infrastructure/stripe/client";
 import { prisma } from "@longox/db/prisma";
 
 export interface CheckoutSessionResult {
@@ -224,27 +228,32 @@ export class StripeService {
   async handleWebhook(event: Stripe.Event): Promise<void> {
     switch (event.type) {
       case "checkout.session.completed":
-        await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        await this.handleCheckoutCompleted(
+          event.data.object as Stripe.Checkout.Session,
+        );
         break;
       case "invoice.paid":
         await this.handleInvoicePaid(event.data.object as Stripe.Invoice);
         break;
       case "invoice.payment_failed":
-        await this.handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
+        await this.handleInvoicePaymentFailed(
+          event.data.object as Stripe.Invoice,
+        );
         break;
       case "customer.subscription.updated":
-        await this.handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+        await this.handleSubscriptionUpdated(
+          event.data.object as Stripe.Subscription,
+        );
         break;
       case "customer.subscription.deleted":
-        await this.handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        await this.handleSubscriptionDeleted(
+          event.data.object as Stripe.Subscription,
+        );
         break;
     }
   }
 
-  async syncInvoiceStatus(
-    invoiceId: string,
-    status: string,
-  ): Promise<void> {
+  async syncInvoiceStatus(invoiceId: string, status: string): Promise<void> {
     // `invoice_number` is unique — find first then update by primary key.
     const existing = await prisma.invoice.findFirst({
       where: { invoiceNumber: invoiceId } as any,
@@ -264,11 +273,7 @@ export class StripeService {
     if (!account) return;
 
     const sub = (account as any).stripeSubscriptionStatus;
-    if (
-      sub === "past_due" ||
-      sub === "canceled" ||
-      sub === "unpaid"
-    ) {
+    if (sub === "past_due" || sub === "canceled" || sub === "unpaid") {
       await prisma.tenant.update({
         where: { id: String(tenantId) },
         data: { status: "suspended" } as any,
@@ -276,7 +281,9 @@ export class StripeService {
     }
   }
 
-  private async handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
+  private async handleCheckoutCompleted(
+    session: Stripe.Checkout.Session,
+  ): Promise<void> {
     const tenantId = session.metadata?.tenantId;
     if (!tenantId) return;
 
@@ -351,7 +358,9 @@ export class StripeService {
           lineType: "subscription",
           description: line.description ?? "Subscription charge",
           quantity: Number(line.quantity ?? 1),
-          unitPrice: line.price?.unit_amount ? Number(line.price.unit_amount) / 100 : 0,
+          unitPrice: line.price?.unit_amount
+            ? Number(line.price.unit_amount) / 100
+            : 0,
           amount: (line.amount ?? 0) / 100,
           currency: invoice.currency ?? "usd",
           periodStart,
@@ -363,7 +372,9 @@ export class StripeService {
     }
   }
 
-  private async handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
+  private async handleInvoicePaymentFailed(
+    invoice: Stripe.Invoice,
+  ): Promise<void> {
     const subscriptionId = invoice.subscription as string | null;
     if (!subscriptionId) return;
 
@@ -378,7 +389,9 @@ export class StripeService {
     });
   }
 
-  private async handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
+  private async handleSubscriptionUpdated(
+    subscription: Stripe.Subscription,
+  ): Promise<void> {
     const tenantId = subscription.metadata?.tenantId;
     if (!tenantId) return;
 
@@ -397,7 +410,9 @@ export class StripeService {
     });
   }
 
-  private async handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
+  private async handleSubscriptionDeleted(
+    subscription: Stripe.Subscription,
+  ): Promise<void> {
     const tenantId = subscription.metadata?.tenantId;
     if (!tenantId) return;
 

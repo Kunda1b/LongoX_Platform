@@ -52,7 +52,8 @@ export const buttonVariants = Object.assign(
   },
 );
 
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: keyof typeof buttonVariantMap;
   size?: keyof typeof buttonSizeMap;
   asChild?: boolean;

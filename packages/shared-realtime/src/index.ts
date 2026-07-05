@@ -146,9 +146,8 @@ export function createSseWriter(
   }, 15000);
 
   const eventTypes = options?.interest;
-  const interests = eventTypes && eventTypes.length > 0
-    ? new Set(eventTypes)
-    : new Set(["*"]);
+  const interests =
+    eventTypes && eventTypes.length > 0 ? new Set(eventTypes) : new Set(["*"]);
 
   const client: SseClient = {
     id,

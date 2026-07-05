@@ -9,7 +9,8 @@ description: Do not set the `packageManager` field in package.json when deployin
 
 **Why:** Replit's internal package-installation wrapper intercepts pnpm invocations, sees the `packageManager` field, and attempts to pin the exact version. The native Rust binary (`@pnpm/exe`) cannot be compiled in the container.
 
-**How to apply:** 
+**How to apply:**
+
 - Delete `"packageManager": "pnpm@X.Y.Z"` from `package.json`.
 - Remove the `allowBuilds` map from `pnpm-workspace.yaml` (pnpm v11-only syntax); move those packages into `onlyBuiltDependencies` instead.
 - After removing the field, run `pnpm install --no-frozen-lockfile` once from bash to populate `node_modules`.

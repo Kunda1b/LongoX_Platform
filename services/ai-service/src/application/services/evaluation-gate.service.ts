@@ -103,7 +103,9 @@ export class EvaluationGateService {
       orderBy: { createdAt: "desc" } as any,
     });
 
-    const baselineScore = baselineRun ? Number((baselineRun as any).score ?? 1) : 1;
+    const baselineScore = baselineRun
+      ? Number((baselineRun as any).score ?? 1)
+      : 1;
 
     const candidateRun = await prisma.aiEvalRun.findFirst({
       where: {

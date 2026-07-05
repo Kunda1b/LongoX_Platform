@@ -87,7 +87,9 @@ export class DAGRunner {
     // ── Topological levels (for parallel fan-out) ────────────────────────────
     const allSorted = topologicalSort(graph);
     if (allSorted.length === 0 && graph.nodes.length > 0) {
-      throw new Error("Workflow graph contains a cycle — topological sort failed");
+      throw new Error(
+        "Workflow graph contains a cycle — topological sort failed",
+      );
     }
 
     // Track in-degree for parallel fan-out scheduling
@@ -107,7 +109,11 @@ export class DAGRunner {
       }, timeoutMs);
     }
 
-    emit({ type: "execution.started", executionId: context.executionId, workflowId: context.workflowId });
+    emit({
+      type: "execution.started",
+      executionId: context.executionId,
+      workflowId: context.workflowId,
+    });
 
     try {
       // ── Parallel fan-out execution ─────────────────────────────────────────
@@ -137,7 +143,11 @@ export class DAGRunner {
         inFlight.add(node.id);
 
         // ── Acquire node lease ──────────────────────────────────────────────
-        const lease = await leaseStore.acquire(context.executionId, node.id, 300_000);
+        const lease = await leaseStore.acquire(
+          context.executionId,
+          node.id,
+          300_000,
+        );
         if (!lease) {
           // Another worker holds the lease — skip (will be picked up on expiry)
           inFlight.delete(node.id);
@@ -157,7 +167,14 @@ export class DAGRunner {
             durationMs: 0,
             attemptNumber: 0,
           });
-          unlockDownstream(node.id, localInDegree, adjacencyMap, readyQueue, graph, failed);
+          unlockDownstream(
+            node.id,
+            localInDegree,
+            adjacencyMap,
+            readyQueue,
+            graph,
+            failed,
+          );
           await lease.release();
           inFlight.delete(node.id);
           return;
@@ -184,8 +201,7 @@ export class DAGRunner {
                 executionId: context.executionId,
                 nodeId: node.id,
                 attempt: 1,
-              })) ??
-              {};
+              })) ?? {};
             context.sharedState!.set(node.id, savedOutput);
             results.push({
               nodeId: node.id,
@@ -197,7 +213,14 @@ export class DAGRunner {
               durationMs: 0,
               attemptNumber: 0,
             });
-            unlockDownstream(node.id, localInDegree, adjacencyMap, readyQueue, graph, failed);
+            unlockDownstream(
+              node.id,
+              localInDegree,
+              adjacencyMap,
+              readyQueue,
+              graph,
+              failed,
+            );
             await lease.release();
             inFlight.delete(node.id);
             return;
@@ -263,7 +286,14 @@ export class DAGRunner {
         }
 
         // ── Unlock downstream nodes ─────────────────────────────────────────
-        unlockDownstream(node.id, localInDegree, adjacencyMap, readyQueue, graph, failed);
+        unlockDownstream(
+          node.id,
+          localInDegree,
+          adjacencyMap,
+          readyQueue,
+          graph,
+          failed,
+        );
         await lease.release();
         inFlight.delete(node.id);
       };
@@ -301,7 +331,6 @@ export class DAGRunner {
       if (active.size > 0) {
         await Promise.allSettled([...active.values()]);
       }
-
     } finally {
       if (timeoutHandle) clearTimeout(timeoutHandle);
     }
@@ -345,7 +374,9 @@ export class DAGRunner {
   ): Promise<NodeExecutionResult> {
     const nodeTypeId = node.nodeTypeId ?? node.type ?? "unknown";
     const isTrigger = nodeTypeId.startsWith("trigger.");
-    const retryPolicy = node.retryPolicy ?? (isTrigger ? TRIGGER_RETRY_POLICY : defaultRetryPolicy);
+    const retryPolicy =
+      node.retryPolicy ??
+      (isTrigger ? TRIGGER_RETRY_POLICY : defaultRetryPolicy);
 
     // ── Human approval gate ─────────────────────────────────────────────────
     if (node.approvalGate && options.writeApprovalGate) {
@@ -506,7 +537,13 @@ export class DAGRunner {
     }
 
     // ── Standard execution with retries ────────────────────────────────────
-    return this.executeWithRetries(node, context, retryPolicy, emit, options.checkpointStore);
+    return this.executeWithRetries(
+      node,
+      context,
+      retryPolicy,
+      emit,
+      options.checkpointStore,
+    );
   }
 
   // ─── Standard execution + retries ──────────────────────────────────────────
@@ -639,7 +676,12 @@ export class DAGRunner {
     emit: (e: DAGEvent) => void,
   ): Promise<NodeExecutionResult> {
     const loopConfig = node.loop!;
-    const { maxIterations, continueCondition, breakOnKey, iterationDelayMs = 0 } = loopConfig;
+    const {
+      maxIterations,
+      continueCondition,
+      breakOnKey,
+      iterationDelayMs = 0,
+    } = loopConfig;
     const startedAt = Date.now();
 
     // ── P1-13: enforce loop-iteration caps (architecture §9.1) ──────────────

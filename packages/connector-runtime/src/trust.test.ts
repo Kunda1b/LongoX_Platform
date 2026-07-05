@@ -10,7 +10,9 @@ import {
 } from "./trust";
 import type { ConnectorManifest } from "./manifest";
 
-function makeManifest(overrides?: Partial<ConnectorManifest>): ConnectorManifest {
+function makeManifest(
+  overrides?: Partial<ConnectorManifest>,
+): ConnectorManifest {
   return {
     manifestVersion: "1.0",
     id: "test-connector",
@@ -25,8 +27,11 @@ function makeManifest(overrides?: Partial<ConnectorManifest>): ConnectorManifest
     categories: ["test"],
     certificationLevel: "official",
     signature: "valid-signature",
-    checksum: "6aaa7daa161a33ad8f83c269f3e59a0dd6ab6464c0c38ce3be56a755b7d21f67",
-    permissions: [{ scope: "read", description: "Read", required: true, dangerous: false }],
+    checksum:
+      "6aaa7daa161a33ad8f83c269f3e59a0dd6ab6464c0c38ce3be56a755b7d21f67",
+    permissions: [
+      { scope: "read", description: "Read", required: true, dangerous: false },
+    ],
     capabilities: {
       actions: true,
       triggers: { polling: false, webhooks: false, events: false },
@@ -37,10 +42,33 @@ function makeManifest(overrides?: Partial<ConnectorManifest>): ConnectorManifest
       realtime: false,
     },
     networkAccess: { requiredDomains: ["example.com"], allowDynamic: false },
-    auth: [{ type: "api_key", label: "API Key", apiKey: { keyName: "x-api-key", keyType: "header" } }],
-    actions: [{ id: "act1", name: "Action 1", description: "", inputSchema: {}, outputSchema: {}, idempotent: false, requiredAuth: [], requiredPermissions: [] }],
+    auth: [
+      {
+        type: "api_key",
+        label: "API Key",
+        apiKey: { keyName: "x-api-key", keyType: "header" },
+      },
+    ],
+    actions: [
+      {
+        id: "act1",
+        name: "Action 1",
+        description: "",
+        inputSchema: {},
+        outputSchema: {},
+        idempotent: false,
+        requiredAuth: [],
+        requiredPermissions: [],
+      },
+    ],
     triggers: [],
-    runtime: { minMemoryMb: 128, minCpuMs: 500, timeoutMs: 30_000, maxNetworkRequests: 50, requiredOps: [] },
+    runtime: {
+      minMemoryMb: 128,
+      minCpuMs: 500,
+      timeoutMs: 30_000,
+      maxNetworkRequests: 50,
+      requiredOps: [],
+    },
     ...overrides,
   };
 }
@@ -92,40 +120,58 @@ describe("evaluateTrust", () => {
   });
 
   it("fails official manifest without signature", () => {
-    const result = evaluateTrust(makeManifest({ signature: null as unknown as string }));
+    const result = evaluateTrust(
+      makeManifest({ signature: null as unknown as string }),
+    );
     expect(result.passed).toBe(false);
     expect(result.reasons).toContain("Signature required but not provided");
   });
 
   it("fails when actions exceed maxActions for tier", () => {
     const manyActions = Array.from({ length: 60 }, (_, i) => ({
-      id: `act-${i}`, name: `Action ${i}`, description: "", inputSchema: {}, outputSchema: {},
-      idempotent: false, requiredAuth: [], requiredPermissions: [],
+      id: `act-${i}`,
+      name: `Action ${i}`,
+      description: "",
+      inputSchema: {},
+      outputSchema: {},
+      idempotent: false,
+      requiredAuth: [],
+      requiredPermissions: [],
     }));
     const result = evaluateTrust(makeManifest({ actions: manyActions }));
     expect(result.passed).toBe(false);
-    expect(result.reasons.some(r => r.includes("Exceeds max actions"))).toBe(true);
+    expect(result.reasons.some((r) => r.includes("Exceeds max actions"))).toBe(
+      true,
+    );
   });
 
   it("passes sandbox manifest without signature", () => {
-    const result = evaluateTrust(makeManifest({
-      certificationLevel: "sandbox",
-      signature: null as unknown as string,
-      actions: [],
-    }));
+    const result = evaluateTrust(
+      makeManifest({
+        certificationLevel: "sandbox",
+        signature: null as unknown as string,
+        actions: [],
+      }),
+    );
     expect(result.passed).toBe(true);
   });
 
   it("passes community manifest with checksum but no signature", () => {
-    const result = evaluateTrust(makeManifest({
-      certificationLevel: "community",
-      signature: null as unknown as string,
-    }));
+    const result = evaluateTrust(
+      makeManifest({
+        certificationLevel: "community",
+        signature: null as unknown as string,
+      }),
+    );
     expect(result.passed).toBe(true);
   });
 
   it("fails when categories don't match allowed list", () => {
-    vi.spyOn(require("./trust"), "OFFICIAL_TRUST_POLICY", "get").mockReturnValue({
+    vi.spyOn(
+      require("./trust"),
+      "OFFICIAL_TRUST_POLICY",
+      "get",
+    ).mockReturnValue({
       ...OFFICIAL_TRUST_POLICY,
       allowedCategories: ["payments"],
     });

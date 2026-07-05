@@ -4,7 +4,10 @@ import type {
   ExecutionContext,
   NodeExecutionResult,
 } from "@longox/workflow-engine";
-import { DenoIsolate, UNTRUSTED_CONNECTOR_POLICY } from "@longox/connector-sandbox";
+import {
+  DenoIsolate,
+  UNTRUSTED_CONNECTOR_POLICY,
+} from "@longox/connector-sandbox";
 
 export class CodeExecutor implements NodeExecutor {
   canHandle(nodeTypeId: string): boolean {

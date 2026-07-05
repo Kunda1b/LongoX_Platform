@@ -89,7 +89,7 @@ export function WebhookEndpointsList() {
                 </Badge>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">
-                    {ep.lastTriggeredAt 
+                    {ep.lastTriggeredAt
                       ? new Date(ep.lastTriggeredAt).toLocaleDateString()
                       : "never"}
                   </span>

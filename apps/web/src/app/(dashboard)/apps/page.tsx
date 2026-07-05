@@ -68,7 +68,9 @@ export default function AppsPage() {
               <CardContent className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Badge
-                    variant={app.status === "published" ? "success" : "secondary"}
+                    variant={
+                      app.status === "published" ? "success" : "secondary"
+                    }
                   >
                     {app.status}
                   </Badge>

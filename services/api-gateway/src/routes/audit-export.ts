@@ -11,7 +11,15 @@ router.get(
   authorize({ resource: "audit", action: "admin" }),
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const { format = "json", action, actorId, resourceType, resourceId, dateFrom, dateTo } = req.query as {
+      const {
+        format = "json",
+        action,
+        actorId,
+        resourceType,
+        resourceId,
+        dateFrom,
+        dateTo,
+      } = req.query as {
         format?: string;
         action?: string;
         actorId?: string;
@@ -35,11 +43,17 @@ router.get(
         result = await auditExport.exportAuditLogsAsCSV(req.tenantId!, filters);
         res.setHeader("Content-Type", "text/csv");
       } else {
-        result = await auditExport.exportAuditLogsAsJSON(req.tenantId!, filters);
+        result = await auditExport.exportAuditLogsAsJSON(
+          req.tenantId!,
+          filters,
+        );
         res.setHeader("Content-Type", "application/json");
       }
 
-      res.setHeader("Content-Disposition", `attachment; filename=audit-export.${format}`);
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=audit-export.${format}`,
+      );
       res.send(result);
     } catch (error) {
       // Wrap the underlying error in the §13.3 standard envelope so clients

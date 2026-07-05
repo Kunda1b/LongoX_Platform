@@ -66,7 +66,9 @@ export default function RevenuePage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Earnings
+                </CardTitle>
                 <DollarSign className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
@@ -100,7 +102,9 @@ export default function RevenuePage() {
                 <ShoppingBag className="h-4 w-4 text-purple-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{summary.totalListings}</div>
+                <div className="text-2xl font-bold">
+                  {summary.totalListings}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Active marketplace items
                 </p>
@@ -109,11 +113,15 @@ export default function RevenuePage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Pending Payouts</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Pending Payouts
+                </CardTitle>
                 <Clock className="h-4 w-4 text-amber-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{summary.pendingPayouts}</div>
+                <div className="text-2xl font-bold">
+                  {summary.pendingPayouts}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   ${(summary.pendingAmount / 100).toFixed(2)} pending
                 </p>
@@ -125,7 +133,9 @@ export default function RevenuePage() {
           {summary.shares && summary.shares.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Listing Revenue Breakdown</CardTitle>
+                <CardTitle className="text-sm">
+                  Listing Revenue Breakdown
+                </CardTitle>
                 <CardDescription className="text-xs">
                   Detailed earnings per listing
                 </CardDescription>
@@ -138,7 +148,9 @@ export default function RevenuePage() {
                       className="flex items-center justify-between rounded-lg border p-3"
                     >
                       <div className="space-y-1">
-                        <p className="text-sm font-medium">Listing #{share.listingId}</p>
+                        <p className="text-sm font-medium">
+                          Listing #{share.listingId}
+                        </p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <span>Platform: {share.platformPercentage}%</span>
                           <span>Seller: {share.sellerPercentage}%</span>
@@ -161,7 +173,8 @@ export default function RevenuePage() {
                           ${(Number(share.sellerPayout) / 100).toFixed(2)}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          of ${(Number(share.totalEarned) / 100).toFixed(2)} total
+                          of ${(Number(share.totalEarned) / 100).toFixed(2)}{" "}
+                          total
                         </p>
                       </div>
                     </div>
@@ -175,7 +188,9 @@ export default function RevenuePage() {
           {myListings && Array.isArray(myListings) && myListings.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">My Marketplace Listings</CardTitle>
+                <CardTitle className="text-sm">
+                  My Marketplace Listings
+                </CardTitle>
                 <CardDescription className="text-xs">
                   Items you've published to the marketplace
                 </CardDescription>
@@ -192,11 +207,17 @@ export default function RevenuePage() {
                         <div>
                           <p className="text-sm font-medium">{listing.title}</p>
                           <p className="text-xs text-muted-foreground">
-                            ${((listing.pricing?.price ?? 0) / 100).toFixed(2)} |{" "}
-                            {listing.installCount ?? 0} installs
+                            ${((listing.pricing?.price ?? 0) / 100).toFixed(2)}{" "}
+                            | {listing.installCount ?? 0} installs
                           </p>
                         </div>
-                        <Badge variant={listing.status === "published" ? "success" : "secondary"}>
+                        <Badge
+                          variant={
+                            listing.status === "published"
+                              ? "success"
+                              : "secondary"
+                          }
+                        >
                           {listing.status}
                         </Badge>
                       </div>
