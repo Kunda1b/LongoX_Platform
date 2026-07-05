@@ -346,6 +346,48 @@ importers:
 
   lib/api-spec:
     devDependencies:
+      '@longox/ai-service':
+        specifier: workspace:*
+        version: link:../../services/ai-service
+      '@longox/api-gateway':
+        specifier: workspace:*
+        version: link:../../services/api-gateway
+      '@longox/billing-service':
+        specifier: workspace:*
+        version: link:../../services/billing-service
+      '@longox/connector-runtime':
+        specifier: workspace:*
+        version: link:../../packages/connector-runtime
+      '@longox/db':
+        specifier: workspace:*
+        version: link:../../packages/shared-db
+      '@longox/execution-service':
+        specifier: workspace:*
+        version: link:../../services/execution-service
+      '@longox/replication-service':
+        specifier: workspace:*
+        version: link:../../services/replication-service
+      '@longox/search-service':
+        specifier: workspace:*
+        version: link:../../services/search-service
+      '@longox/shared-auth':
+        specifier: workspace:*
+        version: link:../../packages/shared-auth
+      '@longox/shared-rbac':
+        specifier: workspace:*
+        version: link:../../packages/shared-rbac
+      '@longox/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
+      '@longox/template-service':
+        specifier: workspace:*
+        version: link:../../services/template-service
+      '@longox/workflow-engine':
+        specifier: workspace:*
+        version: link:../../packages/workflow-engine
+      '@longox/workflow-service':
+        specifier: workspace:*
+        version: link:../../services/workflow-service
       orval:
         specifier: ^8.17.0
         version: 8.17.0(prettier@3.8.3)(typescript@5.9.3)

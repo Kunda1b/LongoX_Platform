@@ -152,7 +152,15 @@ describe("RESOURCE_ACTIONS", () => {
   });
 
   it("all actions are valid Action types", () => {
-    const validActions = ["read", "write", "run", "delete", "admin", "install"];
+    const validActions = [
+      "read",
+      "write",
+      "run",
+      "delete",
+      "admin",
+      "install",
+      "promote",
+    ];
     for (const actions of Object.values(RESOURCE_ACTIONS)) {
       for (const action of actions) {
         expect(validActions).toContain(action);

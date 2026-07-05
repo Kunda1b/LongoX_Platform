@@ -52,7 +52,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
-  /auth/register:
+  /api/v1/auth/register:
     post:
       operationId: registerUser
       tags: [auth]
@@ -75,7 +75,7 @@ paths:
         "409":
           description: Email already registered
 
-  /auth/login:
+  /api/v1/auth/login:
     post:
       operationId: loginUser
       tags: [auth]
@@ -97,7 +97,7 @@ paths:
           description: Invalid credentials
 
   # ─── Dashboard / Summary ────────────────────────────────────────────
-  /dashboard/summary:
+  /api/v1/dashboard/summary:
     get:
       operationId: getDashboardSummary
       tags: [dashboard]
@@ -110,7 +110,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardSummary"
 
-  /dashboard/activity:
+  /api/v1/dashboard/activity:
     get:
       operationId: getRecentActivity
       tags: [dashboard]
@@ -132,7 +132,7 @@ paths:
                   $ref: "#/components/schemas/ActivityItem"
 
   # ─── Analytics (UiPath-inspired) ─────────────────────────────────────
-  /analytics/executions:
+  /api/v1/analytics/executions:
     get:
       operationId: getExecutionAnalytics
       tags: [analytics]
@@ -153,7 +153,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/DailyExecutionStat"
 
-  /analytics/workflows:
+  /api/v1/analytics/workflows:
     get:
       operationId: getWorkflowAnalytics
       tags: [analytics]
@@ -169,7 +169,7 @@ paths:
                   $ref: "#/components/schemas/WorkflowStat"
 
   # ─── Node Types (n8n-inspired) ────────────────────────────────────────
-  /node-types:
+  /api/v1/node-types:
     get:
       operationId: listNodeTypes
       tags: [node-types]
@@ -190,7 +190,7 @@ paths:
                   $ref: "#/components/schemas/NodeType"
 
   # ─── Templates (Zapier/n8n-inspired) ─────────────────────────────────
-  /templates:
+  /api/v1/templates:
     get:
       operationId: listTemplates
       tags: [templates]
@@ -231,7 +231,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Template"
 
-  /templates/{id}:
+  /api/v1/templates/{id}:
     get:
       operationId: getTemplate
       tags: [templates]
@@ -263,7 +263,7 @@ paths:
         "204":
           description: Deleted
 
-  /templates/{id}/versions:
+  /api/v1/templates/{id}/versions:
     get:
       operationId: listTemplateVersions
       tags: [templates]
@@ -284,7 +284,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/TemplateVersion"
 
-  /templates/{id}/fork:
+  /api/v1/templates/{id}/fork:
     post:
       operationId: forkTemplate
       tags: [templates]
@@ -305,7 +305,7 @@ paths:
         "404":
           description: Not found
 
-  /templates/{id}/use:
+  /api/v1/templates/{id}/use:
     post:
       operationId: useTemplate
       tags: [templates]
@@ -325,7 +325,7 @@ paths:
                 $ref: "#/components/schemas/Workflow"
 
   # ─── Credentials (n8n-inspired) ────────────────────────────────────────
-  /credentials:
+  /api/v1/credentials:
     get:
       operationId: listCredentials
       tags: [credentials]
@@ -357,7 +357,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Credential"
 
-  /credentials/{id}:
+  /api/v1/credentials/{id}:
     delete:
       operationId: deleteCredential
       tags: [credentials]
@@ -373,7 +373,7 @@ paths:
           description: Deleted
 
   # ─── Workflows ──────────────────────────────────────────────────────
-  /workflows:
+  /api/v1/workflows:
     get:
       operationId: listWorkflows
       tags: [workflows]
@@ -415,7 +415,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Workflow"
 
-  /workflows/{id}:
+  /api/v1/workflows/{id}:
     get:
       operationId: getWorkflow
       tags: [workflows]
@@ -472,7 +472,7 @@ paths:
         "204":
           description: Deleted
 
-  /workflows/{id}/toggle:
+  /api/v1/workflows/{id}/toggle:
     post:
       operationId: toggleWorkflow
       tags: [workflows]
@@ -491,7 +491,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Workflow"
 
-  /workflows/{id}/run:
+  /api/v1/workflows/{id}/run:
     post:
       operationId: runWorkflow
       tags: [workflows]
@@ -510,7 +510,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Execution"
 
-  /workflows/{id}/duplicate:
+  /api/v1/workflows/{id}/duplicate:
     post:
       operationId: duplicateWorkflow
       tags: [workflows]
@@ -529,7 +529,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Workflow"
 
-  /workflows/{id}/versions:
+  /api/v1/workflows/{id}/versions:
     get:
       operationId: listWorkflowVersions
       tags: [workflows]
@@ -550,7 +550,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/WorkflowVersion"
 
-  /workflows/{id}/publish:
+  /api/v1/workflows/{id}/publish:
     post:
       operationId: publishWorkflow
       tags: [workflows]
@@ -572,7 +572,7 @@ paths:
           description: Not found
 
   # ─── Dashboards (Builder) ─────────────────────────────────────────────
-  /dashboards:
+  /api/v1/dashboards:
     get:
       operationId: listDashboards
       tags: [dashboards]
@@ -614,7 +614,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Dashboard"
 
-  /dashboards/stats:
+  /api/v1/dashboards/stats:
     get:
       operationId: getDashboardBuilderStats
       tags: [dashboards]
@@ -627,7 +627,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardStats"
 
-  /dashboards/{id}:
+  /api/v1/dashboards/{id}:
     get:
       operationId: getDashboard
       tags: [dashboards]
@@ -684,7 +684,7 @@ paths:
         "204":
           description: Deleted
 
-  /dashboards/{id}/publish:
+  /api/v1/dashboards/{id}/publish:
     post:
       operationId: publishDashboard
       tags: [dashboards]
@@ -706,7 +706,7 @@ paths:
           description: Not found
 
   # ─── Billing & Usage ────────────────────────────────────────────────
-  /usage:
+  /api/v1/usage:
     get:
       operationId: getUsageSummary
       tags: [billing]
@@ -719,7 +719,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/UsageSummary"
 
-  /usage/events:
+  /api/v1/usage/events:
     get:
       operationId: listUsageEvents
       tags: [billing]
@@ -748,7 +748,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/UsageEvent"
 
-  /billing/current:
+  /api/v1/billing/current:
     get:
       operationId: getCurrentBillingPeriod
       tags: [billing]
@@ -761,7 +761,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/BillingPeriod"
 
-  /billing/invoices:
+  /api/v1/billing/invoices:
     get:
       operationId: listBillingInvoices
       tags: [billing]
@@ -777,7 +777,7 @@ paths:
                   $ref: "#/components/schemas/BillingInvoice"
 
   # ─── Environments ────────────────────────────────────────────────────
-  /environments:
+  /api/v1/environments:
     get:
       operationId: listEnvironments
       tags: [environments]
@@ -809,7 +809,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Environment"
 
-  /environments/{id}:
+  /api/v1/environments/{id}:
     get:
       operationId: getEnvironment
       tags: [environments]
@@ -869,7 +869,7 @@ paths:
           description: Deleted
 
   # ─── Workflow Promotions ──────────────────────────────────────────────
-  /workflows/{id}/promotions:
+  /api/v1/workflows/{id}/promotions:
     get:
       operationId: listWorkflowPromotions
       tags: [workflows]
@@ -910,7 +910,7 @@ paths:
           description: Not found
 
   # ─── Webhook Triggers ────────────────────────────────────────────────
-  /webhooks/{workflowId}:
+  /api/v1/webhooks/{workflowId}:
     post:
       operationId: triggerWebhook
       tags: [executions]
@@ -930,7 +930,7 @@ paths:
                 $ref: "#/components/schemas/Execution"
 
   # ─── Dead-Letter Queue ───────────────────────────────────────────────
-  /dlq:
+  /api/v1/dlq:
     get:
       operationId: listDlqEntries
       tags: [executions]
@@ -955,7 +955,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/DlqEntry"
 
-  /dlq/{id}/retry:
+  /api/v1/dlq/{id}/retry:
     post:
       operationId: retryDlqEntry
       tags: [executions]
@@ -974,7 +974,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Execution"
 
-  /dlq/{id}/dismiss:
+  /api/v1/dlq/{id}/dismiss:
     post:
       operationId: dismissDlqEntry
       tags: [executions]
@@ -994,7 +994,7 @@ paths:
                 $ref: "#/components/schemas/DlqEntry"
 
   # ─── Audit Log ───────────────────────────────────────────────────────
-  /audit-log:
+  /api/v1/audit-log:
     get:
       operationId: listAuditLog
       tags: [audit]
@@ -1028,7 +1028,7 @@ paths:
                   $ref: "#/components/schemas/AuditLogEntry"
 
   # ─── Executions ──────────────────────────────────────────────────────
-  /executions:
+  /api/v1/executions:
     get:
       operationId: listExecutions
       tags: [executions]
@@ -1058,7 +1058,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Execution"
 
-  /executions/{id}:
+  /api/v1/executions/{id}:
     get:
       operationId: getExecution
       tags: [executions]
@@ -1077,7 +1077,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ExecutionDetail"
 
-  /executions/{id}/retry:
+  /api/v1/executions/{id}/retry:
     post:
       operationId: retryExecution
       tags: [executions]
@@ -1097,7 +1097,7 @@ paths:
                 $ref: "#/components/schemas/Execution"
 
   # ─── Connectors ──────────────────────────────────────────────────────
-  /connectors:
+  /api/v1/connectors:
     get:
       operationId: listConnectors
       tags: [connectors]
@@ -1125,7 +1125,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Connector"
 
-  /connectors/{id}:
+  /api/v1/connectors/{id}:
     get:
       operationId: getConnector
       tags: [connectors]
@@ -1144,7 +1144,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Connector"
 
-  /connectors/{id}/install:
+  /api/v1/connectors/{id}/install:
     post:
       operationId: installConnector
       tags: [connectors]
@@ -1163,7 +1163,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Connector"
 
-  /connectors/categories:
+  /api/v1/connectors/categories:
     get:
       operationId: listConnectorCategories
       tags: [connectors]
@@ -1179,7 +1179,7 @@ paths:
                   $ref: "#/components/schemas/ConnectorCategory"
 
   # ─── Apps (Internal Tools Builder) ──────────────────────────────────
-  /apps:
+  /api/v1/apps:
     get:
       operationId: listApps
       tags: [apps]
@@ -1216,7 +1216,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/App"
 
-  /apps/{id}:
+  /api/v1/apps/{id}:
     get:
       operationId: getApp
       tags: [apps]
@@ -1271,7 +1271,7 @@ paths:
         "204":
           description: Deleted
 
-  /apps/stats:
+  /api/v1/apps/stats:
     get:
       operationId: getAppStats
       tags: [apps]
@@ -1285,7 +1285,7 @@ paths:
                 $ref: "#/components/schemas/AppStats"
 
   # ─── Tenants ─────────────────────────────────────────────────────────
-  /tenants:
+  /api/v1/tenants:
     get:
       operationId: listTenants
       tags: [tenants]
@@ -1317,7 +1317,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Tenant"
 
-  /tenants/{id}:
+  /api/v1/tenants/{id}:
     get:
       operationId: getTenant
       tags: [tenants]
@@ -1373,7 +1373,7 @@ paths:
           description: Deleted
 
   # ─── RBAC — Roles ─────────────────────────────────────────────────────
-  /roles:
+  /api/v1/roles:
     get:
       operationId: listRoles
       tags: [rbac]
@@ -1410,7 +1410,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Role"
 
-  /roles/{id}:
+  /api/v1/roles/{id}:
     get:
       operationId: getRole
       tags: [rbac]
@@ -1465,7 +1465,7 @@ paths:
         "204":
           description: Deleted
 
-  /roles/{id}/permissions/{permissionId}:
+  /api/v1/roles/{id}/permissions/{permissionId}:
     put:
       operationId: addPermissionToRole
       tags: [rbac]
@@ -1504,7 +1504,7 @@ paths:
           description: Removed
 
   # ─── RBAC — Permissions ───────────────────────────────────────────────
-  /permissions:
+  /api/v1/permissions:
     get:
       operationId: listPermissions
       tags: [rbac]
@@ -1520,7 +1520,7 @@ paths:
                   $ref: "#/components/schemas/Permission"
 
   # ─── RBAC — User Role Assignments ─────────────────────────────────────
-  /user-roles:
+  /api/v1/user-roles:
     get:
       operationId: listUserRoles
       tags: [rbac]
@@ -1561,7 +1561,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserRole"
 
-  /user-roles/{id}:
+  /api/v1/user-roles/{id}:
     delete:
       operationId: revokeRole
       tags: [rbac]
@@ -1577,7 +1577,7 @@ paths:
           description: Revoked
 
   # ─── Workspace Members ────────────────────────────────────────────────
-  /members:
+  /api/v1/members:
     get:
       operationId: listMembers
       tags: [rbac]
@@ -1592,7 +1592,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/WorkspaceMember"
 
-  /members/{userId}/role:
+  /api/v1/members/{userId}/role:
     put:
       operationId: assignMemberRole
       tags: [rbac]
@@ -1612,7 +1612,7 @@ paths:
                 $ref: "#/components/schemas/MemberRoleAssignment"
 
   # ─── AI Models ────────────────────────────────────────────────────────
-  /ai-models:
+  /api/v1/ai-models:
     get:
       operationId: listAiModels
       tags: [ai]
@@ -1644,7 +1644,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AiModel"
 
-  /ai-models/{id}:
+  /api/v1/ai-models/{id}:
     get:
       operationId: getAiModel
       tags: [ai]
@@ -1700,7 +1700,7 @@ paths:
           description: Deleted
 
   # ─── Prompts ──────────────────────────────────────────────────────────
-  /prompts:
+  /api/v1/prompts:
     get:
       operationId: listPrompts
       tags: [ai]
@@ -1732,7 +1732,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Prompt"
 
-  /prompts/{id}:
+  /api/v1/prompts/{id}:
     get:
       operationId: getPrompt
       tags: [ai]
@@ -1787,7 +1787,7 @@ paths:
         "204":
           description: Deleted
 
-  /prompts/{id}/versions:
+  /api/v1/prompts/{id}/versions:
     get:
       operationId: listPromptVersions
       tags: [ai]
@@ -1808,7 +1808,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/PromptVersion"
 
-  /prompts/{id}/publish:
+  /api/v1/prompts/{id}/publish:
     post:
       operationId: publishPrompt
       tags: [ai]
@@ -1828,7 +1828,7 @@ paths:
                 $ref: "#/components/schemas/Prompt"
 
   # ─── AI Usage / Token Accounting ──────────────────────────────────────
-  /ai/usage:
+  /api/v1/ai/usage:
     get:
       operationId: listTokenUsage
       tags: [ai]
@@ -1849,7 +1849,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/TokenUsage"
 
-  /ai/usage/summary:
+  /api/v1/ai/usage/summary:
     get:
       operationId: getAiUsageSummary
       tags: [ai]
@@ -1863,7 +1863,7 @@ paths:
                 $ref: "#/components/schemas/AiUsageSummary"
 
   # ─── Feature Flags ────────────────────────────────────────────────────
-  /feature-flags:
+  /api/v1/feature-flags:
     get:
       operationId: listFeatureFlags
       tags: [platform]
@@ -1895,7 +1895,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/FeatureFlag"
 
-  /feature-flags/{id}:
+  /api/v1/feature-flags/{id}:
     patch:
       operationId: updateFeatureFlag
       tags: [platform]
@@ -1934,7 +1934,7 @@ paths:
           description: Deleted
 
   # ─── Notifications ────────────────────────────────────────────────────
-  /notifications:
+  /api/v1/notifications:
     get:
       operationId: listNotifications
       tags: [platform]
@@ -1980,7 +1980,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Notification"
 
-  /notifications/{id}/read:
+  /api/v1/notifications/{id}/read:
     post:
       operationId: markNotificationRead
       tags: [platform]
@@ -1999,7 +1999,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Notification"
 
-  /notification-templates:
+  /api/v1/notification-templates:
     get:
       operationId: listNotificationTemplates
       tags: [platform]
@@ -2032,7 +2032,7 @@ paths:
                 $ref: "#/components/schemas/NotificationTemplate"
 
   # ─── Global Search ────────────────────────────────────────────────────
-  /search:
+  /api/v1/search:
     get:
       operationId: globalSearch
       tags: [platform]
@@ -2057,7 +2057,7 @@ paths:
                 $ref: "#/components/schemas/SearchResults"
 
   # ─── Region Policies ─────────────────────────────────────────────────
-  /region-policies:
+  /api/v1/region-policies:
     get:
       operationId: listRegionPolicies
       tags: [platform]
@@ -2089,7 +2089,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/RegionPolicy"
 
-  /region-policies/{id}:
+  /api/v1/region-policies/{id}:
     patch:
       operationId: updateRegionPolicy
       tags: [platform]
@@ -2127,7 +2127,7 @@ paths:
         "204":
           description: Deleted
 
-  /schedules:
+  /api/v1/schedules:
     get:
       operationId: listSchedules
       tags: [schedules]
@@ -2176,7 +2176,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Schedule"
 
-  /schedules/due:
+  /api/v1/schedules/due:
     get:
       operationId: getDueSchedules
       tags: [schedules]
@@ -2191,7 +2191,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Schedule"
 
-  /schedules/stats:
+  /api/v1/schedules/stats:
     get:
       operationId: getScheduleStats
       tags: [schedules]
@@ -2211,7 +2211,7 @@ paths:
                   completed:
                     type: integer
 
-  /schedules/{id}:
+  /api/v1/schedules/{id}:
     get:
       operationId: getSchedule
       tags: [schedules]
@@ -2266,7 +2266,7 @@ paths:
         "204":
           description: Deleted
 
-  /schedules/{id}/pause:
+  /api/v1/schedules/{id}/pause:
     post:
       operationId: pauseSchedule
       tags: [schedules]
@@ -2285,7 +2285,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Schedule"
 
-  /schedules/{id}/activate:
+  /api/v1/schedules/{id}/activate:
     post:
       operationId: activateSchedule
       tags: [schedules]
@@ -2304,7 +2304,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Schedule"
 
-  /datasources:
+  /api/v1/datasources:
     get:
       operationId: listDataSources
       tags: [datasources]
@@ -2349,7 +2349,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/DataSource"
 
-  /datasources/adapters:
+  /api/v1/datasources/adapters:
     get:
       operationId: listDataSourceAdapters
       tags: [datasources]
@@ -2364,7 +2364,7 @@ paths:
                 items:
                   type: string
 
-  /datasources/{id}:
+  /api/v1/datasources/{id}:
     get:
       operationId: getDataSource
       tags: [datasources]
@@ -2419,7 +2419,7 @@ paths:
         "204":
           description: Deleted
 
-  /datasources/{id}/test:
+  /api/v1/datasources/{id}/test:
     post:
       operationId: testDataSourceConnection
       tags: [datasources]
@@ -2443,7 +2443,7 @@ paths:
                   error:
                     type: string
 
-  /datasources/{id}/query:
+  /api/v1/datasources/{id}/query:
     post:
       operationId: executeDataSourceQuery
       tags: [datasources]
@@ -2485,7 +2485,7 @@ paths:
                   executionTimeMs:
                     type: integer
 
-  /datasources/{id}/tables:
+  /api/v1/datasources/{id}/tables:
     get:
       operationId: listDataSourceTables
       tags: [datasources]
@@ -2505,6 +2505,71 @@ paths:
                 type: array
                 items:
                   type: string
+
+  /api/v1/marketplace/listings:
+    get:
+      operationId: listMarketplaceListings
+      tags: [marketplace]
+      summary: List marketplace listings
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: pageToken
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/marketplace/listings/{id}:
+    get:
+      operationId: getMarketplaceListing
+      tags: [marketplace]
+      summary: Get a marketplace listing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/compliance/gdpr/export:
+    post:
+      operationId: requestGdprExport
+      tags: [compliance]
+      summary: Request a GDPR data export
+      responses:
+        "202":
+          description: Accepted
+
+  /api/v1/compliance/gdpr/deletion:
+    post:
+      operationId: requestGdprDeletion
+      tags: [compliance]
+      summary: Request GDPR deletion
+      responses:
+        "202":
+          description: Accepted
+
+  /api/v1/audit/export:
+    post:
+      operationId: requestAuditExport
+      tags: [audit]
+      summary: Request an audit log export
+      responses:
+        "202":
+          description: Accepted
 
 components:
   schemas:
@@ -4263,3 +4328,23 @@ components:
           type: object
         createdBy:
           type: integer
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    oauth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: /api/v1/auth/oauth/authorize
+          tokenUrl: /api/v1/auth/oauth/token
+          scopes:
+            read: Read access
+            write: Write access
+            admin: Administrative access

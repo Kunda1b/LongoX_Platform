@@ -52,7 +52,7 @@ type LifecycleListener = (
   state: LifecycleState,
 ) => void;
 
-class LifecycleEngine {
+export class LifecycleEngine {
   private hooks = new Map<ConnectorLifecycleEvent, LifecycleHook[]>();
   private listeners = new Set<LifecycleListener>();
   private states = new Map<string, LifecycleState>();

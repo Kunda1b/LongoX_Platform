@@ -230,7 +230,9 @@ export function validateManifest(manifest: ConnectorManifest): string[] {
       "certificationLevel must be one of: official, verified, community, sandbox",
     );
   }
-  if (!manifest.capabilities) errors.push("capabilities is required");
+  if (!manifest.capabilities) {
+    errors.push("capabilities is required");
+  }
   if (manifest.permissions.length === 0)
     errors.push("at least one permission is required");
   for (const action of manifest.actions) {
@@ -249,7 +251,7 @@ export function validateManifest(manifest: ConnectorManifest): string[] {
     }
   }
   if (
-    manifest.capabilities.auth.oauth2 &&
+    manifest.capabilities?.auth?.oauth2 &&
     manifest.networkAccess.requiredDomains.length === 0
   ) {
     errors.push("oauth2 requires at least one network domain");

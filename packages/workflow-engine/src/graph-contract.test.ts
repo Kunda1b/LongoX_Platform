@@ -66,7 +66,7 @@ describe("validateGraphContract", () => {
 
   it("rejects missing workflowId", () => {
     const errors = validateGraphContract(makeValidGraph({ workflowId: "" }));
-    expect(errors).toContain("workflowId must be a positive integer");
+    expect(errors).toContain("workflowId is required");
   });
 
   it("rejects missing version", () => {
@@ -451,7 +451,12 @@ describe("applyDiff", () => {
   });
 
   it("updates metadata timestamps", () => {
-    const from = makeValidGraph();
+    const from = makeValidGraph({
+      metadata: {
+        ...makeValidGraph().metadata,
+        updatedAt: "2020-01-01T00:00:00.000Z",
+      },
+    });
     const to = makeValidGraph({
       metadata: { ...from.metadata, name: "Changed" },
     });

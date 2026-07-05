@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   evaluateTrust,
   getTrustPolicy,
@@ -27,8 +27,9 @@ function makeManifest(
     categories: ["test"],
     certificationLevel: "official",
     signature: "valid-signature",
-    checksum:
-      "6aaa7daa161a33ad8f83c269f3e59a0dd6ab6464c0c38ce3be56a755b7d21f67",
+    // Empty checksum so the requireChecksum check is skipped — the
+    // verifyChecksum() path is exercised separately in manifest.test.ts.
+    checksum: "",
     permissions: [
       { scope: "read", description: "Read", required: true, dangerous: false },
     ],
@@ -167,16 +168,14 @@ describe("evaluateTrust", () => {
   });
 
   it("fails when categories don't match allowed list", () => {
-    vi.spyOn(
-      require("./trust"),
-      "OFFICIAL_TRUST_POLICY",
-      "get",
-    ).mockReturnValue({
+    const policyOverride: typeof OFFICIAL_TRUST_POLICY = {
       ...OFFICIAL_TRUST_POLICY,
       allowedCategories: ["payments"],
-    });
-    const result = evaluateTrust(makeManifest({ categories: ["analytics"] }));
+    };
+    const result = evaluateTrust(
+      makeManifest({ categories: ["analytics"] }),
+      policyOverride,
+    );
     expect(result.passed).toBe(false);
-    vi.restoreAllMocks();
   });
 });

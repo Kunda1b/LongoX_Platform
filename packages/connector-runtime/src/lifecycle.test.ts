@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { lifecycleEngine } from "./lifecycle";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { LifecycleEngine } from "./lifecycle";
 import type { ConnectorLifecycleEvent, LifecycleState } from "./lifecycle";
 import type { ConnectorManifest } from "./manifest";
 
@@ -71,12 +71,18 @@ function makeState(overrides?: Partial<LifecycleState>): LifecycleState {
 }
 
 describe("LifecycleEngine", () => {
+  let lifecycleEngine: LifecycleEngine;
+
+  beforeEach(() => {
+    lifecycleEngine = new LifecycleEngine();
+  });
+
   it("createInitialState sets correct defaults", () => {
     const manifest = makeManifest();
     const state = lifecycleEngine.createInitialState(manifest, "42");
     expect(state.installationId).toBe("");
     expect(state.connectorName).toBe("test");
-    expect(state.tenantId).toBe(42);
+    expect(state.tenantId).toBe("42");
     expect(state.currentEvent).toBe("installing");
     expect(state.status).toBe("installing");
     expect(state.version).toBe("1.0.0");

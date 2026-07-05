@@ -228,7 +228,7 @@ describe("Appendix D - AI RAG retrieval", () => {
     if (dbModule) {
       const hasKB =
         dbModule.knowledgeBasesTable ||
-        db_module?.knowledgeBasesTable !== undefined ||
+        dbModule.knowledgeBaseTable ||
         false;
       expect(hasKB || true).toBeTruthy();
     }
