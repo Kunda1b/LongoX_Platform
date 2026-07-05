@@ -217,6 +217,9 @@ model Workflow {
   diffs          WorkflowDiff[]
   approvalTasks  ApprovalTask[]
 
+  // ADR-010: Pre-computed tsvector for FTS with GIN indexes
+  nameTsv     Unsupported("tsvector")?     @map("name_tsv")
+  descTsv     Unsupported("tsvector")?     @map("desc_tsv")
   @@index([tenantId, status])
   @@index([tenantId, name])
   @@map("workflows")
@@ -397,6 +400,9 @@ model Connector {
   connectorActions  ConnectorAction[]
   connectorTriggers ConnectorTrigger[]
 
+  // ADR-010: Pre-computed tsvector for FTS with GIN indexes
+  nameTsv     Unsupported("tsvector")?     @map("name_tsv")
+  descTsv     Unsupported("tsvector")?     @map("desc_tsv")
   @@map("connectors")
 }
 
@@ -541,6 +547,8 @@ model Template {
 
   versions TemplateVersion[]
 
+  // ADR-010: Pre-computed tsvector for FTS with GIN indexes
+  nameTsv     Unsupported("tsvector")?     @map("name_tsv")
   @@map("templates")
 }
 
@@ -1353,6 +1361,9 @@ model App {
   viewCount    Int      @default(0) @map("view_count")
   layout       Json?    @default("{}")
   lastEditedAt DateTime @default(now()) @map("last_edited_at")
+  // ADR-010: Pre-computed tsvector for FTS with GIN indexes
+  nameTsv      Unsupported("tsvector")?     @map("name_tsv")
+  descTsv      Unsupported("tsvector")?     @map("desc_tsv")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

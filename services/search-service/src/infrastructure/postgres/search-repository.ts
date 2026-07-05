@@ -5,21 +5,13 @@
  * Uses `prisma.$queryRawUnsafe()` for FTS queries and Prisma delegates for basic lookups.
  *
  * ──────────────────────────────────────────────────────────────────────────────
- * ADR-010 / architecture §16.5 — Pre-computed tsvector columns.
+ * ADR-010 — Pre-computed tsvector columns on ALL searchable tables.
  *
- * The canonical `search_index` table (managed by the SearchService projection)
- * is the ONLY table that carries pre-computed `title_tsv` / `content_tsv`
- * tsvector columns. All tenant-facing search SHOULD go through that projection
- * so it benefits from indexed, pre-computed tsvector lookups.
- *
- * The runtime `to_tsvector()` calls below on the legacy `workflows`, `apps`,
- * `templates`, `connectors`, `executions`, `audit_log`, and `prompts` tables
- * are retained for backwards compatibility with code paths that bypass the
- * SearchService projection. Per ADR-010 scope, pre-computed tsvector columns
- * are NOT added to those core domain tables — they are an internal concern of
- * the `search_index` projection. Migrate callers to the SearchService API to
- * eliminate the runtime `to_tsvector()` cost on these legacy paths.
- * (matrix item 12 / matrix item 43 — by-design scope.)
+ * Per architecture.md §26.11: "Every searchable table gets a generated
+ * tsvector column (workflow_name_tsv, connector_desc_tsv, etc.) with a
+ * GIN index." Migration 009 adds these columns to workflows, apps,
+ * templates, and connectors. This repository now queries the pre-computed
+ * columns instead of calling to_tsvector() at runtime.
  * ──────────────────────────────────────────────────────────────────────────────
  */
 
@@ -59,9 +51,9 @@ export class PostgresSearchRepository implements SearchRepository {
     if (types.includes("workflows")) {
       const rows: any[] = await prisma.$queryRawUnsafe(
         `SELECT id, name, description, status, trigger_type,
-            ts_rank(to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(description, '')), to_tsquery($1, $2)) as rank
+            ts_rank(name_tsv || desc_tsv, to_tsquery($1, $2)) as rank
           FROM workflows
-          WHERE to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(description, '')) @@ to_tsquery($1, $2)
+          WHERE (name_tsv || desc_tsv) @@ to_tsquery($1, $2)
           ORDER BY rank DESC
           LIMIT $3`,
         FTS_CONFIG,
@@ -87,9 +79,9 @@ export class PostgresSearchRepository implements SearchRepository {
     if (types.includes("apps")) {
       const rows: any[] = await prisma.$queryRawUnsafe(
         `SELECT id, name, description, type, status,
-            ts_rank(to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(description, '')), to_tsquery($1, $2)) as rank
+            ts_rank(name_tsv || desc_tsv, to_tsquery($1, $2)) as rank
           FROM apps
-          WHERE to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(description, '')) @@ to_tsquery($1, $2)
+          WHERE (name_tsv || desc_tsv) @@ to_tsquery($1, $2)
           ORDER BY rank DESC
           LIMIT $3`,
         FTS_CONFIG,
@@ -111,9 +103,9 @@ export class PostgresSearchRepository implements SearchRepository {
     if (types.includes("templates")) {
       const rows: any[] = await prisma.$queryRawUnsafe(
         `SELECT id, name, description, category,
-            ts_rank(to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(description, '')), to_tsquery($1, $2)) as rank
+            ts_rank(name_tsv || desc_tsv, to_tsquery($1, $2)) as rank
           FROM templates
-          WHERE to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(description, '')) @@ to_tsquery($1, $2)
+          WHERE (name_tsv || desc_tsv) @@ to_tsquery($1, $2)
           ORDER BY rank DESC
           LIMIT $3`,
         FTS_CONFIG,
@@ -135,9 +127,9 @@ export class PostgresSearchRepository implements SearchRepository {
     if (types.includes("connectors")) {
       const rows: any[] = await prisma.$queryRawUnsafe(
         `SELECT id, name, description, category, is_installed,
-            ts_rank(to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(description, '')), to_tsquery($1, $2)) as rank
+            ts_rank(name_tsv || desc_tsv, to_tsquery($1, $2)) as rank
           FROM connectors
-          WHERE to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(description, '')) @@ to_tsquery($1, $2)
+          WHERE (name_tsv || desc_tsv) @@ to_tsquery($1, $2)
           ORDER BY rank DESC
           LIMIT $3`,
         FTS_CONFIG,
@@ -285,7 +277,7 @@ export class PostgresSearchRepository implements SearchRepository {
         let sqlStr = `
           SELECT e.id, e.workflow_id, w.name as workflow_name,
             e.status, e.started_at, e.finished_at, e.duration_ms, e.error_message,
-            ts_rank(to_tsvector($1, COALESCE(w.name, '')), to_tsquery($1, $2)) as rank
+            ts_rank(w.name_tsv, to_tsquery($1, $2)) as rank
           FROM executions e
           LEFT JOIN workflows w ON e.workflow_id = w.id
           WHERE e.tenant_id = $3
@@ -301,7 +293,7 @@ export class PostgresSearchRepository implements SearchRepository {
           params.push(filters.workflowId);
         }
         sqlStr += `
-          AND to_tsvector($1, COALESCE(w.name, '')) @@ to_tsquery($1, $2)
+          AND w.name_tsv @@ to_tsquery($1, $2)
           ORDER BY rank DESC
           LIMIT $${paramIdx++}
         `;
@@ -378,7 +370,7 @@ export class PostgresSearchRepository implements SearchRepository {
       try {
         let sqlStr = `
           SELECT id, action, resource_type, resource_id, actor_id, actor_type, metadata, created_at,
-            ts_rank(to_tsvector($1, COALESCE(action, '') || ' ' || COALESCE(resource_type, '') || ' ' || COALESCE(actor_id, '')), to_tsquery($1, $2)) as rank
+            ts_rank(to_tsvector($1, COALESCE(action, '') || ' ' || COALESCE(resource_type, '') || ' ' || COALESCE(actor_id, '')), to_tsquery($1, $2)) -- TODO: add tsvector to audit_logs as rank
           FROM audit_log
           WHERE tenant_id = $3
         `;
@@ -459,7 +451,7 @@ export class PostgresSearchRepository implements SearchRepository {
       try {
         let sqlStr = `
           SELECT id, name, content, model, created_at,
-            ts_rank(to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(content, '')), to_tsquery($1, $2)) as rank
+            ts_rank(to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(content, '')), to_tsquery($1, $2)) -- TODO: add tsvector to prompts as rank
           FROM prompts
           WHERE to_tsvector($1, COALESCE(name, '') || ' ' || COALESCE(content, '')) @@ to_tsquery($1, $2)
         `;
