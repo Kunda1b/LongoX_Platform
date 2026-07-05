@@ -3,7 +3,7 @@ import type {
   ConnectorManifest,
   SignedManifest,
 } from "./manifest";
-import { signManifest } from "./manifest";
+import { signManifest, verifyChecksum } from "./manifest";
 
 export const TRUST_TIER_HIERARCHY: Record<ConnectorCertificationLevel, number> =
   {
@@ -68,14 +68,16 @@ export function getTrustPolicy(
   }
 }
 
-export function evaluateTrust(manifest: ConnectorManifest): {
+export function evaluateTrust(
+  manifest: ConnectorManifest,
+  policyOverride?: TrustPolicy,
+): {
   passed: boolean;
   reasons: string[];
 } {
-  const policy = getTrustPolicy(manifest.certificationLevel);
+  const policy = policyOverride ?? getTrustPolicy(manifest.certificationLevel);
   const reasons: string[] = [];
   if (policy.requireChecksum && manifest.checksum) {
-    const { verifyChecksum } = require("./manifest");
     if (!verifyChecksum(manifest, manifest.checksum)) {
       reasons.push("Checksum verification failed");
     }

@@ -6,6 +6,20 @@
     "codegen": "orval --config ./orval.config.ts && pnpm -w run typecheck:libs"
   },
   "devDependencies": {
+    "@longox/ai-service": "workspace:*",
+    "@longox/api-gateway": "workspace:*",
+    "@longox/billing-service": "workspace:*",
+    "@longox/connector-runtime": "workspace:*",
+    "@longox/db": "workspace:*",
+    "@longox/execution-service": "workspace:*",
+    "@longox/replication-service": "workspace:*",
+    "@longox/search-service": "workspace:*",
+    "@longox/shared-auth": "workspace:*",
+    "@longox/shared-rbac": "workspace:*",
+    "@longox/shared-types": "workspace:*",
+    "@longox/template-service": "workspace:*",
+    "@longox/workflow-engine": "workspace:*",
+    "@longox/workflow-service": "workspace:*",
     "orval": "^8.17.0"
   }
 }

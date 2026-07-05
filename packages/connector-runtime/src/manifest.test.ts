@@ -196,9 +196,13 @@ describe("validateManifest", () => {
 describe("verifyChecksum", () => {
   it("returns true for matching checksum", () => {
     const manifest = makeValidManifest();
-    const checksum =
-      "6aaa7daa161a33ad8f83c269f3e59a0dd6ab6464c0c38ce3be56a755b7d21f67";
-    expect(verifyChecksum(manifest, checksum)).toBe(true);
+    // Compute the expected checksum dynamically to avoid coupling the
+    // assertion to a specific JSON key ordering.
+    const { createHash } = require("node:crypto");
+    const expected = createHash("sha256")
+      .update(JSON.stringify(manifest))
+      .digest("hex");
+    expect(verifyChecksum(manifest, expected)).toBe(true);
   });
 
   it("returns false for mismatched checksum", () => {

@@ -164,7 +164,7 @@ describe("Failover drill rehearsal", () => {
     const fs = await import("node:fs").catch(() => null);
     if (fs) {
       const path = new URL(
-        "../../infrastructure/disaster-recovery/runbooks/region-failover.md",
+        "../infrastructure/disaster-recovery/runbooks/region-failover.md",
         import.meta.url,
       );
       const exists = fs.existsSync(path);

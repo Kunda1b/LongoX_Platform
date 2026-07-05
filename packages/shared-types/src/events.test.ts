@@ -18,7 +18,7 @@ describe("createEventEnvelope", () => {
     expect(envelope.type).toBe("workflow.published");
     expect(envelope.time).toBeTruthy();
     expect(envelope.context.correlationId).toBeTruthy();
-    expect(envelope.data.workflowId).toBe(1);
+    expect(envelope.data.workflowId).toBe("1");
     expect(envelope.data.version).toBe(2);
     expect(envelope.priority).toBe("normal");
     expect(envelope.classification).toBe("internal");

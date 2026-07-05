@@ -351,12 +351,14 @@ type Promotion {
 type Query {
   me: CurrentUser!
   tenants: [Tenant!]!
+  tenant(id: ID!): Tenant
   workflows(
     filter: WorkflowFilter
     first: Int
     after: String
   ): WorkflowConnection!
   workflow(id: ID!): Workflow
+  workflowVersion(id: ID!): WorkflowVersion
   executions(
     filter: ExecutionFilter
     first: Int
@@ -364,15 +366,628 @@ type Query {
   ): ExecutionConnection!
   execution(id: ID!): Execution
   dashboards: [Dashboard!]!
+  dashboard(id: ID!): Dashboard
   connector(id: ID!): Connector
+  connectors(
+    first: Int
+    after: String
+    filter: ConnectorFilter
+  ): ConnectorConnection!
   templates(category: String, first: Int, after: String): TemplateConnection!
+  template(id: ID!): Template
+  marketplaceListings(
+    first: Int
+    after: String
+    category: String
+  ): MarketplaceListingConnection!
+  marketplaceListing(id: ID!): MarketplaceListing
+  aiRuns(first: Int, after: String): AiRunConnection!
+  aiRun(id: ID!): AiRun
+  aiModels: [AiModel!]!
+  aiPrompts(first: Int, after: String): AiPromptConnection!
+  aiPrompt(id: ID!): AiPrompt
+  billingAccount: BillingAccount!
+  invoices(first: Int, after: String): InvoiceConnection!
+  invoice(id: ID!): Invoice
+  subscription(id: ID!): Subscription
+  usageMetrics(scope: String!, range: String!): UsageMetrics!
+  auditLog(filter: AuditFilter, first: Int, after: String): AuditLogConnection!
+  search(query: String!, types: [String!], first: Int): SearchResultConnection!
+  environments(workflowId: ID!): [Environment!]!
+  environment(id: ID!): Environment
+  credential(id: ID!): Credential
+  credentials: [Credential!]!
+  webhookEndpoint(id: ID!): WebhookEndpoint
+  webhookEndpoints: [WebhookEndpoint!]!
+  apps: [App!]!
+  app(id: ID!): App
+  featureFlags: [FeatureFlag!]!
+  featureFlag(key: String!): FeatureFlag
+  roles: [Role!]!
+  role(id: ID!): Role
+  members(tenantId: ID!): [Membership!]!
 }
 
 type Mutation {
+  # Workflow mutations
+  createWorkflow(input: CreateWorkflowInput!): Workflow!
+  updateWorkflow(input: UpdateWorkflowInput!): Workflow!
+  deleteWorkflow(id: ID!): Boolean!
   publishWorkflow(input: PublishWorkflowInput!): PublishWorkflowPayload!
+  unpublishWorkflow(id: ID!): Workflow!
+  duplicateWorkflow(id: ID!): Workflow!
+
+  # Execution mutations
+  runWorkflow(input: RunWorkflowInput!): Execution!
+  retryExecution(id: ID!): Execution!
+  cancelExecution(id: ID!): Execution!
+  pauseExecution(id: ID!): Execution!
+  resumeExecution(id: ID!): Execution!
+
+  # Dashboard mutations
   createDashboard(input: CreateDashboardInput!): CreateDashboardPayload!
+  updateDashboard(input: UpdateDashboardInput!): Dashboard!
+  deleteDashboard(id: ID!): Boolean!
+  publishDashboard(id: ID!): Dashboard!
+
+  # Connector mutations
   installConnector(input: InstallConnectorInput!): InstallConnectorPayload!
+  uninstallConnector(id: ID!): Boolean!
+  configureConnector(input: ConfigureConnectorInput!): Connector!
+  upgradeConnector(input: UpgradeConnectorInput!): Connector!
+  rollbackConnector(input: RollbackConnectorInput!): Connector!
+
+  # Environment mutations
   promoteEnvironment(
     input: PromoteEnvironmentInput!
   ): PromoteEnvironmentPayload!
+  requestPromotion(input: RequestPromotionInput!): Promotion!
+  approvePromotion(input: ApprovePromotionInput!): Promotion!
+  rejectPromotion(input: RejectPromotionInput!): Promotion!
+  rollbackEnvironment(input: RollbackEnvironmentInput!): Environment!
+
+  # AI mutations
+  runAiPrompt(input: RunAiPromptInput!): AiRun!
+  cancelAiRun(id: ID!): AiRun!
+  createAiPrompt(input: CreateAiPromptInput!): AiPrompt!
+  updateAiPrompt(input: UpdateAiPromptInput!): AiPrompt!
+  publishAiPrompt(id: ID!): AiPrompt!
+  deleteAiPrompt(id: ID!): Boolean!
+  uploadKnowledgeBase(input: UploadKnowledgeBaseInput!): KnowledgeBase!
+
+  # Billing mutations
+  createCheckoutSession(input: CreateCheckoutSessionInput!): CheckoutSession!
+  cancelSubscription(id: ID!): Subscription!
+  updateSubscription(input: UpdateSubscriptionInput!): Subscription!
+  applyCoupon(input: ApplyCouponInput!): BillingAccount!
+
+  # Marketplace mutations
+  publishMarketplaceListing(
+    input: PublishMarketplaceListingInput!
+  ): MarketplaceListing!
+  installMarketplaceListing(id: ID!): Boolean!
+
+  # Credential mutations
+  createCredential(input: CreateCredentialInput!): Credential!
+  updateCredential(input: UpdateCredentialInput!): Credential!
+  deleteCredential(id: ID!): Boolean!
+
+  # Webhook mutations
+  createWebhookEndpoint(input: CreateWebhookEndpointInput!): WebhookEndpoint!
+  updateWebhookEndpoint(input: UpdateWebhookEndpointInput!): WebhookEndpoint!
+  deleteWebhookEndpoint(id: ID!): Boolean!
+
+  # App mutations
+  createApp(input: CreateAppInput!): App!
+  updateApp(input: UpdateAppInput!): App!
+  deleteApp(id: ID!): Boolean!
+
+  # Member/invitation mutations
+  inviteMember(input: InviteMemberInput!): Membership!
+  removeMember(input: RemoveMemberInput!): Boolean!
+  updateMemberRole(input: UpdateMemberRoleInput!): Membership!
+
+  # Feature flag mutations
+  setFeatureFlag(input: SetFeatureFlagInput!): FeatureFlag!
+
+  # Audit export
+  requestAuditExport(input: RequestAuditExportInput!): AuditExportJob!
+
+  # GDPR
+  requestGdprExport(input: RequestGdprExportInput!): GdprExportJob!
+  requestGdprDeletion(input: RequestGdprDeletionInput!): GdprDeletionJob!
+}
+
+# ─── Extended types ────────────────────────────────────────────────────────────
+
+input ConnectorFilter {
+  trustLevel: TrustLevel
+  category: String
+  search: String
+}
+
+type ConnectorConnection {
+  edges: [ConnectorEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ConnectorEdge {
+  node: Connector!
+  cursor: String!
+}
+
+type MarketplaceListing {
+  id: ID!
+  name: String!
+  description: String!
+  category: String!
+  publisher: String!
+  version: String!
+  trustLevel: TrustLevel!
+  installCount: Int!
+  rating: Float
+}
+
+type MarketplaceListingConnection {
+  edges: [MarketplaceListingEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type MarketplaceListingEdge {
+  node: MarketplaceListing!
+  cursor: String!
+}
+
+enum AiRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+  BLOCKED
+}
+
+type AiRun {
+  id: ID!
+  promptId: ID
+  model: String!
+  provider: String!
+  status: AiRunStatus!
+  input: JSON
+  output: JSON
+  tokensIn: Int
+  tokensOut: Int
+  costUsd: Float
+  startedAt: String!
+  finishedAt: String
+  guardrailViolations: [String!]!
+}
+
+type AiRunConnection {
+  edges: [AiRunEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type AiRunEdge {
+  node: AiRun!
+  cursor: String!
+}
+
+type AiModel {
+  id: ID!
+  name: String!
+  provider: String!
+  contextWindow: Int!
+  inputCostPer1k: Float!
+  outputCostPer1k: Float!
+  capabilities: [String!]!
+}
+
+type AiPrompt {
+  id: ID!
+  name: String!
+  description: String
+  version: Int!
+  template: String!
+  modelId: ID
+  status: String!
+  publishedAt: String
+}
+
+type AiPromptConnection {
+  edges: [AiPromptEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type AiPromptEdge {
+  node: AiPrompt!
+  cursor: String!
+}
+
+type KnowledgeBase {
+  id: ID!
+  name: String!
+  documentCount: Int!
+  embeddingModel: String!
+  createdAt: String!
+}
+
+type BillingAccount {
+  id: ID!
+  tenantId: ID!
+  planId: String!
+  status: String!
+  balance: Float!
+  currency: String!
+  currentPeriodStart: String!
+  currentPeriodEnd: String!
+}
+
+type Invoice {
+  id: ID!
+  tenantId: ID!
+  amount: Float!
+  currency: String!
+  status: String!
+  pdfUrl: String
+  paidAt: String
+  createdAt: String!
+}
+
+type InvoiceConnection {
+  edges: [InvoiceEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type InvoiceEdge {
+  node: Invoice!
+  cursor: String!
+}
+
+type Subscription {
+  id: ID!
+  tenantId: ID!
+  planId: String!
+  status: String!
+  currentPeriodStart: String!
+  currentPeriodEnd: String!
+  cancelAtPeriodEnd: Boolean!
+}
+
+type UsageMetrics {
+  scope: String!
+  range: String!
+  workflowRuns: Int!
+  aiTokens: Int!
+  storageBytes: Float!
+  executionMs: Float!
+}
+
+input AuditFilter {
+  actorId: ID
+  resource: String
+  action: String
+  from: String
+  to: String
+}
+
+type AuditLogEntry {
+  id: ID!
+  tenantId: ID!
+  actorId: ID!
+  resource: String!
+  action: String!
+  metadata: JSON
+  createdAt: String!
+}
+
+type AuditLogConnection {
+  edges: [AuditLogEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type AuditLogEdge {
+  node: AuditLogEntry!
+  cursor: String!
+}
+
+type AuditExportJob {
+  id: ID!
+  status: String!
+  downloadUrl: String
+  createdAt: String!
+}
+
+type SearchResult {
+  type: String!
+  id: ID!
+  title: String!
+  snippet: String!
+  score: Float!
+}
+
+type SearchResultConnection {
+  edges: [SearchResultEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type SearchResultEdge {
+  node: SearchResult!
+  cursor: String!
+}
+
+enum EnvironmentType {
+  DEV
+  STAGING
+  PRODUCTION
+}
+
+type Environment {
+  id: ID!
+  workflowId: ID!
+  type: EnvironmentType!
+  currentVersionId: ID
+  createdAt: String!
+}
+
+type Credential {
+  id: ID!
+  tenantId: ID!
+  name: String!
+  type: String!
+  connectorId: ID
+  createdAt: String!
+}
+
+type WebhookEndpoint {
+  id: ID!
+  tenantId: ID!
+  url: String!
+  events: [String!]!
+  secret: String
+  active: Boolean!
+  createdAt: String!
+}
+
+type App {
+  id: ID!
+  tenantId: ID!
+  name: String!
+  description: String
+  webhookUrl: String
+  active: Boolean!
+  createdAt: String!
+}
+
+type FeatureFlag {
+  key: String!
+  description: String
+  enabled: Boolean!
+  rolloutPercent: Int!
+}
+
+# ─── Input types ───────────────────────────────────────────────────────────────
+
+input CreateWorkflowInput {
+  tenantId: ID!
+  name: String!
+  description: String
+  tags: [String!]
+}
+
+input UpdateWorkflowInput {
+  id: ID!
+  name: String
+  description: String
+  tags: [String!]
+}
+
+input RunWorkflowInput {
+  workflowId: ID!
+  versionId: ID
+  inputs: JSON
+  correlationId: String
+}
+
+input UpdateDashboardInput {
+  id: ID!
+  title: String
+  layout: JSON
+}
+
+input ConfigureConnectorInput {
+  installationId: ID!
+  config: JSON!
+}
+
+input UpgradeConnectorInput {
+  installationId: ID!
+  version: String!
+}
+
+input RollbackConnectorInput {
+  installationId: ID!
+  version: String!
+}
+
+input RequestPromotionInput {
+  workflowId: ID!
+  versionId: ID!
+  sourceEnvironment: String!
+  targetEnvironment: String!
+  notes: String
+}
+
+input ApprovePromotionInput {
+  promotionId: ID!
+  notes: String
+}
+
+input RejectPromotionInput {
+  promotionId: ID!
+  reason: String!
+}
+
+input RollbackEnvironmentInput {
+  environmentId: ID!
+  versionId: ID!
+  reason: String
+}
+
+input RunAiPromptInput {
+  promptId: ID
+  modelId: ID
+  template: String
+  inputs: JSON
+  knowledgeBaseId: ID
+}
+
+input CreateAiPromptInput {
+  name: String!
+  description: String
+  template: String!
+  modelId: ID
+}
+
+input UpdateAiPromptInput {
+  id: ID!
+  name: String
+  description: String
+  template: String
+  modelId: ID
+}
+
+input UploadKnowledgeBaseInput {
+  name: String!
+  documents: [JSON!]!
+  embeddingModel: String
+}
+
+input CreateCheckoutSessionInput {
+  planId: String!
+  successUrl: String!
+  cancelUrl: String!
+}
+
+type CheckoutSession {
+  id: ID!
+  url: String!
+  status: String!
+  expiresAt: String!
+}
+
+input UpdateSubscriptionInput {
+  id: ID!
+  planId: String!
+}
+
+input ApplyCouponInput {
+  couponCode: String!
+}
+
+input PublishMarketplaceListingInput {
+  name: String!
+  description: String!
+  category: String!
+  version: String!
+  artifactRef: String!
+}
+
+input CreateCredentialInput {
+  name: String!
+  type: String!
+  value: JSON!
+  connectorId: ID
+}
+
+input UpdateCredentialInput {
+  id: ID!
+  name: String
+  value: JSON
+}
+
+input CreateWebhookEndpointInput {
+  url: String!
+  events: [String!]!
+  secret: String
+  active: Boolean
+}
+
+input UpdateWebhookEndpointInput {
+  id: ID!
+  url: String
+  events: [String!]
+  active: Boolean
+}
+
+input CreateAppInput {
+  name: String!
+  description: String
+  webhookUrl: String
+}
+
+input UpdateAppInput {
+  id: ID!
+  name: String
+  description: String
+  webhookUrl: String
+  active: Boolean
+}
+
+input InviteMemberInput {
+  tenantId: ID!
+  email: String!
+  role: String!
+}
+
+input RemoveMemberInput {
+  tenantId: ID!
+  userId: ID!
+}
+
+input UpdateMemberRoleInput {
+  tenantId: ID!
+  userId: ID!
+  role: String!
+}
+
+input SetFeatureFlagInput {
+  key: String!
+  enabled: Boolean
+  rolloutPercent: Int
+}
+
+input RequestAuditExportInput {
+  filter: AuditFilter
+  format: String
+}
+
+input RequestGdprExportInput {
+  tenantId: ID!
+  userId: ID
+}
+
+input RequestGdprDeletionInput {
+  tenantId: ID!
+  userId: ID!
+}
+
+type GdprExportJob {
+  id: ID!
+  status: String!
+  downloadUrl: String
+  createdAt: String!
+}
+
+type GdprDeletionJob {
+  id: ID!
+  status: String!
+  scheduledAt: String!
+  createdAt: String!
 }
