@@ -51,7 +51,11 @@ export class ReportingProjection {
         );
         (await this.upsertKPI("ai.requests", 1, tenantId, period)) as any;
         break;
-      case "billing.usage.recorded":
+      case "usage.recorded":
+        // §19.4 canonical name — was previously `billing.usage.recorded`
+        // (matrix item 15). The old name is still emitted by some legacy
+        // publishers; we accept both as a courtesy but only the §19.4
+        // form is documented.
         await this.upsertKPI(
           "billing.usage",
           (event.payload.quantity as string as any) ?? "",

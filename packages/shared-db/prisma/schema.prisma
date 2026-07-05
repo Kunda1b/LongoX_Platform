@@ -323,17 +323,25 @@ model WorkflowExecution {
 
 /// Per-node checkpoint for crash recovery — Section 9.7
 model NodeExecutionCheckpoint {
-  id          String   @id @default(cuid())
-  executionId String   @map("execution_id")
-  nodeId      String   @map("node_id")
-  attempt     Int
-  stateJson   Json     @map("state_json")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id                 String   @id @default(cuid())
+  executionId        String   @map("execution_id")
+  nodeId             String   @map("node_id")
+  attempt            Int
+  stateJson          Json     @map("state_json")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  // §9.7 — Node execution lifecycle / idempotency / compensation metadata
+  idempotencyKey     String?  @map("idempotency_key")
+  compensationStatus String?  @map("compensation_status") // pending | in_progress | completed | failed
+  retryCount         Int?     @map("retry_count")
+  startedAt          DateTime? @map("started_at")
+  finishedAt         DateTime? @map("finished_at")
 
   execution WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
 
   @@unique([executionId, nodeId, attempt])
   @@index([executionId, nodeId, attempt])
+  @@index([idempotencyKey])
   @@map("node_execution_checkpoints")
 }
 

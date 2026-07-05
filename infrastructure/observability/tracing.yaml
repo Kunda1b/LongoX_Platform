@@ -14,25 +14,46 @@
 tracing:
 
   # ─── Sampling ──────────────────────────────────────────────────────────
+  # ─── matrix item 31 — Differentiated OTel sampling ─────────────────────
+  # Sampling ratios are differentiated by domain criticality:
+  #   - billing / auth / AI        : 100% (financial, security, and
+  #                                   high-marginal-cost operations — never
+  #                                   sample them out, every span matters)
+  #   - everything else             : 1%   (high-volume control-plane traffic
+  #                                   where individual traces have low
+  #                                   diagnostic value)
+  # Errors and slow traces bypass sampling regardless (see `tail_sampling`
+  # rules below). The previous flat 10% default undersampled billing/auth
+  # and oversampled routine CRUD traffic.
   sampling:
     # Default head-based probability sampling
     default_sampler: parentbased_traceidratio
-    default_ratio: 0.1  # 10% of all requests
+    default_ratio: 0.01  # 1% of all requests (matrix item 31)
 
     # Per-service overrides
     overrides:
       - service: api-gateway
-        ratio: 0.15         # Slightly higher for gateway (entry point)
+        ratio: 0.01         # control-plane CRUD — 1%
       - service: ai-service
-        ratio: 0.05         # AI calls are high-volume but expensive to trace
+        ratio: 1.0          # AI — 100% (matrix item 31)
       - service: execution-service
-        ratio: 0.1
+        ratio: 0.01         # high volume — 1%
       - service: execution-worker
-        ratio: 0.1
+        ratio: 0.01         # high volume — 1%
       - service: billing-service
-        ratio: 0.5          # Higher for billing (financial operations)
+        ratio: 1.0          # billing — 100% (financial audit, matrix item 31)
+      - service: auth-service
+        ratio: 1.0          # auth — 100% (security, matrix item 31)
       - service: search-service
-        ratio: 0.05
+        ratio: 0.01         # high volume — 1%
+      - service: workflow-service
+        ratio: 0.01
+      - service: connector-service
+        ratio: 0.01
+      - service: notification-service
+        ratio: 0.01
+      - service: audit-service
+        ratio: 1.0          # audit — 100% (compliance, matrix item 31)
 
     # Tail-based sampling rules (processed in OTel Collector)
     # Traces matching ANY rule below are kept at 100%

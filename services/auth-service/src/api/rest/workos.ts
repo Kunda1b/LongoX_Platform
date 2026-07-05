@@ -18,6 +18,7 @@
  *   POST /auth/workos/mfa/enroll       — start TOTP enroll
  *   POST /auth/workos/mfa/challenge    — issue MFA challenge
  *   POST /auth/workos/mfa/verify       — verify TOTP code
+ *   POST /auth/workos/mfa/webauthn/enroll — start WebAuthn/passkey enroll (item 24)
  *   POST /auth/sso                     — SAML/OIDC SSO initiation
  *   POST /auth/scim                    — SCIM 2.0 directory sync webhook
  */
@@ -29,6 +30,7 @@ import {
   refreshWorkOSToken,
   getAdminPortalLink,
   enrollMfa,
+  enrollWebAuthnMfa,
   challengeMfa,
   verifyMfa,
   isWorkOSEnabled,
@@ -294,6 +296,53 @@ router.post("/auth/workos/mfa/verify", async (req, res): Promise<void> => {
     });
   }
 });
+
+// ─── WebAuthn / passkey MFA (matrix item 24) ─────────────────────────────────
+//
+// Passkey/WebAuthn MFA is fully supported by WorkOS — the `MfaFactorType`
+// union already includes `"webauthn"`, and `@longox/shared-auth/workos`
+// exposes a dedicated `enrollWebAuthnMfa(workosUserId)` helper that delegates
+// to `WorkOS.userManagement.enrollAuthFactor({ type: "webauthn" })`.
+//
+// The enrollment + verification flows go through the SAME WorkOS challenge
+// API as TOTP/SMS — only the factor type differs. Passkey enrollment
+// returns a `challenge` (CBOR-encoded options) that the browser's
+// `navigator.credentials.create()` consumes; verification posts the signed
+// `assertion` back to `/auth/workos/mfa/verify` (the same endpoint above).
+//
+// Passkey enrollment typically also goes through WorkOS's hosted AuthKit UI
+// rather than this REST endpoint — but the direct API is exposed here for
+// headless tenants that want to embed the passkey enrollment flow in their
+// own UI.
+router.post(
+  "/auth/workos/mfa/webauthn/enroll",
+  async (req, res): Promise<void> => {
+    const { workos_user_id } = req.body as { workos_user_id?: string };
+    if (!workos_user_id) {
+      res.status(400).json({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "workos_user_id is required",
+          correlation_id: req.correlationId ?? null,
+        },
+      });
+      return;
+    }
+    try {
+      const factor = await enrollWebAuthnMfa(workos_user_id);
+      res.json(factor);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({
+        error: {
+          code: "WORKOS_MFA_WEBAUTHN_ENROLL_ERROR",
+          message,
+          correlation_id: req.correlationId ?? null,
+        },
+      });
+    }
+  },
+);
 
 // ─── SSO initiation (SAML/OIDC) ───────────────────────────────────────────────
 // Per ADR-007, Enterprise SSO is brokered by WorkOS — the customer IdP is the

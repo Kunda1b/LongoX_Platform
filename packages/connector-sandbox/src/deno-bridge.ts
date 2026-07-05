@@ -3,6 +3,26 @@ import type { AuditLogger } from "./audit";
 import { auditLogger } from "./audit";
 import type { IsolateContext, IsolateResult } from "./isolate";
 
+// ──────────────────────────────────────────────────────────────────────────────
+// ADR-009 / architecture §14 — Deno sandbox execution model.
+//
+// The **target architecture** is to run connector sandbox code inside the
+// host Node.js process via `deno_core`'s in-process V8 binding (zero IPC,
+// zero subprocess overhead, fine-grained resource isolation via the V8
+// isolate API). The `deno_core` Rust crate is already declared as a
+// dependency of this package.
+//
+// The **current implementation** below uses `node:child_process` to spawn
+// a Deno CLI subprocess per execution. This is a pragmatic interim: it is
+// correct and isolation-safe, but pays per-execution fork + cold-start
+// cost (~50–150 ms) that the in-process binding eliminates.
+//
+// TODO: ADR-009 — migrate to deno_core V8 binding. Replace
+// `executeAsSubprocess` with an in-process `Deno.core.denoFetch`/
+// `JsRuntime` based path that loads the user code into a fresh V8 isolate
+// (matrix items 10, 11).
+// ──────────────────────────────────────────────────────────────────────────────
+
 export interface DenoRuntimeConfig {
   denoPath?: string;
   cacheDir?: string;

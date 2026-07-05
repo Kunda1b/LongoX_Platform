@@ -91,6 +91,14 @@ function getQueueForType(name: QueueName): Queue {
 // Legacy queue kept for backwards compatibility with callers that still enqueue
 // jobs onto `longox:executions` (pre-named-queue code paths). All new enqueue
 // sites should resolve the proper named queue via `getQueueForType`.
+//
+// @deprecated (matrix item 9) — the `longox:executions` legacy queue is
+// deprecated and will be removed in a future release once all enqueue sites
+// are migrated to the named-queue topology (ADR-001 / §11). Do NOT add new
+// callers — use `getQueueForType` with a `QueueName` from `QUEUE_TOPOLOGY`.
+// The legacy queue is only retained defensively so that callers passing an
+// unknown job type don't throw at runtime; all production code should resolve
+// to a named queue.
 const LEGACY_QUEUE_NAME = "longox:executions";
 let legacyQueue: Queue | null = null;
 
@@ -329,9 +337,9 @@ async function processBillingReconciliation(
   data: Record<string, unknown>,
 ): Promise<void> {
   try {
-    const { processBillingReconciliationJob } = await import(
-      "@longox/billing-service"
-    );
+    const { processBillingReconciliationJob } =
+      await import("@longox/billing-service");
+
     await processBillingReconciliationJob(data as any);
   } catch (err) {
     console.warn(
@@ -350,9 +358,9 @@ async function processNotificationOutbound(
   data: Record<string, unknown>,
 ): Promise<void> {
   try {
-    const { processNotificationOutboundJob } = await import(
-      "@longox/notification-service"
-    );
+    const { processNotificationOutboundJob } =
+      await import("@longox/notification-service");
+
     await processNotificationOutboundJob(data as any);
   } catch (err) {
     console.warn(
@@ -371,9 +379,9 @@ async function processConnectorInstall(
   data: Record<string, unknown>,
 ): Promise<void> {
   try {
-    const { processConnectorInstallJob } = await import(
-      "@longox/connector-service"
-    );
+    const { processConnectorInstallJob } =
+      await import("@longox/connector-service");
+
     await processConnectorInstallJob(data as any);
   } catch (err) {
     console.warn(
@@ -392,9 +400,9 @@ async function processTemplatePublish(
   data: Record<string, unknown>,
 ): Promise<void> {
   try {
-    const { processTemplatePublishJob } = await import(
-      "@longox/template-service"
-    );
+    const { processTemplatePublishJob } =
+      await import("@longox/template-service");
+
     await processTemplatePublishJob(data as any);
   } catch (err) {
     console.warn(

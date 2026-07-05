@@ -1,0 +1,179 @@
+openapi: 3.1.0
+info:
+  title: LongoX Execution Service
+  version: 0.1.0
+  description: |
+    Workflow + DAG execution surface for the LongoX Platform. Exposes the
+    §9 execution lifecycle (start/pause/resume/cancel), node-level status,
+    and Server-Sent Events for live updates (matrix item 22).
+
+    Status: minimal stub — additional endpoints (recovery, replay, child
+    workflows) will be documented as they ship.
+  license:
+    name: Proprietary
+servers:
+  - url: https://exec.longox.dev
+    description: Production
+  - url: http://localhost:3004
+    description: Local development
+paths:
+  /health:
+    get:
+      summary: Service health probe
+      operationId: executionHealth
+      tags: [health]
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+        "503":
+          description: Service is not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /executions:
+    post:
+      summary: Start a new workflow execution
+      operationId: startExecution
+      tags: [execution]
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartExecutionRequest"
+      responses:
+        "202":
+          description: Execution accepted (async)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Execution"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /executions/{executionId}:
+    get:
+      summary: Get execution status
+      operationId: getExecution
+      tags: [execution]
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: executionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Execution
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Execution"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /executions/{executionId}/events:
+    get:
+      summary: Stream execution events via Server-Sent Events
+      operationId: streamExecutionEvents
+      tags: [execution, sse]
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: executionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: SSE stream of node/execution events
+          content:
+            text/event-stream:
+              schema:
+                type: string
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: __session
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status, service, timestamp]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        service:
+          type: string
+          enum: [execution-service]
+        timestamp:
+          type: string
+          format: date-time
+    StartExecutionRequest:
+      type: object
+      required: [workflowId, triggerType]
+      properties:
+        workflowId:
+          type: string
+        triggerType:
+          type: string
+          enum: [manual, webhook, scheduled, api]
+        triggerPayload:
+          type: object
+          additionalProperties: true
+        idempotencyKey:
+          type: string
+          description: §9.7 idempotency key (workflow|run|node|attempt).
+    Execution:
+      type: object
+      required: [id, workflowId, status, startedAt]
+      properties:
+        id:
+          type: string
+        workflowId:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, completed, failed, paused, cancelled]
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            requestId:
+              type: string

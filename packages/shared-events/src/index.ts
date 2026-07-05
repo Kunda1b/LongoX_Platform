@@ -1,42 +1,52 @@
 import { randomUUID } from "node:crypto";
 
 export type PlatformEventType =
+  // ── §19.4 canonical event catalog (16 entries) ────────────────────────────
   | "workflow.created"
-  | "workflow.updated"
-  | "workflow.deleted"
   | "workflow.published"
   | "workflow.activated"
-  | "workflow.deactivated"
-  | "workflow.promoted"
-  | "environment.rolled_back"
-  | "workflow.started"
-  | "workflow.completed"
   | "execution.started"
   | "execution.completed"
   | "execution.failed"
+  | "execution.checkpoint.persisted" // §19.4 (matrix item 60) — was missing
+  | "connector.installed"
+  | "connector.revoked" // §19.4 (matrix item 60) — replaces legacy `connector.uninstalled`
+  | "template.published"
+  | "usage.recorded"
+  | "ai.run.completed"
+  | "ai.run.guardrail.violation" // §19.4 (matrix item 60) — was missing
+  | "environment.promoted"
+  | "environment.rolled_back"
+  | "billing.invoice.generated"
+  // ── Backwards-compat extensions (NOT in §19.4, retained for existing callers) ──
+  // These are NOT part of the §19.4 canonical catalog. They are accepted by
+  // the bus for backwards compatibility with services that emit them, but
+  // new publishers SHOULD prefer the §19.4 names above. Legacy aliases
+  // `workflow.started`/`workflow.completed` SHOULD migrate to
+  // `execution.started`/`execution.completed`; `connector.uninstalled`
+  // SHOULD migrate to `connector.revoked`.
+  | "workflow.updated"
+  | "workflow.deleted"
+  | "workflow.deactivated"
+  | "workflow.promoted"
+  | "workflow.started" // legacy alias — prefer `execution.started`
+  | "workflow.completed" // legacy alias — prefer `execution.completed`
   | "execution.retried"
   | "execution.cancelled"
-  | "connector.installed"
-  | "connector.uninstalled"
+  | "connector.uninstalled" // legacy alias — prefer `connector.revoked`
   | "connector.updated"
   | "user.login"
   | "user.created"
   | "user.updated"
   | "tenant.created"
   | "tenant.updated"
-  | "usage.recorded"
-  | "billing.invoice.generated"
-  | "template.published"
   | "template.installed"
   | "dashboard.published"
   | "dashboard.created"
-  | "ai.run.completed"
   | "ai.run.failed"
   | "prompt.published"
   | "prompt.approved"
   | "prompt.rejected"
-  | "environment.promoted"
-  | "environment.rolled_back"
   | "agent.run.started"
   | "agent.run.completed"
   | "agent.run.failed";
@@ -128,16 +138,40 @@ export function createEvent(
 ): PlatformEvent {
   const id = `evt_${randomUUID()}`;
   const eventVersion = options.eventVersion ?? 1;
+
+  // §19.1 / matrix item 59 — enforce canonical id prefixes on `tenant_id`
+  // (must start with `tnt_`) and `actor_id` (must start with `usr_`) when
+  // they are non-null. System actors (`system`, `webhook`, `schedule`) are
+  // allowed without the `usr_` prefix.
+  const rawTenantId = options.tenantId ?? null;
+  let tenantId: string | null = rawTenantId;
+  if (rawTenantId !== null && !rawTenantId.startsWith("tnt_")) {
+    // Auto-fix rather than throw so callers don't have to refactor at every
+    // call site. The emitted event carries the canonical form.
+    tenantId = `tnt_${rawTenantId}`;
+  }
+
+  const rawActorId = actor.id ?? null;
+  let actorId: string | null = rawActorId;
+  if (rawActorId !== null) {
+    const systemActors = new Set(["system", "webhook", "schedule"]);
+    const isSystemActor =
+      typeof actor.type === "string" && systemActors.has(actor.type);
+    if (!rawActorId.startsWith("usr_") && !isSystemActor) {
+      actorId = `usr_${rawActorId}`;
+    }
+  }
+
   return {
     // Architecture-compliant names
     event_id: id,
     event_type: type,
     event_version: eventVersion,
     occurred_at: new Date().toISOString(),
-    tenant_id: options.tenantId ?? null,
+    tenant_id: tenantId,
     correlation_id: correlationId ?? null,
     aggregate_id: aggregateId,
-    actor_id: actor.id ?? null,
+    actor_id: actorId,
     payload,
     schema_url: schemaUrlFor(type, eventVersion),
 
@@ -146,10 +180,10 @@ export function createEvent(
     type,
     version: eventVersion,
     timestamp: new Date().toISOString(),
-    tenantId: options.tenantId ?? null,
+    tenantId: tenantId,
     correlationId: correlationId ?? null,
     aggregateId,
-    actorId: actor.id ?? null,
+    actorId: actorId,
     aggregateType,
     actorType: actor.type ?? "system",
     causationId: causationId ?? null,
@@ -193,7 +227,7 @@ export function validateEvent(
 ): EventValidationError[] | null {
   const errors: EventValidationError[] = [];
 
-  // event_id — UUID with optional evt_ prefix
+  // event_id — UUID with evt_ prefix (mandatory per §19.1)
   if (!event.event_id && !event.id) {
     errors.push({ field: "event_id", reason: "missing" });
   } else {
@@ -203,7 +237,10 @@ export function validateEvent(
     if (!uuidRe.test(id)) {
       errors.push({
         field: "event_id",
-        reason: "must be a UUID, optionally prefixed with evt_",
+        // matrix item 58 — the regex REQUIRES `evt_` prefix; the previous
+        // message ("optionally prefixed") was wrong. Per §19.1 the prefix
+        // is mandatory.
+        reason: "must be a UUID, prefixed with evt_",
       });
     }
   }
@@ -788,6 +825,203 @@ export function createEventBus(): EventBus {
     | "nats";
   const busUrl = process.env.EVENT_BUS_URL;
   return initEventBus(busType, busUrl);
+}
+
+// ─── §19.2 consumer_offsets auto-dedup (matrix item 14) ──────────────────────
+//
+// Architecture §19.2 mandates per-consumer idempotency: each consumer tracks
+// the (consumerName, event_id) tuples it has already processed in the
+// `consumer_offsets` table, and skips re-delivered events. The
+// `DeduplicatingEventBus` wrapper below enforces this on the dispatch path:
+// before invoking the inner bus's subscriber callbacks, it checks the
+// `consumer_offsets` table; if the (consumer, event_id) row already exists
+// with status `completed`, the event is treated as already-processed and is
+// not redelivered.
+//
+// The deduper is **opt-in**: wrap any `EventBus` with
+// `new DeduplicatingEventBus(inner, { consumerName })` to get the
+// idempotency guarantee. The Postgres backend lazily loads `@longox/db/prisma`
+// so that the shared-events package stays importable in non-Postgres contexts
+// (tests, edge workers) — when Prisma isn't available the wrapper degrades to
+// a transparent pass-through.
+
+export interface DeduplicatingEventBusOptions {
+  /** Consumer name written to the `consumer_offsets.consumer_name` column. */
+  consumerName: string;
+  /**
+   * Optional injected offset store. When omitted, the bus lazily resolves the
+   * Prisma-backed store on first use. Useful for tests.
+   */
+  offsetStore?: OffsetStore;
+  /**
+   * When `true` (default), silently swallow dedup errors and fall through to
+   * delivery. Set to `false` to surface dedup-store failures as handler
+   * exceptions.
+   */
+  failOpenOnError?: boolean;
+}
+
+export interface OffsetStore {
+  /** Returns `true` if (consumer, eventId) is already marked completed. */
+  isProcessed(consumerName: string, eventId: string): Promise<boolean>;
+  /** Marks (consumer, eventId) as completed. */
+  markProcessed(
+    consumerName: string,
+    eventId: string,
+    aggregateId: string,
+  ): Promise<void>;
+}
+
+/**
+ * Lazily-resolved Prisma-backed offset store. We import Prisma dynamically so
+ * that consumers of `@longox/shared-events` that never use the deduper don't
+ * pay the Prisma-client import cost.
+ */
+class PrismaOffsetStore implements OffsetStore {
+  private prisma: any = null;
+
+  private async getPrisma(): Promise<any> {
+    if (this.prisma) return this.prisma;
+    try {
+      // Dynamic import with a non-literal specifier so TypeScript does NOT
+      // try to resolve the module at type-check time. This keeps
+      // shared-events free of a hard dependency on shared-db (events are
+      // domain-level; db is infrastructure). At runtime Node resolves the
+      // workspace symlink normally.
+      const modulePath = "@longox/db/prisma";
+      const mod: any = await (Function(
+        "p",
+        "return import(p)",
+      )(modulePath) as Promise<any>);
+      this.prisma = mod.prisma;
+      return this.prisma;
+    } catch (err) {
+      console.warn(
+        "[DeduplicatingEventBus] Prisma unavailable — offset store is disabled:",
+        err instanceof Error ? err.message : String(err),
+      );
+      return null;
+    }
+  }
+
+  async isProcessed(consumerName: string, eventId: string): Promise<boolean> {
+    const prisma = await this.getPrisma();
+    if (!prisma) return false;
+    try {
+      const existing = (await prisma.consumerOffset.findUnique({
+        where: {
+          consumerName_eventId: { consumerName, eventId },
+        } as any,
+        select: { status: true } as any,
+      })) as any;
+      return existing?.status === "completed";
+    } catch {
+      return false;
+    }
+  }
+
+  async markProcessed(
+    consumerName: string,
+    eventId: string,
+    aggregateId: string,
+  ): Promise<void> {
+    const prisma = await this.getPrisma();
+    if (!prisma) return;
+    try {
+      await prisma.consumerOffset.upsert({
+        where: {
+          consumerName_eventId: { consumerName, eventId },
+        } as any,
+        create: {
+          consumerName,
+          eventId,
+          aggregateId,
+          status: "completed",
+        } as any,
+        update: { status: "completed" } as any,
+      });
+    } catch (err) {
+      console.warn(
+        "[DeduplicatingEventBus] Failed to mark event processed:",
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
+}
+
+export class DeduplicatingEventBus implements EventBus {
+  private offsetStore: OffsetStore;
+  private readonly failOpen: boolean;
+  private readonly consumerName: string;
+  private readonly wrapped: EventBus;
+  /** Tracks in-flight event ids to prevent concurrent double-dispatch. */
+  private inFlight = new Set<string>();
+
+  constructor(wrapped: EventBus, opts: DeduplicatingEventBusOptions) {
+    this.wrapped = wrapped;
+    this.consumerName = opts.consumerName;
+    this.offsetStore = opts.offsetStore ?? new PrismaOffsetStore();
+    this.failOpen = opts.failOpenOnError ?? true;
+  }
+
+  async publish(event: Omit<PlatformEvent, "id" | "timestamp">): Promise<void> {
+    // Publish is a pass-through — dedup is a consumer-side concern.
+    return this.wrapped.publish(event);
+  }
+
+  subscribe(type: string, handler: EventHandler<PlatformEvent>): () => void {
+    const dedupHandler: EventHandler<PlatformEvent> = async (event) => {
+      const eventId = event.event_id ?? event.id;
+      if (!eventId) {
+        // No event id → can't dedup → just call the handler.
+        return handler(event);
+      }
+      // Short-circuit if the same event is currently being dispatched.
+      if (this.inFlight.has(eventId)) return;
+      this.inFlight.add(eventId);
+      try {
+        let alreadyProcessed = false;
+        try {
+          alreadyProcessed = await this.offsetStore.isProcessed(
+            this.consumerName,
+            eventId,
+          );
+        } catch (err) {
+          if (!this.failOpen) throw err;
+          // Fail-open: assume not processed.
+        }
+        if (alreadyProcessed) {
+          // Already handled — silent skip per §19.2 idempotency rule.
+          return;
+        }
+        await handler(event);
+        try {
+          await this.offsetStore.markProcessed(
+            this.consumerName,
+            eventId,
+            event.aggregate_id ?? event.aggregateId ?? "",
+          );
+        } catch (err) {
+          if (!this.failOpen) throw err;
+        }
+      } finally {
+        this.inFlight.delete(eventId);
+      }
+    };
+    return this.wrapped.subscribe(type, dedupHandler);
+  }
+
+  async connect(): Promise<void> {
+    await this.wrapped.connect?.();
+  }
+
+  async disconnect(): Promise<void> {
+    await this.wrapped.disconnect?.();
+  }
+
+  async health(): Promise<{ connected: boolean; latencyMs: number }> {
+    return this.wrapped.health?.() ?? { connected: true, latencyMs: 0 };
+  }
 }
 
 export { InMemoryEventBus as LocalEventBus };
